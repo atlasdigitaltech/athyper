@@ -1,0 +1,210 @@
+# =======================================================================
+# Stack       : athyper Stack - Plane Routes
+# Environment : LOCAL
+#
+# Local routing model:
+#   neon.athyper.local  -> host dev server for apps/neon
+#   mesh.athyper.local  -> host dev server for apps/mesh
+#   studio.athyper.local -> host dev server for apps/studio
+#
+# Staging/production replace this file with the templates in:
+#   stack/config/gateway/environments/neon-workbench-routes.staging.yml
+#   stack/config/gateway/environments/neon-workbench-routes.prod.yml
+# =======================================================================
+
+http:
+  middlewares:
+    plane-neon-headers:
+      headers:
+        customRequestHeaders:
+          X-Athyper-Plane: "neon"
+          X-Athyper-Trust-Level: "tenant"
+
+    plane-mesh-headers:
+      headers:
+        customRequestHeaders:
+          X-Athyper-Plane: "mesh"
+          X-Athyper-Trust-Level: "partner"
+
+    plane-studio-headers:
+      headers:
+        customRequestHeaders:
+          X-Athyper-Plane: "studio"
+          X-Athyper-Trust-Level: "internal"
+
+    admin-ip-restrict:
+      ipAllowList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+
+    athyper-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: 1s
+
+    athyper-inflight:
+      inFlightReq:
+        amount: 200
+        sourceCriterion:
+          requestHeaderName: "X-Forwarded-For"
+
+    athyper-circuit-breaker:
+      circuitBreaker:
+        # Local API traffic is too sparse for a response-code ratio: two
+        # deterministic application 500s can otherwise trip the shared plane
+        # and turn unrelated Activity/auth requests into gateway 503s. Protect
+        # the local upstream connection without amplifying handler defects.
+        expression: "NetworkErrorRatio() > 0.10"
+        checkPeriod: 10s
+        fallbackDuration: 10s
+        recoveryDuration: 10s
+
+    athyper-security-headers:
+      headers:
+        frameDeny: true
+        contentTypeNosniff: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          X-XSS-Protection: "0"
+
+    athyper-compress:
+      compress:
+        minResponseBodyBytes: 1024
+        encodings: ["br", "gzip"]
+
+  routers:
+    neon-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: neon-web
+      priority: 110
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-neon-headers
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
+
+    neon-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_NEON_HOST" }}`)"
+      entryPoints: [websecure]
+      service: neon-web-failover
+      priority: 10
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-neon-headers
+        - athyper-security-headers
+        - athyper-compress
+
+    mesh-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: mesh-web
+      priority: 110
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-mesh-headers
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
+
+    mesh-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_MESH_HOST" }}`)"
+      entryPoints: [websecure]
+      service: mesh-web-failover
+      priority: 10
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - plane-mesh-headers
+        - athyper-security-headers
+        - athyper-compress
+
+    studio-plane-local-api:
+      rule: "Host(`{{ env "APPS_ATHYPER_STUDIO_HOST" }}`) && PathPrefix(`/api`)"
+      entryPoints: [websecure]
+      service: studio-web
+      priority: 120
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - admin-ip-restrict
+        - plane-studio-headers
+        - athyper-security-headers
+        - athyper-compress
+        - athyper-circuit-breaker
+
+    studio-plane-local:
+      rule: "Host(`{{ env "APPS_ATHYPER_STUDIO_HOST" }}`)"
+      entryPoints: [websecure]
+      service: studio-web-failover
+      priority: 20
+      tls: {}
+      middlewares:
+        - athyper-ratelimit
+        - athyper-inflight
+        - admin-ip-restrict
+        - plane-studio-headers
+        - athyper-security-headers
+        - athyper-compress
+
+  services:
+    neon-web-failover:
+      failover:
+        service: neon-web
+        fallback: athyper-outage-page
+
+    mesh-web-failover:
+      failover:
+        service: mesh-web
+        fallback: athyper-outage-page
+
+    studio-web-failover:
+      failover:
+        service: studio-web
+        fallback: athyper-outage-page
+
+    athyper-outage-page:
+      loadBalancer:
+        servers:
+          - url: "http://gateway-outage:8080"
+
+    neon-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_NEON_UPSTREAM_URL" }}"
+
+    mesh-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_MESH_UPSTREAM_URL" }}"
+
+    studio-web:
+      loadBalancer:
+        healthCheck:
+          path: /livez
+          interval: 15s
+          timeout: 5s
+        servers:
+          - url: "{{ env "APPS_ATHYPER_STUDIO_UPSTREAM_URL" }}"

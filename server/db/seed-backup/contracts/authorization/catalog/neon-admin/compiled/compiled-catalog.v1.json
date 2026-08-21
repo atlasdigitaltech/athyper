@@ -1,0 +1,116 @@
+{
+  "compiledCatalogVersion": "wave2.neon-admin.catalog.v1",
+  "semanticContractVersion": "wave2.authorization-catalog.semantic.v1",
+  "catalogId": "neon-admin",
+  "database": "neon",
+  "catalogOwnerCode": "platform",
+  "planes": [
+    "neon",
+    "admin"
+  ],
+  "resolutionMode": "exact_permission_id",
+  "referenceSources": [
+    {
+      "kind": "entity_operation",
+      "relation": "control.entity_operation",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "entity_name -> control.entity.entity_code",
+      "operationPath": "operation_code_v2 ?? exact contextual legacy map(permission_code)",
+      "permissionPath": "permission_id_v2",
+      "role": "execute"
+    },
+    {
+      "kind": "surface",
+      "relation": "control.entity_surface",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "entity_id",
+      "operationPath": "each required_permissions[] exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "render"
+    },
+    {
+      "kind": "action",
+      "relation": "control.entity_action_rule",
+      "identityColumns": [
+        "entity_code",
+        "status",
+        "action_code"
+      ],
+      "entityPath": "entity_code -> control.entity.entity_code",
+      "operationPath": "action_code exact manifest map",
+      "permissionPath": "required_permission exact contextual map",
+      "role": "execute"
+    },
+    {
+      "kind": "transition",
+      "relation": "control.lifecycle_transition",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "lifecycle_id -> control.entity_lifecycle -> control.entity",
+      "operationPath": "operation_code exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow",
+      "relation": "control.entity_flow",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "entity_version_id -> control.entity_version.entity_id",
+      "operationPath": "explicit flow operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow_step",
+      "relation": "control.entity_flow_step",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "flow_id -> control.entity_flow.entity_version_id -> control.entity",
+      "operationPath": "explicit step operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "execute"
+    },
+    {
+      "kind": "flow_field",
+      "relation": "control.entity_flow_field",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "flow_step_id -> flow -> entity_version_id -> control.entity",
+      "operationPath": "override_permission exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "override"
+    },
+    {
+      "kind": "field_security",
+      "relation": "control.field_security_policy",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "entity_id",
+      "operationPath": "explicit field access operation binding",
+      "permissionPath": "compiled reference permission_id",
+      "role": "mask"
+    },
+    {
+      "kind": "relation",
+      "relation": "control.entity_relation",
+      "identityColumns": [
+        "id"
+      ],
+      "entityPath": "entity_version_id -> control.entity_version.entity_id",
+      "operationPath": "each mutation_permissions[] exact contextual map",
+      "permissionPath": "compiled reference permission_id",
+      "role": "mutate"
+    }
+  ],
+  "operations": []
+}

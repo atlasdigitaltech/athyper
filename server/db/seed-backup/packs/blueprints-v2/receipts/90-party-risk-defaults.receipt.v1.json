@@ -1,0 +1,26 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "party-risk-defaults",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "plane":  "neon",
+    "tenantId":  null,
+    "status":  "retired-demo-fixture",
+    "appliedAt":  "2026-08-04",
+    "payloadResults":  [
+                           {
+                               "payload":  "none",
+                               "status":  "retired",
+                               "rowCounts":  {
+                                                 "productionRowsApplied":  0
+                                             }
+                           }
+                       ],
+    "assertionResults":  [
+                             {
+                                 "assertion":  "production-reference-exclusion",
+                                 "status":  "passed",
+                                 "evidence":  "active pack contains zero payloads; named demo counterparties and scenarios are absent"
+                             }
+                         ]
+}

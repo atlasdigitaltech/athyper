@@ -1,0 +1,58 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-dbpool-apps-config
+#
+# Description :
+#   PgBouncer transaction pooler for Athyper platform, Neon, Mesh, and
+#   supporting application databases on port 6432.
+#
+# =======================================================================
+
+services:
+  dbpool-apps:
+    image: edoburu/pgbouncer:v1.25.1-p0
+    profiles: ["core", "db"]
+    deploy:
+      resources:
+        limits:
+          memory: "${DBPOOL_APPS_MEMORY_LIMIT}"
+    command:
+      - sh
+      - -c
+      - |
+        printf '"%s" "%s"\n' "$$DBPOOL_APPS_USER" "$$DBPOOL_APPS_PASSWORD" > /etc/pgbouncer/userlist.txt
+        sed -e "s/__DB_HOST__/$$DB_HOST/g" \
+            -e "s/__DB_PORT__/$$DB_PORT/g" \
+            /etc/pgbouncer/pgbouncer.ini.tpl > /tmp/pgbouncer.ini
+        exec pgbouncer /tmp/pgbouncer.ini
+    environment:
+      DBPOOL_APPS_USER: ${DBPOOL_APPS_USER}
+      DBPOOL_APPS_PASSWORD: ${DBPOOL_APPS_PASSWORD}
+      DB_HOST: ${DB_HOST:-db}
+      DB_PORT: ${DB_PORT:-5432}
+    volumes:
+      - ${ATHYPER_CONFIG}/${DBPOOL_APPS_CONFIG}:/etc/pgbouncer/pgbouncer.ini.tpl:ro
+    networks: [internal]
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 5s     # PgBouncer is lightweight, near-instant startup
+    # Shutdown: 10s — drain pooled connections quickly
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

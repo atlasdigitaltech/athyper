@@ -1,0 +1,11 @@
+{
+  "contractVersion": "authorization-v2.retired-seed-sources.v1",
+  "reason": "Excluded from the canonical three-plane provisioner because these sources write retired pre-DDL auth or identity columns.",
+  "paths": [
+    "seed/blueprints/universal/990_validation/998_canonical_neon_authority.sql",
+    "seed/tenants/neon/010_demo/900_principals/001_demo_principals.sql",
+    "seed/tenants/neon/010_demo/900_principals/004_athq_principals.sql",
+    "seed/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql",
+    "seed/tenants/neon/010_demo/900_principals/006_principal_users.sql"
+  ]
+}

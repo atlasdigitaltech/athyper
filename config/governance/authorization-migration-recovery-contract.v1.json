@@ -1,0 +1,233 @@
+{
+  "schemaVersion": 1,
+  "contractId": "authorization-v2-wave0-recovery",
+  "status": "approval_required",
+  "lastReviewedRevision": null,
+  "globalApproval": {
+    "changeOwner": null,
+    "rollbackOwner": null,
+    "securityApprover": null,
+    "dataOwnerApprover": null,
+    "operationsApprover": null,
+    "approvedAt": null,
+    "ticket": null
+  },
+  "contracts": [
+    {
+      "id": "resolver-read-switch",
+      "scope": "Neon and Admin authorization resolver selection while legacy remains the sole writer",
+      "strategy": "shadow_then_named_cohort_enforce",
+      "sourceWriter": "legacy",
+      "targetWritable": false,
+      "rpo": {
+        "target": "0 authorization decisions lost",
+        "maximumDataLossSeconds": 0,
+        "basis": "Read selection only; source authority is unchanged"
+      },
+      "rto": {
+        "target": null,
+        "maximumRecoveryMinutes": null,
+        "approvalStatus": "pending"
+      },
+      "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
+      "maximumCaptureLag": "0 committed authorization source transactions at promotion",
+      "maximumCaptureLagTransactions": 0,
+      "promotionEvidence": [
+        "golden corpus complete",
+        "zero unexplained high-risk mismatch",
+        "minimum applied capture watermark reached",
+        "legacy writer remains exclusive"
+      ],
+      "rollback": {
+        "mechanism": "publish a higher rollout revision in legacy mode and invalidate authorization epochs/caches",
+        "trigger": null,
+        "owner": null,
+        "deadline": null,
+        "deadlineMinutes": null,
+        "reverseReplayRequired": false
+      },
+      "observationWindow": {
+        "duration": null,
+        "durationMinutes": null,
+        "startsAt": null,
+        "endsAt": null,
+        "approvalStatus": "pending"
+      },
+      "approval": {
+        "status": "pending",
+        "approvedBy": [],
+        "approvedAt": null,
+        "ticket": null
+      }
+    },
+    {
+      "id": "authorization-writer-switch",
+      "scope": "Neon and Admin authorization authority writer cutover",
+      "strategy": "single_writer_freeze_zero_lag_epoch_switch",
+      "sourceWriter": "legacy until the cutover epoch",
+      "targetWritable": false,
+      "rpo": {
+        "target": "0 accepted authorization writes",
+        "maximumDataLossSeconds": 0,
+        "basis": "Commit-ordered source journal and idempotent transaction-atomic replay"
+      },
+      "rto": {
+        "target": null,
+        "maximumRecoveryMinutes": null,
+        "approvalStatus": "pending"
+      },
+      "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
+      "maximumCaptureLag": "0 committed authorization source transactions",
+      "maximumCaptureLagTransactions": 0,
+      "promotionEvidence": [
+        "legacy write freeze active",
+        "capture triggers enabled on every registered source",
+        "source and applied watermarks equal",
+        "conservation ledger reconciled",
+        "forward replay drill passed",
+        "post-switch rollback semantics approved"
+      ],
+      "rollback": {
+        "mechanism": "pending decision: tested reverse replay or forward repair",
+        "trigger": null,
+        "owner": null,
+        "deadline": null,
+        "deadlineMinutes": null,
+        "reverseReplayRequired": true
+      },
+      "observationWindow": {
+        "duration": null,
+        "durationMinutes": null,
+        "startsAt": null,
+        "endsAt": null,
+        "approvalStatus": "pending"
+      },
+      "approval": {
+        "status": "pending",
+        "approvedBy": [],
+        "approvedAt": null,
+        "ticket": null
+      }
+    },
+    {
+      "id": "fresh-database-business-move",
+      "scope": "Fresh-target Neon business, document/object, audit/event, and projection move",
+      "strategy": null,
+      "allowedStrategies": [
+        "complete_maintenance_write_freeze",
+        "snapshot_plus_cdc_then_final_freeze"
+      ],
+      "sourceWriter": "source runtime and dispatcher lease only",
+      "targetWritable": false,
+      "rpo": {
+        "target": null,
+        "maximumDataLossSeconds": null,
+        "basis": null
+      },
+      "rto": {
+        "target": null,
+        "maximumRecoveryMinutes": null,
+        "approvalStatus": "pending"
+      },
+      "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
+      "maximumCaptureLag": null,
+      "maximumCaptureLagTransactions": null,
+      "promotionEvidence": [
+        "source and target database identity verified",
+        "table and object disposition fully approved",
+        "FK-ordered counts and checksums reconciled",
+        "object existence and hashes reconciled",
+        "event and dispatcher watermarks reconciled",
+        "backup restore drill passed",
+        "external side-effect duplication report clean"
+      ],
+      "rollback": {
+        "mechanism": null,
+        "trigger": null,
+        "owner": null,
+        "deadline": null,
+        "deadlineMinutes": null,
+        "reverseReplayRequired": null
+      },
+      "observationWindow": {
+        "duration": null,
+        "durationMinutes": null,
+        "startsAt": null,
+        "endsAt": null,
+        "approvalStatus": "pending"
+      },
+      "approval": {
+        "status": "pending",
+        "approvedBy": [],
+        "approvedAt": null,
+        "ticket": null
+      }
+    },
+    {
+      "id": "fresh-mesh-database-move",
+      "scope": "Fresh-target Mesh account, network, exchange-document, object, audit/event, and projection move",
+      "strategy": null,
+      "allowedStrategies": [
+        "complete_maintenance_write_freeze",
+        "snapshot_plus_cdc_then_final_freeze"
+      ],
+      "sourceWriter": "source Mesh runtime and dispatcher lease only",
+      "targetWritable": false,
+      "rpo": {
+        "target": null,
+        "maximumDataLossSeconds": null,
+        "basis": null
+      },
+      "rto": {
+        "target": null,
+        "maximumRecoveryMinutes": null,
+        "approvalStatus": "pending"
+      },
+      "freezeMaximum": null,
+      "freezeMaximumSeconds": null,
+      "maximumCaptureLag": null,
+      "maximumCaptureLagTransactions": null,
+      "promotionEvidence": [
+        "Neon is unavailable during independent Mesh acceptance",
+        "source and target database identity verified",
+        "table and object disposition fully approved",
+        "account and membership counts/checksums reconciled",
+        "document/object references and hashes reconciled",
+        "event and dispatcher watermarks reconciled",
+        "backup restore drill passed"
+      ],
+      "rollback": {
+        "mechanism": null,
+        "trigger": null,
+        "owner": null,
+        "deadline": null,
+        "deadlineMinutes": null,
+        "reverseReplayRequired": null
+      },
+      "observationWindow": {
+        "duration": null,
+        "durationMinutes": null,
+        "startsAt": null,
+        "endsAt": null,
+        "approvalStatus": "pending"
+      },
+      "approval": {
+        "status": "pending",
+        "approvedBy": [],
+        "approvedAt": null,
+        "ticket": null
+      }
+    }
+  ],
+  "invariants": [
+    "One authority writer and one external-effect dispatcher lease exist at a time",
+    "Target remains read-only until all promotion gates pass",
+    "Authorization, identity, business, object, event, Neon, and Mesh watermarks are distinct",
+    "RPO 0 after target writes is forbidden without tested lossless reverse replay",
+    "Resolver rollback and database rollback are separate procedures",
+    "The source database and migration evidence remain immutable through the approved observation window"
+  ]
+}

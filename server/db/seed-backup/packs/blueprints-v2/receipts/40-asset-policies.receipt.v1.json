@@ -1,0 +1,28 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "asset-policies",
+  "packVersion": "2.0.0",
+  "packChecksum": "522222d925ae195c86ab71a35573ea5cf9e326fad25c0d6642f3e96141b4653b",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {
+      "path": "server/db/seed/blueprints/universal/040_assets/340_asset_classes.sql",
+      "status": "passed-twice",
+      "rowCount": 16
+    },
+    {
+      "path": "server/db/seed/blueprints/universal/040_assets/341_asset_class_book_policy_templates.sql",
+      "status": "passed-twice",
+      "rowCount": 24
+    }
+  ],
+  "assertionResults": [
+    { "assertion": "company-book-scope", "status": "passed", "evidence": "1 active company; 2 active assigned books" },
+    { "assertion": "hierarchy", "status": "passed", "evidence": "4 roots; 12 children; no orphan" },
+    { "assertion": "expected-count", "status": "passed", "evidence": "12 policies per assigned statutory/management book" },
+    { "assertion": "idempotent-convergence", "status": "passed", "evidence": "second pass: class_updates=0; policy_updates=0" }
+  ]
+}

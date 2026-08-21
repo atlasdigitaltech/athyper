@@ -1,0 +1,38 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "party-risk-defaults",
+  "version": "2.0.0",
+  "executionOrder": 90,
+  "plane": "neon",
+  "tenantScope": "none",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [],
+  "checksumAlgorithm": "sha256",
+  "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "payloads": [],
+  "preconditions": {
+    "requiredSetting": "app.database_plane",
+    "requiredRelations": [],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/90-party-risk-defaults.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

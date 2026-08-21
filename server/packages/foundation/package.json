@@ -1,0 +1,28 @@
+{
+  "name": "@athyper/server-foundation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./context": "./src/context/index.ts",
+    "./dependencies": "./src/dependencies/index.ts",
+    "./errors": "./src/errors/index.ts",
+    "./lifecycle": "./src/lifecycle/index.ts",
+    "./observability": "./src/observability/index.ts",
+    "./resilience": "./src/resilience/index.ts",
+    "./tenancy": "./src/tenancy/index.ts",
+    "./transaction": "./src/transaction/index.ts",
+    "./validation": "./src/validation/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

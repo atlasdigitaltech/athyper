@@ -1,0 +1,23 @@
+# Grafana dashboard provisioning — STAGING override
+#
+# Mounted by stack/compose/athyper.override.staging.yml onto
+# /etc/grafana/provisioning/dashboards/dashboards.yml, shadowing the
+# production-safe default.
+#
+# Staging permits on-call exploration during incident rehearsal: edits
+# and deletions are allowed, but the file-based provisioner still
+# re-installs the JSON set on container restart, so UI changes are
+# ephemeral by design.
+apiVersion: 1
+
+providers:
+  - name: athyper
+    orgId: 1
+    folder: Athyper
+    type: file
+    disableDeletion: false
+    editable: true
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/json
+      foldersFromFilesStructure: false

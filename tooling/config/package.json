@@ -1,0 +1,22 @@
+{
+  "name": "@athyper/config",
+  "version": "0.1.0",
+  "private": true,
+  "files": [
+    "tsconfig.json",
+    "tsconfig-base.json",
+    "tsconfig-nextjs.json",
+    "tsconfig-react.json"
+  ],
+  "exports": {
+    "./tsconfig": "./tsconfig.json",
+    "./tsconfig.json": "./tsconfig.json",
+    "./tsconfig-base": "./tsconfig-base.json",
+    "./tsconfig-base.json": "./tsconfig-base.json",
+    "./tsconfig-nextjs": "./tsconfig-nextjs.json",
+    "./tsconfig-nextjs.json": "./tsconfig-nextjs.json",
+    "./tsconfig-react": "./tsconfig-react.json",
+    "./tsconfig-react.json": "./tsconfig-react.json",
+    "./package.json": "./package.json"
+  }
+}

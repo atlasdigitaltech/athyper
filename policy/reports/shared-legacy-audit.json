@@ -1,0 +1,664 @@
+{
+  "strictMode": true,
+  "legacyMode": true,
+  "sharedRoot": "packages/shared",
+  "generatedAtUtc": "2026-07-13T20:43:47.762Z",
+  "totalViolations": 131,
+  "violations": [
+    {
+      "path": "api-client/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "content-ui/src/document-components/distributions/distributable-cost.test.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "distributable-cost.test.ts"
+    },
+    {
+      "path": "content-ui/src/document-components/postings-preview/postingsPreviewBuilder.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "postings-preview-builder.ts"
+    },
+    {
+      "path": "content-ui/src/document-components/postings-preview/strategies/apInvoicePostingStrategy.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "ap-invoice-posting-strategy.ts"
+    },
+    {
+      "path": "content-ui/src/document-components/pricing-components/drawers/_shared.tsx",
+      "reason": "Avoid leading underscore prefixes",
+      "suggestion": "shared.tsx"
+    },
+    {
+      "path": "content-ui/src/document-components/shared/useDebouncedValue.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-debounced-value.ts"
+    },
+    {
+      "path": "content-ui/src/document-components/shared/useEditAffordance.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-edit-affordance.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useDocumentDirtyMap.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-dirty-map.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useDocumentEditDraft.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-edit-draft.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useDocumentPageController.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-page-controller.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useDocumentScrollSpy.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-scroll-spy.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useLazyDocumentSections.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-lazy-document-sections.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/usePinOnScroll.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-pin-on-scroll.ts"
+    },
+    {
+      "path": "content-ui/src/object-page/useScrollIntent.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-scroll-intent.ts"
+    },
+    {
+      "path": "content-ui/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "content-ui/src/__tests__/utils/mockBrowser.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "mockBrowser.test.ts"
+    },
+    {
+      "path": "content-ui/src/__tests__/utils/mockObservers.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "mockObservers.test.ts"
+    },
+    {
+      "path": "content-ui/src/__tests__/utils/renderHook.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "renderHook.test.ts"
+    },
+    {
+      "path": "content-ui/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "entity-print/src/core/PrintTemplateRegistry.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "print-template-registry.ts"
+    },
+    {
+      "path": "entity-print/src/core/resolveEntityPrintSections.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "resolve-entity-print-sections.ts"
+    },
+    {
+      "path": "entity-print/src/hooks/usePrintEntity.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-print-entity.ts"
+    },
+    {
+      "path": "entity-print/src/templates/formatPrintFieldValue.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "format-print-field-value.ts"
+    },
+    {
+      "path": "icons/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "identity-gate/src/components.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Components.tsx"
+    },
+    {
+      "path": "runtime-line-item/src/embedded/columns.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Columns.tsx"
+    },
+    {
+      "path": "runtime-line-item/src/embedded/useLocalStoragePreference.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-local-storage-preference.ts"
+    },
+    {
+      "path": "runtime-line-item/src/meta/index.test.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "index.test.ts"
+    },
+    {
+      "path": "runtime-line-item/src/surface/resolveLineSelectionActions.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "resolve-line-selection-actions.ts"
+    },
+    {
+      "path": "runtime-line-item/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "runtime-line-item/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "me-ui/src/_shared.tsx",
+      "reason": "Avoid leading underscore prefixes",
+      "suggestion": "shared.tsx"
+    },
+    {
+      "path": "metadata-client/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "query/src/hooks/useCommentCounts.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-comment-counts.ts"
+    },
+    {
+      "path": "query/src/hooks/useFilterPresets.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-filter-presets.ts"
+    },
+    {
+      "path": "query/src/hooks/useRecentItems.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-recent-items.ts"
+    },
+    {
+      "path": "query/src/hooks/useRecordBookmarks.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-record-bookmarks.ts"
+    },
+    {
+      "path": "query/src/hooks/useSubmitPreflight.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-submit-preflight.ts"
+    },
+    {
+      "path": "runtime-add-item/src/controller/AddItemController.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "add-item-controller.ts"
+    },
+    {
+      "path": "runtime-add-item/src/controller/DraftLineCommitter.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "draft-line-committer.ts"
+    },
+    {
+      "path": "runtime-add-item/src/picker/useSourceAdapterPicker.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-source-adapter-picker.ts"
+    },
+    {
+      "path": "runtime-add-item/src/test-harness/defineSourceAdapterContractSuite.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "define-source-adapter-contract-suite.ts"
+    },
+    {
+      "path": "runtime-add-item/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "runtime-add-item/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "runtime-bulk-actions/src/mapOperationsToActions.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "map-operations-to-actions.ts"
+    },
+    {
+      "path": "runtime-bulk-actions/src/provider.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Provider.tsx"
+    },
+    {
+      "path": "runtime-bulk-actions/src/useBulkActionRunner.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-bulk-action-runner.ts"
+    },
+    {
+      "path": "runtime-bulk-actions/src/useBulkPreflight.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-bulk-preflight.ts"
+    },
+    {
+      "path": "runtime-bulk-actions/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "runtime-bulk-actions/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "runtime-canvas/src/actions/useOperationDispatch.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-operation-dispatch.ts"
+    },
+    {
+      "path": "runtime-canvas/src/document-runtime/useDocumentAffordance.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-affordance.ts"
+    },
+    {
+      "path": "runtime-canvas/src/document-runtime/useDocumentChildren.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-children.ts"
+    },
+    {
+      "path": "runtime-canvas/src/document-runtime/useDocumentComponentsController.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-components-controller.ts"
+    },
+    {
+      "path": "runtime-canvas/src/document-runtime/useDocumentLookup.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-lookup.ts"
+    },
+    {
+      "path": "runtime-canvas/src/document-runtime/useDocumentRules.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-document-rules.ts"
+    },
+    {
+      "path": "runtime-canvas/src/edit/entering-edit-skeleton.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "EnteringEditSkeleton.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/limited-edit-banner.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "LimitedEditBanner.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/runtime-descriptor-edit-workspace.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeDescriptorEditWorkspace.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/runtime-edit-form-actions.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeEditFormActions.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/runtime-edit-form.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeEditForm.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/runtime-field-set.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeFieldSet.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/edit/source-change-candidates.test.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "source-change-candidates.test.ts"
+    },
+    {
+      "path": "runtime-canvas/src/edit/submit-preflight-panel.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "SubmitPreflightPanel.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/fields/fx-exchange-rate-field.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "FxExchangeRateField.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/fields/registry.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Registry.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/fields/runtime-field-value-view.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeFieldValueView.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/list/runtime-list-page.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeListPage.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/panels/buildContextDrawerEntity.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "build-context-drawer-entity.ts"
+    },
+    {
+      "path": "runtime-canvas/src/panels/buildPrintPreviewEntity.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "build-print-preview-entity.ts"
+    },
+    {
+      "path": "runtime-canvas/src/panels/useContextDrawer.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-context-drawer.ts"
+    },
+    {
+      "path": "runtime-canvas/src/panels/usePrintPreview.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-print-preview.ts"
+    },
+    {
+      "path": "runtime-canvas/src/process/runtime-process-surface.test.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "runtime-process-surface.test.ts"
+    },
+    {
+      "path": "runtime-canvas/src/process/runtime-process-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeProcessSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/process/snapshot-compare-drawer.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "SnapshotCompareDrawer.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/process/snapshot-detail-drawer.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "SnapshotDetailDrawer.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/record/document-object-page-workspace.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "DocumentObjectPageWorkspace.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/record/runtime-header-model.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeHeaderModel.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/record/runtime-record-chrome.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeRecordChrome.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/record/runtime-record-workspace.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RuntimeRecordWorkspace.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/audit-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "AuditSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/document-child-tables-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "DocumentChildTablesSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/fields-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "FieldsSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/header-scope-pc-strip-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "HeaderScopePcStripSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/lifecycle-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "LifecycleSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/line-items-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "LineItemsSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/polymorphic-pc-lines-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "PolymorphicPcLinesSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/postings-preview-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "PostingsPreviewSurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/rich-summary-surface.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "RichSummarySurface.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/surfaces/surface-shell.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "SurfaceShell.tsx"
+    },
+    {
+      "path": "runtime-canvas/src/temporal/useIsPostingDateDisabled.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-is-posting-date-disabled.ts"
+    },
+    {
+      "path": "runtime-canvas/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "runtime-contracts/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "runtime-list/src/core/accessScope.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "access-scope.ts"
+    },
+    {
+      "path": "runtime-list/src/core/lazyList.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "lazy-list.ts"
+    },
+    {
+      "path": "runtime-list/src/core/listPresentation.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "list-presentation.ts"
+    },
+    {
+      "path": "runtime-list/src/core/presenterProps.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "presenter-props.ts"
+    },
+    {
+      "path": "runtime-list/src/core/tableChrome.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "table-chrome.ts"
+    },
+    {
+      "path": "runtime-list/src/core/urlState.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "url-state.ts"
+    },
+    {
+      "path": "runtime-list/src/islands/organize/organizeState.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "organize-state.ts"
+    },
+    {
+      "path": "runtime-list/src/islands/organize/organizeUrl.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "organize-url.ts"
+    },
+    {
+      "path": "runtime-list/src/islands/organize/paletteStyles.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "palette-styles.ts"
+    },
+    {
+      "path": "runtime-list/src/islands/RuntimeListPaginationGate.tsx",
+      "reason": "Non-component TSX filenames in strict mode should be kebab-case",
+      "suggestion": "runtime-list-pagination-gate.tsx"
+    },
+    {
+      "path": "runtime-list/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "runtime-list/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "runtime-shared/src/edit/useBeforeUnload.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-before-unload.ts"
+    },
+    {
+      "path": "runtime-shared/src/edit/useEditKeyboardShortcuts.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-edit-keyboard-shortcuts.ts"
+    },
+    {
+      "path": "runtime-shared/src/edit/useEntityEdit.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-entity-edit.ts"
+    },
+    {
+      "path": "runtime-shared/src/edit/useEntityEditState.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-entity-edit-state.ts"
+    },
+    {
+      "path": "runtime-shared/src/entity-search/AdvancedEntityChooser.tsx",
+      "reason": "Non-component TSX filenames in strict mode should be kebab-case",
+      "suggestion": "advanced-entity-chooser.tsx"
+    },
+    {
+      "path": "runtime-shared/src/entity-search/lookupConfig.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "lookup-config.ts"
+    },
+    {
+      "path": "runtime-shared/src/entity-search/referenceLabelResolver.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "reference-label-resolver.ts"
+    },
+    {
+      "path": "runtime-shared/src/entity-search/useEntitySearch.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-entity-search.ts"
+    },
+    {
+      "path": "runtime-shared/src/preferences/context.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Context.tsx"
+    },
+    {
+      "path": "runtime-shared/src/preferences/useTemporalContext.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-temporal-context.ts"
+    },
+    {
+      "path": "runtime-shared/src/resolvers/apply-client-source-change.test.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "apply-client-source-change.test.ts"
+    },
+    {
+      "path": "runtime-shared/src/validation/metaFieldValidation.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "meta-field-validation.ts"
+    },
+    {
+      "path": "shell-runtime/src/session-warning-dialog.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "SessionWarningDialog.tsx"
+    },
+    {
+      "path": "theme/src/preset-validator.cli.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "preset-validator.cli.ts"
+    },
+    {
+      "path": "theme/src/recordBadge.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "record-badge.ts"
+    },
+    {
+      "path": "theme/src/semanticColors.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "semantic-colors.ts"
+    },
+    {
+      "path": "theme/src/typography.generate.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "typography.generate.ts"
+    },
+    {
+      "path": "ui/src/composites/FloatingSelectionBar/internals.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "Internals.tsx"
+    },
+    {
+      "path": "ui/src/composites/FloatingSelectionBar/useInteractionModality.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-interaction-modality.ts"
+    },
+    {
+      "path": "ui/src/surfaces/stack/useStackFrame.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "use-stack-frame.ts"
+    },
+    {
+      "path": "ui/src/__tests__/setup.ts",
+      "reason": "Use *.test.ts or *.test.tsx for files inside __tests__",
+      "suggestion": "setup.test.ts"
+    },
+    {
+      "path": "ui/vitest.config.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "vitest.config.ts"
+    },
+    {
+      "path": "workflow-ui/src/utils/formatDate.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "format-date.ts"
+    },
+    {
+      "path": "workflow-ui/src/utils/intentToBadgeVariant.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "intent-to-badge-variant.ts"
+    },
+    {
+      "path": "workflow-ui/src/utils/stageIntent.ts",
+      "reason": "TypeScript source filenames should be kebab-case",
+      "suggestion": "stage-intent.ts"
+    },
+    {
+      "path": "workflow-ui/src/utils/workflowStatusIcon.tsx",
+      "reason": "React component files in strict mode should be PascalCase",
+      "suggestion": "WorkflowStatusIcon.tsx"
+    }
+  ]
+}

@@ -1,0 +1,331 @@
+{
+  "contractVersion": "athyper.authorization.inventory-promotion-qualification.v1",
+  "plane": "mesh",
+  "defaultDecision": "deny_unqualified",
+  "qualifications": [
+    {
+      "permissionCode": "mesh.network.network_account.activate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_account",
+        "transitionCode": "activate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.add_identifier",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.change_network_role",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.configure_profile",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.create",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.reinstate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_account",
+        "transitionCode": "reinstate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.retire",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_account",
+        "transitionCode": "retire"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.revoke_identifier",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.suspend",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_account",
+        "transitionCode": "suspend"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_account.update",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.accept",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_relationship",
+        "transitionCode": "accept"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.read",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "not_applicable"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.reject",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_relationship",
+        "transitionCode": "reject"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.request",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "state_neutral"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.resume",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_relationship",
+        "transitionCode": "resume"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.suspend",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_relationship",
+        "transitionCode": "suspend"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    },
+    {
+      "permissionCode": "mesh.network.network_relationship.terminate",
+      "decision": "pending",
+      "scopeCoordinatesReviewed": false,
+      "lifecycle": {
+        "disposition": "transition",
+        "lifecycleEntityCode": "network_relationship",
+        "transitionCode": "terminate"
+      },
+      "assurance": {
+        "riskTierReviewed": false,
+        "mfaReviewed": false,
+        "sodReviewed": false
+      },
+      "writerOwnership": {
+        "reviewed": false,
+        "owner": "@athyper/server-plane-mesh"
+      }
+    }
+  ]
+}

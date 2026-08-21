@@ -1,0 +1,35 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "governance",
+  "packVersion": "2.0.0",
+  "packChecksum": "34115e9cf7f9357ad8808e67ec5bb3e6a4c2cf43cda63ce1fc512aa497999d72",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {
+      "path": "server/db/seed/blueprints/modules/governance/010_finance_close_governance_templates.sql",
+      "status": "passed-twice",
+      "rowCounts": {
+        "cycleTypes": 4,
+        "phases": 32,
+        "categories": 56,
+        "taskTemplates": 84,
+        "taskDependencies": 94,
+        "crossDependencies": 1,
+        "carryForwardRules": 12
+      }
+    },
+    {
+      "path": "server/db/seed/blueprints/modules/governance/099_apply.sql",
+      "status": "passed-twice"
+    }
+  ],
+  "assertionResults": [
+    { "assertion": "company-expansion", "status": "passed", "evidence": "1 active company; 84 templates; 94 dependencies" },
+    { "assertion": "dependency-endpoints", "status": "passed", "evidence": "all endpoints exist, share cycle type and company code" },
+    { "assertion": "cross-dependency", "status": "passed", "evidence": "hard MONTHLY_CLOSE.CERTIFICATION -> YEAR_END_CLOSE.YEAR_END_CERTIFICATION" },
+    { "assertion": "idempotent-convergence", "status": "passed", "evidence": "second pass produced zero updated_at values across all seven governance tables" }
+  ]
+}

@@ -31,7 +31,7 @@ assignees: ''
 | athyper version | `v0.x.x` |
 | OS | e.g. Windows 11, Ubuntu 22.04 |
 | Runtime | e.g. Node 20, Python 3.11 |
-| Component | e.g. neon, mesh, atlas, core |
+| Component | e.g. neon, stack, atlas, core |
 
 ## Additional Context
 

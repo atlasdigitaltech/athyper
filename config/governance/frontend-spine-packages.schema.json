@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["version", "packages"],
+  "properties": {
+    "version": { "const": 1 },
+    "packages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "name", "owner", "classification", "dependencyBudget"],
+        "properties": {
+          "path": { "type": "string", "pattern": "^(apps|packages)/" },
+          "name": { "type": "string", "pattern": "^@athyper/" },
+          "owner": { "type": "string", "minLength": 1 },
+          "classification": { "enum": ["Shared contract", "Shared platform", "Product-specific", "Application composition"] },
+          "dependencyBudget": {
+            "type": "object",
+            "required": ["runtime", "workspace"],
+            "properties": {
+              "runtime": { "type": "integer", "minimum": 0 },
+              "workspace": { "type": "integer", "minimum": 0 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

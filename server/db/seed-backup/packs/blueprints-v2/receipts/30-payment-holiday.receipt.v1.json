@@ -1,0 +1,16 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "payment-holiday",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "e59eddf9d3ee868884675d5b99ba5343595c0c46f8336fc7a114bc0081f75a6b",
+    "plane":  "neon",
+    "tenantId":  "f5000000-0000-0000-0000-000000000001",
+    "status":  "pending-validation",
+    "appliedAt":  null,
+    "payloadResults":  [
+
+                       ],
+    "assertionResults":  [
+
+                         ]
+}

@@ -1,0 +1,9 @@
+ALTER TABLE trustiam.organization ADD CONSTRAINT trustiam_organization_tenant_fk FOREIGN KEY(authority_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,ADD CONSTRAINT trustiam_organization_party_fk FOREIGN KEY(authority_tenant_id,canonical_party_id) REFERENCES master.canonical_party(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.organization_provider ADD CONSTRAINT trustiam_organization_provider_org_fk FOREIGN KEY(authority_tenant_id,organization_id) REFERENCES trustiam.organization(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.application_projection ADD CONSTRAINT trustiam_application_projection_org_fk FOREIGN KEY(authority_tenant_id,organization_id) REFERENCES trustiam.organization(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.projection_scope ADD CONSTRAINT trustiam_projection_scope_projection_fk FOREIGN KEY(authority_tenant_id,projection_id) REFERENCES trustiam.application_projection(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.identity_provisioning_request ADD CONSTRAINT trustiam_identity_provisioning_request_tenant_fk FOREIGN KEY(authority_tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.identity_provisioning_attempt ADD CONSTRAINT trustiam_identity_provisioning_attempt_request_fk FOREIGN KEY(authority_tenant_id,request_id) REFERENCES trustiam.identity_provisioning_request(authority_tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE trustiam.projection_reconciliation_attempt
+ ADD CONSTRAINT trustiam_projection_reconciliation_attempt_projection_fk FOREIGN KEY(authority_tenant_id,projection_id) REFERENCES trustiam.application_projection(authority_tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT trustiam_projection_reconciliation_attempt_replay_fk FOREIGN KEY(authority_tenant_id,manual_replay_of) REFERENCES trustiam.projection_reconciliation_attempt(authority_tenant_id,id) ON DELETE RESTRICT;

@@ -1,0 +1,108 @@
+groups:
+  - name: memorycache
+    rules:
+
+      # -----------------------------------------------------------------------
+      # Memory pressure — warn at 80%, critical at 95%
+      # With noeviction policy, Redis rejects writes when full.
+      # This fires before that happens so operators can act.
+      # -----------------------------------------------------------------------
+      - alert: RedisMemoryHigh
+        expr: >
+          redis_memory_used_bytes{service="memorycache"}
+          / redis_memory_max_bytes{service="memorycache"} > 0.80
+        for: 2m
+        labels:
+          severity: warning
+          service: memorycache
+        annotations:
+          summary: "Redis memory usage above 80%"
+          description: >
+            Redis is using {{ $value | humanizePercentage }} of its maxmemory (100 MB).
+            With noeviction policy, writes will be rejected at 100%.
+            Consider increasing MEMORYCACHE_MEMORY_LIMIT or pruning stale keys.
+
+      - alert: RedisMemoryCritical
+        expr: >
+          redis_memory_used_bytes{service="memorycache"}
+          / redis_memory_max_bytes{service="memorycache"} > 0.95
+        for: 1m
+        labels:
+          severity: critical
+          service: memorycache
+        annotations:
+          summary: "Redis memory critical — writes will be rejected imminently"
+          description: >
+            Redis is at {{ $value | humanizePercentage }} of maxmemory.
+            Login, session creation, and PKCE flows are at risk of failure.
+            Immediate action required.
+
+      # -----------------------------------------------------------------------
+      # Rejected connections — any rejection means the client connection
+      # limit (maxclients=5000) was hit.
+      # -----------------------------------------------------------------------
+      - alert: RedisRejectedConnections
+        expr: increase(redis_rejected_connections_total{service="memorycache"}[5m]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          service: memorycache
+        annotations:
+          summary: "Redis is rejecting connections"
+          description: >
+            {{ $value }} connection(s) were rejected in the last 5 minutes.
+            Current maxclients is 5000. Check for connection leaks in api
+            or web BFF, or raise the maxclients limit in cache.conf.
+
+      # -----------------------------------------------------------------------
+      # High connected clients — warn at 2000 (40% of maxclients=5000)
+      # -----------------------------------------------------------------------
+      - alert: RedisHighClientCount
+        expr: redis_connected_clients{service="memorycache"} > 2000
+        for: 5m
+        labels:
+          severity: warning
+          service: memorycache
+        annotations:
+          summary: "Redis connected client count is high"
+          description: >
+            {{ $value }} clients currently connected (maxclients=5000).
+            Investigate for connection pool misconfiguration or leaks.
+
+      # -----------------------------------------------------------------------
+      # Redis down — exporter can reach the host but Redis itself is not responding
+      # -----------------------------------------------------------------------
+      - alert: RedisDown
+        expr: redis_up{service="memorycache"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          service: memorycache
+        annotations:
+          summary: "Redis is down"
+          description: >
+            The redis_exporter cannot connect to the Redis instance.
+            api and web BFF will return 503 for all auth/session operations.
+            Restart the memorycache container and investigate logs.
+
+      # -----------------------------------------------------------------------
+      # Keyspace misses — high ratio indicates TTLs too short or cache pollution
+      # -----------------------------------------------------------------------
+      - alert: RedisHighMissRate
+        expr: >
+          rate(redis_keyspace_misses_total{service="memorycache"}[5m])
+          / (
+            rate(redis_keyspace_hits_total{service="memorycache"}[5m]) +
+            rate(redis_keyspace_misses_total{service="memorycache"}[5m])
+            + 0.0001
+          ) > 0.50
+        for: 10m
+        labels:
+          severity: warning
+          service: memorycache
+        annotations:
+          summary: "Redis cache miss rate above 50%"
+          description: >
+            Cache miss rate is {{ $value | humanizePercentage }} over the last 5 minutes.
+            This may indicate TTLs are too short for the access pattern, or that
+            the cache was recently flushed / restarted.

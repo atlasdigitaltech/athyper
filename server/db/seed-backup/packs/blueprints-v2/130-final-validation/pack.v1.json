@@ -1,0 +1,60 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "final-validation",
+  "version": "2.0.0",
+  "executionOrder": 130,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "ap-non-po"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "1430a830d1281ab32a7f4e4401029ddc7a37b2853ea8530c810c11fac2a2f5b3",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/universal/990_validation/998_canonical_neon_authority.sql",
+      "sha256": "e32a355d13e259fe0a1cd66928174bc49672c088a0a2929c27f267293126e4a3",
+      "bytes": 1055,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/universal/990_validation/999_common_onboarding_assertions.sql",
+      "sha256": "ab5aba9b5ec9bbf81edb3a3c8f94cc8c6bbc0f930043ed5d8fa55c194f77febb",
+      "bytes": 5564,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.tenant",
+      "authz.permission",
+      "master.company_code",
+      "master.legal_entity",
+      "master.org_unit",
+      "master.ledger_book"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/130-final-validation.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "semantic"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

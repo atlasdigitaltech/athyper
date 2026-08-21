@@ -1,0 +1,351 @@
+{
+  "contractVersion": "athyper.authorization.operation-bindings.v1",
+  "plane": "neon",
+  "defaultBehavior": "deny_unbound_operation",
+  "authzEntityOperationBindings": [
+    {
+      "bindingId": "98585950-715a-5e25-ac5b-872acf99873e",
+      "entityCode": "attachment",
+      "operationKey": "archive",
+      "permissionId": "d5775595-dfc3-5a9f-9698-3aa0d4b437dc",
+      "permissionCode": "neon.collaboration.attachment.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "d205964e-5e1f-5b36-a01e-df7ebd8a741c",
+      "entityCode": "attachment",
+      "operationKey": "create",
+      "permissionId": "f6af45b7-f806-5665-9627-6bce00f23b45",
+      "permissionCode": "neon.collaboration.attachment.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "e5a4de6f-188e-5116-a85d-01a1fe1f31e8",
+      "entityCode": "attachment",
+      "operationKey": "download",
+      "permissionId": "7cf88bed-7ffc-572a-9128-6c0120760b22",
+      "permissionCode": "neon.collaboration.attachment.download",
+      "status": "draft"
+    },
+    {
+      "bindingId": "39f036c8-2d9a-5111-ad90-773edb3e9b93",
+      "entityCode": "attachment",
+      "operationKey": "finalize",
+      "permissionId": "abf3f640-6a99-56bd-9616-c684f5078e4a",
+      "permissionCode": "neon.collaboration.attachment.finalize",
+      "status": "draft"
+    },
+    {
+      "bindingId": "06f3c59a-fe01-5bfb-ab1a-750f621abb08",
+      "entityCode": "attachment",
+      "operationKey": "read",
+      "permissionId": "c0f93896-6f21-5a13-ad73-abaa3f1606da",
+      "permissionCode": "neon.collaboration.attachment.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "2a2c3dae-c4ad-59b7-a28d-9aaf564240e6",
+      "entityCode": "content_item",
+      "operationKey": "archive",
+      "permissionId": "8447fc71-450f-5276-b7ac-1743ca9b5e52",
+      "permissionCode": "neon.content.content_item.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "9f0fd9d0-21c4-5029-a9f1-1243a6affcab",
+      "entityCode": "content_item",
+      "operationKey": "create",
+      "permissionId": "f77e9d95-51a7-5690-8690-d031e6df4fd3",
+      "permissionCode": "neon.content.content_item.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "fdf02e9f-0f0c-51d7-a375-1ec98bff20fe",
+      "entityCode": "content_item",
+      "operationKey": "grant_access",
+      "permissionId": "c60163b5-47e2-533a-a86a-8316caa125d4",
+      "permissionCode": "neon.content.content_item.grant_access",
+      "status": "draft"
+    },
+    {
+      "bindingId": "69b83c44-95b7-57a9-a39d-a29823efea08",
+      "entityCode": "content_item",
+      "operationKey": "publish",
+      "permissionId": "79b41fb0-0ae0-5a4d-a974-0ec6f54ebdf2",
+      "permissionCode": "neon.content.content_item.publish",
+      "status": "draft"
+    },
+    {
+      "bindingId": "6148df0f-bd2b-5b2d-af7f-4d3d636f3a08",
+      "entityCode": "content_item",
+      "operationKey": "read",
+      "permissionId": "98d67978-4a2b-56b7-b198-f26447ccb00f",
+      "permissionCode": "neon.content.content_item.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "92b1fad0-b7c5-5ef8-a95c-8cafc25c605c",
+      "entityCode": "content_item",
+      "operationKey": "revoke_access",
+      "permissionId": "a441e955-faa1-5165-9009-312e674e0c6c",
+      "permissionCode": "neon.content.content_item.revoke_access",
+      "status": "draft"
+    },
+    {
+      "bindingId": "d8b096bd-5d1d-5d9c-a8f1-c80b194e0373",
+      "entityCode": "content_item",
+      "operationKey": "submit",
+      "permissionId": "f07b6305-9acc-5731-887c-ea9033c923d4",
+      "permissionCode": "neon.content.content_item.submit",
+      "status": "draft"
+    },
+    {
+      "bindingId": "964c9a8f-eff6-592b-a266-ee600f75147f",
+      "entityCode": "content_item",
+      "operationKey": "update",
+      "permissionId": "122df486-10d3-5f83-b679-51f9d5676643",
+      "permissionCode": "neon.content.content_item.update",
+      "status": "draft"
+    },
+    {
+      "bindingId": "9b7407fd-dbe0-5b71-aa83-142ad71b0281",
+      "entityCode": "company_code",
+      "operationKey": "activate",
+      "permissionId": "fcb9c010-44ba-5c3b-8bfe-0f8d6ab36545",
+      "permissionCode": "neon.organization.company_code.activate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "cac8a507-93fe-5935-a992-bf664c42b9ae",
+      "entityCode": "company_code",
+      "operationKey": "archive",
+      "permissionId": "b71cca62-5797-55b7-9d7b-54f75d80f7ea",
+      "permissionCode": "neon.organization.company_code.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "268998dd-b0c7-57ba-aacc-d173190588f1",
+      "entityCode": "company_code",
+      "operationKey": "create",
+      "permissionId": "401a79f7-bd58-51be-ae23-c6c194d61697",
+      "permissionCode": "neon.organization.company_code.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "55c727d0-01fe-5000-a8a4-055833fa506d",
+      "entityCode": "company_code",
+      "operationKey": "deactivate",
+      "permissionId": "f73ee0ea-5a24-54bd-b163-e36292ed70cd",
+      "permissionCode": "neon.organization.company_code.deactivate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "03f3fe0e-0184-5fc6-af26-199bd9d73889",
+      "entityCode": "company_code",
+      "operationKey": "read",
+      "permissionId": "ba994c8c-c94d-5c3b-87f4-435bbc4653b2",
+      "permissionCode": "neon.organization.company_code.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "f0e4153e-8aa5-59a8-a203-448068aba00a",
+      "entityCode": "company_code",
+      "operationKey": "retire",
+      "permissionId": "a9336cc1-e2a6-5316-9c51-29c10ff844a5",
+      "permissionCode": "neon.organization.company_code.retire",
+      "status": "draft"
+    },
+    {
+      "bindingId": "fdf4795c-a4f3-5463-a013-6cc208d54123",
+      "entityCode": "company_code",
+      "operationKey": "update",
+      "permissionId": "18078a41-aff2-56f0-9c65-4b9d2d0aff8a",
+      "permissionCode": "neon.organization.company_code.update",
+      "status": "draft"
+    },
+    {
+      "bindingId": "f59e7203-3a4a-5edf-a822-9b355fb92a44",
+      "entityCode": "legal_entity",
+      "operationKey": "activate",
+      "permissionId": "d250b863-c4a9-540d-afe0-b517e89fb6ec",
+      "permissionCode": "neon.organization.legal_entity.activate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "5a51a685-dd6c-5a84-a23e-a09512c3d457",
+      "entityCode": "legal_entity",
+      "operationKey": "archive",
+      "permissionId": "b62c5f38-f535-5ce3-a135-6161e2a9f772",
+      "permissionCode": "neon.organization.legal_entity.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "72df363b-ee1c-5f0a-a69a-066e04858185",
+      "entityCode": "legal_entity",
+      "operationKey": "create",
+      "permissionId": "3e73a9da-9cb0-550d-a2f8-6f963fb26b2b",
+      "permissionCode": "neon.organization.legal_entity.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "47eb7b76-795c-5293-a743-585b0d99fefc",
+      "entityCode": "legal_entity",
+      "operationKey": "deactivate",
+      "permissionId": "1d643453-6c65-574a-ad36-370fc1ca86e1",
+      "permissionCode": "neon.organization.legal_entity.deactivate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "5b40a8bc-7ad1-5c1c-a3cb-dfbe1719668b",
+      "entityCode": "legal_entity",
+      "operationKey": "read",
+      "permissionId": "145519c7-e337-560c-bed7-76f6127ca9c8",
+      "permissionCode": "neon.organization.legal_entity.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "76b4c73e-7643-52d5-aa29-ee9cfd782ec1",
+      "entityCode": "legal_entity",
+      "operationKey": "retire",
+      "permissionId": "5f21f8a8-afb3-55d8-aad8-2b71bbbaf902",
+      "permissionCode": "neon.organization.legal_entity.retire",
+      "status": "draft"
+    },
+    {
+      "bindingId": "1d7c465f-ef2c-524c-a7e7-5438a098f77d",
+      "entityCode": "legal_entity",
+      "operationKey": "update",
+      "permissionId": "68fbb953-179d-5e1f-9546-c5a6db586a28",
+      "permissionCode": "neon.organization.legal_entity.update",
+      "status": "draft"
+    },
+    {
+      "bindingId": "e26ce843-6d8b-5cb9-ac84-5b42aab90326",
+      "entityCode": "operating_organization",
+      "operationKey": "activate",
+      "permissionId": "055011bf-26da-5185-b220-562513d4611f",
+      "permissionCode": "neon.organization.operating_organization.activate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "67587e3a-4b1d-502a-abff-571333250988",
+      "entityCode": "operating_organization",
+      "operationKey": "archive",
+      "permissionId": "ef434d40-1b60-5853-8a00-337010268921",
+      "permissionCode": "neon.organization.operating_organization.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "c871795c-ff27-50d7-a05b-2dd49f8d19f9",
+      "entityCode": "operating_organization",
+      "operationKey": "assign_company_code",
+      "permissionId": "b927032c-cefc-5d4d-a6b7-a1fa8c7bf16c",
+      "permissionCode": "neon.organization.operating_organization.assign_company_code",
+      "status": "draft"
+    },
+    {
+      "bindingId": "3a9699c8-b7fb-56fb-a80a-36a3ceb5c9f4",
+      "entityCode": "operating_organization",
+      "operationKey": "configure_profile",
+      "permissionId": "8219a059-6005-5f17-a651-28b5cd1a7d83",
+      "permissionCode": "neon.organization.operating_organization.configure_profile",
+      "status": "draft"
+    },
+    {
+      "bindingId": "4e557eb3-ccad-5865-a946-a8da73b25056",
+      "entityCode": "operating_organization",
+      "operationKey": "create",
+      "permissionId": "03aa37c6-ce71-547d-9030-028be0b472c6",
+      "permissionCode": "neon.organization.operating_organization.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "bc8744a1-d2b6-5251-ab2c-e74a90f6cf1b",
+      "entityCode": "operating_organization",
+      "operationKey": "deactivate",
+      "permissionId": "0123fab0-4564-5730-9995-d44b84e7f465",
+      "permissionCode": "neon.organization.operating_organization.deactivate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "dc8c3fc5-9e53-528b-a7da-74c3c59009a3",
+      "entityCode": "operating_organization",
+      "operationKey": "read",
+      "permissionId": "9c1ab7c7-ed01-54b8-b424-a60b7c06277c",
+      "permissionCode": "neon.organization.operating_organization.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "1b50518e-579e-5dc1-a632-17b83ffcfdef",
+      "entityCode": "operating_organization",
+      "operationKey": "retire",
+      "permissionId": "cb63837e-a140-542e-b4a5-37aa92d42dce",
+      "permissionCode": "neon.organization.operating_organization.retire",
+      "status": "draft"
+    },
+    {
+      "bindingId": "93e62579-a26d-55fd-a8f0-ff37160b915a",
+      "entityCode": "operating_organization",
+      "operationKey": "unassign_company_code",
+      "permissionId": "9443bf72-5cfb-5acc-bd35-93e1ba18264b",
+      "permissionCode": "neon.organization.operating_organization.unassign_company_code",
+      "status": "draft"
+    },
+    {
+      "bindingId": "660caac8-e3b5-5e8b-ad38-3680c6d4cae7",
+      "entityCode": "operating_organization",
+      "operationKey": "update",
+      "permissionId": "171261e4-fc84-56c3-8ea6-0f4200cd6f62",
+      "permissionCode": "neon.organization.operating_organization.update",
+      "status": "draft"
+    },
+    {
+      "bindingId": "124fb52d-9603-5204-a622-a7a2d3487adc",
+      "entityCode": "business_partner",
+      "operationKey": "activate",
+      "permissionId": "ec73bb07-5bb4-5343-a5b4-8e99e22b54dc",
+      "permissionCode": "neon.relationship.business_partner.activate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "6a729047-ef18-51a8-a20b-6acc07e244e4",
+      "entityCode": "business_partner",
+      "operationKey": "archive",
+      "permissionId": "4c837a70-052d-5b18-ab90-04c07b893b38",
+      "permissionCode": "neon.relationship.business_partner.archive",
+      "status": "draft"
+    },
+    {
+      "bindingId": "27b2ba3b-a61c-5f3b-adbc-c24a2f5755dc",
+      "entityCode": "business_partner",
+      "operationKey": "create",
+      "permissionId": "a04f7edb-c487-5fb8-9a61-1f532f233860",
+      "permissionCode": "neon.relationship.business_partner.create",
+      "status": "draft"
+    },
+    {
+      "bindingId": "d8a94353-c903-50d0-aa01-873e60415d77",
+      "entityCode": "business_partner",
+      "operationKey": "deactivate",
+      "permissionId": "ad6356e4-d2ef-51c9-b9ec-13c45f72f042",
+      "permissionCode": "neon.relationship.business_partner.deactivate",
+      "status": "draft"
+    },
+    {
+      "bindingId": "aa85cf18-011a-5ccf-af01-4aa9dbbfc355",
+      "entityCode": "business_partner",
+      "operationKey": "read",
+      "permissionId": "66520bd3-adb6-533a-aef7-3f77ea5ab6e8",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "status": "draft"
+    },
+    {
+      "bindingId": "f904d83b-aa3a-5557-a91b-b42d4fd9b774",
+      "entityCode": "business_partner",
+      "operationKey": "update",
+      "permissionId": "991c3e90-f8c6-57d9-a0ad-21b8d3c396a6",
+      "permissionCode": "neon.relationship.business_partner.update",
+      "status": "draft"
+    }
+  ]
+}

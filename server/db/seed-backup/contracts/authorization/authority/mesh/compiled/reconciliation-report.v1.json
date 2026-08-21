@@ -1,0 +1,32 @@
+{
+  "reportVersion": "wave3.authorization-authority.verification.v1",
+  "reproducibleInputSha256": "d07a3f90fd089a668c7218a9dbc683daa21870d461d3fa632f8a1316a66b2283",
+  "authorityVersion": "wave3.mesh.authority.v1",
+  "target": "mesh",
+  "status": "pass",
+  "counts": {
+    "catalogPermissions": 32,
+    "permissionSets": 4,
+    "roles": 4,
+    "groups": 5,
+    "zeroGrantGroups": 1,
+    "proofEdges": 86
+  },
+  "gates": {
+    "exactPermissionSets": true,
+    "tenantPlaneConsistent": true,
+    "emptyScopeNeverGrants": true,
+    "meshLocalProofGraph": true,
+    "everyActiveUserDeliberatelyMapped": "live_snapshot_gate_required",
+    "inactiveAuthorityGrantsNothing": "live_database_gate_required",
+    "backfillAnomaliesZero": "live_database_gate_required",
+    "targetConstraintsValidated": "live_database_gate_required",
+    "finalAuthorityNotNull": "post_backfill_live_gate_required"
+  },
+  "readAudit": [
+    "authority/authorization-authority-semantic-contract.v1.json",
+    "authority/mesh/authority.v1.json",
+    "catalog/mesh/compiled/compiled-catalog.v1.json"
+  ],
+  "failures": []
+}

@@ -1,0 +1,145 @@
+import { expect, test } from "@playwright/test";
+import {
+  CORE_SURFACES,
+  REQUIRED_COMPONENT_STATES,
+  assertKeyboardReachability,
+  assertSurfaceContract,
+  assertWebVitalBudgets,
+  observeWebVitals,
+  productionContext,
+} from "./fixtures";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  const context = productionContext(testInfo);
+  test.skip(!context.enabled, "set PLAYWRIGHT_PRODUCTION_MATRIX=1 and plane credentials");
+  await observeWebVitals(page);
+});
+
+test("login and context selection remain reachable", async ({ browser }, testInfo) => {
+  const project = productionContext(testInfo);
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL as string,
+    ignoreHTTPSErrors: true,
+  });
+  const page = await context.newPage();
+  await page.goto("/login");
+  await expect(page.getByLabel(/email|username/i)).toBeVisible();
+  await expect(page.getByLabel(/password/i)).toBeVisible();
+  await expect(page.getByRole("button", { name: /sign in|log in/i })).toBeEnabled();
+  await context.close();
+  expect(["studio", "neon", "mesh"]).toContain(project.plane);
+});
+
+for (const surface of CORE_SURFACES) {
+  test(`${surface.code}: shell, accessibility, keyboard and performance`, async ({ page }) => {
+    await page.goto(surface.route);
+    await assertSurfaceContract(page, surface.code);
+    await assertKeyboardReachability(page);
+    await assertWebVitalBudgets(page);
+  });
+}
+
+test("desktop or mobile shell matches the active project", async ({ page }, testInfo) => {
+  const { formFactor } = productionContext(testInfo);
+  await page.goto("/dashboard");
+  if (formFactor === "mobile") {
+    await expect(page.getByRole("button", { name: /open navigation|menu/i })).toBeVisible();
+  } else {
+    await expect(page.getByRole("navigation").first()).toBeVisible();
+  }
+});
+
+test("light, dark and density modes retain the surface contract", async ({ page }) => {
+  await page.goto("/settings");
+  for (const theme of ["light", "dark"]) {
+    for (const density of ["compact", "default", "comfortable"]) {
+      await page.evaluate(({ theme: nextTheme, density: nextDensity }) => {
+        document.documentElement.classList.toggle("dark", nextTheme === "dark");
+        document.documentElement.dataset.density = nextDensity;
+      }, { theme, density });
+      await assertSurfaceContract(page, `settings:${theme}:${density}`);
+    }
+  }
+});
+
+test("runtime list/detail/document fixtures use bounded requests", async ({ page }) => {
+  const entity = process.env.PLAYWRIGHT_RUNTIME_ENTITY;
+  const record = process.env.PLAYWRIGHT_RUNTIME_RECORD_ID;
+  test.skip(!entity || !record, "requires PLAYWRIGHT_RUNTIME_ENTITY and PLAYWRIGHT_RUNTIME_RECORD_ID");
+  const listRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/\/api\/.*(?:records|entities)/.test(request.url())) listRequests.push(request.url());
+  });
+  await page.goto(`/app/${encodeURIComponent(entity!)}`);
+  await assertSurfaceContract(page, "runtime-list");
+  await page.goto(`/app/${encodeURIComponent(entity!)}/${encodeURIComponent(record!)}`);
+  await assertSurfaceContract(page, "runtime-detail-document");
+  expect(listRequests.every((url) => /(?:limit|page_size|size)=\d+/.test(url) || !url.includes("?")))
+    .toBe(true);
+});
+
+test("dashboard and settings bootstrap without route-level request waterfalls", async ({ page }) => {
+  for (const route of ["/dashboard", "/settings"]) {
+    const bootstrapRequests: string[] = [];
+    const listener = (request: { resourceType(): string; url(): string }) => {
+      if (request.resourceType() === "fetch" || request.resourceType() === "xhr") {
+        bootstrapRequests.push(request.url());
+      }
+    };
+    page.on("request", listener);
+    await page.goto(route);
+    await page.locator("[aria-busy='true']").first().waitFor({ state: "detached", timeout: 20_000 }).catch(() => undefined);
+    page.removeListener("request", listener);
+    const aggregateRequests = bootstrapRequests.filter((url) =>
+      route === "/dashboard"
+        ? /\/api\/relay\/platform\/dashboard(?:\?|$)/.test(url)
+        : /\/api\/.*settings.*(?:bootstrap|effective)(?:\?|$)/.test(url));
+    expect(aggregateRequests.length, `${route} bootstrap request count`).toBeLessThanOrEqual(1);
+  }
+});
+
+for (const state of REQUIRED_COMPONENT_STATES) {
+  test(`seeded component state: ${state}`, async ({ page }) => {
+    const environmentKey = `PLAYWRIGHT_STATE_${state.replaceAll("-", "_").toUpperCase()}_ROUTE`;
+    const route = process.env[environmentKey];
+    test.skip(!route, `requires ${environmentKey}`);
+    await page.goto(route!);
+    await expect(
+      page.locator(`[data-ui-state="${state}"]`).or(page.getByText(stateText(state))).first(),
+    ).toBeVisible();
+  });
+}
+
+test("permission denied and expired session fail closed", async ({ page, context }) => {
+  const deniedRoute = process.env.PLAYWRIGHT_DENIED_ROUTE ?? "/settings/tenant/not-authorized/general";
+  await page.goto(deniedRoute);
+  await expect(page.locator("body")).toContainText(/denied|not authorized|not found|unavailable/i);
+  await context.clearCookies();
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/login|auth/i);
+});
+
+test("required state vocabulary is complete", () => {
+  expect(REQUIRED_COMPONENT_STATES).toEqual([
+    "loading", "empty", "partial", "error", "unauthorized", "unavailable",
+    "stale", "mutation-pending", "mutation-success", "mutation-conflict",
+    "mutation-failure",
+  ]);
+});
+
+function stateText(state: (typeof REQUIRED_COMPONENT_STATES)[number]): RegExp {
+  const patterns: Record<(typeof REQUIRED_COMPONENT_STATES)[number], RegExp> = {
+    loading: /loading/i,
+    empty: /no .* available|no .* found|empty/i,
+    partial: /some data .* unavailable|partial/i,
+    error: /unable to load|temporarily unavailable|try again/i,
+    unauthorized: /denied|not authorized/i,
+    unavailable: /feature unavailable|not available/i,
+    stale: /stale|out of date/i,
+    "mutation-pending": /saving|submitting|working/i,
+    "mutation-success": /saved|completed|success/i,
+    "mutation-conflict": /changed elsewhere|conflict/i,
+    "mutation-failure": /save failed|action failed|could not be saved/i,
+  };
+  return patterns[state];
+}

@@ -1,0 +1,270 @@
+#!/usr/bin/env node
+/**
+ * kysely-generate-from-ast.mjs
+ * ============================
+ * Generates Kysely TypeScript types from a Prisma schema file using
+ * @mrleebo/prisma-ast (pure JS, no WASM). Produces the same output as
+ * prisma-kysely, but bypasses the Prisma WASM schema-build binary that panics
+ * on large schemas (capacity overflow with 400+ models).
+ *
+ * Usage:
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.neon.prisma
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.mesh.prisma
+ *   node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.studio.prisma
+ */
+
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { resolve, dirname, join } from "node:path";
+import { createRequire } from "node:module";
+import { execSync } from "node:child_process";
+
+// Resolve @mrleebo/prisma-ast: local node_modules first, then global npm.
+function resolvePrismaAst() {
+  const __dir = dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1"));
+  const candidates = [
+    resolve(__dir, "../node_modules/@mrleebo/prisma-ast/dist/index.js"),
+    resolve(__dir, "../../../../../../node_modules/.pnpm/node_modules/@mrleebo/prisma-ast/dist/index.js"),
+    resolve(__dir, "../../../../../../node_modules/@mrleebo/prisma-ast/dist/index.js"),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) return p;
+  }
+  try {
+    const globalRoot = execSync("npm root -g", { encoding: "utf-8" }).trim();
+    // prisma-kysely bundles it; prisma itself may also carry it via @prisma/dev
+    for (const sub of [
+      "prisma-kysely/node_modules/@mrleebo/prisma-ast/dist/index.js",
+      "prisma/node_modules/@prisma/dev/node_modules/@mrleebo/prisma-ast/dist/index.js",
+      "@mrleebo/prisma-ast/dist/index.js",
+    ]) {
+      const p = resolve(globalRoot, sub);
+      if (existsSync(p)) return p;
+    }
+  } catch {}
+  throw new Error("Cannot locate @mrleebo/prisma-ast — run: npm install -g prisma-kysely");
+}
+
+const require = createRequire(import.meta.url);
+const { getSchema } = require(resolvePrismaAst());
+
+// ── CLI args ──────────────────────────────────────────────────────────────────
+const args = process.argv.slice(2);
+function getArg(name) {
+  const idx = args.indexOf(name);
+  return idx !== -1 ? args[idx + 1] : null;
+}
+
+const schemaArg = getArg("--schema");
+const outputArg = getArg("--output");
+if (!schemaArg) {
+  console.error("Usage: node kysely-generate-from-ast.mjs --schema <path> [--output <dir>]");
+  process.exit(1);
+}
+
+const schemaPath = resolve(process.cwd(), schemaArg);
+
+// ── Type mappings ─────────────────────────────────────────────────────────────
+const PRISMA_SCALAR_MAP = {
+  String: "string",
+  Int: "number",
+  Float: "number",
+  BigInt: "bigint",
+  Decimal: "string",
+  Boolean: "boolean",
+  DateTime: "Timestamp",
+  Json: "unknown",
+  Bytes: "Buffer",
+};
+
+function mapPrismaType(typeName) {
+  return PRISMA_SCALAR_MAP[typeName] ?? null;
+}
+
+// ── Parse schema ──────────────────────────────────────────────────────────────
+const schemaSource = readFileSync(schemaPath, "utf-8");
+const parsed = getSchema(schemaSource);
+
+function getGeneratorOutput(schema, generatorName) {
+  for (const block of schema.list) {
+    if (block.type === "generator" && block.name === generatorName) {
+      for (const a of block.assignments) {
+        if (a.type === "assignment" && a.key === "output") {
+          const v = a.value;
+          return typeof v === "string" ? v.replace(/^"|"$/g, "") : null;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+let outputDir;
+if (outputArg) {
+  outputDir = resolve(process.cwd(), outputArg);
+} else {
+  const relOut = getGeneratorOutput(parsed, "kysely");
+  if (!relOut) {
+    console.error("Could not find 'generator kysely { output = ... }' in schema. Pass --output.");
+    process.exit(1);
+  }
+  outputDir = resolve(dirname(schemaPath), relOut);
+}
+
+const modelNames = new Set();
+const enumNames = new Set();
+for (const block of parsed.list) {
+  if (block.type === "model") modelNames.add(block.name);
+  if (block.type === "enum") enumNames.add(block.name);
+}
+
+// ── Extract model info ────────────────────────────────────────────────────────
+function getStringArgValue(arg) {
+  if (!arg) return null;
+  const v = arg.value;
+  if (typeof v === "string") return v.replace(/^"|"$/g, "");
+  return null;
+}
+
+function hasRelationAttr(field) {
+  return field.attributes?.some((a) => a.name === "relation") ?? false;
+}
+
+function hasDefaultAttr(field) {
+  return field.attributes?.some((a) => a.name === "default") ?? false;
+}
+
+function getSchemaAttr(block) {
+  const props = block.properties ?? [];
+  for (const p of props) {
+    if (p.type === "attribute" && p.name === "schema") {
+      const firstArg = p.args?.[0];
+      if (firstArg) return getStringArgValue(firstArg) ?? null;
+    }
+  }
+  return null;
+}
+
+function getMapAttr(block) {
+  const props = block.properties ?? [];
+  for (const p of props) {
+    if (p.type === "attribute" && p.name === "map") {
+      const firstArg = p.args?.[0];
+      if (firstArg) return getStringArgValue(firstArg) ?? null;
+    }
+  }
+  return null;
+}
+
+// ── Generate output ───────────────────────────────────────────────────────────
+const DEFAULT_SCHEMA = "public";
+const lines = [];
+
+lines.push(`import type { ColumnType } from "kysely";`);
+lines.push(`export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>`);
+lines.push(`  ? ColumnType<S, I | undefined, U>`);
+lines.push(`  : ColumnType<T, T | undefined, T>;`);
+lines.push(`export type Timestamp = ColumnType<Date, Date | string, Date | string>;`);
+lines.push(``);
+
+for (const block of parsed.list) {
+  if (block.type !== "enum") continue;
+  const values = block.enumerators
+    .filter((e) => e.type === "enumerator")
+    .map((e) => `"${e.name}"`);
+  if (values.length === 0) continue;
+  lines.push(`export type ${block.name} = ${values.join(" | ")};`);
+  lines.push(``);
+}
+
+const models = parsed.list.filter((b) => b.type === "model");
+models.sort((a, b) => a.name.localeCompare(b.name));
+
+const dbEntries = [];
+
+for (const model of models) {
+  const modelName = model.name;
+  const pgSchema = getSchemaAttr(model) ?? DEFAULT_SCHEMA;
+  const tableDbName = getMapAttr(model) ?? modelName;
+
+  const fieldLines = [];
+  for (const prop of model.properties) {
+    if (prop.type !== "field") continue;
+    const field = prop;
+
+    if (hasRelationAttr(field)) continue;
+
+    let fieldTypeName;
+    if (typeof field.fieldType === "string") {
+      fieldTypeName = field.fieldType;
+    } else if (field.fieldType?.type === "function") {
+      fieldTypeName = "Unsupported";
+    } else {
+      fieldTypeName = String(field.fieldType);
+    }
+
+    const tsScalar = mapPrismaType(fieldTypeName);
+    let tsType;
+
+    if (tsScalar !== null) {
+      tsType = tsScalar;
+    } else if (enumNames.has(fieldTypeName)) {
+      tsType = fieldTypeName;
+    } else if (modelNames.has(fieldTypeName)) {
+      if (field.array || field.optional) continue;
+      continue;
+    } else if (fieldTypeName === "Unsupported") {
+      tsType = "unknown";
+    } else {
+      tsType = "unknown";
+    }
+
+    if (field.array) {
+      tsType = `${tsType}[]`;
+    }
+
+    const hasDefault = hasDefaultAttr(field);
+    const isOptional = field.optional && !field.array;
+
+    let finalType;
+    if (hasDefault && isOptional) {
+      finalType = `Generated<${tsType} | null>`;
+    } else if (hasDefault) {
+      finalType = `Generated<${tsType}>`;
+    } else if (isOptional) {
+      finalType = `${tsType} | null`;
+    } else {
+      finalType = tsType;
+    }
+
+    fieldLines.push(`    ${field.name}: ${finalType};`);
+  }
+
+  if (fieldLines.length === 0) continue;
+
+  lines.push(`export type ${modelName} = {`);
+  for (const fl of fieldLines) lines.push(fl);
+  lines.push(`};`);
+  lines.push(``);
+
+  const dbKey =
+    pgSchema === DEFAULT_SCHEMA
+      ? tableDbName
+      : `${pgSchema}.${tableDbName}`;
+  dbEntries.push({ key: dbKey, typeName: modelName });
+}
+
+lines.push(`export type DB = {`);
+for (const entry of dbEntries) {
+  const needsQuotes = entry.key.includes(".");
+  const keyStr = needsQuotes ? `"${entry.key}"` : entry.key;
+  lines.push(`    ${keyStr}: ${entry.typeName};`);
+}
+lines.push(`};`);
+lines.push(``);
+
+// ── Write output ──────────────────────────────────────────────────────────────
+mkdirSync(outputDir, { recursive: true });
+const outputPath = join(outputDir, "types.ts");
+writeFileSync(outputPath, lines.join("\n"), "utf-8");
+console.log(`Generated ${lines.length} lines → ${outputPath}`);
+console.log(`  Models: ${models.length}, DB entries: ${dbEntries.length}`);

@@ -1,0 +1,345 @@
+{
+  "contractVersion": "athyper.authorization.scope-compatibility.v1",
+  "scopeVersion": "1.0.0",
+  "plane": "neon",
+  "defaultScopeBehavior": "deny_undeclared",
+  "permissions": [
+    {
+      "permissionCode": "neon.address_contact.company_code.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "company_code",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.address_contact.legal_entity.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.address_contact.tenant.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent.provider_diagnostics",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent.use",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_admin.support_session",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_feedback.submit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_history.delete",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_history.export",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_history.manage",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_history.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.ai.agent_tools.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.context.catalog.read",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "company_code",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.records.lock.force_release",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "resource",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.create",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.relationship.business_partner.update",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.banking.admin",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.banking.submit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.banking.verify",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.governance.write",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.qualification.admin",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.tax.restricted",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.tax.submit",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    },
+    {
+      "permissionCode": "neon.supplier.tax.verify",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "legal_entity",
+          "propagation": "exact"
+        },
+        {
+          "kind": "operating_organization",
+          "propagation": "subtree"
+        }
+      ]
+    }
+  ],
+  "sha256": "dd6d5beff70972101abf790f928a2371ddeb3f4abbb50438b485d89577883a12"
+}

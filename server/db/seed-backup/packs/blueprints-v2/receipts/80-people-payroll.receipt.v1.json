@@ -1,0 +1,16 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "people-payroll",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "b2325e4c100632593461d4fd79ce0344056d0edf94d5ea732c46c6240f79fdf8",
+    "plane":  "neon",
+    "tenantId":  "f5000000-0000-0000-0000-000000000001",
+    "status":  "pending-validation",
+    "appliedAt":  null,
+    "payloadResults":  [
+
+                       ],
+    "assertionResults":  [
+
+                         ]
+}

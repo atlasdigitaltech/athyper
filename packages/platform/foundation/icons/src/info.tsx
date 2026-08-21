@@ -1,0 +1,3 @@
+import * as React from "react";
+import { IconFrame, type IconProps } from "./icon";
+export function InfoIcon(props: IconProps) { return <IconFrame {...props}><circle cx="12" cy="12" r="9" /><path d="M12 11v6M12 7h.01" /></IconFrame>; }

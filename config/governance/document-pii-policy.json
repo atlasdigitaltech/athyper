@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "classificationMode": "advisory",
+  "supportedJurisdictions": ["baseline-global"],
+  "supportedBaselineTypes": ["credit_card", "email", "iban", "ip_address", "phone", "ssn"],
+  "baselineDetector": {
+    "confidence": "heuristic",
+    "persistsMatchedValues": false,
+    "redactsSourceText": false,
+    "escalation": "A governed detector is mandatory before automated redaction, legal-hold decisions, cross-border classification, or blocking workflow decisions."
+  },
+  "falsePositiveHandling": "Labels are review signals. They must not independently deny access, redact data, or create a legal/compliance record."
+}

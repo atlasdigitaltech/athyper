@@ -1,0 +1,18 @@
+{
+  "name": "@athyper/server-platform-collaboration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "build": "tsc -p tsconfig.json", "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit", "test": "vitest run" },
+  "dependencies": {
+    "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-audit": "workspace:*",
+    "@athyper/server-contract-collaboration": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-contract-governance": "workspace:*",
+    "@athyper/server-foundation": "workspace:*"
+    ,"express":"^5.0.0","kysely":"^0.28.16"
+  },
+  "devDependencies": { "@types/express":"^5.0.1", "@types/node": "^25.6.0", "typescript": "^6.0.3", "vitest": "^4.1.4" }
+}

@@ -28,7 +28,7 @@ assignees: ''
 <!-- Which part of the ecosystem does this touch? -->
 - [ ] athyper (Framework core)
 - [ ] neon (Platform)
-- [ ] mesh (Network)
+- [ ] stack (Infrastructure)
 - [ ] atlas (AI Agent)
 
 ## Priority

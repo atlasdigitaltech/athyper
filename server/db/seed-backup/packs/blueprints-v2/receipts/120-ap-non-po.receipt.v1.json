@@ -1,0 +1,16 @@
+{
+    "contractVersion":  "athyper.blueprint-application-receipt.v1",
+    "packCode":  "ap-non-po",
+    "packVersion":  "2.0.0",
+    "packChecksum":  "5e944c6432230fd0067a11368b6e1b8b803a3de587bd3b9532a460761e647aee",
+    "plane":  "neon",
+    "tenantId":  "f5000000-0000-0000-0000-000000000001",
+    "status":  "pending-validation",
+    "appliedAt":  null,
+    "payloadResults":  [
+
+                       ],
+    "assertionResults":  [
+
+                         ]
+}

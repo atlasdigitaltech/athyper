@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "contractId": "authorization-v2-wave8-reset-cutover-observation",
+  "status": "approval_required",
+  "requiredEnvironmentClass": "isolated_production_like",
+  "databaseStrategy": "fresh_target_connection_switch",
+  "inPlaceResetAllowed": false,
+  "sourceRetention": "immutable_and_independently_restorable_through_observation",
+  "requiredComponents": [
+    "neon_database",
+    "mesh_database",
+    "keycloak"
+  ],
+  "requiredPlanes": [
+    "neon",
+    "mesh"
+  ],
+  "requiredDirections": [
+    "forward"
+  ],
+  "reverseReplayRule": "required_when_lossless_post_write_rollback_is_promised",
+  "requiredSeedCaptures": [
+    "clean_build_a",
+    "clean_build_b",
+    "forced_reseed_a",
+    "forced_reseed_b",
+    "in_place_upgrade"
+  ],
+  "requiredAcceptanceDomains": [
+    "authorization",
+    "business_data"
+  ],
+  "requiredNegativeTests": [
+    "cross_plane",
+    "least_privilege_rls",
+    "opposite_database_unavailable",
+    "single_dispatcher_lease",
+    "external_effect_conservation"
+  ],
+  "promotionRules": [
+    "source and target database URLs and identities are distinct",
+    "target is a fresh plane-local database",
+    "all evidence belongs to one rehearsal and repository revision",
+    "target remains read-only until all promotion gates pass",
+    "Neon and Mesh switch as one compatible release",
+    "no lossless post-write rollback claim without reverse replay",
+    "legacy sources remain restorable through stable observation"
+  ],
+  "liveExecution": {
+    "authorized": false,
+    "reason": "exact environment identities, approvals, RPO/RTO and evidence are not checked into source control"
+  }
+}

@@ -1,0 +1,60 @@
+-- seed-contract-version: 1
+-- seed-pack: common.shared.example
+-- seed-pack-version: 1.0.0
+-- seed-dataset: shared.example
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"internal-canonical-catalog","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-03","license":"internal"}
+-- seed-plane: common
+-- seed-tenant-scope: none
+-- seed-natural-key: shared.example(code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: natural-key-only
+-- seed-expected-row-count: exact:1
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+
+DO $seed_plane_guard$
+BEGIN
+    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
+        RAISE EXCEPTION '[common.shared.example] app.database_plane is missing or invalid';
+    END IF;
+END;
+$seed_plane_guard$;
+
+INSERT INTO shared.example (code, name, status, created_by)
+VALUES ('example', 'Example', 'active', '00000000-0000-0000-0000-000000000000')
+ON CONFLICT (code) DO UPDATE
+SET name = EXCLUDED.name,
+    status = EXCLUDED.status,
+    updated_at = now(),
+    updated_by = EXCLUDED.created_by
+WHERE (shared.example.name, shared.example.status)
+      IS DISTINCT FROM
+      (EXCLUDED.name, EXCLUDED.status);
+
+DO $seed_assertions$
+DECLARE
+    v_count integer;
+BEGIN
+    -- seed-assertion: expected-count
+    SELECT count(*) INTO v_count FROM shared.example WHERE code = 'example';
+    IF v_count <> 1 THEN
+        RAISE EXCEPTION '[common.shared.example] expected 1 owned row, found %', v_count;
+    END IF;
+
+    -- seed-assertion: orphan
+    IF EXISTS (SELECT 1 FROM shared.example WHERE code = 'example' AND created_by IS NULL) THEN
+        RAISE EXCEPTION '[common.shared.example] orphan audit authority';
+    END IF;
+
+    -- seed-assertion: uniqueness
+    IF EXISTS (SELECT code FROM shared.example WHERE code = 'example' GROUP BY code HAVING count(*) <> 1) THEN
+        RAISE EXCEPTION '[common.shared.example] natural-key uniqueness failure';
+    END IF;
+
+    -- seed-assertion: semantic
+    IF EXISTS (SELECT 1 FROM shared.example WHERE code = 'example' AND status <> 'active') THEN
+        RAISE EXCEPTION '[common.shared.example] semantic status failure';
+    END IF;
+END;
+$seed_assertions$;

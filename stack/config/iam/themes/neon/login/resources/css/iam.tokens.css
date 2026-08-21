@@ -1,0 +1,199 @@
+/*
+ * GENERATED from @athyper/platform-theme/src/tokens.ts.
+ * Do not edit. Run: pnpm iam:build
+ */
+@font-face {
+  font-family: "Geist";
+  src: url("../fonts/Geist-Variable.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+:root, :root[data-theme="light"] {
+  --a-background: #f8fafc;
+  --a-foreground: #172033;
+  --a-surface: #ffffff;
+  --a-surface-raised: #ffffff;
+  --a-muted: #eef2f7;
+  --a-muted-foreground: #5b6578;
+  --a-border: #d5dce7;
+  --a-input: #aab4c5;
+  --a-primary: #175cd3;
+  --a-primary-foreground: #ffffff;
+  --a-danger: #b42318;
+  --a-danger-foreground: #ffffff;
+  --a-warning: #b54708;
+  --a-warning-foreground: #ffffff;
+  --a-success: #067647;
+  --a-success-foreground: #ffffff;
+  --a-focus: #2e90fa;
+  --a-scrim: rgb(15 23 42 / 0.58);
+  --a-contrast: #151515;
+  --a-contrast-foreground: #ffffff;
+  --a-warning-subtle: #fff8eb;
+  --a-warning-subtle-foreground: #172033;
+  --a-font-sans:Geist, Inter, ui-sans-serif, system-ui, sans-serif;
+  --a-font-mono:ui-monospace, SFMono-Regular, monospace;
+  --a-font-size-body:0.9375rem;
+  --a-font-size-sm:0.875rem;
+  --a-font-size-title:1.5rem;
+  --a-line-height-body:1.5;
+  --a-line-height-title:1.25;
+  --a-font-weight-regular:500;
+  --a-font-weight-strong:700;
+  --a-space-1:0.25rem;
+  --a-space-2:0.5rem;
+  --a-space-3:0.75rem;
+  --a-space-4:1rem;
+  --a-space-5:1.25rem;
+  --a-space-6:1.5rem;
+  --a-space-8:2rem;
+  --a-space-10:2.5rem;
+  --a-radius-sm:0.375rem;
+  --a-radius-md:0.625rem;
+  --a-radius-lg:0.875rem;
+  --a-radius-xl:1rem;
+  --a-radius-round:9999px;
+  --a-shadow-raised:0 1px 3px rgb(15 23 42 / 0.12);
+  --a-shadow-overlay:0 18px 48px rgb(15 23 42 / 0.24);
+  --a-shadow-prominent:0 1.5rem 4rem rgb(15 23 42 / 0.14);
+  --a-motion-fast:120ms;
+  --a-motion-normal:180ms;
+  --a-motion-slow:260ms;
+  --a-easing:cubic-bezier(.2,.8,.2,1);
+  --a-focus-width:3px;
+  --a-focus-offset:2px;
+  --a-border-width:1px;
+  --a-content-sm:32rem;
+  --a-icon-sm:1rem;
+  --a-icon-md:1.25rem;
+  --a-logo-md:1.75rem;
+  --a-control-height:2.5rem;
+  --a-touch-target:2.75rem;
+  --a-opacity-interactive:0.88;
+  --a-opacity-disabled:0.55;
+  --athyper-color-bg:var(--a-background);
+  --athyper-color-surface:var(--a-muted);
+  --athyper-color-surface-raised:var(--a-surface-raised);
+  --athyper-color-text:var(--a-foreground);
+  --athyper-color-muted:var(--a-muted-foreground);
+  --athyper-color-border:var(--a-border);
+  --athyper-color-primary:var(--a-contrast);
+  --athyper-color-primary-foreground:var(--a-contrast-foreground);
+  --athyper-color-success:var(--a-success);
+  --athyper-color-warning:var(--a-warning);
+  --athyper-color-danger:var(--a-danger);
+  --athyper-color-info:var(--a-primary);
+  --athyper-color-neon:var(--a-contrast);
+  --athyper-color-mesh:var(--a-contrast);
+  --athyper-color-studio:var(--a-contrast);
+  --plane-accent:var(--a-contrast);
+  --athyper-font-sans:var(--a-font-sans);
+  --athyper-font-mono:var(--a-font-mono);
+  --athyper-space-1:var(--a-space-1);
+  --athyper-space-2:var(--a-space-2);
+  --athyper-space-3:var(--a-space-3);
+  --athyper-space-4:var(--a-space-4);
+  --athyper-space-5:var(--a-space-5);
+  --athyper-space-6:var(--a-space-6);
+  --athyper-space-8:var(--a-space-8);
+  --athyper-space-10:var(--a-space-10);
+  --athyper-radius-sm:var(--a-radius-sm);
+  --athyper-radius-md:var(--a-radius-md);
+  --athyper-radius-lg:var(--a-radius-lg);
+  --athyper-radius-xl:var(--a-radius-xl);
+  --athyper-shadow-sm:var(--a-shadow-raised);
+  --athyper-shadow-md:var(--a-shadow-raised);
+  --athyper-shadow-lg:var(--a-shadow-prominent);
+  --athyper-focus-ring:0 0 0 var(--a-focus-width) var(--a-focus);
+  --athyper-motion-fast:var(--a-motion-fast);
+  --athyper-motion-normal:var(--a-motion-normal);
+  --background:var(--a-background);
+  --foreground:var(--a-foreground);
+  --card:var(--a-surface-raised);
+  --card-foreground:var(--a-foreground);
+  --popover:var(--a-surface-raised);
+  --popover-foreground:var(--a-foreground);
+  --primary:var(--a-contrast);
+  --primary-foreground:var(--a-contrast-foreground);
+  --secondary:var(--a-muted);
+  --secondary-foreground:var(--a-foreground);
+  --accent:var(--a-muted);
+  --accent-foreground:var(--a-foreground);
+  --muted:var(--a-muted);
+  --muted-foreground:var(--a-muted-foreground);
+  --destructive:var(--a-danger);
+  --destructive-foreground:var(--a-danger-foreground);
+  --success:var(--a-success);
+  --warning:var(--a-warning);
+  --info:var(--a-primary);
+  --border:var(--a-border);
+  --input:var(--a-input);
+  --ring:var(--a-focus);
+  --radius:var(--a-radius-md);
+  --shadow-sm:var(--a-shadow-raised);
+  --shadow-md:var(--a-shadow-raised);
+  --bg:var(--a-background);
+  --fg:var(--a-foreground);
+  --primary-fg:var(--a-contrast-foreground);
+  --muted-fg:var(--a-muted-foreground);
+  --input-bg:var(--a-surface-raised);
+  color-scheme: light;
+}
+
+:root[data-theme="dark"], :root.dark {
+  --a-background: #0b1220;
+  --a-foreground: #e8edf5;
+  --a-surface: #111b2e;
+  --a-surface-raised: #17243a;
+  --a-muted: #1d2a40;
+  --a-muted-foreground: #a8b3c7;
+  --a-border: #33425a;
+  --a-input: #52627a;
+  --a-primary: #84adff;
+  --a-primary-foreground: #071225;
+  --a-danger: #f97066;
+  --a-danger-foreground: #230402;
+  --a-warning: #fec84b;
+  --a-warning-foreground: #241400;
+  --a-success: #47cd89;
+  --a-success-foreground: #031b12;
+  --a-focus: #84caff;
+  --a-scrim: rgb(0 0 0 / 0.72);
+  --a-contrast: #f4f6f8;
+  --a-contrast-foreground: #11151c;
+  --a-warning-subtle: #2b2110;
+  --a-warning-subtle-foreground: #f5f7fa;
+  color-scheme: dark;
+}
+
+:root[data-theme="high-contrast"] {
+  --a-background: #000000;
+  --a-foreground: #ffffff;
+  --a-surface: #000000;
+  --a-surface-raised: #0a0a0a;
+  --a-muted: #171717;
+  --a-muted-foreground: #ffffff;
+  --a-border: #ffffff;
+  --a-input: #ffffff;
+  --a-primary: #ffff00;
+  --a-primary-foreground: #000000;
+  --a-danger: #ff6b6b;
+  --a-danger-foreground: #000000;
+  --a-warning: #ffff00;
+  --a-warning-foreground: #000000;
+  --a-success: #66ff99;
+  --a-success-foreground: #000000;
+  --a-focus: #00ffff;
+  --a-scrim: rgb(0 0 0 / 0.88);
+  --a-contrast: #ffff00;
+  --a-contrast-foreground: #000000;
+  --a-warning-subtle: #000000;
+  --a-warning-subtle-foreground: #ffffff;
+  color-scheme: dark;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --a-motion-fast: 0ms; --a-motion-normal: 0ms; --a-motion-slow: 0ms; }
+}

@@ -1,0 +1,18 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "spend-taxonomy-business-intents",
+  "packVersion": "2.0.0",
+  "packChecksum": "80fddfc8b5446f1e7ad957ac87895375f24a2f8ea4f76d906675ba21f72b7b72",
+  "plane": "neon",
+  "tenantId": "f5000000-0000-0000-0000-000000000001",
+  "status": "validated-disposable-neon",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"010_spend_taxonomy manifest (10 ordered payloads)","status":"passed-twice"}
+  ],
+  "assertionResults": [
+    {"assertion":"tenant-and-actor-scope","status":"passed","evidence":"all tenant-owned payloads resolved the disposable tenant and an existing tenant principal"},
+    {"assertion":"hierarchy-and-policy-integrity","status":"passed","evidence":"category hierarchy, classification crosswalks, buy/sell policies, and inventory policies completed their embedded assertions"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"the complete ordered manifest succeeded on two consecutive same-database passes"}
+  ]
+}

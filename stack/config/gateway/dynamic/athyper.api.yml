@@ -1,0 +1,28 @@
+# =======================================================================
+# Stack       : athyper Stack – API Host Static Routing (local dev)
+# Environment : LOCAL
+#
+# Purpose:
+#   Routes api.athyper.local → host backend when running via api-up.bat
+#   (port 4000 on host). Traefik hot-reloads this file — no gateway
+#   restart required when the file is added/changed.
+#
+#   priority: 1 ensures the Docker-label router (auto-priority ≈ 30)
+#   wins in staging/prod when api container is running.
+#   This file is harmless in non-local environments.
+# =======================================================================
+
+http:
+  routers:
+    api-host:
+      rule: "Host(`api.athyper.local`)"
+      entryPoints: [websecure]
+      service: api-host
+      priority: 1
+      tls: {}
+
+  services:
+    api-host:
+      loadBalancer:
+        servers:
+          - url: "{{ env "APPS_ATHYPER_API_UPSTREAM_URL" }}"

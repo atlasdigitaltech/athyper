@@ -1,0 +1,36 @@
+name: athyper-iam-live
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: iam_live
+      POSTGRES_USER: iam_live
+      POSTGRES_PASSWORD: iam_live_test_only
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iam_live -d iam_live"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--requirepass", "iam_live_test_only", "--aclfile", "/usr/local/etc/redis/users.acl"]
+    volumes:
+      - ./redis-users.acl:/usr/local/etc/redis/users.acl:ro
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "iam_live_test_only", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: ["start-dev", "--health-enabled=true", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: iam_live_test_only
+    volumes:
+      - ../../stack/config/iam/realm-athyper.json:/opt/keycloak/data/import/realm-athyper.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\r\nhost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q '200 OK' <&3"]
+      interval: 5s
+      timeout: 5s
+      retries: 60

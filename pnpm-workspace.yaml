@@ -1,31 +1,88 @@
 packages:
-  # ─────────────────────────────────────────────
-  # Framework (engine)
-  # ─────────────────────────────────────────────
-  - "framework/core"
-  - "framework/runtime"
-  - "framework/adapters/*" # db, auth, memorycache, telemetry, objectstorage
+  - "apps/*"
+  - "packages/domain/*/*"
+  - "packages/planes/*"
+  - "packages/planes/*/*"
+  - "packages/product-deprecated/*/*"
+  - "packages/shared/*"
+  - "packages/shared/*/*"
+  - "!packages/shared/finance-rules"
+  - "!packages/shared/runtime-line-item"
+  - "!packages/shared/theme"
+  - "!packages/shared/ui"
+  - "tooling/*"
+  # ── Server packages (three-plane refactor structure) ──────────────────────
+  - "server/apps/*"
+  - "server/db"
+  - "server/packages/foundation"
+  - "server/packages/contracts/*"
+  - "server/packages/adapters/*"
+  - "server/packages/adapters/database/core"
+  - "server/packages/adapters/database/neon-postgres"
+  - "server/packages/adapters/database/athyper-postgres"
+  - "server/packages/adapters/database/mesh-postgres"
+  - "server/packages/runtime/*"
+  - "server/packages/platform/*"
+  - "server/packages/services/*"
+  - "server/packages/planes/*"
+  - "server/packages/planes/neon/*"
+  - "server/packages/planes/studio/*"
+  - "server/packages/planes/mesh/*"
+  - "server/packages/test-utils"
+  - "!packages/shared/business-domain/config"
+  # business-domain/theme re-enabled: @athyper/theme required by runtime-shared and consumers
+  # foundation/theme uses different name @athyper/platform-theme — no conflict
+  # - "!packages/shared/business-domain/theme"
+  - "!packages/shared/business-domain/ui"
+  # data-integration/icons re-enabled: @athyper/icons has no replacement (platform-icons is a different name)
+  # - "!packages/shared/data-integration/icons"
+  - "!packages/shared/platform-auth/config"
+  # cascade re-enabled: @athyper/cascade required by server/packages/services/shared
+  # - "!packages/shared/runtime-domain/cascade"
+  - "!packages/shared/runtime-domain/config"
+  # runtime-domain/content-ui re-enabled: @athyper/content-ui has no replacement in active workspace
+  # - "!packages/shared/runtime-domain/content-ui"
+  - "!packages/shared/runtime-domain/domain-widgets"
+  - "!packages/shared/runtime-domain/entity-print"
+  - "!packages/shared/runtime-domain/finance-rules"
+  - "!packages/shared/runtime-domain/icons"
+  - "!packages/shared/runtime-domain/temporal"
+  - "!packages/shared/runtime-domain/theme"
+  # runtime-domain/ui re-enabled: @athyper/ui peerDep required by runtime-shared and its consumers
+  # business-domain/ui stays excluded (same name @athyper/ui, superseded by runtime-domain/ui)
+  # - "!packages/shared/runtime-domain/ui"
+  - "!packages/shared/shared-infrastructure/config"
+  - "!packages/shared/ui-platform/config"
+  - "!packages/shared/ui-platform/finance-rules"
+  - "!packages/shared/ui-platform/i18n"
+  - "!packages/shared/ui-platform/notifications-client"
+  - "!packages/shared/ui-platform/temporal"
+  # ── Flat platform stubs (empty 1-line placeholders superseded by packages/platform/foundation/*) ──
+  - "!packages/platform/api-client"
+  - "!packages/platform/brand"
+  - "!packages/platform/core"
+  - "!packages/platform/i18n"
+  - "!packages/platform/icons"
+  - "!packages/platform/notifications"
+  - "!packages/platform/query"
+  - "!packages/platform/surface-kit"
+  - "!packages/platform/theme"
+  - "!packages/platform/ui"
+  # ── Old shared hierarchy copy superseded by packages/contracts/mesh-exchange ──
+  - "!packages/shared/data-integration/mesh-exchange-contracts"
 
-  # NOTE: clear
-  # Do NOT include framework/*
-  # Services are part of runtime package, not separate pnpm packages
-
-  # ─────────────────────────────────────────────
-  # Shared libraries & tooling
-  # ─────────────────────────────────────────────
-  - "packages/*" # ui, auth, api-client, workbenches
-  - "tooling/*" # eslint-config, tsconfig
-  - "tools/*" # codegen, etc.
-
-  # ─────────────────────────────────────────────
-  # Products (deployables)
-  # ─────────────────────────────────────────────
-  - "products/*/apps/*" # Next.js apps (neon/apps/web)
-  - "products/*/auth" # Product-specific auth packages
-  - "products/*/content" # Product-specific content packages
-  - "products/*/shared/*" # Product-specific shared packages
-  - "products/*/themes" # Product-specific theme packages
-
-
-  # OPTIONAL (enable only if product root has package.json)
-  # - "products/*"
+  # ── New package structure ────────────────────────────────────────────
+  - "packages/tooling/*"
+  - "packages/contracts/*"
+  - "packages/contracts/*/*"
+  - "packages/platform/*"
+  - "packages/platform/foundation/*"
+  - "packages/platform/gateway/*"
+  - "packages/platform/iam/*"
+  - "packages/platform/shell/*"
+  - "packages/platform/entity/runtime/*"
+  - "packages/platform/entity/authoring/*"
+  - "packages/platform/ai/*"
+  - "packages/platform/communications/*"
+  - "packages/planes/neon/modules/*"
+  - "packages/planes/studio/studio/*"

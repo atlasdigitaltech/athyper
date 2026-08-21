@@ -1,0 +1,6 @@
+{
+  "contractVersion": "athyper.authorization.inventory-promotion-qualification.v1",
+  "plane": "mesh",
+  "defaultDecision": "deny_unqualified",
+  "qualifications": []
+}

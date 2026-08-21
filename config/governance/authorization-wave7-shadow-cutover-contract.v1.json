@@ -1,0 +1,150 @@
+﻿{
+  "schemaVersion": 1,
+  "contractId": "authorization-v2-wave7-shadow-cutover",
+  "status": "implemented-operational-evidence-pending",
+  "planes": {
+    "neon": {
+      "authorityDatabase": "neon",
+      "defaultResolver": "legacy",
+      "defaultWriter": "legacy"
+    },
+    "studio": {
+      "authorityDatabase": "neon",
+      "defaultResolver": "legacy",
+      "defaultWriter": "legacy"
+    },
+    "mesh": {
+      "authorityDatabase": "mesh",
+      "defaultResolver": "legacy",
+      "defaultWriter": "legacy",
+      "forbiddenDependencies": [
+        "Neon relation",
+        "Neon DATABASE_URL",
+        "Neon authorization service fallback"
+      ]
+    }
+  },
+  "shadowConsumerPaths": [
+    "single",
+    "batch",
+    "session",
+    "studio",
+    "mesh",
+    "workflow",
+    "company_scope",
+    "acl"
+  ],
+  "mandatoryComparisonActionClasses": [
+    "mutation",
+    "admin_action",
+    "financial_posting",
+    "workflow_decision",
+    "delegation_use",
+    "acl_protected_read"
+  ],
+  "sampleEligibleActionClasses": [
+    "routine_read"
+  ],
+  "mismatchClasses": [
+    "capability",
+    "scope",
+    "precedence",
+    "plane",
+    "entitlement",
+    "operation_mapping",
+    "delegation",
+    "acl",
+    "data_defect"
+  ],
+  "comparison": {
+    "input": "one immutable identity and request context",
+    "evaluators": [
+      "exact legacy consumer path",
+      "canonical v2 evaluator",
+      "approved golden target truth"
+    ],
+    "normalization": [
+      "decision",
+      "plane",
+      "exact permission codes",
+      "typed scopes",
+      "reason",
+      "evidence kinds"
+    ],
+    "authorityDuringShadow": "legacy",
+    "composition": "select_one_never_union",
+    "missingTargetTruth": "data_defect",
+    "mismatchOwnershipRequired": true,
+    "dispositions": [
+      "unreviewed",
+      "expected",
+      "bug",
+      "retired"
+    ]
+  },
+  "projection": {
+    "source": "legacy transactional outbox captured before snapshot",
+    "start": "recorded durable source watermark",
+    "ordering": "monotonic source transaction watermark",
+    "atomicity": "all related rows from one source transaction",
+    "idempotency": "source database id plus source transaction id",
+    "cutoverBlockers": [
+      "partial source transaction",
+      "rejected transaction",
+      "lag above plane threshold",
+      "incomplete conservation reconciliation"
+    ]
+  },
+  "resolverStates": [
+    "legacy",
+    "shadow",
+    "cohort_enforce",
+    "all_enforce",
+    "observation_complete"
+  ],
+  "writerProtocol": {
+    "shadowAndReadCutoverWriter": "legacy",
+    "targetDirectWritesBeforeSwitch": "rejected",
+    "dualUnconstrainedWriters": "forbidden",
+    "switchPreconditions": [
+      "authorization writes frozen",
+      "source watermark equals applied watermark",
+      "complete transaction projection",
+      "conservation reconciled",
+      "target write guards validated",
+      "all reads enforce canonical authority"
+    ],
+    "postSwitchRollback": {
+      "instantPromiseRequires": "tested or active target-to-legacy projector",
+      "withoutProjector": "instant resolver rollback promise is closed before target-only writes"
+    }
+  },
+  "readCutoverGates": [
+    "zero unexplained high-risk mismatch",
+    "zero unowned mismatch",
+    "approved active-user corpus parity",
+    "projection within lag threshold",
+    "zero partial transactions",
+    "conservation complete",
+    "legacy sole writer",
+    "cache invalidation verified under load",
+    "decision evidence verified under load"
+  ],
+  "writerCutoverGates": [
+    "read cutover gates remain satisfied",
+    "authorization write freeze active",
+    "projection zero lag",
+    "validated target write guards",
+    "rollback contract satisfied"
+  ],
+  "observationCompletionGates": [
+    "target writer active",
+    "approved observation window elapsed",
+    "load evidence remains current",
+    "no unexplained high-risk mismatch"
+  ],
+  "operationalEvidence": {
+    "required": true,
+    "repositoryBuildDoesNotAssertProductionReadiness": true
+  }
+}

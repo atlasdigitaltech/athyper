@@ -1,0 +1,24 @@
+{
+  "name": "@athyper/server-adapter-db-athyper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-adapter-db-core": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "kysely": "^0.28.16"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

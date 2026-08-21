@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "description": "Fail-closed composition registry for runtime-mutable server capabilities. Coverage selectors are resolved against the generated DDL service coverage artifact by CI.",
+  "capabilities": [
+    {
+      "id": "finance-f2-f6",
+      "coverage": {
+        "serviceOwner": "@athyper/server-service-finance",
+        "featureGate": "WAVE0_FINANCE_ROUTES_ENABLED",
+        "classifications": ["runtime_mutable"]
+      },
+      "service": "@athyper/server-service-finance",
+      "exposure": "not_exposed",
+      "featureFlag": {
+        "name": "WAVE0_FINANCE_ROUTES_ENABLED",
+        "runtimeMutable": true,
+        "defaultEnabled": false
+      },
+      "planes": ["neon"],
+      "decision": {
+        "approved": false,
+        "reason": "The generated coverage rows remain provisional; enabling is blocked until F2-F6 command evidence is reviewed."
+      },
+      "profiles": { "athyper-server": false }
+    },
+    {
+      "id": "governance-compliance",
+      "coverage": {
+        "serviceOwner": "@athyper/server-platform-governance",
+        "featureGate": "WAVE0_GOVERNANCE_ROUTES_ENABLED",
+        "classifications": ["runtime_mutable"]
+      },
+      "service": "@athyper/server-platform-governance",
+      "exposure": "not_exposed",
+      "featureFlag": {
+        "name": "WAVE0_GOVERNANCE_ROUTES_ENABLED",
+        "runtimeMutable": true,
+        "defaultEnabled": false
+      },
+      "planes": ["studio", "neon", "mesh"],
+      "decision": {
+        "approved": false,
+        "reason": "Governance mutation coverage remains provisional and cannot be enabled."
+      },
+      "profiles": { "athyper-server": false }
+    },
+    {
+      "id": "control-administration",
+      "coverage": {
+        "serviceOwner": "@athyper/server-platform-control-admin",
+        "featureGate": "WAVE0_CONTROL_ADMIN_ROUTES_ENABLED",
+        "classifications": ["runtime_mutable"]
+      },
+      "service": "@athyper/server-platform-control-admin",
+      "exposure": "not_exposed",
+      "featureFlag": {
+        "name": "WAVE0_CONTROL_ADMIN_ROUTES_ENABLED",
+        "runtimeMutable": true,
+        "defaultEnabled": false
+      },
+      "planes": ["studio", "neon", "mesh"],
+      "decision": {
+        "approved": false,
+        "reason": "Control mutation coverage remains provisional and cannot be enabled."
+      },
+      "profiles": { "athyper-server": false }
+    },
+    {
+      "id": "authorization-management",
+      "coverage": {
+        "serviceOwner": "@athyper/server-platform-iam",
+        "featureGate": "authorization-v2",
+        "classifications": ["runtime_mutable"]
+      },
+      "service": "@athyper/server-platform-iam",
+      "exposure": "not_exposed",
+      "featureFlag": {
+        "name": "authorization-v2",
+        "runtimeMutable": true,
+        "defaultEnabled": false
+      },
+      "planes": ["studio", "neon", "mesh"],
+      "decision": {
+        "approved": false,
+        "reason": "Authorization-management mutation coverage remains provisional and cannot be enabled."
+      },
+      "profiles": { "athyper-server": false }
+    }
+  ]
+}

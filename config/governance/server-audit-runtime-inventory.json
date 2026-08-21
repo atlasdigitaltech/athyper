@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "components": [
+    { "id": "http-status", "kind": "http", "implementation": "platform/audit/audit-routes.ts", "registration": "unconditional", "runtimeEvidence": "apps/platform-host/src/composition/register-platform.ts" },
+    { "id": "http-query-export", "kind": "http", "implementation": "platform/audit/governance-service.ts", "registration": "not registered", "runtimeEvidence": null },
+    { "id": "export-job-definition", "kind": "job-definition", "implementation": null, "registration": "not registered", "runtimeEvidence": null },
+    { "id": "export-worker", "kind": "worker-handler", "implementation": "platform/audit/export-worker.ts", "registration": "not registered", "runtimeEvidence": null },
+    { "id": "export-artifact-storage", "kind": "storage", "implementation": "contracts/audit/AuditArtifactWriter", "registration": "not registered", "runtimeEvidence": null },
+    { "id": "integrity-controls", "kind": "service", "implementation": "platform/audit/governance-service.ts", "registration": "not registered", "runtimeEvidence": "db/ddl/common/audit" },
+    { "id": "legal-hold-retention", "kind": "service", "implementation": "platform/audit/governance-service.ts", "registration": "not registered", "runtimeEvidence": "db/ddl/common/audit" },
+    { "id": "pii-inventory", "kind": "service", "implementation": "platform/audit/governance-service.ts", "registration": "not registered", "runtimeEvidence": "db/ddl/planes/studio/metadata/09_views.sql" },
+    { "id": "audit-schedules", "kind": "schedule", "implementation": null, "registration": "not registered", "runtimeEvidence": null }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "contractVersion": "wave4.canonical-evaluator.v1",
+  "dependsOn": [
+    "wave2.authorization-catalog.semantic.v1",
+    "wave3.authorization-authority.semantic.v1"
+  ],
+  "decisionModes": [
+    "entity_resource",
+    "registered_capability",
+    "collection"
+  ],
+  "evaluationOrder": [
+    "exact_identity",
+    "active_principal",
+    "active_plane_membership",
+    "exact_typed_request",
+    "permission_plane_eligibility",
+    "physical_entitlement",
+    "hard_policy",
+    "principal_or_active_group_deny",
+    "independent_allow_paths",
+    "within_path_scope_intersection",
+    "cross_path_union",
+    "mode_specific_result"
+  ],
+  "rules": {
+    "singleBatch": "single_is_one_item_batch",
+    "entityPermissionDirectCheck": "forbidden",
+    "emptyScope": "deny",
+    "entitlement": "unavailability_wins_before_deny_role_acl_delegation_override",
+    "inactiveGroup": "activates_neither_allow_nor_deny",
+    "deny": "exact_hard_principal_or_active_group_only",
+    "roleSubjectDeny": "migration_disposition_only_never_runtime",
+    "recordAcl": "shareable_exact_record_only_separate_from_organizational_scope",
+    "delegation": "exact_delegable_subset_with_ordinary_group_role_provenance",
+    "delegationChaining": "forbidden",
+    "override": "principal_only_approved_expiring_allow",
+    "relationshipAuthority": "forbidden",
+    "directFeaturePrincipalGrant": "forbidden"
+  },
+  "scopeAlgebra": {
+    "withinProofPath": "intersection",
+    "betweenProofPaths": "union",
+    "collectionDeny": "subtraction",
+    "sharedRecordSet": "separate_acl_predicate_minus_matching_denies"
+  },
+  "capabilityStatus": {
+    "override": "shadow_available",
+    "recordAcl": "shadow_not_enforced_until_wave5_consumers_move",
+    "delegation": "shadow_not_enforced_until_wave5_consumers_move"
+  }
+}

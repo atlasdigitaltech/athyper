@@ -1,0 +1,14 @@
+@import "./styles.css";
+
+@theme inline {
+  --color-background: var(--a-background);
+  --color-foreground: var(--a-foreground);
+  --color-surface: var(--a-surface);
+  --color-muted: var(--a-muted);
+  --color-primary: var(--a-primary);
+  --color-danger: var(--a-danger);
+  --color-border: var(--a-border);
+  --font-sans: var(--a-font-sans);
+  --radius-md: var(--a-radius-md);
+  --shadow-overlay: var(--a-shadow-overlay);
+}

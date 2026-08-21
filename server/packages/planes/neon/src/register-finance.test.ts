@@ -1,0 +1,16 @@
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it, vi } from "vitest";
+import { defaultFinanceFeatureFlags, deterministicFinanceJobId, financeEntryPoints, financeSliceDdl, financeSliceOrder, registerFinance } from "./register-finance.js";
+
+const actor={tenantId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",principalId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",planeKey:"neon" as const,correlationId:"cccccccc-cccc-4ccc-8ccc-cccccccccccc"};
+function options(flags:Record<string,boolean>={}){return{database:{} as never,transactions:{run:async(_actor:unknown,work:(tx:never)=>Promise<unknown>)=>work({} as never)},flags,permissions:{isAllowed:async()=>true},guard:{assertPeriodOpen:async()=>undefined},rounding:{} as never,audit:{record:async()=>undefined},outbox:{append:async()=>undefined},ddl:{check:vi.fn(async()=>({ready:true}))}} as never;}
+
+describe("Neon finance composition",()=>{
+  it("defaults every qualified slice to disabled and preserves dependency order",()=>{expect(defaultFinanceFeatureFlags).toEqual({f2BudgetPlanning:false,f3LedgerCommitments:false,f4InventoryFifo:false,f5Tax:false,f6Closing:false});expect(financeSliceOrder).toEqual(["f2","f3","f4","f5","f6"]);const result=registerFinance(options());expect(financeSliceOrder.map(slice=>result.slices[slice].enabled)).toEqual([false,false,false,false,false]);});
+  it("rejects out-of-order activation",()=>{expect(()=>registerFinance(options({f3LedgerCommitments:true}))).toThrow("F3 requires F2");expect(()=>registerFinance(options({f2BudgetPlanning:true,f3LedgerCommitments:true,f6Closing:true}))).toThrow("F6 requires F4 and F5");});
+  it("exposes exact route contracts, DDL checks, and FIFO only",()=>{for(const slice of financeSliceOrder){expect(financeSliceDdl[slice].length).toBeGreaterThan(0);expect(financeEntryPoints[slice].some(point=>point.kind==="readiness")).toBe(true);for(const point of financeEntryPoints[slice].filter(point=>point.kind==="route")){expect(point.permission).toMatch(/^finance\./);expect(point.path).toMatch(/^\/api\/finance\//);expect(point.method).toMatch(/^(get|post)$/);}}const result=registerFinance(options());expect(result.slices.f4.services.valuationMethods).toEqual(["fifo"]);expect(JSON.stringify(result.slices.f4)).not.toMatch(/lifo|avco/i);});
+  it("uses deterministic durable job identity and refuses disabled publication",async()=>{expect(deterministicFinanceJobId("f2","finance.planning.execute",actor.tenantId,"RUN 42")).toBe(`finance:f2:finance.planning.execute:${actor.tenantId}:run-42`);await expect(registerFinance(options()).enqueue("f2","finance.planning.execute",actor,"run",{})).rejects.toThrow("FINANCE_SLICE_DISABLED");});
+  it("reports enabled slices unhealthy when durable or source adapters are absent",async()=>{const result=registerFinance(options({f2BudgetPlanning:true}));await expect(result.slices.f2.readiness()).resolves.toEqual(expect.objectContaining({status:"unhealthy",message:expect.stringContaining("durable-jobs")}));});
+  it("contains no SQL in the composition module",async()=>{const source=await readFile(fileURLToPath(new URL("./register-finance.ts",import.meta.url)),"utf8");expect(source).not.toMatch(/\bSELECT\b|\bINSERT\b|\bUPDATE\b|\bDELETE\b/i);});
+});

@@ -1,0 +1,91 @@
+{
+  "contractVersion": "athyper.authorization.operation-lifecycle-schema.v1",
+  "permissionIdentity": "plane.business_domain.entity.operation",
+  "tableClassifications": [
+    "aggregate_root",
+    "aggregate_child",
+    "reference_configuration_root",
+    "sensitive_overlay",
+    "immutable_evidence",
+    "projection_derived_state",
+    "technical_work_state",
+    "pending_review"
+  ],
+  "operation": {
+    "requiredFields": [
+      "entityCode",
+      "operationKey",
+      "permissionCode",
+      "permissionKind",
+      "storageRoot",
+      "requiredScopeKinds",
+      "scopeCoordinateKeys",
+      "riskTier",
+      "requiresMfa",
+      "requiresSod",
+      "serviceOwner"
+    ],
+    "rules": {
+      "canonicalPermission": "neon.{business_domain}.{entityCode}.{operationKey}",
+      "entityOperationsTargetRootsOnly": true,
+      "genericCrudOnChildren": "deny",
+      "missingScopeCoordinates": "deny",
+      "callerSelectedPermission": "deny",
+      "unownedWriter": "deny"
+    }
+  },
+  "lifecycle": {
+    "requiredFields": ["entityCode", "storageRoot", "statusField", "transitions"],
+    "transitionRequiredFields": ["code", "from", "to", "permissionCode"],
+    "rules": {
+      "oneOperationBindingPerTransition": true,
+      "currentStateAndVersionRevalidatedInTransaction": true,
+      "immutableEvidenceUsesReversalOrSupersession": true,
+      "auditAndOutboxAreTransactional": true
+    }
+  },
+  "crossPlaneProvisioning": {
+    "sourceAuthority": "Studio owns onboarding workflow and desired-state evidence only.",
+    "targetAuthority": "The target plane owns business records, lifecycle and authorization decisions.",
+    "rules": {
+      "directCrossPlaneSql": "deny",
+      "projectionImpliesPermission": "deny",
+      "onboardingConvergenceImpliesBusinessActivation": "deny",
+      "unknownResourceOrDesiredStateField": "deny",
+      "wrongPlaneOrTenant": "deny",
+      "staleOrSameVersionDifferentHash": "deny",
+      "targetApplyMode": "plane_local_idempotent_transaction",
+      "defaultOrganizationState": "draft",
+      "activationGate": "target_plane_operation_with_exact_scope_mfa_sod_and_policy"
+    }
+  },
+  "bilateralNetworkAuthorization": {
+    "authorityIntersection": [
+      "tenant_authority",
+      "active_network_account",
+      "trustiam_network_account_and_role_ceiling",
+      "active_network_relationship",
+      "acting_participant_side",
+      "exact_resource_coordinates",
+      "mfa_sod_and_policy"
+    ],
+    "rules": {
+      "studioCreatesOrAcceptsRelationship": "deny",
+      "initiatorAcceptsOwnRequest": "deny",
+      "missingBuyerSupplierOrActingAccountCoordinate": "deny",
+      "missingBuyerOrSupplierTenantCoordinate": "deny",
+      "inactiveAccountOrRelationship": "deny",
+      "roleExceedsProjectedCeiling": "deny",
+      "relationshipScope": "derived_descendant_of_each_participant_network_account",
+      "relationshipParticipantCoordinates": "immutable",
+      "relationshipLifecycleMutation": "function_only_side_aware",
+      "relationshipEvidenceAndOutbox": "transactional"
+    }
+  },
+  "publication": {
+    "inventoryModeAllowsPendingReview": true,
+    "releaseModeAllowsPendingReview": false,
+    "createsRolesOrGrants": false,
+    "changesEnforcement": false
+  }
+}

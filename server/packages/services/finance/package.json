@@ -1,0 +1,22 @@
+{
+  "name": "@athyper/server-service-finance",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": { "@athyper/server-contract-finance": "workspace:*", "kysely": "^0.28.16" },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.15.5",
+    "pg": "^8.16.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

@@ -1,9 +1,0 @@
-﻿{
-    "code":  "CNX",
-    "name":  "Integration Enterprise Connectors",
-    "dependsOn":  [
-                      "INT"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Enterprise"
-}

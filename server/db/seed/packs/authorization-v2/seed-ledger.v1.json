@@ -1,0 +1,47 @@
+{
+  "contractVersion": "athyper.authorization.clean-slate-seed-ledger.v1",
+  "generatedFrom": "canonical_json_sorted_keys",
+  "immutableContentDrift": "fail",
+  "packs": [
+    {
+      "target": "studio",
+      "path": "seed/packs/authorization-v2/studio/seed-pack.v1.json",
+      "contentSha256": "dc06cf3cd2d6b125c2565d1b3daf2a8de9b866beb1ab4630f1f2345a66013160",
+      "permissionCount": 26,
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 28,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 59
+    },
+    {
+      "target": "neon",
+      "path": "seed/packs/authorization-v2/neon/seed-pack.v1.json",
+      "contentSha256": "1e89d3ada5c6105ab6b7f9597b376279b8510d1856aabe8e25b44d16776450f2",
+      "permissionCount": 24,
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 151,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 305
+    },
+    {
+      "target": "mesh",
+      "path": "seed/packs/authorization-v2/mesh/seed-pack.v1.json",
+      "contentSha256": "5bc2f17bbe70f5c549fdc17b2a53376aa9f40e9ce8a78b11bd8961fb021b0b63",
+      "permissionCount": 32,
+      "roleCount": 0,
+      "groupCount": 1,
+      "mappedSubjectCount": 54,
+      "materializedRoleCount": 0,
+      "materializedRolePermissionCount": 0,
+      "materializedGroupCount": 3,
+      "assignmentRowCount": 111
+    }
+  ],
+  "ledgerSha256": "d6c8b64e1e280583b0c1be486da3df5ba178d164daab30025137e2ac9cf23ceb"
+}

@@ -1,0 +1,60 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-metrics-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  metrics:
+    image: prom/prometheus:v3.11.2
+    profiles: ["telemetry"]
+    user: "9104:9104"
+    deploy:
+      resources:
+        limits:
+          memory: "${METRICS_MEMORY_LIMIT}"
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/metrics/config.yml:/etc/prometheus/prometheus.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/recording-rules.yml:/etc/prometheus/recording-rules.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/governance-alerts.yml:/etc/prometheus/governance-alerts.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/redis-alerts.yml:/etc/prometheus/redis-alerts.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/document-registry-alerts.yml:/etc/prometheus/document-registry-alerts.yml:ro
+      - ${ATHYPER_CONFIG}/telemetry/metrics/api-alerts.yml:/etc/prometheus/api-alerts.yml:ro
+      - ${ATHYPER_DATA}/telemetry/metrics:/prometheus
+    networks: [edge, internal]
+    depends_on:
+      alertmanager:
+        condition: service_healthy
+      memorycache-exporter:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/ready"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    # Shutdown: 20s — Prometheus flushes TSDB head block
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.docker.network=athyper-edge
+      - traefik.enable=true
+      - traefik.http.routers.metrics.entrypoints=websecure
+      - traefik.http.routers.metrics.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.metrics.rule=Host(`${METRICS_HOST}`)
+      - traefik.http.routers.metrics.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.metrics.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.metrics.tls=true
+      - traefik.http.services.metrics.loadbalancer.server.port=9090

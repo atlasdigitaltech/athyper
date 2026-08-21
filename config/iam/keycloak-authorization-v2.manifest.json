@@ -1,0 +1,47 @@
+{
+  "contractVersion": "wave6.keycloak-additive.v1",
+  "realm": "athyper",
+  "managedBy": "athyper.authorization-v2",
+  "clients": [
+    {
+      "clientId": "studio-web",
+      "createIfMissing": false,
+      "expected": { "enabled": true }
+    },
+    {
+      "clientId": "neon-web",
+      "createIfMissing": false,
+      "expected": { "enabled": true }
+    },
+    {
+      "clientId": "mesh-web",
+      "createIfMissing": false,
+      "expected": { "enabled": true }
+    }
+  ],
+  "groups": [
+    {
+      "name": "grp:workbench:studio",
+      "attributes": {
+        "athyper.authorization-v2.managed": ["true"],
+        "athyper.authorization-v2.plane": ["studio"]
+      }
+    },
+    {
+      "name": "grp:workbench:user",
+      "attributes": {
+        "athyper.authorization-v2.managed": ["true"],
+        "athyper.authorization-v2.plane": ["neon"]
+      }
+    },
+    {
+      "name": "grp:workbench:partner",
+      "attributes": {
+        "athyper.authorization-v2.managed": ["true"],
+        "athyper.authorization-v2.plane": ["mesh"]
+      }
+    }
+  ],
+  "destructiveOperations": [],
+  "userOperations": []
+}

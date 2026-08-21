@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "archetype": "journal_entry",
+      "entityCode": "journal_entry",
+      "recordPath": "/app/journal_entry/<journal-entry-record-id>",
+      "supportedResources": [
+        "core",
+        "process",
+        "approvals",
+        "lifecycle",
+        "collections",
+        "versions",
+        "comments",
+        "attachments",
+        "activity",
+        "support"
+      ],
+      "surfaces": [
+        { "id": "details", "kind": "initial", "label": "Details" },
+        { "id": "line_items", "kind": "tab", "label": "Line Items", "telemetrySurface": "lines" },
+        { "id": "approvals", "kind": "tab", "label": "Approvals" },
+        { "id": "lifecycle", "kind": "tab", "label": "Lifecycle" },
+        { "id": "versions", "kind": "tab", "label": "Versions" },
+        { "id": "comments", "kind": "panel", "label": "Comments" },
+        { "id": "attachments", "kind": "panel", "label": "Attachments" },
+        { "id": "activity", "kind": "panel", "label": "Activity" }
+      ]
+    },
+    {
+      "archetype": "purchase_invoice",
+      "entityCode": "purchase_invoice",
+      "recordPath": "/app/purchase_invoice/<purchase-invoice-record-id>",
+      "supportedResources": [
+        "core",
+        "process",
+        "approvals",
+        "lifecycle",
+        "collections",
+        "versions",
+        "comments",
+        "attachments",
+        "activity",
+        "support"
+      ],
+      "surfaces": [
+        { "id": "details", "kind": "initial", "label": "Details" },
+        { "id": "invoice_lines", "kind": "tab", "label": "Invoice Lines", "telemetrySurface": "lines" },
+        { "id": "payment_allocations", "kind": "tab", "label": "Payment Allocations" },
+        { "id": "schedules", "kind": "tab", "label": "Schedules" },
+        { "id": "approvals", "kind": "tab", "label": "Approvals" },
+        { "id": "lifecycle", "kind": "tab", "label": "Lifecycle" },
+        { "id": "versions", "kind": "tab", "label": "Versions" },
+        { "id": "comments", "kind": "panel", "label": "Comments" },
+        { "id": "attachments", "kind": "panel", "label": "Attachments" },
+        { "id": "activity", "kind": "panel", "label": "Activity" }
+      ]
+    },
+    {
+      "archetype": "master",
+      "entityCode": "supplier",
+      "recordPath": "/app/supplier/<master-record-id>",
+      "supportedResources": ["core", "process", "support"],
+      "surfaces": [
+        { "id": "details", "kind": "initial", "label": "Details" }
+      ]
+    },
+    {
+      "archetype": "ledger",
+      "entityCode": "<ledger-entity-code>",
+      "recordPath": "/app/<ledger-entity-code>/<ledger-record-id>",
+      "supportedResources": ["core", "process", "activity", "support"],
+      "surfaces": [
+        { "id": "details", "kind": "initial", "label": "Details" },
+        { "id": "activity", "kind": "panel", "label": "Activity" }
+      ]
+    }
+  ]
+}

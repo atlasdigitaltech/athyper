@@ -9,147 +9,802 @@ on:
     branches:
       - main
       - develop
+  # Cleanup-plan v5 P5c — manual trigger for the screenshot parity gate
+  # while activation prereqs land. See tests/e2e/README.md.
+  workflow_dispatch:
+    inputs:
+      playwright_base_url:
+        description: 'Base URL for Neon (e.g. https://neon.athyper.local)'
+        required:    false
+        default:     'https://neon.athyper.local'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: '20.20.0'
+  PNPM_VERSION: '10.33.0'
+
 jobs:
-  # ─── Lint & Validate ─────────────────────────────────────────────
-  validate:
-    name: Validate
+  # ─── Quality Gate ────────────────────────────────────────────────
+  # Runs: format check → lint → typecheck → test → depcheck
+  # Uses pnpm + Turbo with GitHub Actions cache for speed
+  # ─────────────────────────────────────────────────────────────────
+  quality:
+    name: Quality Gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Check required files exist
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Gate 2 — Workspace dependency resolution.
+      # Every workspace:* dep must resolve to an active workspace member.
+      # Catches packages deleted from pnpm-workspace.yaml while still
+      # referenced by consumers (the P0-B failure class).
+      - name: Verify workspace:* dependency resolution
+        run: pnpm policy:workspace-resolution
+
+      - name: Verify deployment profiles and package boundaries
+        run: pnpm policy:release-boundaries
+
+      - name: Verify UTF-8 source and architecture artifacts
+        run: pnpm policy:utf8
+
+      # Gate 1 — Duplicate package names (explicit blocking step).
+      # policy:release-boundaries already runs this via &&, but process.exit(1)
+      # in a pnpm subprocess is sometimes swallowed by older pnpm behavior.
+      # This dedicated step makes the duplicate gate unambiguous in CI logs.
+      - name: Verify no duplicate active package names
+        run: pnpm policy:canonical-packages
+
+      - name: Verify server Docker workspace manifests
+        run: pnpm policy:server-docker-workspaces
+
+      - name: Verify Docker and CI pnpm pins
+        run: pnpm policy:docker-toolchain
+
+      - name: Generate Prisma/Kysely types
+        run: pnpm --filter @athyper/adapter-db-neon run prisma:generate
+
+      - name: Check generated Kysely types are current
+        run: git diff --exit-code -- server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts
+
+      - name: Format check
+        run: pnpm run format:check
+
+      - name: Lint
+        run: pnpm run lint:errors
+        env:
+          FORCE_COLOR: '1'
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Verify OpenAPI route contracts and operation IDs
+        run: pnpm run openapi:check
+
+      - name: Verify DDL service coverage policy and generated artifact
+        run: pnpm run ddl:coverage:check
+
+      - name: Verify host capability composition agrees with DDL coverage
+        run: pnpm run policy:host-capability-registry
+
+      - name: Test DDL service coverage failure gates
+        run: pnpm run test:ddl-service-coverage
+
+      - name: Test host capability composition failure gates
+        run: pnpm run test:host-capability-registry
+
+      - name: Check generated typography CSS
+        run: pnpm --filter @athyper/platform-theme run check:typography
+
+      - name: Workspace tests with coverage
+        run: pnpm run test:workspace -- --coverage
+        env:
+          CI: 'true'
+          FORCE_COLOR: '1'
+
+      - name: Root tests and reachability
+        run: pnpm run test:root
+        env:
+          CI: 'true'
+          FORCE_COLOR: '1'
+
+      - name: Document-open rollout CI gates
+        env:
+          DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH: ${{ vars.DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH }}
+          DOCUMENT_OPEN_RAW_TRACE_PATH: ${{ vars.DOCUMENT_OPEN_RAW_TRACE_PATH }}
+          DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES: ${{ vars.DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES }}
+          DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT: ${{ vars.DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT }}
         run: |
-          required_files=(
-            "README.md"
-            "CHANGELOG.md"
-            "LICENSE"
-            ".gitignore"
-          )
-          missing=()
-          for f in "${required_files[@]}"; do
-            if [ ! -f "$f" ]; then
-              missing+=("$f")
+          if [ -n "$DOCUMENT_OPEN_RAW_TRACE_PATH" ]; then
+            if [ ! -f "$DOCUMENT_OPEN_RAW_TRACE_PATH" ]; then
+              echo "Missing document-open raw trace input: $DOCUMENT_OPEN_RAW_TRACE_PATH"
+              exit 1
             fi
-          done
-          if [ ${#missing[@]} -ne 0 ]; then
-            echo "Missing required files: ${missing[*]}"
-            exit 1
-          fi
-          echo "All required files present."
+            snapshot_output="${DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH:-/tmp/document-open-rollout.snapshot.json}"
+            export_args="--input=$DOCUMENT_OPEN_RAW_TRACE_PATH --output=$snapshot_output"
+            if [ -n "$DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES" ]; then
+              export_args="$export_args --minimum-samples=$DOCUMENT_OPEN_ROLLOUT_MINIMUM_SAMPLES"
+            fi
 
-      - name: Validate CHANGELOG has Unreleased section
-        run: |
-          if ! grep -q "\[Unreleased\]" CHANGELOG.md; then
-            echo "CHANGELOG.md must have an [Unreleased] section"
-            exit 1
+            pnpm document-open-rollout-snapshot-export $export_args
+            echo "DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH=$snapshot_output"
+            export DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH="$snapshot_output"
           fi
-          echo "CHANGELOG.md is valid."
+
+          if [ -n "$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH" ]; then
+            if [ ! -f "$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH" ]; then
+              echo "Missing document-open gate snapshot file: $DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH"
+              exit 1
+            fi
+            pnpm document-open-rollout-ci-gate --snapshot="$DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH"
+            exit 0
+          fi
+
+          if [ -n "$DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT" ]; then
+            pnpm document-open-rollout-ci-gate
+            exit 0
+          fi
+
+          echo "No document-open snapshot input found; skipping rollout CI gate check."
+          echo "Set DOCUMENT_OPEN_CI_GATE_SNAPSHOT_PATH (preferred) or DOCUMENT_OPEN_ROLLOUT_PROGRESS_SNAPSHOT to enable."
+
+      - name: Fetch base branch for changeset
+        if: github.event_name == 'pull_request'
+        run: git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+
+      - name: Check changeset
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}
+
+      - name: Dependency graph check
+        run: pnpm run depcheck
+
+      # Workspace policy — prevents recurrence of the April 2026 audit findings.
+      # Enforces version drift for shared toolchain (typescript, @types/react,
+      # @types/react-dom, @tanstack/react-query), bounded peer ranges for
+      # @tanstack/react-query, and tsconfig normalization (moduleResolution
+      # casing, required extends, no per-package strictness downgrades).
+      # See scripts/policy/ and .syncpackrc.json.
+      - name: Workspace policy
+        run: pnpm run policy
+
+      # Admin-plane strict MFA realm guard. This is intentionally DB-free: it
+      # validates the checked-in Keycloak realm export still emits amr and keeps
+      # admin-web bound to the mandatory OTP browser flow.
+      - name: Verify Keycloak realm strict MFA
+        run: pnpm --filter @athyper/runtime-server run realm-strict-mfa:verify
+
+      # F8 Phase 2 — single-ingress port hardening. Fails if any service
+      # with traefik.* labels also publishes a backend port directly on
+      # the host (bypass path). Advisory while baseline is clean; promote
+      # to blocking by removing continue-on-error once confidence settles.
+      - name: Verify port hardening (F8 Phase 2)
+        continue-on-error: true
+        run: bash stack/scripts/setup/verify-port-hardening.sh
+
+      # Seed drift lint (Batch 5C). Static check that legacy column names
+      # (removed/renamed during DDL evolution) do not reappear in seed
+      # contracts. Complements the in-DB 042o pre-quarantine and 100_
+      # post-quarantine assertions. Zero deps, no DB. See
+      # server/scripts/lint-seed-drift.ts for the rule list.
+      - name: Verify seed drift
+        run: npx tsx server/scripts/lint-seed-drift.ts
+
+      # Pricing-component hot-path guard (v3.1 Phase 0). Static check that
+      # each PC mutator calls refreshInvoiceCaches at most once per service
+      # entry, and that apportionToLines does NOT loop createComponent.
+      # Catches the O(N²) regression class fixed in Phase 0 where adding
+      # one header charge fired the PIL cache refresh N times.
+      - name: Verify PC refresh call-count budget
+        run: npx tsx server/scripts/verify-pc-refresh-call-count.ts
+
+      # PC affordance matrix parity (v3.1 Phase 1). Diffs the canonical
+      # matrix in @athyper/api-contracts/pc-affordance-matrix against the
+      # DDL trigger fn_pc_supersede_only_update + the AP route status sets.
+      # Catches drift where the UI offers an action the DB blocks, or the
+      # DB allows an action the UI hides.
+      - name: Verify PC affordance parity
+        run: npx tsx server/scripts/verify-pc-affordance-parity.ts
+
+      - name: Verify meta-entity kernel governance
+        run: pnpm policy:meta-entity
+
+      - name: Verify records identity-boundary ratchet
+        run: pnpm policy:records-identity-boundary
+
+      - name: Verify performance phase history and legacy boundary
+        run: pnpm policy:performance-phase-history
+
+      - name: Verify unified experience production budgets
+        run: pnpm perf:verify:experience-contracts && pnpm perf:verify:shell-bundle
+
+      - name: Verify unified experience cleanup inventory
+        run: pnpm policy:experience-cleanup
+
+      - name: Verify meta-entity retirement evidence boundary
+        run: pnpm test:meta-entity-retirement
+
+      # Gate 3 — Legacy DDL schema reference check (advisory → blocking at Phase 3).
+      # Fails if server/packages/**/*.ts or server/src/**/*.ts contains any of the
+      # old-DDL relation names: shared.module, shared.workspace,
+      # shared.plan_module_access, master.tenant_module_subscription,
+      # control.entity_version, control.entity_operation.
+      # Advisory while runtime code is being migrated off the old relations.
+      # Promote to blocking (remove continue-on-error) once Phase 3 migration
+      # confirms zero references remain.
+      - name: Verify no legacy DDL schema references (Gate 3 — advisory)
+        continue-on-error: true
+        run: pnpm policy:no-legacy-schema-refs
+
+  # P0 performance baseline. Advisory until two stable captured runs have
+  # been reviewed. Enable by setting the PERF_BASE_URL repository variable.
+  performance-baseline:
+    name: P0 Performance Baseline (Advisory)
+    runs-on: ubuntu-latest
+    needs: quality
+    if: ${{ vars.PERF_BASE_URL != '' }}
+    continue-on-error: true
+    env:
+      PERF_BASE_URL: ${{ vars.PERF_BASE_URL }}
+      PERF_DATASET_PROFILE: ${{ vars.PERF_DATASET_PROFILE }}
+      PERF_API_REPLICAS: ${{ vars.PERF_API_REPLICAS }}
+      PERF_POSTGRES_TOPOLOGY: ${{ vars.PERF_POSTGRES_TOPOLOGY }}
+      PERF_REDIS_TOPOLOGY: ${{ vars.PERF_REDIS_TOPOLOGY }}
+      PERF_LIFECYCLE_SCRIPT: ${{ vars.PERF_LIFECYCLE_SCRIPT }}
+      PERF_POOL_PRESSURE_SCRIPT: ${{ vars.PERF_POOL_PRESSURE_SCRIPT }}
+      PERF_PG_TOP_SQL_COMMAND: ${{ vars.PERF_PG_TOP_SQL_COMMAND }}
+      TOKEN_TENANT_A: ${{ secrets.PERF_TOKEN }}
+      ORG_TENANT_A: ${{ secrets.PERF_ORG }}
+      ENTITY: ${{ vars.PERF_ENTITY }}
+      RECORD_ID: ${{ vars.PERF_RECORD_ID }}
+      PERF_OUTPUT_DIR: perf/artifacts/p0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Install k6
+        uses: grafana/setup-k6-action@v1
+      - name: Capture three real baseline runs
+        run: pnpm perf:capture:p0
+        env:
+          PERF_REPETITIONS: '3'
+      - name: Upload P0 performance artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: athyper-p0-performance-${{ github.sha }}
+          path: perf/artifacts/p0/
+          if-no-files-found: error
+          retention-days: 30
+
+  # ─── Screenshot Regression (PI) ──────────────────────────────────
+  # Cleanup-plan v5 P5c. Visual diff against a pinned reference
+  # snapshot of the descriptor-driven PI route. After Sprint 8 PR6
+  # the framework (Playwright dep, global setup, fixture seed
+  # skeleton, spec) is in place; the test itself stays guarded by
+  # `test.skip(...)` until the activation steps in
+  # `tests/e2e/README.md` complete:
+  #   1. `pnpm exec playwright install chromium` (per-machine)
+  #   2. PC + AD INSERTs authored in
+  #      server/db/seed/tenants/neon/010_demo/999_visual_fixture_pi.sql
+  #   3. PLAYWRIGHT_USER + PLAYWRIGHT_PASSWORD set in CI secrets
+  #   4. PLAYWRIGHT_BASE_URL set in CI secrets
+  #   5. Reference snapshot generated + committed
+  #
+  # To enable: flip the `if:` guard below + the `env:` block per
+  # `tests/e2e/README.md` § "Flip the CI gate".
+  # ─────────────────────────────────────────────────────────────────
+  screenshot-parity-pi:
+    name: Screenshot Regression (PI)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run visual regression tests
+        env:
+          # Activation: replace `inputs.playwright_base_url` with
+          # `${{ secrets.PLAYWRIGHT_BASE_URL }}` once a stable test env
+          # URL is configured as a repo secret.
+          PLAYWRIGHT_BASE_URL: ${{ inputs.playwright_base_url }}
+          # Activation: add `PLAYWRIGHT_USER` + `PLAYWRIGHT_PASSWORD` to
+          # the env block here once those repo secrets are configured.
+          # Until they exist global-setup writes an empty storageState
+          # and the spec's `test.skip(...)` keeps the suite dormant.
+        run: pnpm test:visual
+
+      - name: Upload diff artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-parity-diffs
+          path: |
+            tests/e2e/.playwright-output/
+            tests/e2e/visual/__screenshots__/
+          retention-days: 14
 
   # ─── Build ───────────────────────────────────────────────────────
+  # Builds all workspace packages excluding @athyper/web (Next.js app)
+  # which requires runtime secrets not available in CI.
+  # ─────────────────────────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: validate
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        # node-version: [18, 20, 22]   # Uncomment when runtime is defined
+    needs: quality
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Uncomment and configure for your runtime:
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: ${{ matrix.node-version }}
-      #     cache: 'npm'
-
-      # - name: Install dependencies
-      #   run: npm ci
-
-      # - name: Build
-      #   run: npm run build
-
-      - name: Build placeholder
-        run: echo "Build step — configure for your runtime"
-
-  # ─── Test ────────────────────────────────────────────────────────
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Uncomment and configure for your runtime:
-      # - name: Setup Node.js
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: 20
-      #     cache: 'npm'
-
-      # - name: Install dependencies
-      #   run: npm ci
-
-      # - name: Run tests
-      #   run: npm test
-
-      # - name: Upload coverage
-      #   uses: codecov/codecov-action@v4
-      #   with:
-      #     token: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Test placeholder
-        run: echo "Test step — configure for your runtime"
-
-  # ─── Security Scan ───────────────────────────────────────────────
-  security:
-    name: Security Scan
-    runs-on: ubuntu-latest
-    needs: validate
-    permissions:
-      security-events: write
-      actions: read
-      contents: read
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run CodeQL Analysis
-        uses: github/codeql-action/init@v3
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
-          languages: javascript  # Change to match your stack
-        continue-on-error: true
+          version: ${{ env.PNPM_VERSION }}
 
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-        continue-on-error: true
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
 
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        continue-on-error: true
+      - name: Restore Turbo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
 
-  # ─── Status Gate ─────────────────────────────────────────────────
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        # Builds framework, shared packages, tooling — excludes Next.js app
+        # @athyper/web requires runtime secrets (DB, Keycloak, Redis) for production build
+        run: pnpm turbo run build --filter=!@athyper/web --filter=!@athyper/auth --filter=!@athyper/content
+        env:
+          NODE_ENV: production
+
+  # ─── RLS Verify ──────────────────────────────────────────────────
+  # Spins up Postgres, runs migrations + system seed, then executes the RLS
+  # verification suite under a non-superuser role (athyperapp_test). This is
+  # what makes RLS policies operationally verified — running the suite as the
+  # superuser DATABASE_URL bypasses RLS and every test would trivially pass.
+  #
+  # Blocking release gate: this job intentionally runs under NOBYPASSRLS so
+  # schema-owner/superuser bypass cannot make tenant isolation appear green.
+  # ─────────────────────────────────────────────────────────────────
+  rls-verify:
+    name: RLS + Tenant Stamp Verify
+    runs-on: ubuntu-latest
+    needs: quality
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: athyperadmin
+          POSTGRES_PASSWORD: athyperadmin
+          POSTGRES_DB: athyper_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U athyperadmin -d athyper_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_ADMIN_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_test
+      DATABASE_URL:       postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_test
+      DATABASE_URL_PGBOUNCER: postgresql://athyperadmin:athyperadmin@127.0.0.1:6432/athyper_test
+      RLS_APP_ROLE:       athyperapp_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+
+      - name: Run DDL migrations (phase 1)
+        run: pnpm --filter @athyper/db run db:setup:ddl
+
+      - name: Run system seed (phase 2)
+        run: pnpm --filter @athyper/db run db:setup:system
+
+      - name: Verify metadata semantic fallback coverage
+        run: pnpm --dir server run metadata:semantic-fallbacks:audit
+
+      - name: Create athyperapp_test role (LOGIN, NOBYPASSRLS)
+        env:
+          PGPASSWORD: athyperadmin
+        run: |
+          psql "$DATABASE_ADMIN_URL" <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp_test') THEN
+              CREATE ROLE athyperapp_test LOGIN NOBYPASSRLS PASSWORD 'athyperapp_test';
+            END IF;
+          END $$;
+          -- Inherit all grants the runtime role (athyperapp) already has so the
+          -- verification suite runs with the same privilege surface the app uses.
+          GRANT athyperapp TO athyperapp_test;
+          SQL
+
+      - name: Verify RLS under non-superuser role
+        env:
+          DATABASE_URL: postgresql://athyperapp_test:athyperapp_test@127.0.0.1:5432/athyper_test
+        run: |
+          mkdir -p perf/qualification/evidence
+          pnpm --dir server exec tsx scripts/verify-rls.ts --json > perf/qualification/evidence/rls.json
+
+      - name: Upload blocking RLS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rls-qualification-${{ github.run_id }}
+          path: perf/qualification/evidence/rls.json
+          if-no-files-found: error
+
+      # Audit P3-S1 — entity_policy coverage gate. Asserts that every active
+      # tenant has policy rows for every entity in MUST_HAVE_POLICY_ENTITIES
+      # (the canonical P2P + finance posting surfaces). Tenant entity_policy
+      # rows are seeded under server/db/seed/tenants/*/entity_engine/*.sql;
+      # this check guarantees those were applied. Inherits the parent job's
+      # continue-on-error policy while tenant-seed loading is wired into CI.
+      - name: Verify entity_policy coverage
+        run: npx tsx server/scripts/verify-entity-policy.ts
+
+      # Audit P0-S6 — budget lifecycle integration suite. Exercises the
+      # RESERVE → COMMIT → CONSUME → RELEASE ladder, idempotency under
+      # retry, parallel-FOR-UPDATE serialisation, failure branches
+      # (period closed, allocation inactive, insufficient + WARN/BLOCK,
+      # no-match policy switch), the dispatcher's outer-transaction
+      # rollback contract, and the strict-required hook-runner gates.
+      #
+      # Tests are gated on DATABASE_URL inside the file and create
+      # per-test fresh tenants (cleaned up by tenant_id in afterEach),
+      # so they share this job's DB without polluting other steps.
+      #
+      # Advisory at first per the Wave 2 plan (`continue-on-error: true`).
+      # Remove that line to promote to blocking once green for 5
+      # consecutive runs. The strict-flag prod flip (P0-S5) gates on
+      # this being blocking.
+      - name: Verify budget lifecycle integration (P0-S6)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run budget-lifecycle.integration
+
+      # Audit AP-S3 / rb-19 closure — stub-regression guard. Fails when
+      # the *_REVERSAL_NOT_IMPLEMENTED return codes reappear in the
+      # posting services. Cheap, fast, zero deps. Not advisory: any
+      # regression here is a real release blocker.
+      - name: Verify reversal handlers are not stubbed
+        run: npx tsx server/scripts/verify-reversal-implementations.ts
+
+      # Reference-relation coverage gate. Every entity_field that declares
+      # reference_config.target_entity must have a matching belongs_to/fk
+      # row in control.entity_relation. The runtime label enricher reads
+      # the relation row to resolve target tables for FK companion-label
+      # hydration; descriptor/relation drift produces UUIDs in the UI.
+      - name: Verify reference-relation coverage
+        run: npx tsx server/scripts/verify-reference-relation-coverage.ts
+
+      # Audit AP-S2a + AP-S3 — receipt + SS reversal integration tests.
+      # Same gating + advisory posture as the budget lifecycle suite;
+      # promote to blocking once green for 5 consecutive runs.
+      - name: Verify receipt + SS reversal integration (AP-S2a + AP-S3)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run reversal.integration
+
+      # Audit AP-S1a + AP-S1b — AP master fixture smoke tests. Exercises
+      # handlePostReceipt + handlePostInvoice end-to-end against the live
+      # DB. The first sustained pass here is also the first signal that
+      # the receipt/SS posting bug fixes (book lookup, JE INSERT shape,
+      # inventory_movement INSERT shape) actually work in practice.
+      # Same advisory posture; promote to blocking after 5 green runs.
+      - name: Verify AP posting smoke tests (AP-S1a + AP-S1b)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-receipt-posting ap-pi-posting
+
+      # Workstream A — Phase 4 accounting-profile-engine path coverage.
+      # Asserts handlePostInvoice resolves Dr accounts through the profile
+      # chain (FROM_INTENT + POSTING_ROLE), exercises credit-note inversion,
+      # intent routing (intent_to_accounting_profile_rule), and that the
+      # legacy fallback still reaches accounting_distribution.account_source='FALLBACK'.
+      # Advisory until 5 green main runs; then promote to blocking.
+      - name: Verify PI profile-path integration (Workstream A)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-pi-profile-path
+
+      # Workstream B — PO-based PI smoke with matching. Exercises
+      # INVOICE_MATCHED dispatcher branch, matchInvoice three-way logic,
+      # commitment_line.invoiced_quantity bookkeeping, and rollback
+      # semantics under match exceptions (qty / price variance).
+      # Advisory until 5 green main runs; promote to blocking.
+      - name: Verify PO-based PI integration (Workstream B)
+        continue-on-error: true
+        run: pnpm --filter @athyper/svc-business exec vitest run ap-pi-po-based
+
+      # F9 — SECURITY DEFINER hardening contract: every prosecdef=true
+      # function must be owned by athyperadmin, REVOKED from PUBLIC, GRANTed
+      # to athyperapp, and carry an explicit search_path. Runs against the
+      # same DB this job already migrated (DDL + system seed), so no extra
+      # setup is needed. Advisory while the baseline burns in (parent job
+      # already continue-on-error: true).
+      - name: Verify SECURITY DEFINER hardening (F9)
+        run: pnpm --filter @athyper/runtime-server run secdef:verify
+
+      # ─── Three-Plane Permission Stack — Phase 6 guardrails ────────────────
+      # Locks the invariants that Phases 1-5 spent significant effort fixing:
+      #   - entity_operation FK + handler-shape integrity
+      #   - permission_code alias usage (D6: `update` canonical, `edit` legacy)
+      #   - plane_eligibility cardinality + subset rules
+      #   - control.entity_version EFFECTIVE-row immutability (D14)
+      # These scripts run against the same DDL+system seed the rest of this
+      # job has already provisioned. The composite script wires them
+      # together with one exit code so the PR check is unambiguous.
+      # See docs/local/architecture/three-plane-permission-stack-phase6-exit.md
+      - name: Verify three-plane permission stack invariants
+        run: pnpm --filter @athyper/db run db:verify:three-plane
+
+      # PgBouncer sidecar — the TenantStampDriver's implicit-transaction
+      # behavior is specifically tested against transaction-pool mode here,
+      # because that's the pool mode the athyper apps use in every environment.
+      - name: Start PgBouncer (transaction pool mode)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pgbouncer
+
+          # SCRAM-SHA-256 auth requires an md5/plain entry in userlist.txt;
+          # we use plain for simplicity (the admin password isn't a secret in CI).
+          sudo tee /etc/pgbouncer/userlist.txt > /dev/null <<'EOF'
+          "athyperadmin" "athyperadmin"
+          "athyperapp_test" "athyperapp_test"
+          EOF
+
+          sudo tee /etc/pgbouncer/pgbouncer.ini > /dev/null <<'EOF'
+          [databases]
+          athyper_test = host=127.0.0.1 port=5432 dbname=athyper_test
+
+          [pgbouncer]
+          listen_addr = 127.0.0.1
+          listen_port = 6432
+          auth_type = plain
+          auth_file = /etc/pgbouncer/userlist.txt
+          pool_mode = transaction
+          max_client_conn = 100
+          default_pool_size = 20
+          server_reset_query = DISCARD ALL
+          server_reset_query_always = 0
+          ignore_startup_parameters = extra_float_digits, options, application_name
+          log_connections = 0
+          log_disconnections = 0
+          EOF
+
+          sudo chmod 644 /etc/pgbouncer/userlist.txt /etc/pgbouncer/pgbouncer.ini
+          sudo pgbouncer -d /etc/pgbouncer/pgbouncer.ini
+
+          # Wait for PgBouncer to listen.
+          for i in {1..20}; do
+            if pg_isready -h 127.0.0.1 -p 6432 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PgBouncer did not become ready in time"
+          exit 1
+
+      - name: Verify tenant-stamp driver (through PgBouncer tx pool)
+        env:
+          # Point the stamp suite at PgBouncer so we catch tx-pool-specific
+          # surprises (connection handoff, DISCARD ALL interactions).
+          DATABASE_URL: ${{ env.DATABASE_URL_PGBOUNCER }}
+        run: pnpm --filter @athyper/runtime-server run tenant-stamp:verify -- --bench
+
+  # ─── Three-Plane Permission Stack Gate ───────────────────────────
+  # Phase 8 — promoted from advisory to blocking.
+  #
+  # Spins up its own Postgres (separate from rls-verify so it doesn't
+  # inherit that job's continue-on-error policy) and runs:
+  #   - db:verify:three-plane (entity-operations, permission-aliases,
+  #     plane-eligibility, version-locks) — Phase 6 invariants
+  #   - db:verify:effective-lock — Phase 8 matrix Tier 2 (S8, S9)
+  #
+  # PRs that touch entity_operation seeds, control.permission_alias,
+  # plane_eligibility, or entity_version DDL must pass this gate.
+  # ─────────────────────────────────────────────────────────────────
+  three-plane-verify:
+    name: Three-Plane Permission Stack Verify
+    runs-on: ubuntu-latest
+    needs: quality
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER:     athyperadmin
+          POSTGRES_PASSWORD: athyperadmin
+          POSTGRES_DB:       athyper_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd="pg_isready -U athyperadmin -d athyper_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_ADMIN_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5433/athyper_test
+      DATABASE_URL:       postgresql://athyperadmin:athyperadmin@127.0.0.1:5433/athyper_test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for Postgres
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h 127.0.0.1 -p 5433 -U athyperadmin -d athyper_test; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres did not become ready in time"
+          exit 1
+
+      - name: Run DDL migrations (phase 1)
+        run: pnpm --filter @athyper/db run db:setup:ddl
+
+      - name: Run system seed (phase 2)
+        run: pnpm --filter @athyper/db run db:setup:system
+
+      - name: Verify strict seed and effective P2P lifecycle contracts
+        run: pnpm --filter @athyper/db run db:verify:seed-contracts
+
+      - name: Verify strict seed and effective P2P lifecycle contracts (blocking)
+        run: pnpm --filter @athyper/db run db:verify:seed-contracts
+
+      - name: Verify three-plane invariants (Phase 6)
+        run: pnpm --filter @athyper/db run db:verify:three-plane
+
+      - name: Verify EFFECTIVE lock scenarios (Phase 8 matrix Tier 2)
+        run: pnpm --filter @athyper/db run db:verify:effective-lock
+
+  # ─── CI Status Gate ──────────────────────────────────────────────
+  # Required check — PRs must pass this to be mergeable.
+  # RLS is blocking and runs under NOBYPASSRLS.
+  # three-plane-verify is blocking as of Phase 8.
+  # ─────────────────────────────────────────────────────────────────
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [validate, build, test]
+    needs: [quality, build, rls-verify, three-plane-verify]
     if: always()
     steps:
-      - name: Check all jobs passed
+      - name: Evaluate results
         run: |
-          if [[ "${{ needs.validate.result }}" != "success" || \
-                "${{ needs.build.result }}" != "success" || \
-                "${{ needs.test.result }}" != "success" ]]; then
-            echo "One or more CI jobs failed"
+          quality="${{ needs.quality.result }}"
+          build="${{ needs.build.result }}"
+          rls="${{ needs.rls-verify.result }}"
+          threeplane="${{ needs.three-plane-verify.result }}"
+
+          echo "quality           : $quality"
+          echo "build             : $build"
+          echo "rls-verify        : $rls"
+          echo "three-plane-verify: $threeplane"
+
+          if [[ "$quality" != "success" ]]; then
+            echo "Quality gate failed — lint, typecheck, test, or format check did not pass."
             exit 1
           fi
+
+          if [[ "$build" != "success" ]]; then
+            echo "Build failed — package compilation did not succeed."
+            exit 1
+          fi
+
+          if [[ "$rls" != "success" ]]; then
+            echo "RLS verification failed under NOBYPASSRLS — tenant isolation is a release blocker."
+            exit 1
+          fi
+
+          if [[ "$threeplane" != "success" ]]; then
+            echo "Three-plane permission stack verify failed — see Phase 6 + Phase 8 contracts."
+            exit 1
+          fi
+
           echo "All CI checks passed."

@@ -1,0 +1,29 @@
+# syntax=docker/dockerfile:1.7
+# =============================================================================
+# athyper Platform Host — Development Image
+# Build context: repo root (d:/Products/athyper)
+# Usage:
+#   docker compose --project-directory stack/compose build athyper-api
+# =============================================================================
+
+FROM node:24-alpine AS base
+
+RUN apk add --no-cache postgresql-client
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+
+WORKDIR /app
+
+# ─── Dependency install ───────────────────────────────────────────────────────
+COPY . .
+RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile --filter "@athyper/server-platform-host..."
+
+# ─── Source ───────────────────────────────────────────────────────────────────
+
+WORKDIR /app/server/apps/platform-host
+
+EXPOSE 4000
+
+# Dev: tsx watch for hot-reload (PORT is injected by Docker compose via env)
+CMD ["pnpm", "run", "dev:api"]

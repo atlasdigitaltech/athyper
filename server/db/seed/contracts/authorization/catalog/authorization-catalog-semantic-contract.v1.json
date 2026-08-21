@@ -1,0 +1,59 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:athyper:authorization-catalog:semantic-contract:v1",
+  "title": "Athyper canonical entity-operation authorization catalog",
+  "contractVersion": "wave2.authorization-catalog.semantic.v1",
+  "rules": {
+    "canonicalPermissionCode": "{product}.{domain}.{entity}.{operation}",
+    "entityOperationCardinality": "one_operation_to_one_entity_bound_permission",
+    "aliases": "forbidden",
+    "runtimeResolution": "exact_permission_id_only",
+    "genericMutationAuthority": "forbidden",
+    "highRiskMetadata": [
+      "riskTier",
+      "requiresMfa",
+      "requiresSod",
+      "shareable",
+      "delegable"
+    ]
+  },
+  "vocabulary": {
+    "planes": ["neon", "studio", "mesh"],
+    "operationKinds": ["read", "mutation"],
+    "idempotencyModes": ["none", "idempotent", "idempotency_key_required"],
+    "riskTiers": ["low", "medium", "high", "critical"],
+    "referenceKinds": [
+      "entity_operation",
+      "surface",
+      "action",
+      "transition",
+      "flow",
+      "flow_step",
+      "flow_field",
+      "field_security",
+      "relation"
+    ],
+    "referenceRoles": [
+      "discover",
+      "render",
+      "execute",
+      "mutate",
+      "override",
+      "mask"
+    ]
+  },
+  "requiredOperationFields": [
+    "entityCode",
+    "operationCode",
+    "canonicalPermissionCode",
+    "operationKind",
+    "idempotencyMode",
+    "riskTier",
+    "requiresMfa",
+    "requiresSod",
+    "shareable",
+    "delegable",
+    "planes",
+    "provenance"
+  ]
+}

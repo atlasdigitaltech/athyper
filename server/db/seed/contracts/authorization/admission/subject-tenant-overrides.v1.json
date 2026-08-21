@@ -1,0 +1,14 @@
+{
+  "contractVersion": "athyper.authorization.admission-overrides.v1",
+  "unresolvedSubjectBehavior": "deny",
+  "tenantBySubject": {
+    "aa000002-0000-0000-0000-000000000001": ["athyper"],
+    "ee001000-0000-0000-0000-000000000011": ["athyper"],
+    "ee001000-0000-0000-0000-000000000012": ["athyper"],
+    "ee001000-0000-0000-0000-000000000013": ["athyper"],
+    "ee001000-0000-0000-0000-000000000014": ["athyper"],
+    "ee002000-0000-0000-0000-000000000011": ["athyper"],
+    "ee002000-0000-0000-0000-000000000012": ["athyper"],
+    "ee002000-0000-0000-0000-000000000013": ["athyper"]
+  }
+}

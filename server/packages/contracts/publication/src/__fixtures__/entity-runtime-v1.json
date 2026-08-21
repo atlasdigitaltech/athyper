@@ -1,0 +1,41 @@
+{
+  "schema": "athyper.publication-artifact.v1",
+  "publicationKey": "metadata.entity.invoice",
+  "releaseId": "22222222-2222-4222-8222-222222222222",
+  "releaseNo": 2,
+  "releaseKind": "publish",
+  "targetPlane": "neon",
+  "artifactKind": "entity_runtime",
+  "generatedAt": "2026-08-10T00:00:00.000Z",
+  "minimumRuntimeVersion": "1.0.0",
+  "compatibilityLevel": "backward_compatible",
+  "payload": {
+    "entityContract": {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "entityId": "44444444-4444-4444-8444-444444444444",
+      "entityCode": "invoice",
+      "releaseId": "22222222-2222-4222-8222-222222222222",
+      "revisionId": "55555555-5555-4555-8555-555555555555",
+      "releaseNo": 2,
+      "contractSchemaCode": "athyper.entity-contract",
+      "contractSchemaVersion": "1.0",
+      "contractHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "contract": { "entityCode": "invoice" },
+      "publicationKey": "metadata.entity.invoice",
+      "signature": { "algorithm": "Ed25519", "keyId": "publication-2026", "signature": "fixture-signature" },
+      "publishedAt": "2026-08-10T00:00:00.000Z"
+    },
+    "entityDescriptor": {
+      "id": "66666666-6666-4666-8666-666666666666",
+      "plane": "neon",
+      "descriptorKind": "entity_runtime",
+      "descriptorSchemaVersion": "1.0",
+      "sourceContractHash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "compiledHash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "descriptor": { "entityCode": "invoice", "storage": { "schema": "document", "object": "invoice" } },
+      "compilerVersion": "publication-compiler/1.0.0",
+      "compatibilityLevel": "backward_compatible",
+      "generatedAt": "2026-08-10T00:00:00.000Z"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "$schema": "./kernel.config.schema.json",
+  "$comment": "Staging Environment (Ubuntu) — pre-production testing. Infrastructure wiring (db, redis, s3, telemetry endpoints) is LOCKED from this file and must be set via SUPERSTAR env vars or staging .env.",
+
+  "env": "staging",
+  "mode": "api",
+  "serviceName": "athyper-runtime",
+  "port": 3000,
+
+  "logLevel": "info",
+  "shutdownTimeoutMs": 30000,
+
+  "$comment_routing": "API routing: api-stg.athyper.com is routed via Traefik Docker-provider labels on api (APPS_ATHYPER_API_HOST env var), NOT via a file-provider route file. No gateway/dynamic/ route file is needed for the API hostname.",
+  "$comment_urls": "MUST match PUBLIC_BASE_URL / PUBLIC_WEB_URL in stack/env/staging.env — validate-env.sh checks parity.",
+  "publicBaseUrl": "https://api-stg.athyper.com",
+  "publicWebUrl": "https://neon-stg.athyper.com",
+
+  "db": {
+    "$comment": "LOCKED — stripped at load time. Set DATABASE_URL / DATABASE_ADMIN_URL via staging .env or SUPERSTAR env vars.",
+    "url": "LOCKED_USE_ENV_VAR",
+    "adminUrl": "LOCKED_USE_ENV_VAR",
+    "poolMax": 20
+  },
+
+  "redis": {
+    "$comment": "LOCKED — stripped at load time. Set REDIS_URL via staging .env or SUPERSTAR env vars.",
+    "url": "LOCKED_USE_ENV_VAR",
+    "connectTimeoutMs": "LOCKED_USE_ENV_VAR: REDIS_CONNECT_TIMEOUT_MS (default 5000)",
+    "maxRetries": "LOCKED_USE_ENV_VAR: REDIS_MAX_RETRIES (default 2)",
+    "errorLogCooldownMs": "LOCKED_USE_ENV_VAR: REDIS_ERROR_LOG_COOLDOWN_MS (default 10000)"
+  },
+
+  "s3": {
+    "$comment": "LOCKED — stripped at load time. Set S3_* via staging .env or SUPERSTAR env vars.",
+    "endpoint": "LOCKED_USE_ENV_VAR",
+    "accessKey": "LOCKED_USE_ENV_VAR",
+    "secretKey": "LOCKED_USE_ENV_VAR",
+    "region": "LOCKED_USE_ENV_VAR: S3_REGION (staging: us-east-1)",
+    "bucket": "LOCKED_USE_ENV_VAR: S3_BUCKET (staging: athyper-staging)",
+    "useSSL": "LOCKED_USE_ENV_VAR: S3_USE_SSL (staging: true)",
+    "multipartPartSizeMb": "LOCKED_USE_ENV_VAR: S3_MULTIPART_PART_SIZE_MB (default 5)",
+    "multipartQueueSize": "LOCKED_USE_ENV_VAR: S3_MULTIPART_QUEUE_SIZE (default 4)",
+    "maxUploadMb": "LOCKED_USE_ENV_VAR: S3_MAX_UPLOAD_MB (default 100)",
+    "presignedTtlSeconds": "LOCKED_USE_ENV_VAR: S3_PRESIGNED_TTL_SECONDS (default 900)"
+  },
+
+  "iam": {
+    "strategy": "single_realm",
+    "defaultRealmKey": "athyper",
+    "defaultTenantKey": null,
+    "defaultOrgKey": null,
+    "requireTenantClaimsInProd": true,
+    "realms": {
+      "athyper": {
+        "iam": {
+          "$comment_issuerUrl": "MUST match IAM_ISSUER_URL in stack/env/staging.env — validate-env.sh checks parity.",
+          "issuerUrl": "https://iam-stg.athyper.com/realms/athyper",
+          "clientId": "athyper-api-runtime",
+          "allowedAzp": [
+            "athyper-api-runtime",
+            "athyper-svc-runtime-worker",
+            "studio-svc-bff",
+            "studio-web",
+            "mesh-svc-bff",
+            "mesh-web",
+            "neon-svc-bff",
+            "neon-web"
+          ],
+          "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"
+        },
+        "defaults": {
+          "features": {
+            "metaStudio": true,
+            "debugMode": false
+          },
+          "policies": {
+            "strictTenantIsolation": true
+          }
+        },
+        "tenants": {}
+      }
+    }
+  },
+
+  "telemetry": {
+    "$comment": "LOCKED — otlpEndpoint is stripped at load time. Set via staging .env or SUPERSTAR env vars. Telemetry enablement is controlled by OTEL env vars, not this file.",
+    "otlpEndpoint": "LOCKED_USE_ENV_VAR",
+    "serviceName": "athyper-runtime",
+    "serviceVersion": "1.0.0"
+  }
+}

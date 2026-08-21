@@ -1,0 +1,42 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-memorycacheexporter-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  memorycache-exporter:
+    image: oliver006/redis_exporter:v1.82.0-alpine
+    profiles: ["core", "memorycache"]
+    deploy:
+      resources:
+        limits:
+          memory: "${MEMORYCACHE_EXPORTER_MEMORY_LIMIT}"
+    environment:
+      REDIS_ADDR: redis://exporter:${REDIS_EXPORTER_PASSWORD}@memorycache:6379
+    networks: [internal]
+    depends_on:
+      memorycache:
+        condition: service_healthy
+    # M2 fix: switched to alpine variant so we have a shell for healthchecks
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9121/metrics || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    # Shutdown: 10s — lightweight exporter, no state to flush
+    stop_grace_period: 10s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

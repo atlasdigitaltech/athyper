@@ -1,0 +1,6 @@
+﻿{
+  "extends": "@athyper/tsconfig/base.json",
+  "compilerOptions": { "noEmit": true, "types": ["node"], "lib": ["ES2023", "DOM", "DOM.Iterable"] },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

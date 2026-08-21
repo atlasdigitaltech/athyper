@@ -1,0 +1,6 @@
+{
+  "name": "@athyper/server-contract-publication",
+  "private": true,
+  "type": "module",
+  "exports": "./index.js"
+}

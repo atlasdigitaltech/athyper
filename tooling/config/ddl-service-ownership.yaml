@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "1.0.0",
+  "description": "Reviewed semantics are expressed as ordered rules. DDL discovery remains solely the generator's responsibility. This file is JSON-compatible YAML 1.2 so the policy tooling has no runtime package dependency.",
+  "defaults": {
+    "classification": "runtime_mutable",
+    "serviceOwner": "none",
+    "commands": {
+      "decision": "not_exposed",
+      "codes": [],
+      "reason": "No runtime command is approved by the baseline ownership rules."
+    },
+    "repository": [],
+    "entryPoints": [],
+    "auditEvent": [],
+    "outboxEvent": [],
+    "replayEvidence": [],
+    "immutabilityEvidence": [],
+    "reversalEvidence": [],
+    "concurrencyEvidence": [],
+    "rebuildEvidence": [],
+    "reconciliationEvidence": [],
+    "mutationComposition": "not_applicable",
+    "unitTests": [],
+    "postgresTests": [],
+    "featureGate": null,
+    "rolloutStatus": "code_complete",
+    "reviewStatus": "provisional",
+    "decisionNote": "Provisional baseline; table-level ownership and evidence review is required before promotion."
+  },
+  "rules": [
+    {
+      "match": { "schema": "audit" },
+      "set": { "classification": "evidence", "serviceOwner": "@athyper/server-platform-audit" }
+    },
+    {
+      "match": { "schema": "log" },
+      "set": { "classification": "evidence", "serviceOwner": "@athyper/server-platform-audit" }
+    },
+    {
+      "match": { "schema": "authz" },
+      "set": { "serviceOwner": "@athyper/server-platform-iam", "featureGate": "authorization-v2" }
+    },
+    {
+      "match": { "schema": "control" },
+      "set": { "serviceOwner": "@athyper/server-platform-control-admin", "featureGate": "WAVE0_CONTROL_ADMIN_ROUTES_ENABLED" }
+    },
+    {
+      "match": { "schema": "governance" },
+      "set": { "serviceOwner": "@athyper/server-platform-governance", "featureGate": "WAVE0_GOVERNANCE_ROUTES_ENABLED" }
+    },
+    {
+      "match": { "schema": "ai" },
+      "set": { "serviceOwner": "@athyper/server-platform-ai", "featureGate": "ATLAS_AGENT_ENABLED" }
+    },
+    {
+      "match": { "schema": "document" },
+      "set": { "serviceOwner": "@athyper/server-service-documents" }
+    },
+    {
+      "match": { "schema": "master" },
+      "set": { "serviceOwner": "@athyper/server-service-master-data" }
+    },
+    {
+      "match": { "schema": "runtime_meta" },
+      "set": { "serviceOwner": "@athyper/server-platform-metadata" }
+    },
+    {
+      "match": { "schema": "ops" },
+      "set": { "serviceOwner": "@athyper/server-platform-jobs" }
+    },
+    {
+      "match": { "schema": "snapshot" },
+      "set": { "classification": "evidence", "serviceOwner": "@athyper/server-service-records", "featureGate": "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED" }
+    },
+    {
+      "match": { "schema": "ledger", "scope": "neon" },
+      "set": {
+        "serviceOwner": "@athyper/server-service-finance",
+        "featureGate": "WAVE0_FINANCE_ROUTES_ENABLED",
+        "repository": ["server/packages/services/finance/src/index.ts"],
+        "entryPoints": ["server/apps/platform-host/src/composition/finance-routes.ts"]
+      }
+    },
+    {
+      "match": { "schema": "metadata", "scope": "studio" },
+      "set": {
+        "serviceOwner": "@athyper/server-plane-studio-meta-entity-authoring",
+        "repository": ["server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts"],
+        "entryPoints": ["server/packages/planes/studio/meta-entity-authoring/src/routes.ts"]
+      }
+    },
+    {
+      "match": { "schema": "onboarding", "scope": "studio" },
+      "set": {
+        "serviceOwner": "@athyper/server-plane-studio-onboarding",
+        "repository": ["server/packages/planes/studio/onboarding/src/kysely-onboarding-saga-repository.ts"],
+        "entryPoints": ["server/packages/planes/studio/onboarding/src/routes.ts"]
+      }
+    },
+    {
+      "match": { "schema": "trustiam", "scope": "studio" },
+      "set": { "serviceOwner": "@athyper/server-platform-iam" }
+    },
+    {
+      "match": { "schema": "publication", "scope": "studio" },
+      "set": { "serviceOwner": "@athyper/server-service-publication" }
+    },
+    {
+      "match": { "schema": "mesh", "scope": "mesh" },
+      "set": { "serviceOwner": "@athyper/server-plane-mesh" }
+    },
+    {
+      "match": { "tablePattern": "(_event|_history|_receipt|_evidence)$" },
+      "set": { "classification": "evidence" }
+    },
+    {
+      "match": { "tablePattern": "(_balance|_projection|_summary|_current|_epoch|_checkpoint)$" },
+      "set": { "classification": "projection" }
+    },
+    {
+      "match": { "tablePattern": "(_catalog|_definition|_type|_template)$" },
+      "set": { "classification": "catalog_seed_managed" }
+    }
+  ],
+  "overrides": {}
+}

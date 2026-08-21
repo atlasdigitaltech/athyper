@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "environment": "stable-performance",
+  "capturedAt": "2026-07-15T00:00:00.000Z",
+  "checks": {
+    "tenantIsolation": true,
+    "permissionRevocation": true,
+    "descriptorInvalidation": true,
+    "durableMutation": true,
+    "securityParity": true,
+    "cacheParity": true
+  },
+  "routes": {
+    "descriptor": { "samples": 100, "p95Ms": 24, "transactionP95Ms": 0, "sqlP95": 0, "compatibilityTraffic": 0 },
+    "bootstrap": { "samples": 100, "p95Ms": 95, "transactionP95Ms": 0, "sqlP95": 0, "compatibilityTraffic": 0 },
+    "list": { "samples": 100, "p95Ms": 140, "transactionP95Ms": 0, "sqlP95": 1, "compatibilityTraffic": 0 },
+    "detail": { "samples": 100, "p95Ms": 230, "transactionP95Ms": 0, "sqlP95": 2, "compatibilityTraffic": 0 },
+    "create": { "samples": 100, "p95Ms": 360, "transactionP95Ms": 90, "sqlP95": 7, "compatibilityTraffic": 0 },
+    "patch": { "samples": 100, "p95Ms": 350, "transactionP95Ms": 45, "sqlP95": 7, "compatibilityTraffic": 0 },
+    "delete": { "samples": 100, "p95Ms": 370, "transactionP95Ms": 90, "sqlP95": 7, "compatibilityTraffic": 0 },
+    "aggregate": { "samples": 100, "p95Ms": 740, "transactionP95Ms": 220, "sqlP95": 14, "compatibilityTraffic": 0 },
+    "transition": { "samples": 100, "p95Ms": 750, "transactionP95Ms": 225, "sqlP95": 14, "compatibilityTraffic": 0 }
+  }
+}

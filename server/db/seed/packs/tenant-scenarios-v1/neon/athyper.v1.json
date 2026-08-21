@@ -1,0 +1,1307 @@
+{
+  "contractVersion": "athyper.tenant-scenario.v1",
+  "packVersion": "2.0.0",
+  "plane": "neon",
+  "tenantCode": "athyper",
+  "complexity": "complex",
+  "tenantProfile": {
+    "countryCode": "AE",
+    "localeCode": "en-AE",
+    "timezoneCode": "Asia/Dubai",
+    "languageCode": "en",
+    "dateFormat": "DD/MM/YYYY",
+    "numberFormat": "1,234.56",
+    "weekStart": 1,
+    "weekendDays": [
+      0,
+      6
+    ]
+  },
+  "legalEntities": [
+    {
+      "scopeKey": "ORG-1000000001",
+      "code": "le-athq",
+      "name": "Athyper Group Holdings",
+      "legalName": "Athyper Group Holdings Ltd",
+      "registrationCountryCode": "AE",
+      "functionalCurrency": "AED",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000002",
+      "code": "le-amre",
+      "name": "Athyper Malaysia Real Estate",
+      "legalName": "Athyper Malaysia Real Estate Sdn Bhd",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "MY",
+      "functionalCurrency": "MYR",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    },
+    {
+      "scopeKey": "ORG-1000000003",
+      "code": "le-aqtu",
+      "name": "Athyper Qatar Utilities",
+      "legalName": "Athyper Qatar Utilities W.L.L.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "QA",
+      "functionalCurrency": "QAR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000004",
+      "code": "le-asac",
+      "name": "Athyper Saudi Construction",
+      "legalName": "Athyper Saudi Construction Company",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "SA",
+      "functionalCurrency": "SAR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000005",
+      "code": "le-aqts",
+      "name": "Athyper Qatar Transport & Storage",
+      "legalName": "Athyper Qatar Transport and Storage W.L.L.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "QA",
+      "functionalCurrency": "QAR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000006",
+      "code": "le-auet",
+      "name": "Athyper UAE Trading",
+      "legalName": "Athyper UAE Trading LLC",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "AE",
+      "functionalCurrency": "AED",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000007",
+      "code": "le-asah",
+      "name": "Athyper Saudi Hospitality",
+      "legalName": "Athyper Saudi Hospitality Company",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "SA",
+      "functionalCurrency": "SAR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000008",
+      "code": "le-auic",
+      "name": "Athyper US Information & Communication",
+      "legalName": "Athyper US Information and Communication Inc.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "US",
+      "functionalCurrency": "USD",
+      "reportingCurrency": "USD",
+      "regionCode": "americas"
+    },
+    {
+      "scopeKey": "ORG-1000000009",
+      "code": "le-asgf",
+      "name": "Athyper Singapore Financial Services",
+      "legalName": "Athyper Singapore Financial Services Pte. Ltd.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "SG",
+      "functionalCurrency": "SGD",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    },
+    {
+      "scopeKey": "ORG-1000000010",
+      "code": "le-aitm",
+      "name": "Athyper India Textile & Leather Mfg",
+      "legalName": "Athyper India Textile and Leather Manufacturing Pvt. Ltd.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "IN",
+      "functionalCurrency": "INR",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    },
+    {
+      "scopeKey": "ORG-1000000011",
+      "code": "le-acfb",
+      "name": "Athyper Canada Food & Beverage Mfg",
+      "legalName": "Athyper Canada Food and Beverage Manufacturing Ltd.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "CA",
+      "functionalCurrency": "CAD",
+      "reportingCurrency": "USD",
+      "regionCode": "americas"
+    },
+    {
+      "scopeKey": "ORG-1000000012",
+      "code": "le-adpm",
+      "name": "Athyper Germany Pharmaceutical Mfg",
+      "legalName": "Athyper Germany Pharmaceutical Manufacturing GmbH",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "DE",
+      "functionalCurrency": "EUR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000013",
+      "code": "le-atem",
+      "name": "Athyper Taiwan Electronics Mfg",
+      "legalName": "Athyper Taiwan Electronics Manufacturing Co., Ltd.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "TW",
+      "functionalCurrency": "TWD",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    },
+    {
+      "scopeKey": "ORG-1000000014",
+      "code": "le-aspe",
+      "name": "Athyper South Africa Petroleum Extraction",
+      "legalName": "Athyper South Africa Petroleum Extraction Pty Ltd",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "ZA",
+      "functionalCurrency": "ZAR",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000015",
+      "code": "le-auka",
+      "name": "Athyper UK Agriculture",
+      "legalName": "Athyper UK Agriculture Limited",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "GB",
+      "functionalCurrency": "GBP",
+      "reportingCurrency": "USD",
+      "regionCode": "emea"
+    },
+    {
+      "scopeKey": "ORG-1000000016",
+      "code": "le-ajed",
+      "name": "Athyper Japan Education Services",
+      "legalName": "Athyper Japan Education Services K.K.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "JP",
+      "functionalCurrency": "JPY",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    },
+    {
+      "scopeKey": "ORG-1000000017",
+      "code": "le-aphs",
+      "name": "Athyper Philippines Hospital Services",
+      "legalName": "Athyper Philippines Hospital Services Inc.",
+      "parentScopeKey": "ORG-1000000001",
+      "registrationCountryCode": "PH",
+      "functionalCurrency": "PHP",
+      "reportingCurrency": "USD",
+      "regionCode": "apac"
+    }
+  ],
+  "companyCodes": [
+    {
+      "code": "athq",
+      "legalEntityScopeKey": "ORG-1000000001",
+      "name": "Athyper Group Holdings",
+      "functionalCurrency": "AED",
+      "countryCode": "AE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Dubai",
+      "localeCode": "en-AE",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "amre",
+      "legalEntityScopeKey": "ORG-1000000002",
+      "name": "Athyper Malaysia Real Estate",
+      "functionalCurrency": "MYR",
+      "countryCode": "MY",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Kuala_Lumpur",
+      "localeCode": "en-MY",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aqtu",
+      "legalEntityScopeKey": "ORG-1000000003",
+      "name": "Athyper Qatar Utilities",
+      "functionalCurrency": "QAR",
+      "countryCode": "QA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Qatar",
+      "localeCode": "en-QA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asac",
+      "legalEntityScopeKey": "ORG-1000000004",
+      "name": "Athyper Saudi Construction",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aqts",
+      "legalEntityScopeKey": "ORG-1000000005",
+      "name": "Athyper Qatar Transport & Storage",
+      "functionalCurrency": "QAR",
+      "countryCode": "QA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Qatar",
+      "localeCode": "en-QA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auet",
+      "legalEntityScopeKey": "ORG-1000000006",
+      "name": "Athyper UAE Trading",
+      "functionalCurrency": "AED",
+      "countryCode": "AE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Dubai",
+      "localeCode": "en-AE",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asah",
+      "legalEntityScopeKey": "ORG-1000000007",
+      "name": "Athyper Saudi Hospitality",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auic",
+      "legalEntityScopeKey": "ORG-1000000008",
+      "name": "Athyper US Information & Communication",
+      "functionalCurrency": "USD",
+      "countryCode": "US",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "America/New_York",
+      "localeCode": "en-US",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asgf",
+      "legalEntityScopeKey": "ORG-1000000009",
+      "name": "Athyper Singapore Financial Services",
+      "functionalCurrency": "SGD",
+      "countryCode": "SG",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Singapore",
+      "localeCode": "en-SG",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aitm",
+      "legalEntityScopeKey": "ORG-1000000010",
+      "name": "Athyper India Textile & Leather Mfg",
+      "functionalCurrency": "INR",
+      "countryCode": "IN",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Asia/Kolkata",
+      "localeCode": "en-IN",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "acfb",
+      "legalEntityScopeKey": "ORG-1000000011",
+      "name": "Athyper Canada Food & Beverage Mfg",
+      "functionalCurrency": "CAD",
+      "countryCode": "CA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "America/Toronto",
+      "localeCode": "en-CA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "adpm",
+      "legalEntityScopeKey": "ORG-1000000012",
+      "name": "Athyper Germany Pharmaceutical Mfg",
+      "functionalCurrency": "EUR",
+      "countryCode": "DE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Europe/Berlin",
+      "localeCode": "de-DE",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "atem",
+      "legalEntityScopeKey": "ORG-1000000013",
+      "name": "Athyper Taiwan Electronics Mfg",
+      "functionalCurrency": "TWD",
+      "countryCode": "TW",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Taipei",
+      "localeCode": "zh-TW",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aspe",
+      "legalEntityScopeKey": "ORG-1000000014",
+      "name": "Athyper South Africa Petroleum Extraction",
+      "functionalCurrency": "ZAR",
+      "countryCode": "ZA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Africa/Johannesburg",
+      "localeCode": "en-ZA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auka",
+      "legalEntityScopeKey": "ORG-1000000015",
+      "name": "Athyper UK Agriculture",
+      "functionalCurrency": "GBP",
+      "countryCode": "GB",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Europe/London",
+      "localeCode": "en-GB",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "ajed",
+      "legalEntityScopeKey": "ORG-1000000016",
+      "name": "Athyper Japan Education Services",
+      "functionalCurrency": "JPY",
+      "countryCode": "JP",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Asia/Tokyo",
+      "localeCode": "ja-JP",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aphs",
+      "legalEntityScopeKey": "ORG-1000000017",
+      "name": "Athyper Philippines Hospital Services",
+      "functionalCurrency": "PHP",
+      "countryCode": "PH",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Manila",
+      "localeCode": "en-PH",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "athq.ops",
+      "legalEntityScopeKey": "ORG-1000000001",
+      "name": "Athyper Group Holdings Operations",
+      "functionalCurrency": "AED",
+      "countryCode": "AE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Dubai",
+      "localeCode": "en-AE",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "amre.ops",
+      "legalEntityScopeKey": "ORG-1000000002",
+      "name": "Athyper Malaysia Real Estate Operations",
+      "functionalCurrency": "MYR",
+      "countryCode": "MY",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Kuala_Lumpur",
+      "localeCode": "en-MY",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aqtu.ops",
+      "legalEntityScopeKey": "ORG-1000000003",
+      "name": "Athyper Qatar Utilities Operations",
+      "functionalCurrency": "QAR",
+      "countryCode": "QA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Qatar",
+      "localeCode": "en-QA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asac.ops",
+      "legalEntityScopeKey": "ORG-1000000004",
+      "name": "Athyper Saudi Construction Operations",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aqts.ops",
+      "legalEntityScopeKey": "ORG-1000000005",
+      "name": "Athyper Qatar Transport & Storage Operations",
+      "functionalCurrency": "QAR",
+      "countryCode": "QA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Qatar",
+      "localeCode": "en-QA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auet.ops",
+      "legalEntityScopeKey": "ORG-1000000006",
+      "name": "Athyper UAE Trading Operations",
+      "functionalCurrency": "AED",
+      "countryCode": "AE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Dubai",
+      "localeCode": "en-AE",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asah.ops",
+      "legalEntityScopeKey": "ORG-1000000007",
+      "name": "Athyper Saudi Hospitality Operations",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auic.ops",
+      "legalEntityScopeKey": "ORG-1000000008",
+      "name": "Athyper US Information & Communication Operations",
+      "functionalCurrency": "USD",
+      "countryCode": "US",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "America/New_York",
+      "localeCode": "en-US",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "asgf.ops",
+      "legalEntityScopeKey": "ORG-1000000009",
+      "name": "Athyper Singapore Financial Services Operations",
+      "functionalCurrency": "SGD",
+      "countryCode": "SG",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Singapore",
+      "localeCode": "en-SG",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aitm.ops",
+      "legalEntityScopeKey": "ORG-1000000010",
+      "name": "Athyper India Textile & Leather Mfg Operations",
+      "functionalCurrency": "INR",
+      "countryCode": "IN",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Asia/Kolkata",
+      "localeCode": "en-IN",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "acfb.ops",
+      "legalEntityScopeKey": "ORG-1000000011",
+      "name": "Athyper Canada Food & Beverage Mfg Operations",
+      "functionalCurrency": "CAD",
+      "countryCode": "CA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "America/Toronto",
+      "localeCode": "en-CA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "adpm.ops",
+      "legalEntityScopeKey": "ORG-1000000012",
+      "name": "Athyper Germany Pharmaceutical Mfg Operations",
+      "functionalCurrency": "EUR",
+      "countryCode": "DE",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Europe/Berlin",
+      "localeCode": "de-DE",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "atem.ops",
+      "legalEntityScopeKey": "ORG-1000000013",
+      "name": "Athyper Taiwan Electronics Mfg Operations",
+      "functionalCurrency": "TWD",
+      "countryCode": "TW",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Taipei",
+      "localeCode": "zh-TW",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aspe.ops",
+      "legalEntityScopeKey": "ORG-1000000014",
+      "name": "Athyper South Africa Petroleum Extraction Operations",
+      "functionalCurrency": "ZAR",
+      "countryCode": "ZA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Africa/Johannesburg",
+      "localeCode": "en-ZA",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "auka.ops",
+      "legalEntityScopeKey": "ORG-1000000015",
+      "name": "Athyper UK Agriculture Operations",
+      "functionalCurrency": "GBP",
+      "countryCode": "GB",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Europe/London",
+      "localeCode": "en-GB",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "ajed.ops",
+      "legalEntityScopeKey": "ORG-1000000016",
+      "name": "Athyper Japan Education Services Operations",
+      "functionalCurrency": "JPY",
+      "countryCode": "JP",
+      "fiscalYearStartMonth": 4,
+      "timezoneCode": "Asia/Tokyo",
+      "localeCode": "ja-JP",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "aphs.ops",
+      "legalEntityScopeKey": "ORG-1000000017",
+      "name": "Athyper Philippines Hospital Services Operations",
+      "functionalCurrency": "PHP",
+      "countryCode": "PH",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Manila",
+      "localeCode": "en-PH",
+      "companyPurpose": "operations",
+      "readinessProfile": "finance_baseline_v1"
+    }
+  ],
+  "operatingOrganizations": [
+    {
+      "code": "athyper.shared-services",
+      "name": "Athyper Shared Services",
+      "domain": "shared_services"
+    },
+    {
+      "code": "athyper.procurement.apac",
+      "name": "Athyper APAC Procurement",
+      "domain": "procurement",
+      "regionCode": "apac",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.procurement.emea",
+      "name": "Athyper EMEA Procurement",
+      "domain": "procurement",
+      "regionCode": "emea",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.procurement.americas",
+      "name": "Athyper AMERICAS Procurement",
+      "domain": "procurement",
+      "regionCode": "americas",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.finance.apac",
+      "name": "Athyper APAC Finance",
+      "domain": "finance",
+      "regionCode": "apac",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.finance.emea",
+      "name": "Athyper EMEA Finance",
+      "domain": "finance",
+      "regionCode": "emea",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.finance.americas",
+      "name": "Athyper AMERICAS Finance",
+      "domain": "finance",
+      "regionCode": "americas",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.people.apac",
+      "name": "Athyper APAC People",
+      "domain": "people",
+      "regionCode": "apac",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.people.emea",
+      "name": "Athyper EMEA People",
+      "domain": "people",
+      "regionCode": "emea",
+      "parentCode": "athyper.shared-services"
+    },
+    {
+      "code": "athyper.people.americas",
+      "name": "Athyper AMERICAS People",
+      "domain": "people",
+      "regionCode": "americas",
+      "parentCode": "athyper.shared-services"
+    }
+  ],
+  "operatingOrganizationCompanyAssignments": [
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "amre",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "asgf",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "aitm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "atem",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "ajed",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "aphs",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "amre.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "asgf.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "aitm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "atem.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "ajed.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.apac",
+      "companyCode": "aphs.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "athq",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aqtu",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "asac",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aqts",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "auet",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "asah",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "adpm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aspe",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "auka",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "athq.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aqtu.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "asac.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aqts.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "auet.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "asah.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "adpm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "aspe.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.emea",
+      "companyCode": "auka.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.americas",
+      "companyCode": "auic",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.procurement.americas",
+      "companyCode": "acfb",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.americas",
+      "companyCode": "auic.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.procurement.americas",
+      "companyCode": "acfb.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "amre",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "asgf",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "aitm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "atem",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "ajed",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "aphs",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "amre.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "asgf.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "aitm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "atem.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "ajed.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.apac",
+      "companyCode": "aphs.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "athq",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aqtu",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "asac",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aqts",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "auet",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "asah",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "adpm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aspe",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "auka",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "athq.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aqtu.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "asac.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aqts.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "auet.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "asah.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "adpm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "aspe.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.emea",
+      "companyCode": "auka.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.americas",
+      "companyCode": "auic",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.finance.americas",
+      "companyCode": "acfb",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.americas",
+      "companyCode": "auic.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.finance.americas",
+      "companyCode": "acfb.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "amre",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "asgf",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "aitm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "atem",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "ajed",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "aphs",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "amre.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "asgf.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "aitm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "atem.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "ajed.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.apac",
+      "companyCode": "aphs.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "athq",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aqtu",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "asac",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aqts",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "auet",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "asah",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "adpm",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aspe",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "auka",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "athq.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aqtu.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "asac.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aqts.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "auet.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "asah.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "adpm.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "aspe.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.emea",
+      "companyCode": "auka.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.americas",
+      "companyCode": "auic",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "athyper.people.americas",
+      "companyCode": "acfb",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.americas",
+      "companyCode": "auic.ops",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "athyper.people.americas",
+      "companyCode": "acfb.ops",
+      "participationRole": "participant"
+    }
+  ],
+  "orgUnitTypes": [
+    {
+      "code": "group",
+      "name": "Group",
+      "levelOrder": 10
+    },
+    {
+      "code": "region",
+      "name": "Region",
+      "levelOrder": 20
+    },
+    {
+      "code": "business",
+      "name": "Business",
+      "levelOrder": 30
+    },
+    {
+      "code": "department",
+      "name": "Department",
+      "levelOrder": 40
+    }
+  ],
+  "orgUnits": [
+    {
+      "code": "athyper.group",
+      "name": "Athyper Group",
+      "typeCode": "group",
+      "sortOrder": 10
+    },
+    {
+      "code": "athyper.apac",
+      "name": "Asia Pacific",
+      "typeCode": "region",
+      "parentCode": "athyper.group",
+      "sortOrder": 20
+    },
+    {
+      "code": "athyper.emea",
+      "name": "Europe Middle East and Africa",
+      "typeCode": "region",
+      "parentCode": "athyper.group",
+      "sortOrder": 30
+    },
+    {
+      "code": "athyper.americas",
+      "name": "Americas",
+      "typeCode": "region",
+      "parentCode": "athyper.group",
+      "sortOrder": 40
+    },
+    {
+      "code": "athyper.digital",
+      "name": "Digital and Technology",
+      "typeCode": "business",
+      "parentCode": "athyper.group",
+      "sortOrder": 50
+    },
+    {
+      "code": "athyper.manufacturing",
+      "name": "Manufacturing",
+      "typeCode": "business",
+      "parentCode": "athyper.group",
+      "sortOrder": 60
+    },
+    {
+      "code": "athyper.services",
+      "name": "Services",
+      "typeCode": "business",
+      "parentCode": "athyper.group",
+      "sortOrder": 70
+    },
+    {
+      "code": "athyper.finance",
+      "name": "Group Finance",
+      "typeCode": "department",
+      "parentCode": "athyper.group",
+      "sortOrder": 80
+    },
+    {
+      "code": "athyper.people",
+      "name": "People and Culture",
+      "typeCode": "department",
+      "parentCode": "athyper.group",
+      "sortOrder": 90
+    },
+    {
+      "code": "athyper.risk",
+      "name": "Risk and Compliance",
+      "typeCode": "department",
+      "parentCode": "athyper.group",
+      "sortOrder": 100
+    },
+    {
+      "code": "athyper.procurement",
+      "name": "Global Procurement",
+      "typeCode": "department",
+      "parentCode": "athyper.services",
+      "sortOrder": 110
+    },
+    {
+      "code": "athyper.sales",
+      "name": "Global Sales",
+      "typeCode": "department",
+      "parentCode": "athyper.services",
+      "sortOrder": 120
+    }
+  ]
+}

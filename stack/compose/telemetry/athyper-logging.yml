@@ -1,0 +1,134 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.1.0
+# Compose     : athyper-logging-config
+#
+# Description :
+#   Grafana Loki 3.x — log aggregation backend.
+#   Storage backend is env-driven: `filesystem` for dev (bind-mount),
+#   `s3` for staging/prod (MinIO via the objectstorage service).
+#
+#   The logging-bucket-init sidecar is a no-op when
+#   LOKI_STORAGE_BACKEND=filesystem and provisions the MinIO bucket
+#   otherwise. Loki depends_on its successful completion so a
+#   mis-configured bucket can't silently drop log streams.
+#
+# =======================================================================
+
+services:
+  # One-shot sidecar: provisions the MinIO bucket when backend=s3, no-ops otherwise.
+  # Runs on every stack start; `mc mb --ignore-existing` is idempotent.
+  logging-bucket-init:
+    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
+    profiles: ["telemetry"]
+    environment:
+      LOKI_STORAGE_BACKEND: ${LOKI_STORAGE_BACKEND}
+      LOKI_S3_BUCKET: ${LOKI_S3_BUCKET}
+      LOKI_S3_ENDPOINT: ${LOKI_S3_ENDPOINT}
+      LOKI_S3_ACCESS_KEY: ${LOKI_S3_ACCESS_KEY}
+      LOKI_S3_SECRET_KEY: ${LOKI_S3_SECRET_KEY}
+      LOKI_S3_INSECURE: ${LOKI_S3_INSECURE}
+      MC_CONFIG_DIR: /tmp/.mc
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ "$${LOKI_STORAGE_BACKEND}" != "s3" ]; then
+          echo "[logging-bucket-init] LOKI_STORAGE_BACKEND=$${LOKI_STORAGE_BACKEND} — skipping bucket bootstrap"
+          exit 0
+        fi
+        scheme="https"
+        if [ "$${LOKI_S3_INSECURE}" = "true" ]; then scheme="http"; fi
+        echo "[logging-bucket-init] provisioning bucket $${LOKI_S3_BUCKET} at $${scheme}://$${LOKI_S3_ENDPOINT}"
+        # Retry alias registration — object storage may still be booting.
+        # Six attempts over ~30s matches the objectstorage healthcheck window.
+        for i in 1 2 3 4 5 6; do
+          if mc alias set storage "$${scheme}://$${LOKI_S3_ENDPOINT}" "$${LOKI_S3_ACCESS_KEY}" "$${LOKI_S3_SECRET_KEY}"; then
+            break
+          fi
+          echo "[logging-bucket-init] object storage not reachable, retry $${i}/6 in 5s..."
+          sleep 5
+        done
+        mc alias ls storage >/dev/null
+        # Use mc ls to check bucket existence first. In non-local environments
+        # objectstorage-init (running as root) creates the bucket; the scoped
+        # athyper-loki user only needs ListBucket for this check, not CreateBucket.
+        # mc mb --ignore-existing is not enough — it still issues CreateBucket and
+        # only suppresses BucketAlreadyOwnedByYou, not AccessDenied.
+        if mc ls "storage/$${LOKI_S3_BUCKET}/" >/dev/null 2>&1; then
+          echo "[logging-bucket-init] bucket already exists: $${LOKI_S3_BUCKET}"
+        else
+          mc mb "storage/$${LOKI_S3_BUCKET}"
+          echo "[logging-bucket-init] bucket created: $${LOKI_S3_BUCKET}"
+        fi
+    depends_on:
+      objectstorage:
+        condition: service_healthy
+    networks: [edge]
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "5m", max-file: "2" }
+
+  logging:
+    image: grafana/loki:3.6.10
+    profiles: ["telemetry"]
+    user: "9103:9103"
+    deploy:
+      resources:
+        limits:
+          memory: "${LOGGING_MEMORY_LIMIT}"
+    command: ["-config.file=/etc/loki/loki.yml", "-config.expand-env=true"]
+    environment:
+      LOKI_STORAGE_BACKEND: ${LOKI_STORAGE_BACKEND}
+      LOKI_S3_BUCKET: ${LOKI_S3_BUCKET}
+      LOKI_S3_ENDPOINT: ${LOKI_S3_ENDPOINT}
+      LOKI_S3_ACCESS_KEY: ${LOKI_S3_ACCESS_KEY}
+      LOKI_S3_SECRET_KEY: ${LOKI_S3_SECRET_KEY}
+      LOKI_S3_INSECURE: ${LOKI_S3_INSECURE}
+    depends_on:
+      # Block Loki startup until the bucket sidecar exits 0. In local
+      # (backend=filesystem) the sidecar no-ops; in s3 mode it guarantees the
+      # bucket exists before Loki tries to write log chunks there.
+      logging-bucket-init:
+        condition: service_completed_successfully
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/logging/config.yml:/etc/loki/loki.yml:ro
+      - ${ATHYPER_DATA}/telemetry/logging:/loki
+    networks: [edge, internal]
+    # Loki 3.x ships as a distroless image — no wget/curl/sh in the container.
+    # Disable the healthcheck rather than rely on tools that aren't available.
+    # Container-alive status is the signal: if Loki crashes, Docker restarts it
+    # via `restart: unless-stopped`. Liveness of the /ready endpoint is verified
+    # externally by the logshipper writing logs (a successful POST proves the
+    # API is up) and by Grafana's Loki datasource health probe.
+    healthcheck:
+      disable: true
+    # Shutdown: 20s — Loki flushes WAL and pending writes
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.docker.network=athyper-edge
+      - traefik.enable=true
+      - traefik.http.routers.logging.entrypoints=websecure
+      - traefik.http.routers.logging.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.logging.rule=Host(`${LOGS_HOST}`)
+      - traefik.http.routers.logging.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.logging.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.logging.tls=true
+      - traefik.http.services.logging.loadbalancer.server.port=3100

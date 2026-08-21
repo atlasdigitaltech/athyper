@@ -1,0 +1,132 @@
+{
+  "contractVersion": "athyper.authorization.studio-neon-organization-boundary.v1",
+  "source": {
+    "plane": "studio",
+    "orchestrationTables": [
+      "onboarding.onboarding_case",
+      "onboarding.onboarding_case_target",
+      "onboarding.onboarding_case_resource",
+      "onboarding.onboarding_compilation_decision",
+      "onboarding.onboarding_case_revision"
+    ],
+    "authorizationProjectionTables": [
+      "trustiam.organization",
+      "trustiam.application_projection",
+      "trustiam.projection_scope"
+    ],
+    "directNeonSql": false,
+    "grantsNeonBusinessAuthority": false
+  },
+  "target": {
+    "plane": "neon",
+    "applierKind": "plane_local_provisioner",
+    "applierOwner": "@athyper/server-service-master-data",
+    "implementationStatus": "required_not_implemented",
+    "requiresExactDatabasePlane": true,
+    "defaultCreateStatus": "draft",
+    "forbidsAuthorizationCatalogMutation": true,
+    "forbidsBusinessActivation": true
+  },
+  "commandBoundary": {
+    "schemaVersion": 1,
+    "exactAudienceBinding": true,
+    "authenticatedServiceActor": true,
+    "allowlistedCommandCode": true,
+    "targetTenantBinding": true,
+    "desiredVersionAndHash": true,
+    "idempotencyFingerprint": true,
+    "staleAndSameVersionConflictDenial": true,
+    "atomicMutationReceiptAndOutbox": true
+  },
+  "lifecycleSeparation": {
+    "keycloakAdmissionMeans": "identity_organization_and_assurance_only",
+    "onboardingActiveMeans": "orchestration_converged",
+    "trustIamProjectionMeans": "authorization_scope_ceiling_only",
+    "neonActiveMeans": "plane_local_business_activation"
+  },
+  "resources": [
+    {
+      "resourceKind": "legal_entity",
+      "targetTable": "master.legal_entity",
+      "createScopeKind": "tenant",
+      "createScopeCoordinateKey": "tenantId",
+      "allowedCommandOperations": ["apply", "retain"],
+      "retention": "retain_legal_and_audit",
+      "applyConstraint": "create_draft_or_update_existing_draft",
+      "allowedDesiredStateFields": [
+        "canonicalPartyId",
+        "code",
+        "name",
+        "displayName",
+        "legalName",
+        "entityType",
+        "parentLegalEntityId",
+        "registrationNumber",
+        "registrationCountryCode",
+        "incorporationDate",
+        "functionalCurrency",
+        "reportingCurrency",
+        "effectiveFrom",
+        "effectiveUntil",
+        "metadata"
+      ],
+      "immutableAfterCreateFields": ["canonicalPartyId", "code", "entityType", "parentLegalEntityId"],
+      "activationPermissionCode": "neon.organization.legal_entity.activate"
+    },
+    {
+      "resourceKind": "company_code",
+      "targetTable": "master.company_code",
+      "createScopeKind": "legal_entity",
+      "createScopeCoordinateKey": "legalEntityId",
+      "allowedCommandOperations": ["apply", "retain"],
+      "retention": "retain_legal_and_audit",
+      "applyConstraint": "create_draft_or_update_existing_draft",
+      "allowedDesiredStateFields": [
+        "legalEntityId",
+        "code",
+        "name",
+        "displayName",
+        "description",
+        "functionalCurrency",
+        "countryCode",
+        "fiscalYearStartMonth",
+        "timezoneCode",
+        "localeCode",
+        "externalRef",
+        "metadata"
+      ],
+      "immutableAfterCreateFields": ["legalEntityId", "code"],
+      "activationPermissionCode": "neon.organization.company_code.activate"
+    },
+    {
+      "resourceKind": "operating_organization",
+      "targetTable": "master.operating_organization",
+      "createScopeKind": "tenant",
+      "createScopeCoordinateKey": "tenantId",
+      "allowedCommandOperations": ["apply", "retain"],
+      "retention": "retain_legal_and_audit",
+      "applyConstraint": "create_draft_or_update_existing_draft",
+      "allowedDesiredStateFields": [
+        "code",
+        "name",
+        "displayName",
+        "description",
+        "domain",
+        "parentOperatingOrganizationId",
+        "effectiveFrom",
+        "effectiveUntil",
+        "metadata"
+      ],
+      "immutableAfterCreateFields": ["code", "domain", "parentOperatingOrganizationId"],
+      "activationPermissionCode": "neon.organization.operating_organization.activate"
+    }
+  ],
+  "requiredBeforeEnforcement": [
+    "Implement a Neon-only master-data provisioner with an allowlist for the three resource kinds and their desired-state fields.",
+    "Bind every command to source authority tenant, onboarding case, canonical party, exact target tenant, desired version and desired hash with verifiable provenance.",
+    "Reject unknown command codes, target-plane mismatch, target-tenant mismatch, stale version, same-version hash conflict and non-draft target mutation.",
+    "Persist resource mutation, command receipt, audit evidence and outbox event in one Neon transaction under a non-BYPASSRLS provisioner role.",
+    "Prove replay, suspension, provenance, wrong-plane, cross-tenant and double-apply behavior with live databases.",
+    "Keep Neon activation behind the plane-local MFA, SoD, policy and exact-scope operation; Studio convergence must never imply business activation."
+  ]
+}

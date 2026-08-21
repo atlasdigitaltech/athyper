@@ -1,0 +1,108 @@
+# ============================================================================
+# Athyper Financial Document Registry — SLO Definitions (SPECIFICATION ONLY)
+#
+# WARNING: This file is NOT a Prometheus-native rule file.
+# It uses a custom recording_rules/slos YAML format for documentation purposes.
+# Do NOT add this file to Prometheus rule_files — it will fail to parse.
+#
+# Service Level Objectives for the document registry subsystem.
+# These SLOs drive alerting thresholds and runbook triggers.
+# To operationalize, convert each SLO into proper Prometheus recording/alerting
+# rules in document-registry-alerts.yml.
+# ============================================================================
+
+slos:
+  # ---------------------------------------------------------------------------
+  # SLO 1: Status Mapping Success Rate
+  # Target: < 0.1% fallback to DRAFT (unmapped source statuses)
+  # ---------------------------------------------------------------------------
+  - name: status_mapping_success
+    description: "Less than 0.1% of status mappings fall back to DRAFT"
+    target: 0.999
+    metric_success: fin_doc_registry_trigger_sync_count
+    metric_failure: fin_doc_registry_status_mapping_fallbacks
+    window: 1h
+    burn_rate_alert:
+      fast: { window: 5m, factor: 14.4, severity: warning }
+      slow: { window: 6h, factor: 6, severity: warning }
+
+  # ---------------------------------------------------------------------------
+  # SLO 2: Posting Consistency
+  # Target: < 5 posting inconsistencies per entity at any time
+  # ---------------------------------------------------------------------------
+  - name: posting_consistency
+    description: "Posting inconsistencies remain below 5 per entity"
+    target_max: 5
+    metric: fin_doc_registry_compliance_posting_inconsistency
+    escalation:
+      - threshold: 5
+        severity: warning
+        for: 10m
+      - threshold: 20
+        severity: warning
+        for: 5m
+      - threshold: 100
+        severity: critical
+        for: 2m
+
+  # ---------------------------------------------------------------------------
+  # SLO 3: Multi-Book Bridge Completeness
+  # Target: 0 incomplete bridge postings for posted documents
+  # ---------------------------------------------------------------------------
+  - name: bridge_completeness
+    description: "All posted documents have complete multi-book bridge entries"
+    target_max: 0
+    metric: fin_doc_registry_bridge_incomplete
+    escalation:
+      - threshold: 1
+        severity: warning
+        for: 5m
+      - threshold: 10
+        severity: critical
+        for: 2m
+
+  # ---------------------------------------------------------------------------
+  # SLO 4: Approved-Not-Posted Clearance
+  # Target: < 50 approved-but-unposted documents at any time
+  # Rationale: indicates posting pipeline health
+  # ---------------------------------------------------------------------------
+  - name: approved_not_posted_clearance
+    description: "Approved documents clear to posted within reasonable time"
+    target_max: 50
+    metric: fin_doc_registry_compliance_approved_not_posted
+    escalation:
+      - threshold: 50
+        severity: warning
+        for: 10m
+      - threshold: 200
+        severity: critical
+        for: 5m
+
+  # ---------------------------------------------------------------------------
+  # SLO 5: Closed-Period Violation Zero Tolerance
+  # Target: 0 documents posted in closed periods
+  # ---------------------------------------------------------------------------
+  - name: closed_period_zero_violation
+    description: "Zero documents posted in hard-closed fiscal periods"
+    target_max: 0
+    metric: fin_doc_registry_compliance_closed_period_violation
+    escalation:
+      - threshold: 1
+        severity: critical
+        for: 1m
+
+  # ---------------------------------------------------------------------------
+  # SLO 6: Approval Evidence Coverage
+  # Target: < 20 documents approved without scoring evidence
+  # ---------------------------------------------------------------------------
+  - name: approval_evidence_coverage
+    description: "Documents on governed routes have decision scoring evidence"
+    target_max: 20
+    metric: fin_doc_registry_compliance_approved_without_scoring
+    escalation:
+      - threshold: 20
+        severity: warning
+        for: 10m
+      - threshold: 100
+        severity: warning
+        for: 5m

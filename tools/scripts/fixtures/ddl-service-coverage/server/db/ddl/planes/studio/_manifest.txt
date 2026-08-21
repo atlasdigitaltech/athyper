@@ -1,0 +1,2 @@
+common/core/03_tables.sql
+planes/studio/core/03_tables.sql

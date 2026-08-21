@@ -1,39 +1,59 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────
 # pre-push hook — athyper
-# Blocks direct pushes to the remote 'main' branch.
-# All changes to main must go through a Pull Request.
+# Blocks direct pushes to protected branches: main, develop.
+# All changes must go through a Pull Request.
+#
+# Also: verifies that KC theme brand assets are in sync with the
+# canonical source before any push. Prevents stale assets from
+# reaching the remote.
+#
+# Flow:  feature/* → PR → develop → PR → main
 #
 # To bypass in a genuine emergency:
 #   git push --no-verify
 # ─────────────────────────────────────────────────────────────
 
-PROTECTED_BRANCH="main"
 REMOTE="$1"
 
 while read local_ref local_sha remote_ref remote_sha; do
   # Extract branch name from ref (refs/heads/main → main)
   remote_branch="${remote_ref#refs/heads/}"
 
-  if [ "$remote_branch" = "$PROTECTED_BRANCH" ]; then
-    # Allow the push only if it's coming from a CI/CD context
+  if [ "$remote_branch" = "main" ] || [ "$remote_branch" = "develop" ]; then
+    # Allow pushes from CI/CD context (GitHub Actions)
     if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
       exit 0
     fi
 
     echo ""
-    echo "  ✖  Direct push to 'main' on remote '$REMOTE' is not allowed."
+    echo "  ✖  Direct push to '$remote_branch' on remote '$REMOTE' is not allowed."
     echo ""
     echo "  Branch workflow:"
-    echo "    1. Push your branch: git push origin feature/your-feature"
-    echo "    2. Open a Pull Request on GitHub"
-    echo "    3. Get at least 1 peer review"
-    echo "    4. Merge via GitHub UI"
+    echo "    feature/* ──PR──► develop ──PR──► main"
+    echo ""
+    echo "    1. git push origin feature/your-feature"
+    echo "    2. Open a Pull Request → develop on GitHub"
+    echo "    3. Get at least 1 peer review → merge"
     echo ""
     echo "  Emergency bypass: git push --no-verify"
     echo ""
     exit 1
   fi
 done
+
+# ── Brand sync verification ───────────────────────────────────
+# Verify KC brand assets match the canonical source before push.
+# Catches cases where brand source changed but sync was not run.
+
+if command -v pnpm &>/dev/null; then
+  pnpm brand:verify
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "  Fix: run  pnpm brand:refresh  then commit the updated files."
+    echo ""
+    exit 1
+  fi
+fi
 
 exit 0

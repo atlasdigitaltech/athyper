@@ -1,0 +1,2 @@
+user default on >iam_live_test_only ~* &* +@all
+user iam-session on >iam_session_test_only ~iam:session:* ~iam:index:* ~iam:elevation:* &* +@read +@write +ping -flushall -flushdb -config

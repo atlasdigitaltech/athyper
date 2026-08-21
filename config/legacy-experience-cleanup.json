@@ -1,0 +1,87 @@
+﻿{
+  "schemaVersion": 1,
+  "observationWindowDays": 14,
+  "targets": [
+    {
+      "code": "plane_shell_wrappers",
+      "status": "retain_until_observed",
+      "flag": "unified_shell_v2",
+      "paths": [
+        "packages/planes/studio/shell/src/index.tsx",
+        "packages/planes/neon/shell/src/index.tsx",
+        "packages/planes/mesh/shell/src/index.tsx"
+      ]
+    },
+    {
+      "code": "settings_clients",
+      "status": "retain_until_observed",
+      "flag": "settings_workspace_v2",
+      "paths": [
+        "apps/studio/app/(shell)/settings/SettingsClient.tsx",
+        "apps/neon/app/(shell)/settings/SettingsClient.tsx",
+        "apps/mesh/app/(shell)/settings/SettingsClient.tsx"
+      ]
+    },
+    {
+      "code": "neon_legacy_settings_sections",
+      "status": "retain_until_observed",
+      "flag": "settings_workspace_v2",
+      "paths": [
+        "apps/neon/app/(shell)/settings/_sections"
+      ]
+    },
+    {
+      "code": "placeholder_command_hubs",
+      "status": "retain_until_observed",
+      "flag": "unified_shell_v2",
+      "paths": [
+        "packages/planes/studio/command-hub/src/index.tsx",
+        "packages/planes/neon/command-hub/src/index.tsx"
+      ]
+    },
+    {
+      "code": "legacy_favorites_container",
+      "status": "retain_until_observed",
+      "flag": "unified_shell_v2",
+      "paths": [
+        "packages/planes/neon/app/src/collaboration/FavoritesPanelContainer.tsx"
+      ]
+    },
+    {
+      "code": "finance_setup_poc",
+      "status": "removed",
+      "flag": "setup_directory_v2",
+      "paths": [
+        "packages/domain/finance/finance-workbench/src/views/FinanceSetupWorkspacePoc.tsx"
+      ]
+    },
+    {
+      "code": "static_dashboard_values",
+      "status": "removed",
+      "flag": "dashboard_host_v2",
+      "paths": []
+    },
+    {
+      "code": "ignored_inbox_catchall_behavior",
+      "status": "removed",
+      "flag": "work_inbox_v2",
+      "paths": []
+    },
+    {
+      "code": "temporary_feature_wrappers",
+      "status": "retain_until_observed",
+      "flag": "unified_shell_v2",
+      "paths": [
+        "packages/planes/studio/shell/src/index.tsx",
+        "packages/planes/neon/shell/src/index.tsx",
+        "packages/planes/mesh/shell/src/index.tsx"
+      ]
+    },
+    {
+      "code": "migration_flags",
+      "status": "retain_until_observed",
+      "flag": "unified_shell_v2",
+      "paths": []
+    }
+  ]
+}

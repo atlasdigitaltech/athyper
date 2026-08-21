@@ -1,0 +1,32 @@
+{
+  "reportVersion": "wave3.authorization-authority.verification.v1",
+  "reproducibleInputSha256": "2dcb90055ba407b44eebc14c99e302eb1aaf9a9cec95f7cbba20def090223a1e",
+  "authorityVersion": "wave3.neon-admin.authority.v1",
+  "target": "neon-admin",
+  "status": "pass",
+  "counts": {
+    "catalogPermissions": 559,
+    "permissionSets": 0,
+    "roles": 10,
+    "groups": 10,
+    "zeroGrantGroups": 2,
+    "proofEdges": 2518
+  },
+  "gates": {
+    "exactPermissionSets": true,
+    "tenantPlaneConsistent": true,
+    "emptyScopeNeverGrants": true,
+    "meshLocalProofGraph": true,
+    "everyActiveUserDeliberatelyMapped": "live_snapshot_gate_required",
+    "inactiveAuthorityGrantsNothing": "live_database_gate_required",
+    "backfillAnomaliesZero": "live_database_gate_required",
+    "targetConstraintsValidated": "live_database_gate_required",
+    "finalAuthorityNotNull": "post_backfill_live_gate_required"
+  },
+  "readAudit": [
+    "authority/authorization-authority-semantic-contract.v1.json",
+    "authority/neon-admin/authority.v1.json",
+    "catalog/neon-admin/compiled/compiled-catalog.v1.json"
+  ],
+  "failures": []
+}

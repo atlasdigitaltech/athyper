@@ -1,110 +1,115 @@
-# Athyper Platform
+# athyper
 
-Multi-tenant SaaS platform built with TypeScript, Node.js, PostgreSQL, Redis, and React. Uses hexagonal architecture, DI-based runtime, and Redis-backed BFF auth.
+Multi-tenant enterprise platform: monorepo containing three Next.js product
+planes, a shared runtime server, shared packages, and the infrastructure stack.
 
 ## Documentation
 
-### Platform Documentation (`docs/athyper/`)
+Canonical docs live under [docs/](docs/). The most-used entry points:
 
-- [Documentation Index](docs/athyper/README.md) — Master index for all platform docs
-- [Getting Started](docs/athyper/deployment/README.md) — Local Windows setup and Contabo server deployment
-- [Architecture](docs/athyper/architecture/README.md) — System design, DI container, request flow, multi-tenancy
-- [Framework](docs/athyper/framework/README.md) — Core contracts, adapters, runtime kernel
-- [Meta-Engine](docs/athyper/meta-engine/README.md) — Schema-driven entity system, compiler, lifecycle
-- [IAM & Auth](docs/athyper/iam/README.md) — PKCE flow, sessions, CSRF, MFA, Keycloak
-- [Security](docs/athyper/security/README.md) — Rate limiting, field-level security, middleware
-- [Audit & Compliance](docs/athyper/compliance/README.md) — Hash chain, encryption, redaction, DSAR
-- [Content Management](docs/athyper/content-management/README.md) — Upload, versioning, ACL, document rendering
-- [Messaging](docs/athyper/messaging/README.md) — In-app messaging, collaboration, comments
-- [Infrastructure](docs/athyper/infrastructure/README.md) — Docker Compose mesh, telemetry stack
-- [Runbooks](docs/athyper/runbooks/README.md) — Auth ops, audit go-live, incident response
-- [Build & Tooling](docs/athyper/BUILD-TOOLING.md) — Turborepo, ESLint, Vitest, codegen pipeline
+### Infrastructure & deployment — [docs/infrastructure/](docs/infrastructure/README.md)
 
-### Business Process Documentation (`docs/neon/`)
+| Resource | Path |
+|----------|------|
+| Local development setup (Windows) | [docs/infrastructure/local-dev-setup.md](docs/infrastructure/local-dev-setup.md) |
+| Environments matrix (local / staging / production) | [docs/infrastructure/environments.md](docs/infrastructure/environments.md) |
+| Staging server installation runbook (Phases 0–26) | [docs/infrastructure/staging-setup.md](docs/infrastructure/staging-setup.md) |
+| Staging day-2 operations (CI/CD, ops, security checklist) | [docs/infrastructure/staging-operations.md](docs/infrastructure/staging-operations.md) |
+| Architecture overview + v13 permission model | [docs/infrastructure/infrastructure-plan.md](docs/infrastructure/infrastructure-plan.md) |
+| Secrets management (inventory, rotation, backends) | [docs/infrastructure/secrets-management.md](docs/infrastructure/secrets-management.md) |
+| Weekly DB reset / re-seed / export runbook | [docs/infrastructure/weekly-reset-reseed-export.md](docs/infrastructure/weekly-reset-reseed-export.md) |
+| Env variable reference (all vars + config layers) | [docs/infrastructure/env-reference.md](docs/infrastructure/env-reference.md) |
+| Stack scripts reference | [docs/infrastructure/scripts-reference.md](docs/infrastructure/scripts-reference.md) |
+| Docker services reference | [docs/infrastructure/docker-services.md](docs/infrastructure/docker-services.md) |
+| Mesh DB provisioning | [docs/infrastructure/mesh-seed-db.md](docs/infrastructure/mesh-seed-db.md) |
 
-- [Entity UI Framework](docs/neon/ENTITY_UI_FRAMEWORK.md) — Entity rendering specification
-- [Finance Specification](docs/neon/finance/FINANCE_FUNCTIONAL_SPECIFICATION.md) — Finance engine v2.1
+### Compose profiles, IAM, render, monitoring
 
-### Developer Onboarding
+| Resource | Path |
+|----------|------|
+| Analytics profile (Metabase, deferred) | [docs/infrastructure/profile-analytics.md](docs/infrastructure/profile-analytics.md) |
+| Security profiles (ClamAV, Infisical) | [docs/infrastructure/profile-security.md](docs/infrastructure/profile-security.md) |
+| Render profile (Gotenberg, Tika) | [docs/infrastructure/profile-render.md](docs/infrastructure/profile-render.md) |
+| Keycloak realm config | [docs/infrastructure/iam-realm-config.md](docs/infrastructure/iam-realm-config.md) |
+| Keycloak protocol mappers | [docs/infrastructure/iam-protocol-mappers.md](docs/infrastructure/iam-protocol-mappers.md) |
+| Render pipeline tuning + DLQ contract | [docs/infrastructure/render-pipeline-config.md](docs/infrastructure/render-pipeline-config.md) |
+| Uptime Kuma (statuswatch) monitors | [docs/infrastructure/monitoring-statuswatch.md](docs/infrastructure/monitoring-statuswatch.md) |
 
-- [Contributing Guide](CONTRIBUTING.md) — Setup, conventions, architecture rules, daily workflow
+### Architecture, meta-entity, specs
 
-## Project Structure
+| Resource | Path |
+|----------|------|
+| Local docs index (ADRs, architecture, audits) | [docs/local/README.md](docs/local/README.md) |
+| Folder boundary map | [docs/local/architecture/folder-boundary-map.md](docs/local/architecture/folder-boundary-map.md) |
+| Meta-entity model docs | [docs/meta-entity/](docs/meta-entity/) |
+| Integration specs | [docs/integrations/](docs/integrations/) |
+| Specs | [docs/specs/](docs/specs/) |
 
-```
-athyper-private/
-├── framework/                        # Core platform
-│   ├── core/                         # @athyper/core — pure contracts, zero infra deps
-│   ├── runtime/                      # @athyper/runtime — kernel, DI, HTTP, services
-│   └── adapters/
-│       ├── auth/                     # @athyper/adapter-auth — Keycloak OIDC, JWKS (jose)
-│       ├── db/                       # @athyper/adapter-db — PostgreSQL via Kysely + Prisma
-│       ├── memorycache/              # @athyper/adapter-memorycache — Redis (ioredis)
-│       ├── objectstorage/            # @athyper/adapter-objectstorage — S3/MinIO (AWS SDK)
-│       └── telemetry/                # @athyper/adapter-telemetry — OpenTelemetry + Pino
-├── products/neon/                    # Neon product
-│   ├── apps/web/                     # @neon/web — Next.js 14 app
-│   ├── auth/                         # @neon/auth — BFF session management, audit
-│   ├── content/                      # @neon/content — BFF content service
-│   └── themes/                       # @neon/theme — Tailwind theme presets
-├── packages/                         # Shared libraries
-│   ├── ui/                           # @athyper/ui — Radix-based component library
-│   ├── api-client/                   # @athyper/api-client — typed API client
-│   ├── auth/                         # @athyper/auth — shared auth types
-│   ├── dashboard/                    # @athyper/dashboard — dashboard schema & registry
-│   ├── i18n/                         # @athyper/i18n — internationalization (7 locales)
-│   ├── theme/                        # @athyper/theme — design tokens, Tailwind preset
-│   ├── workbench-admin/              # @athyper/workbench-admin
-│   ├── workbench-user/               # @athyper/workbench-user
-│   └── workbench-partner/            # @athyper/workbench-partner
-├── mesh/                             # Docker Compose infrastructure
-│   ├── compose/                      # Base + per-environment overrides
-│   ├── config/                       # Service configs (Keycloak, Traefik, Redis, etc.)
-│   └── scripts/                      # up.sh, down.sh, logs.sh, init-data.sh
-├── tools/codegen/                    # Kysely codegen pipeline
-├── tooling/                          # ESLint config, shared tsconfig
-├── docs/
-│   ├── athyper/                      # Platform documentation
-│   └── neon/                         # Business process documentation
-└── server/                           # Server library placeholder
-```
+## Prerequisites
 
-## Quick Start
+Node.js >= 22, pnpm 10.33.0 via Corepack, Docker with Compose, git >= 2.40.
 
 ```bash
-pnpm install                          # Install dependencies
-pnpm mesh:up                          # Start infrastructure (Docker)
-pnpm db:provision                     # Provision database schemas
-pnpm build                            # Build all packages
-pnpm dev                              # Start all services
+node -v && pnpm -v && docker info
 ```
 
-See [Deployment Guide](docs/athyper/deployment/README.md) for full setup.
+## 5-minute setup
 
-## Technology Stack
+```bash
+# 1. Clone and install
+git clone <repo-url> athyper && cd athyper
+pnpm install
 
-| Layer | Technologies |
-|-------|-------------|
-| Backend | Node.js 20, TypeScript 5.9, Express 4, BullMQ |
-| Frontend | Next.js 14, React 19, Tailwind CSS 4, Radix UI, Zustand 5 |
-| Data | PostgreSQL 16, Kysely, Redis/ioredis, Prisma 6 |
-| Auth | Keycloak, JOSE (JWT), PKCE, Redis sessions |
-| Infra | Docker, Traefik, PgBouncer, MinIO (S3) |
-| Observability | OpenTelemetry, Pino, Grafana, Prometheus, Tempo, Loki |
-| Build | pnpm 10, Turbo 2.8, Vitest 4, tsup, ESLint 9 |
+# 2. Create local stack env
+bash stack/scripts/setup/setup-env.sh local stack
 
-## Commands
+# 3. First-time stack setup
+bash stack/scripts/setup/data-dirs-create.sh
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start all services in dev mode |
-| `pnpm build` | Build all packages |
-| `pnpm test` | Run tests (Vitest) |
-| `pnpm lint` | Lint all packages |
-| `pnpm typecheck` | TypeScript type checking |
-| `pnpm check` | Lint + typecheck + test + depcheck |
-| `pnpm mesh:up` | Start Docker infrastructure |
-| `pnpm mesh:down` | Stop Docker infrastructure |
-| `pnpm db:provision` | Provision database (DDL + seed) |
-| `pnpm db:studio` | Open Prisma Studio |
-| `pnpm kysely:codegen` | Generate Kysely types from DB |
+# 4. Start infrastructure (Postgres, Redis, Keycloak, MinIO, …)
+bash stack/scripts/stack-profile/up.sh core
+
+# 5. Run migrations + seed data
+cd server && tsx db/seed/migrate.ts --all && cd ..
+
+# 6. Start dev servers
+pnpm dev
+```
+
+Neon app: http://localhost:3000 · API: http://localhost:4000
+
+See [docs/infrastructure/local-dev-setup.md](docs/infrastructure/local-dev-setup.md) for the full local walkthrough and [docs/infrastructure/staging-setup.md](docs/infrastructure/staging-setup.md) for the Ubuntu staging runbook.
+
+## Repo structure
+
+```
+apps/neon/       Tenant/customer operating plane
+apps/mesh/       Partner/supplier collaboration plane
+apps/admin/      Internal platform administration plane
+packages/        Shared, domain, and product TypeScript packages
+server/          Shared Express API + BullMQ workers + DB DDL/seeds
+stack/           Docker Compose infrastructure stack
+perf/k6/         Load test scripts
+tooling/         Shared tsconfig bases
+```
+
+## Common commands
+
+```bash
+pnpm dev                  # start all packages in watch mode
+pnpm lint                 # ESLint across workspace
+pnpm typecheck            # TypeScript strict check
+pnpm test                 # Vitest unit tests
+
+# Scoped
+pnpm dev --filter @athyper/neon             # Neon app only
+pnpm dev --filter @athyper/mesh             # Mesh app only
+pnpm dev --filter @athyper/admin            # Admin app only
+pnpm dev --filter @athyper/runtime-server   # API + workers only
+
+# DB
+cd server
+tsx db/seed/migrate.ts --status   # show migration state
+tsx db/seed/migrate.ts --all      # run all phases
+tsx db/seed/migrate.ts --reset    # drop + re-seed (local dev only)
+```

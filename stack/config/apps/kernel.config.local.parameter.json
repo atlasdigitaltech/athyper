@@ -1,0 +1,99 @@
+{
+  "$schema": "./kernel.config.schema.json",
+  "$comment": "Local Development — works on Windows, macOS, and Linux. Provides IAM realm config, feature flags, and tenant defaults. Infrastructure wiring (db, redis, s3, telemetry endpoints) is LOCKED from this file and must be set via env vars in the root .env file.",
+
+  "env": "local",
+  "mode": "api",
+  "serviceName": "athyper-runtime",
+  "port": 3000,
+
+  "logLevel": "debug",
+  "shutdownTimeoutMs": 15000,
+
+  "$comment_urls": "MUST match PUBLIC_BASE_URL / PUBLIC_WEB_URL in stack/env/.env — validate-env.sh checks parity.",
+  "publicBaseUrl": "https://api.athyper.local",
+  "publicWebUrl": "https://neon.athyper.local",
+
+  "db": {
+    "$comment": "LOCKED — stripped at load time. Actual values come from DATABASE_URL / DATABASE_ADMIN_URL env vars. Local stack exposes PgBouncer on localhost:6432.",
+    "url": "LOCKED_USE_ENV_VAR",
+    "adminUrl": "LOCKED_USE_ENV_VAR",
+    "poolMax": 5
+  },
+
+  "redis": {
+    "$comment": "LOCKED — stripped at load time. All values come from env vars. Local stack exposes Redis on localhost:6379.",
+    "url": "LOCKED_USE_ENV_VAR",
+    "connectTimeoutMs": "LOCKED_USE_ENV_VAR: REDIS_CONNECT_TIMEOUT_MS (default 5000)",
+    "maxRetries": "LOCKED_USE_ENV_VAR: REDIS_MAX_RETRIES (default 2)",
+    "errorLogCooldownMs": "LOCKED_USE_ENV_VAR: REDIS_ERROR_LOG_COOLDOWN_MS (default 10000)"
+  },
+
+  "s3": {
+    "$comment": "LOCKED — stripped at load time. All values come from S3_* env vars. Local stack provides MinIO via Traefik at https://objectstorage.athyper.local.",
+    "endpoint": "LOCKED_USE_ENV_VAR",
+    "accessKey": "LOCKED_USE_ENV_VAR",
+    "secretKey": "LOCKED_USE_ENV_VAR",
+    "region": "LOCKED_USE_ENV_VAR: S3_REGION (default us-east-1)",
+    "bucket": "LOCKED_USE_ENV_VAR: S3_BUCKET",
+    "useSSL": "LOCKED_USE_ENV_VAR: S3_USE_SSL (default false)",
+    "multipartPartSizeMb": "LOCKED_USE_ENV_VAR: S3_MULTIPART_PART_SIZE_MB (default 5)",
+    "multipartQueueSize": "LOCKED_USE_ENV_VAR: S3_MULTIPART_QUEUE_SIZE (default 4)",
+    "maxUploadMb": "LOCKED_USE_ENV_VAR: S3_MAX_UPLOAD_MB (default 100)",
+    "presignedTtlSeconds": "LOCKED_USE_ENV_VAR: S3_PRESIGNED_TTL_SECONDS (default 900)"
+  },
+
+  "iam": {
+    "strategy": "single_realm",
+    "defaultRealmKey": "athyper",
+    "defaultTenantKey": "default",
+    "defaultOrgKey": null,
+    "requireTenantClaimsInProd": false,
+    "realms": {
+      "athyper": {
+        "iam": {
+          "$comment_issuerUrl": "MUST match IAM_ISSUER_URL in stack/env/.env — validate-env.sh checks parity.",
+          "issuerUrl": "https://iam.athyper.local/realms/athyper",
+          "clientId": "athyper-api-runtime",
+          "allowedAzp": [
+            "athyper-api-runtime",
+            "athyper-svc-runtime-worker",
+            "studio-svc-bff",
+            "studio-web",
+            "mesh-svc-bff",
+            "mesh-web",
+            "neon-svc-bff",
+            "neon-web"
+          ],
+          "clientSecretRef": "IAM_ATHYPER_CLIENT_SECRET"
+        },
+        "defaults": {
+          "features": {
+            "metaStudio": true,
+            "debugMode": true
+          },
+          "policies": {
+            "strictTenantIsolation": false
+          }
+        },
+        "tenants": {
+          "default": {
+            "defaults": {
+              "country": "US",
+              "currency": "USD",
+              "timezone": "UTC"
+            },
+            "orgs": {}
+          }
+        }
+      }
+    }
+  },
+
+  "telemetry": {
+    "$comment": "LOCKED — otlpEndpoint is stripped at load time. Set via env vars. Telemetry enablement is controlled by OTEL env vars, not this file.",
+    "otlpEndpoint": "LOCKED_USE_ENV_VAR",
+    "serviceName": "athyper-runtime",
+    "serviceVersion": "1.0.0"
+  }
+}

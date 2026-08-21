@@ -1,0 +1,19 @@
+{
+  "manifestVersion": "athyper.shared-reference-provenance.v1",
+  "extractionDate": "2026-08-03",
+  "datasets": [
+    { "files": ["001_country.sql"], "standard": "ISO 3166-1", "edition": "repository snapshot at extraction date", "publisher": "International Organization for Standardization" },
+    { "files": ["002_state_region.sql"], "standard": "ISO 3166-2", "edition": "repository snapshot at extraction date", "publisher": "International Organization for Standardization" },
+    { "files": ["003_currency.sql"], "standard": "ISO 4217", "edition": "repository snapshot at extraction date", "publisher": "International Organization for Standardization; maintenance agency SIX Group" },
+    { "files": ["004_language.sql"], "standard": "ISO 639", "edition": "repository snapshot at extraction date", "publisher": "International Organization for Standardization" },
+    { "files": ["005_locale.sql"], "standard": "IETF BCP 47", "edition": "repository snapshot at extraction date", "publisher": "Internet Engineering Task Force" },
+    { "files": ["006_timezone.sql"], "standard": "IANA Time Zone Database", "edition": "repository snapshot at extraction date", "publisher": "Internet Assigned Numbers Authority" },
+    { "files": ["007_uom.sql"], "standard": "UN/CEFACT Recommendation 20", "edition": "repository snapshot at extraction date", "publisher": "United Nations Economic Commission for Europe" },
+    { "files": ["008a_commodity_code_unspsc.sql", "008d_commodity_code_keywords.sql"], "standard": "UNSPSC", "edition": "19.0501", "publisher": "GS1 US" },
+    { "files": ["008b_commodity_code_hs.sql"], "standard": "Harmonized System", "edition": "2022", "publisher": "World Customs Organization" },
+    { "files": ["008c_commodity_crosswalk.sql"], "standard": "Athyper UNSPSC-HS heuristic crosswalk", "edition": "crosswalk_generator_fast_v1", "publisher": "Athyper; derived from UNSPSC 19.0501 and HS 2022" },
+    { "files": ["009b_industry_code_isic_groups_classes.sql", "009e_industry_code_keywords.sql"], "standard": "ISIC", "edition": "Revision 4", "publisher": "United Nations Statistics Division" },
+    { "files": ["009c_industry_code_naics_subsectors.sql"], "standard": "NAICS", "edition": "2022", "publisher": "United States Census Bureau" },
+    { "files": ["009d_industry_crosswalk.sql"], "standard": "Athyper ISIC-NAICS heuristic crosswalk", "edition": "1.0.0", "publisher": "Athyper; derived from ISIC Revision 4 and NAICS 2022" }
+  ]
+}

@@ -1,0 +1,54 @@
+# syntax=docker/dockerfile:1.7
+# =============================================================================
+# athyper Platform Host — Production Image
+# Build context: repository root
+# =============================================================================
+
+FROM node:24-alpine AS base
+RUN corepack enable && corepack prepare pnpm@10.33.0 --activate
+WORKDIR /repo
+
+FROM base AS pruner
+COPY . .
+RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm dlx turbo@2.9.6 prune "@athyper/server-platform-host" "@athyper/server-db" --docker
+
+FROM base AS installer
+COPY --from=pruner /repo/out/json/ ./
+COPY --from=pruner /repo/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY server/tsconfig.json ./server/tsconfig.json
+RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm install --frozen-lockfile
+
+FROM base AS builder
+COPY --from=installer /repo/ ./
+COPY --from=pruner /repo/out/full/ ./
+
+# Build workspace dependencies first, then the host
+RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
+RUN pnpm --filter "@athyper/server-platform-host" run build
+
+# Deploy the production dependency graph
+RUN --mount=type=cache,id=athyper-pnpm-store,target=/pnpm/store,sharing=locked \
+    pnpm config set store-dir /pnpm/store && \
+    pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
+    pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime
+
+FROM node:24-alpine AS runtime
+
+RUN apk add --no-cache postgresql-client wget
+
+ENV NODE_ENV=production
+WORKDIR /app/server
+
+COPY --from=builder --chown=node:node /runtime/ ./
+
+USER node
+EXPOSE 4000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD wget -qO- http://localhost:4000/livez || exit 1
+
+CMD ["node", "dist/main.js"]

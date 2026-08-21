@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "reference": "server-backup is read-only behavioral reference",
+  "items": [
+    { "id": "iam-session-lifecycle", "domain": "iam", "legacy": ["session.routes.ts"], "current": ["platform/iam/iam-routes.ts"], "state": "partial", "requiredEvidence": ["dual-server contract test", "authorization and failure semantics"] },
+    { "id": "iam-mfa", "domain": "iam", "legacy": ["routes/mfa.routes.ts", "mfa/step-up.service.ts"], "current": [], "state": "missing", "requiredEvidence": ["MFA enrollment and elevation contracts", "Keycloak integration test"] },
+    { "id": "iam-discovery-jwks", "domain": "iam", "legacy": ["discovery/discovery.service.ts"], "current": ["adapters/auth-keycloak"], "state": "partial", "requiredEvidence": ["discovery/JWKS contract test", "key rotation test"] },
+    { "id": "iam-delegation-groups-roles-principal-search", "domain": "iam", "legacy": ["routes/mfa.routes.ts", "runtime/auth-pipeline.ts"], "current": [], "state": "missing", "requiredEvidence": ["client contract test", "authorization side-effect test"] },
+    { "id": "audit-query-export", "domain": "audit", "legacy": ["routes/audit.route.ts"], "current": ["platform/audit/audit-routes.ts"], "state": "partial", "requiredEvidence": ["query/export contract test", "storage and retention test"] },
+    { "id": "audit-legal-holds-integrity-pii", "domain": "audit", "legacy": ["routes/legal-hold.route.ts"], "current": [], "state": "missing", "requiredEvidence": ["approved retirement or implemented governed API", "worker/schedule proof"] },
+    { "id": "content-links-attachments-acl", "domain": "content", "legacy": ["services/content/routes/content.route.ts"], "current": ["services/content/content-routes.ts"], "state": "partial", "evidence": ["server/packages/services/content/src/content-routes.compatibility.test.ts"], "requiredEvidence": ["ACL/grant authorization comparison", "attachment-version upload decision"] },
+    { "id": "saved-view-legacy-operations", "domain": "preferences", "legacy": ["services/platform/routes/platform.route.ts"], "current": ["platform/preferences/saved-view-routes.ts"], "state": "partial", "evidence": ["server/packages/platform/preferences/src/preferences.test.ts", "server/packages/platform/preferences/src/saved-view-routes.compatibility.test.ts"], "requiredEvidence": ["legacy response/error schema comparison", "approved retirement record for any omitted operation"] },
+    { "id": "records-policy-workflow-metadata", "domain": "core-platform", "legacy": ["services", "platform"], "current": ["services/records", "platform/policy", "platform/workflow", "platform/metadata"], "state": "partial", "requiredEvidence": ["client-driven route contract suite", "concurrency/side-effect/failure tests"] }
+  ]
+}

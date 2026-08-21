@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "webVitals": {
+    "lcpP75Ms": 2500,
+    "inpP75Ms": 200
+  },
+  "requestBudgets": {
+    "dashboardBootstrapMax": 1,
+    "settingsBootstrapMax": 1,
+    "maxListPageSize": 200
+  },
+  "bundleBudgets": {
+    "sharedShellGzipBytes": 163840
+  }
+}

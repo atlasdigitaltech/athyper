@@ -1,0 +1,41 @@
+{
+  "uid": "athyper-meta-entity-performance",
+  "title": "Athyper Meta-entity Performance",
+  "description": "P0-P7 descriptor, query, transaction, invalidation, and outbox qualification signals",
+  "tags": ["athyper", "meta-entity", "performance", "qualification"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [
+    { "name": "entity", "type": "query", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": "label_values(athyper_framework_requests_total, entity)", "includeAll": true, "allValue": ".*", "current": { "text": "All", "value": "$__all" } },
+    { "name": "operation", "type": "query", "datasource": { "type": "prometheus", "uid": "prometheus" }, "query": "label_values(athyper_framework_requests_total, operation)", "includeAll": true, "allValue": ".*", "current": { "text": "All", "value": "$__all" } }
+  ]},
+  "panels": [
+    { "id": 1, "title": "Descriptor / Framework Cache Hit Rate", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 0 }, "targets": [
+      { "expr": "sum(rate(athyper_framework_requests_total{entity=~\"$entity\",operation=~\"$operation\",cache_state=~\"l1_hit|l2_hit\"}[5m])) / clamp_min(sum(rate(athyper_framework_requests_total{entity=~\"$entity\",operation=~\"$operation\"}[5m])), 1)", "legendFormat": "hit ratio" }
+    ], "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 } } },
+    { "id": 2, "title": "SQL Statements p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 0 }, "targets": [
+      { "expr": "histogram_quantile(0.95, sum(rate(athyper_framework_sql_statements_bucket{entity=~\"$entity\",operation=~\"$operation\"}[5m])) by (le, operation))", "legendFormat": "{{operation}}" }
+    ] },
+    { "id": 3, "title": "Transaction Duration p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 0 }, "targets": [
+      { "expr": "histogram_quantile(0.95, sum(rate(athyper_framework_transaction_duration_seconds_bucket{entity=~\"$entity\",operation=~\"$operation\"}[5m])) by (le, operation))", "legendFormat": "{{operation}}" }
+    ], "fieldConfig": { "defaults": { "unit": "s" } } },
+    { "id": 4, "title": "DB Pool Wait p95", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 }, "targets": [
+      { "expr": "histogram_quantile(0.95, sum(rate(athyper_framework_db_pool_wait_seconds_bucket{entity=~\"$entity\",operation=~\"$operation\"}[5m])) by (le, operation))", "legendFormat": "{{operation}}" }
+    ], "fieldConfig": { "defaults": { "unit": "s" } } },
+    { "id": 5, "title": "Descriptor Invalidation Lag", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 }, "targets": [
+      { "expr": "max(athyper_execution_descriptor_invalidation_lag_seconds)", "legendFormat": "lag" }
+    ], "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 35 }] } } } },
+    { "id": 6, "title": "Outbox Oldest Unpublished", "type": "timeseries", "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 }, "targets": [
+      { "expr": "max by (topic) (athyper_outbox_oldest_unpublished_seconds)", "legendFormat": "{{topic}}" }
+    ], "fieldConfig": { "defaults": { "unit": "s" } } },
+    { "id": 7, "title": "Protected Request Observability Coverage", "type": "stat", "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 }, "targets": [
+      { "expr": "sum(rate(athyper_framework_observability_total{reported=\"true\"}[10m])) / clamp_min(sum(rate(athyper_framework_observability_total[10m])), 1)", "legendFormat": "coverage" }
+    ], "fieldConfig": { "defaults": { "unit": "percentunit", "thresholds": { "steps": [{ "color": "red", "value": null }, { "color": "green", "value": 0.95 }] } } } },
+    { "id": 8, "title": "Compatibility Traffic", "type": "timeseries", "gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 }, "targets": [
+      { "expr": "sum by (operation) (rate(athyper_framework_requests_total{cohort=~\"legacy|compatibility\"}[5m]))", "legendFormat": "{{operation}}" }
+    ] }
+  ]
+}

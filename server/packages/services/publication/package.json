@@ -1,0 +1,31 @@
+{
+  "name": "@athyper/server-service-publication",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run",
+    "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs"
+  },
+  "dependencies": {
+    "@athyper/server-contract-audit": "workspace:*",
+    "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-object-storage": "workspace:*",
+    "@athyper/server-contract-publication": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "@athyper/server-runtime-http": "workspace:*",
+    "kysely": "^0.28.16"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.11.10",
+    "pg": "^8.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

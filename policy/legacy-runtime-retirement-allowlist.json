@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "legacyPackageRoots": [
+    {
+      "path": "packages/product-deprecated/runtime-ui/",
+      "owner": "Runtime Platform",
+      "removeBy": "2026-10-31",
+      "migrationBlocker": "Document and master-detail consumers still rely on the records relay.",
+      "maxLegacyRecordsOccurrences": 88,
+      "maxDeprecatedRuntimeImports": 16
+    }
+  ],
+  "legacyRecordsConsumers": [
+    { "path": "apps/neon/app/api/records/[...path]/route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 2 },
+    { "path": "apps/neon/app/api/records/[...path]/__tests__/route.test.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "apps/neon/app/api/runtime/v1/entities/[entity]/[id]/edit/events/__tests__/route.test.ts", "owner": "Runtime Platform", "removeBy": "2026-08-31", "maxOccurrences": 1 },
+    { "path": "apps/neon/app/api/runtime/v1/entities/[entity]/relations/[relation]/records/[parent_id]/__tests__/route.test.ts", "owner": "Runtime Platform", "removeBy": "2026-08-31", "maxOccurrences": 1 },
+    { "path": "apps/neon/lib/server/meta-entity-process-state.ts", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 4 },
+    { "path": "apps/neon/lib/server/meta-entity-records.ts", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 1 },
+    { "path": "packages/shared/data-integration/api-contracts/src/runtime-server-paths.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 2 },
+    { "path": "packages/shared/data-integration/api-contracts/src/schemas/records.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 3 },
+    { "path": "packages/shared/platform-auth/auth-common/src/__tests__/matrix-golden-fixture.test.ts", "owner": "Identity Platform", "removeBy": "2026-08-31", "maxOccurrences": 10 },
+    { "path": "packages/shared/platform-auth/auth-common/src/__tests__/required-actions.test.ts", "owner": "Identity Platform", "removeBy": "2026-08-31", "maxOccurrences": 4 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/components/line-item-sheet.tsx", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 1 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/components/unified-line-item-sheet.tsx", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 1 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/panels/accounting-panel.tsx", "owner": "Finance Platform", "removeBy": "2026-09-30", "maxOccurrences": 6 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/panels/classification-panel.tsx", "owner": "Finance Platform", "removeBy": "2026-09-30", "maxOccurrences": 1 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/surface/line-items-surface.tsx", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 2 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/surface/lines-grid.tsx", "owner": "Runtime Platform", "removeBy": "2026-09-30", "maxOccurrences": 8 },
+    { "path": "packages/shared/runtime-domain/runtime-line-item/src/variants/procure.ts", "owner": "Procurement Platform", "removeBy": "2026-09-30", "maxOccurrences": 3 },
+    { "path": "server/packages/services/finance/routes/journal.route.ts", "owner": "Finance Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/packages/services/records/routes/action-dispatcher.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/packages/services/records/routes/bulk-action.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/packages/services/records/routes/bulk-crud.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 2 },
+    { "path": "server/packages/services/records/routes/bulk-preflight.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/packages/services/records/routes/business-partner-management.route.ts", "owner": "Business Platform", "removeBy": "2026-10-31", "maxOccurrences": 3 },
+    { "path": "server/packages/services/records/routes/export.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 3 },
+    { "path": "server/packages/services/records/routes/import.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 8 },
+    { "path": "server/packages/services/records/routes/lifecycle.route.ts", "owner": "Workflow Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/packages/services/records/routes/records.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 7 },
+    { "path": "server/packages/services/records/routes/supplier-intake.route.ts", "owner": "Procurement Platform", "removeBy": "2026-10-31", "maxOccurrences": 4 },
+    { "path": "server/packages/services/records/routes/versions.route.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 1 },
+    { "path": "server/scripts/check-runtime-server-paths.ts", "owner": "Runtime Platform", "removeBy": "2026-10-31", "maxOccurrences": 3 }
+  ]
+}

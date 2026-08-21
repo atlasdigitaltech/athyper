@@ -1,9 +1,0 @@
-﻿{
-    "code":  "INT",
-    "name":  "Integration Hub",
-    "dependsOn":  [
-                      "CORE"
-                  ],
-    "tenantScoped":  true,
-    "subscription":  "Base"
-}

@@ -1,0 +1,1932 @@
+{
+  "contractVersion": "athyper.authorization.clean-slate-seed-pack.v1",
+  "planePack": "studio",
+  "semanticPermissionContract": {
+    "contractVersion": "athyper.authorization.semantic.v1",
+    "permissionIdentity": "plane.domain.entity.operation",
+    "defaultDecision": "deny",
+    "rules": {
+      "keycloak": "authentication_client_admission_and_assurance_only",
+      "planeMembership": "active_exact_tenant_and_plane_required",
+      "organizationProjection": "active_verified_projection_required_before_authorization",
+      "permission": "published_exact_plane_permission_required",
+      "operationBinding": "published_exact_entity_operation_binding_required",
+      "scope": "typed_nonempty_target_and_compatible_propagation_required",
+      "entitlement": "required_before_any_allow_proof",
+      "mfa": "permission_risk_and_assurance_policy_required",
+      "separationOfDuties": "required_before_any_allow_proof",
+      "policy": "hard_policy_must_pass",
+      "deny": "matching_deny_has_absolute_precedence",
+      "allow": "active_role_delegation_acl_or_approved_finite_override_proof_required",
+      "cleanSlate": "admitted_subjects_are_quarantined_with_zero_allow_edges"
+    },
+    "scopePropagation": [
+      "exact",
+      "subtree",
+      "member_companies",
+      "relationship_participants"
+    ]
+  },
+  "permissionCatalog": {
+    "version": "2.0.0",
+    "operations": [
+      {
+        "permissionId": "37a1fe0e-8a21-5139-a783-61cbaeed9ce9",
+        "canonicalPermissionCode": "studio.iam.application_projection.read",
+        "plane": "studio",
+        "entityCode": "application_projection",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "2ce3ad20169d275cdac1f7f1f2d04c7888e0558f45619c7b4b005d552c0d2412",
+        "permissionKind": "capability",
+        "moduleCode": "iam"
+      },
+      {
+        "permissionId": "e2b73caf-d562-5ef0-8dbe-aa9ca0ac27c6",
+        "canonicalPermissionCode": "studio.iam.application_projection.replay",
+        "plane": "studio",
+        "entityCode": "application_projection",
+        "operationCode": "replay",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "0be4a6553400dfcd13a9899c2d6a786a875a604a1a75547d1ab5e00dfd25093a",
+        "permissionKind": "capability",
+        "moduleCode": "iam"
+      },
+      {
+        "permissionId": "c2b62141-bfb0-52e7-afc2-99af007399a6",
+        "canonicalPermissionCode": "studio.iam.idp.manage",
+        "plane": "studio",
+        "entityCode": "idp",
+        "operationCode": "manage",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": false,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "0515a6c8b7e7df61d8315242342bb1d968438abfdc53ecd9bcf46b4b76d2c3f7",
+        "permissionKind": "capability",
+        "moduleCode": "iam"
+      },
+      {
+        "permissionId": "c22cc8ed-e7ca-5d14-8bb9-48ccac9dd283",
+        "canonicalPermissionCode": "studio.iam.idp.read",
+        "plane": "studio",
+        "entityCode": "idp",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "d8cceae1a4b90151d8abf1d5ce0c055cd839a0c48e21983429a8cf55b5cedc20",
+        "permissionKind": "capability",
+        "moduleCode": "iam"
+      },
+      {
+        "permissionId": "2e469008-0e6e-5859-9b23-ef9e96038b1a",
+        "canonicalPermissionCode": "studio.iam.parameter.manage",
+        "plane": "studio",
+        "entityCode": "parameter",
+        "operationCode": "manage",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c917e56e7f82fd6ecfbf858dc76a1990e1a04ecf3c80519a50d23852a337598a",
+        "permissionKind": "capability",
+        "moduleCode": "iam"
+      },
+      {
+        "permissionId": "5be69dc1-4ba2-5fb0-8358-11658a878637",
+        "canonicalPermissionCode": "studio.jobs.board.view",
+        "plane": "studio",
+        "entityCode": "board",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "3ec031ec6ca744206e3e9a1333772afc06e219f2a51ce6dc380601a9240a5d3e",
+        "permissionKind": "capability",
+        "moduleCode": "job"
+      },
+      {
+        "permissionId": "869a2819-3225-54cb-a0b7-3b23be4de81c",
+        "canonicalPermissionCode": "studio.jobs.queue.manage",
+        "plane": "studio",
+        "entityCode": "queue",
+        "operationCode": "manage",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "24ffc5e278084c81c987e74c6d5f8c6877369d0423b7f0e771abf0d5e10bf9eb",
+        "permissionKind": "capability",
+        "moduleCode": "job"
+      },
+      {
+        "permissionId": "fb28a879-b318-5741-998f-ae598fcbdc5c",
+        "canonicalPermissionCode": "studio.metadata.contract_draft.create",
+        "plane": "studio",
+        "entityCode": "contract_draft",
+        "operationCode": "create",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "d3e4ea84b133b8121549c414464a2da8bd0069862fd1e7c9828803574f89394a",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "799cd144-d9aa-5396-9d04-1e6d9f9d5b11",
+        "canonicalPermissionCode": "studio.metadata.contract.break_glass",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "break_glass",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "f05d7a5b37117212488e19071b2804743c44751b44a9281e96786497d283d933",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "da731a8f-421d-5ad1-b006-387cd3964b15",
+        "canonicalPermissionCode": "studio.metadata.contract.edit",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "edit",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "0628f7118f5d4f85e02dc6aa16c67f35ba9088b6a060db2a66bf227bf74bcfb8",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "5d34d380-85cd-5cf1-8f04-96edb2fb7133",
+        "canonicalPermissionCode": "studio.metadata.contract.export",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "export",
+        "operationKind": "read",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a3ed8ed9e6f1b28e60149d8b1f3260495b2d3d7ceb869679b684b39b8bcc4ce2",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "9774381f-a06e-540d-a392-44aed6f44a14",
+        "canonicalPermissionCode": "studio.metadata.contract.import",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "import",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "22eb1d43563d149fba875069d9741c128cde8ee0bc7c1cb3b4fc4a9847ef5095",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "bbac4f72-89e7-5773-a124-72b98eb90269",
+        "canonicalPermissionCode": "studio.metadata.contract.publish",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "publish",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "73f4effb7091d944c6dc898096db792ba46c96f5f6b25353e101346a4cffe83a",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "508a16bb-e32c-552e-afd3-086d2789018d",
+        "canonicalPermissionCode": "studio.metadata.contract.review",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "review",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a49c010c7577cbe8a497964379d19df60be8dff274a2f0f08238d712dd1a73d2",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "1b6d8c7d-649f-55b8-addb-068d6a0fec67",
+        "canonicalPermissionCode": "studio.metadata.contract.rollback",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "rollback",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": true,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a25e6bc7d976420c7e7b63110a805ec52828e5ec7c8fe1cc03f420ad02976c07",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "a1cf246c-6337-5e46-8000-04dd13ad836a",
+        "canonicalPermissionCode": "studio.metadata.contract.submit",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "submit",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "2d2f0c9f640df369ba296b6bd86712be9fc6b65044e9890d65b47315b69e5ad6",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "4ef0ded0-2f07-5779-bb8c-b81abb425e8c",
+        "canonicalPermissionCode": "studio.metadata.contract.view",
+        "plane": "studio",
+        "entityCode": "contract",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "61acf018dda9e7adb9eedce3dac9476e8b1c2a170c5843107b0835e02f71ff49",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "94752fd7-e6a9-5f8c-b453-a924839e93b2",
+        "canonicalPermissionCode": "studio.metadata.overlay.edit",
+        "plane": "studio",
+        "entityCode": "overlay",
+        "operationCode": "edit",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "896506bf3a5cfab8450980d5b18908721c9fac9b9128c222c00c84661066c1ed",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "8f6534c0-7654-5885-aa01-3b6d63c5e6ed",
+        "canonicalPermissionCode": "studio.platform.catalog.manage",
+        "plane": "studio",
+        "entityCode": "catalog",
+        "operationCode": "manage",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c28e68917d0d92be4419fa957c686e40b2122e2d94144ba9af53fa9fe084fbde",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "6517bf1a-f6c2-589c-a2be-50dad3b91eef",
+        "canonicalPermissionCode": "studio.platform.catalog.view",
+        "plane": "studio",
+        "entityCode": "catalog",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "dab4a7d0bc46c9c9f618a91d9aa0fd7fda59b98f7cc64858d87c84ca8790b00f",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "45798031-a70a-5c99-ac7a-a013dac08052",
+        "canonicalPermissionCode": "studio.platform.reference.import",
+        "plane": "studio",
+        "entityCode": "reference",
+        "operationCode": "import",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c8c2b64bf379e7ff2487dc893ab889c044aa7a4584f4eb03d979677edfb3c5a5",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "8be339ee-e94c-5753-b60c-c39da092838b",
+        "canonicalPermissionCode": "studio.platform.reference.view",
+        "plane": "studio",
+        "entityCode": "reference",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "189ac8fbdba94e61d5fccded190c7e2e7c38bc18a3220dabca9bbf1587b5bcbf",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "42142097-fc18-5d53-8551-239631879de0",
+        "canonicalPermissionCode": "studio.platform.subscriptions.manage",
+        "plane": "studio",
+        "entityCode": "subscriptions",
+        "operationCode": "manage",
+        "operationKind": "mutation",
+        "riskTier": "critical",
+        "requiresMfa": false,
+        "requiresSod": true,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "0c1814c8cf76d8ebd81838f09541c332437b1e5a716f4dce1366012a15f7e423",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "e1e4d2cd-d13a-5f4b-b501-c3c15d9ee32c",
+        "canonicalPermissionCode": "studio.platform.subscriptions.view",
+        "plane": "studio",
+        "entityCode": "subscriptions",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "4ad65990b606da1f8353e887563efe37badde16cd4eea6bfdd31df9359658dd3",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "3f4e3cfb-5a69-5f81-8ef2-2ab90ba643e7",
+        "canonicalPermissionCode": "studio.platform.taxonomy.import",
+        "plane": "studio",
+        "entityCode": "taxonomy",
+        "operationCode": "import",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "92c0ea7c4e3b71bd869abe7128e38c91461844e3dcfeb6553f0d8ae7fdb6f51c",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      },
+      {
+        "permissionId": "799e5e36-d87e-5c24-92e2-c69afead1b9f",
+        "canonicalPermissionCode": "studio.platform.taxonomy.view",
+        "plane": "studio",
+        "entityCode": "taxonomy",
+        "operationCode": "view",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "da9a566fb1bc0f2e09bc9e4380123ea4a4fa38384de217bcacf5de3964043b69",
+        "permissionKind": "system_action",
+        "moduleCode": "meta"
+      }
+    ]
+  },
+  "permissionScopeCompatibility": {
+    "contractVersion": "athyper.authorization.scope-compatibility.v1",
+    "scopeVersion": "1.0.0",
+    "plane": "studio",
+    "defaultScopeBehavior": "deny_undeclared",
+    "permissions": [
+      {
+        "permissionCode": "studio.iam.application_projection.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.iam.application_projection.replay",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.iam.idp.manage",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.iam.idp.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.iam.parameter.manage",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.jobs.board.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.jobs.queue.manage",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.break_glass",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.edit",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.export",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.import",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.publish",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.review",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.rollback",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.submit",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.contract_draft.create",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.metadata.overlay.edit",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "workspace",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.catalog.manage",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.catalog.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.reference.import",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.reference.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.subscriptions.manage",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.subscriptions.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.taxonomy.import",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "studio.platform.taxonomy.view",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "module",
+            "propagation": "exact"
+          }
+        ]
+      }
+    ],
+    "sha256": "8d04b85b5f9fe13dcb32758e7ee9d20cabd6df44fde772bf99a29e85694f5176"
+  },
+  "authority": {
+    "version": "authorization.clean-slate.v1",
+    "permissionSets": [],
+    "roles": [],
+    "groups": [
+      {
+        "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+        "code": "studio.access.quarantine",
+        "plane": "studio",
+        "roleIds": [],
+        "scopeKind": "tenant",
+        "zeroGrant": true
+      }
+    ],
+    "proofEdges": []
+  },
+  "tenantAuthorityProjection": {
+    "contractVersion": "athyper.authorization.tenant-authority-projection.v1",
+    "plane": "studio",
+    "definitions": {
+      "roles": [],
+      "rolePermissions": [],
+      "principalGroups": [
+        {
+          "id": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "templateGroupId": "d574299c-6105-5f9c-8838-9456ee0aee28",
+          "code": "studio.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        },
+        {
+          "id": "87326271-1376-5439-b006-1353f4b67032",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "templateGroupId": "d574299c-6105-5f9c-8838-9456ee0aee28",
+          "code": "studio.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        },
+        {
+          "id": "c76c68bd-30f5-5ed3-8caf-bed147a8cd81",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "templateGroupId": "d574299c-6105-5f9c-8838-9456ee0aee28",
+          "code": "studio.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        }
+      ]
+    },
+    "assignments": {
+      "planeMemberships": [
+        {
+          "id": "0d9aca1a-7925-5694-a2b3-64debbb2bb1a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "d6d0f38f-f3ba-5217-93fd-9ef960ad1ef5",
+          "keycloakSubject": "aa010607-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "131d4c0b-b8c9-5e43-b3ed-51eb7b8dc1be",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "240e9299-3d29-5e54-82b3-90c25b23b8fe",
+          "keycloakSubject": "aa010407-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "2831ea3f-5f81-50ec-9dfb-1cd19ab6847a",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000001",
+          "status": "active"
+        },
+        {
+          "id": "57e869ae-4dba-5799-93dc-1a1f19404688",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "dc180b54-1cb1-5d24-8320-e5bf373b3946",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000004",
+          "status": "active"
+        },
+        {
+          "id": "6abb473d-92d1-51cc-9b6b-37c34f4f4c60",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c1198f81-6454-5ac9-b972-3333dbc66ffd",
+          "keycloakSubject": "aa010c07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "6c45a2b4-294f-5905-b39a-c14ef2b89b16",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "9428cdb3-039c-5f8b-9b54-06de19b0b705",
+          "keycloakSubject": "aa010507-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "71cf2c32-9e86-5a80-9887-6ef4eae9bc43",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000001",
+          "status": "active"
+        },
+        {
+          "id": "76dabd48-af51-5363-bd95-d1b5d2c51712",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000002",
+          "status": "active"
+        },
+        {
+          "id": "79672f0b-31a6-509f-8421-f2c7e85e4dc9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "503fed61-e122-5d03-b5a0-b584080f1acf",
+          "keycloakSubject": "aa010007-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "7f9e35dc-6764-5f7d-b2fb-a41e20112a98",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000002",
+          "status": "active"
+        },
+        {
+          "id": "8629545a-79f6-5b1f-b84f-22022cd9aaeb",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "4ee44636-f39c-5ac0-a291-495800021d4b",
+          "keycloakSubject": "aa010307-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "88293896-b2f0-5044-a356-3fb3f143feb8",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c6845923-e7db-5e4c-94f8-75c83fa59c5c",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000003",
+          "status": "active"
+        },
+        {
+          "id": "8dba9785-9499-5bdb-8251-b15dcce71aaf",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "791c23b4-2c79-5429-9c9f-9647d4b7f18b",
+          "keycloakSubject": "aa010e07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "9678b962-a1ce-5dd7-9af1-b4ab55de7db0",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "e28b8329-5eae-52f4-aa8b-16199bf80092",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000005",
+          "status": "active"
+        },
+        {
+          "id": "986b6468-c45e-5162-afb1-20e90d2e163c",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "0345bca7-0bb0-57a3-a28d-76267610ef4b",
+          "keycloakSubject": "aa010d07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "a44c58c1-a4ec-5a53-94f0-b09a20e14e15",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c511cb62-c536-5508-8d3f-de1171a4be10",
+          "keycloakSubject": "aa010207-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "a7a6c34f-e35d-559d-8a62-87e2ed0dc359",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "ae948f8f-f102-5410-9722-7708e7cca0d4",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000002",
+          "status": "active"
+        },
+        {
+          "id": "ad3acde5-b860-5209-8834-706042f245b9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "e028395b-4d02-593f-ae77-8bc598a0a0f2",
+          "keycloakSubject": "aa011107-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "b2505d16-0edf-5422-8aa1-729f7fb9dde0",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "a27c34ac-5817-5f69-a437-df748eb9525d",
+          "keycloakSubject": "aa010907-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "b44fe454-baee-5907-8ef7-c2a79275f74e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "2c7d991c-1018-50e5-b82a-c716d1a54806",
+          "keycloakSubject": "aa010b07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "b7309954-4a88-5534-8e90-2b2ccd154ad6",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "10fdcc3b-279b-542f-9c9e-64abefe52e4d",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000003",
+          "status": "active"
+        },
+        {
+          "id": "bee9ee3c-9b2f-5cf8-8dfc-1e45a90ff7d8",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "2bf57c98-5044-5503-a3bb-324fd6a92c4f",
+          "keycloakSubject": "aa010a07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "d332a546-5301-59c2-aeb2-7e5cd6cdb838",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c8e230d9-803e-5695-846d-e7c024ecbb4a",
+          "keycloakSubject": "aa011007-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "d4f1daea-ddb7-5f89-bbf8-d6480799aeca",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "eb676e8c-18f8-5ef6-979d-6f056d9c7913",
+          "keycloakSubject": "aa010107-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "dd91741c-6212-5384-a09d-3676315b09f3",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "654ffc94-00c1-5e52-b2d3-a3a0bdcba73f",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000001",
+          "status": "active"
+        },
+        {
+          "id": "e56623cd-bdfe-56fa-ad9f-76402911812b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "fc4c8b61-7129-5b25-bca8-a5a69ef96756",
+          "keycloakSubject": "aa010f07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "e8c146f6-55fa-5148-a7f3-976908c274ae",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "99cda5f5-2a2c-59fc-b53d-a7ec5598ceb2",
+          "keycloakSubject": "aa010807-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "f90606c3-2df0-5a7e-b24d-f2647d0804c6",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "e5590166-bf46-540e-8745-e3e5f4cf6872",
+          "keycloakSubject": "aa010707-0000-0000-0000-000000000000",
+          "status": "active"
+        }
+      ],
+      "scopeTargets": [
+        {
+          "id": "1d2550e6-6e20-5f74-81d9-388d1e75d20f",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "scopeKind": "tenant",
+          "scopeKey": "cirrusatlantic",
+          "targetId": "44444444-4444-4444-8444-444444444444",
+          "parentScopeTargetId": null
+        },
+        {
+          "id": "9a7a6edf-e3e8-53c1-bfa8-ada600cd81f0",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "scopeKind": "tenant",
+          "scopeKey": "technostat",
+          "targetId": "22222222-2222-4222-8222-222222222222",
+          "parentScopeTargetId": null
+        },
+        {
+          "id": "a87e124d-8ceb-5a56-84c5-8fbdbad47622",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "scopeKind": "tenant",
+          "scopeKey": "athyper",
+          "targetId": "11111111-1111-4111-8111-111111111111",
+          "parentScopeTargetId": null
+        }
+      ],
+      "groupMembers": [
+        {
+          "id": "08ab5c59-4fb4-5c43-8800-20d4057dd3f4",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "df0159b0-2bdc-55e8-944b-efaa9ed9b8e5",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "0e550084-9c15-55c4-9243-7b7a4f30ed3a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "c6845923-e7db-5e4c-94f8-75c83fa59c5c",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000003"
+        },
+        {
+          "id": "0f462ceb-4665-5fe0-93c3-a905f0a0241e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "4ee44636-f39c-5ac0-a291-495800021d4b",
+          "keycloakSubject": "aa010307-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "1009aa7e-c0f4-5e27-ae33-7eeda1d307c1",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "2c7d991c-1018-50e5-b82a-c716d1a54806",
+          "keycloakSubject": "aa010b07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "26538426-9070-5973-8f93-290299397536",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "e5590166-bf46-540e-8745-e3e5f4cf6872",
+          "keycloakSubject": "aa010707-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "2e105f01-eae3-57bc-af7b-e12f1d947830",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "87326271-1376-5439-b006-1353f4b67032",
+          "principalId": "e28b8329-5eae-52f4-aa8b-16199bf80092",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000005"
+        },
+        {
+          "id": "318b3d15-8dba-5f83-8ec5-a64a3331f4be",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "87326271-1376-5439-b006-1353f4b67032",
+          "principalId": "10fdcc3b-279b-542f-9c9e-64abefe52e4d",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000003"
+        },
+        {
+          "id": "35297eca-a4ef-55f5-8d35-4cb5da7607bb",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "fc4c8b61-7129-5b25-bca8-a5a69ef96756",
+          "keycloakSubject": "aa010f07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "4559379a-0c50-5cd2-a869-15f158533e57",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "c8e230d9-803e-5695-846d-e7c024ecbb4a",
+          "keycloakSubject": "aa011007-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "485416de-af06-5bce-9500-ed50c48751f0",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "groupId": "c76c68bd-30f5-5ed3-8caf-bed147a8cd81",
+          "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "4cd2203a-b3b5-55e5-8945-8d65574063df",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "a27c34ac-5817-5f69-a437-df748eb9525d",
+          "keycloakSubject": "aa010907-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5b1047b9-5d4f-589b-97fd-975707f7a7e1",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "87326271-1376-5439-b006-1353f4b67032",
+          "principalId": "ae948f8f-f102-5410-9722-7708e7cca0d4",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "6ee1e5d3-dd74-5c35-b872-9181cc9916e4",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "87326271-1376-5439-b006-1353f4b67032",
+          "principalId": "654ffc94-00c1-5e52-b2d3-a3a0bdcba73f",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "9d4f8347-4f75-58fd-82b9-6f88d436d78f",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "9428cdb3-039c-5f8b-9b54-06de19b0b705",
+          "keycloakSubject": "aa010507-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "a152bbd4-22e8-5d6f-bd96-fd317df33134",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "41bf4855-6aa1-5e43-bc11-ee2cfa647693",
+          "keycloakSubject": "ff001000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "a577452c-256b-5141-9834-23e3b615d342",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "791c23b4-2c79-5429-9c9f-9647d4b7f18b",
+          "keycloakSubject": "aa010e07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "ab7eb5a6-05fa-5a3d-abe3-d8b3cc008cd8",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "groupId": "c76c68bd-30f5-5ed3-8caf-bed147a8cd81",
+          "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "abda7da6-c897-57b9-b718-bc23a73e18ae",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "240e9299-3d29-5e54-82b3-90c25b23b8fe",
+          "keycloakSubject": "aa010407-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "b1bedcb5-6ed7-579a-a099-084ea81a1184",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "d6d0f38f-f3ba-5217-93fd-9ef960ad1ef5",
+          "keycloakSubject": "aa010607-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "b2b0a05e-883c-571e-b1b7-8e5b8faefdae",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "99cda5f5-2a2c-59fc-b53d-a7ec5598ceb2",
+          "keycloakSubject": "aa010807-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "b8dcc68d-f3c4-5b52-bd07-1bce966828d5",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "c511cb62-c536-5508-8d3f-de1171a4be10",
+          "keycloakSubject": "aa010207-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "d1063f70-c424-5a6d-8f9e-ea39cf6215bf",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "87326271-1376-5439-b006-1353f4b67032",
+          "principalId": "dc180b54-1cb1-5d24-8320-e5bf373b3946",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000004"
+        },
+        {
+          "id": "d2f46dea-75ac-52c6-956b-be050dc9502d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "2bf57c98-5044-5503-a3bb-324fd6a92c4f",
+          "keycloakSubject": "aa010a07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "da21ce36-20d1-591b-be8d-e93818885c4f",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "0345bca7-0bb0-57a3-a28d-76267610ef4b",
+          "keycloakSubject": "aa010d07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "e4599716-a586-58e7-a265-e387918ac94a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "eb676e8c-18f8-5ef6-979d-6f056d9c7913",
+          "keycloakSubject": "aa010107-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "ede72bca-79b7-5c3d-a3e2-385f126eb6ae",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "e028395b-4d02-593f-ae77-8bc598a0a0f2",
+          "keycloakSubject": "aa011107-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "ef4db5ca-4482-5f5c-bdb9-d76134fa2c30",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "c1198f81-6454-5ac9-b972-3333dbc66ffd",
+          "keycloakSubject": "aa010c07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "f2fd24e0-f24c-5f44-a66c-c24306d5f7c4",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "c8c0e4e7-eb8f-5185-a57b-c5b75c126b33",
+          "principalId": "503fed61-e122-5d03-b5a0-b584080f1acf",
+          "keycloakSubject": "aa010007-0000-0000-0000-000000000000"
+        }
+      ],
+      "groupRoles": []
+    },
+    "sha256": "08a466b2be8c91d555cc2ac711643a7ca4a0ebc26df9ee6d5602ea104520ea6d"
+  },
+  "subjectAssignments": [
+    {
+      "keycloakSubject": "aa003000-0000-0000-0000-000000000001",
+      "username": "catl.admin",
+      "principalId": "aa003000-0000-0000-0000-000000000001",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa003000-0000-0000-0000-000000000002",
+      "username": "catl.owner",
+      "principalId": "aa003000-0000-0000-0000-000000000002",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010007-0000-0000-0000-000000000000",
+      "username": "athyper.admin",
+      "principalId": "aa010007-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010107-0000-0000-0000-000000000000",
+      "username": "athq.admin",
+      "principalId": "aa010107-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010207-0000-0000-0000-000000000000",
+      "username": "acfb.admin",
+      "principalId": "aa010207-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010307-0000-0000-0000-000000000000",
+      "username": "adpm.admin",
+      "principalId": "aa010307-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010407-0000-0000-0000-000000000000",
+      "username": "aitm.admin",
+      "principalId": "aa010407-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010507-0000-0000-0000-000000000000",
+      "username": "ajed.admin",
+      "principalId": "aa010507-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010607-0000-0000-0000-000000000000",
+      "username": "amre.admin",
+      "principalId": "aa010607-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010707-0000-0000-0000-000000000000",
+      "username": "aphs.admin",
+      "principalId": "aa010707-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010807-0000-0000-0000-000000000000",
+      "username": "aqts.admin",
+      "principalId": "aa010807-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010907-0000-0000-0000-000000000000",
+      "username": "aqtu.admin",
+      "principalId": "aa010907-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010a07-0000-0000-0000-000000000000",
+      "username": "asac.admin",
+      "principalId": "aa010a07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010b07-0000-0000-0000-000000000000",
+      "username": "asah.admin",
+      "principalId": "aa010b07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010c07-0000-0000-0000-000000000000",
+      "username": "asgf.admin",
+      "principalId": "aa010c07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010d07-0000-0000-0000-000000000000",
+      "username": "aspe.admin",
+      "principalId": "aa010d07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010e07-0000-0000-0000-000000000000",
+      "username": "atem.admin",
+      "principalId": "aa010e07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010f07-0000-0000-0000-000000000000",
+      "username": "auet.admin",
+      "principalId": "aa010f07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011007-0000-0000-0000-000000000000",
+      "username": "auic.admin",
+      "principalId": "aa011007-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011107-0000-0000-0000-000000000000",
+      "username": "auka.admin",
+      "principalId": "aa011107-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000001",
+      "username": "tksa.owner",
+      "principalId": "cc001000-0000-0000-0000-000000000001",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000002",
+      "username": "tksa.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000002",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000003",
+      "username": "ssk.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000003",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000004",
+      "username": "tegy.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000004",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000005",
+      "username": "sdtx.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000005",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ff001000-0000-0000-0000-000000000001",
+      "username": "platform.owner",
+      "principalId": "ff001000-0000-0000-0000-000000000001",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ff001000-0000-0000-0000-000000000002",
+      "username": "platform.admin",
+      "principalId": "ff001000-0000-0000-0000-000000000002",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ff001000-0000-0000-0000-000000000003",
+      "username": "support.agent",
+      "principalId": "ff001000-0000-0000-0000-000000000003",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "studio",
+          "membershipStatus": "active",
+          "group": {
+            "id": "d574299c-6105-5f9c-8838-9456ee0aee28",
+            "code": "studio.access.quarantine",
+            "plane": "studio",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "adminPlatformManaged": {
+      "authority": "control.auth_permission.plane_code",
+      "required": true,
+      "unavailableBehavior": "deny"
+    }
+  },
+  "identityContract": {
+    "realm": "athyper",
+    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "enabledSubjectCount": 161,
+    "mappedSubjectCount": 161,
+    "unmanagedKeycloakUsers": "deny",
+    "fieldConflictBehavior": "fail"
+  },
+  "mutationPolicy": {
+    "truncate": "forbidden",
+    "authorizationWideDelete": "forbidden",
+    "apply": "idempotent_upsert_seed_owned_rows_only"
+  }
+}

@@ -1,0 +1,65 @@
+﻿{
+  "schemaVersion": 1,
+  "required": {
+    "entityScope": ["platform_entity", "tenant_overlay_entity"],
+    "planes": ["neon", "mesh", "studio"],
+    "security": ["two_tenants_same_entity", "different_permission_profiles", "warm_auth_epoch_change", "warm_profile_hash_change"],
+    "cache": ["publish_during_cold_load", "redis_unavailable", "redis_slow", "redis_reconnected", "redis_flushed"],
+    "topology": ["single_replica", "multiple_replicas"],
+    "scale": ["high_relation_count", "reference_hydration_100_rows"],
+    "entityClass": ["simple_master", "document_aggregate", "child_entity", "ledger_read_only", "view_backed"],
+    "mutation": ["idempotent_replay", "version_conflict", "lock_conflict", "forbidden_field", "failed_outbox_write", "failed_audit_write"],
+    "load": ["warm", "cold", "stampede", "skew", "failure", "soak"],
+    "level": ["compiler_cursor_property", "provider_cache_invalidation_unit", "postgres_redis_integration", "route_contract_parity", "k6", "soak"]
+  },
+  "coverage": [
+    {
+      "artifact": "server/packages/services/metadata/src/execution-descriptor/__tests__/compiler.test.ts",
+      "covers": ["platform_entity", "tenant_overlay_entity", "simple_master", "document_aggregate", "child_entity", "ledger_read_only", "view_backed", "compiler_cursor_property"]
+    },
+    {
+      "artifact": "server/packages/services/records/query/__tests__/keyset-cursor.test.ts",
+      "covers": ["compiler_cursor_property"]
+    },
+    {
+      "artifact": "server/packages/services/metadata/src/execution-descriptor/__tests__/provider.test.ts",
+      "covers": ["neon", "mesh", "studio", "two_tenants_same_entity", "publish_during_cold_load", "redis_unavailable", "redis_slow", "redis_reconnected", "redis_flushed", "single_replica", "multiple_replicas", "cold", "stampede", "provider_cache_invalidation_unit"]
+    },
+    {
+      "artifact": "server/packages/services/records/query/__tests__/entity-query.service.test.ts",
+      "covers": ["different_permission_profiles", "high_relation_count", "reference_hydration_100_rows"]
+    },
+    {
+      "artifact": "server/packages/services/iam/__tests__/verified-request-context.test.ts",
+      "covers": ["warm_auth_epoch_change", "warm_profile_hash_change"]
+    },
+    {
+      "artifact": "server/packages/services/records/__tests__/entity-mutation-service.test.ts",
+      "covers": ["idempotent_replay", "version_conflict", "lock_conflict", "forbidden_field"]
+    },
+    {
+      "artifact": "server/packages/services/shared/__tests__/durable-side-effects.test.ts",
+      "covers": ["failed_outbox_write", "failed_audit_write"]
+    },
+    {
+      "artifact": "server/src/__tests__/meta-entity-foundation.integration.test.ts",
+      "covers": ["postgres_redis_integration"]
+    },
+    {
+      "artifact": "server/packages/services/metadata/src/execution-descriptor/__tests__/production-provider-route.test.ts",
+      "covers": ["route_contract_parity"]
+    },
+    {
+      "artifact": "perf/k6/p0-meta-entity-baseline.k6.js",
+      "covers": ["warm", "cold", "k6"]
+    },
+    {
+      "artifact": "perf/k6/meta-entity-resilience.k6.js",
+      "covers": ["stampede", "skew", "failure", "k6"]
+    },
+    {
+      "artifact": "perf/k6/meta-entity-soak.k6.js",
+      "covers": ["soak", "k6"]
+    }
+  ]
+}

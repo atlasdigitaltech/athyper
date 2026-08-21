@@ -1,0 +1,1 @@
+-- Mesh has no plane-specific master table extensions. Common platform tables are installed from common/master/03_platform_tables.sql.

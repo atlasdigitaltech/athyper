@@ -1,0 +1,27 @@
+{
+  "name": "@athyper/server-adapter-communications",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-contract-notifications": "workspace:*",
+    "@athyper/server-foundation": "workspace:*",
+    "nodemailer": "^8.0.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^7.0.11",
+    "@types/node": "^25.6.0",
+    "@types/web-push": "^3.6.4",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

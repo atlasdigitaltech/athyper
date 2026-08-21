@@ -1,0 +1,3250 @@
+{
+  "contractVersion": "athyper.authorization.clean-slate-seed-pack.v1",
+  "planePack": "mesh",
+  "semanticPermissionContract": {
+    "contractVersion": "athyper.authorization.semantic.v1",
+    "permissionIdentity": "plane.domain.entity.operation",
+    "defaultDecision": "deny",
+    "rules": {
+      "keycloak": "authentication_client_admission_and_assurance_only",
+      "planeMembership": "active_exact_tenant_and_plane_required",
+      "organizationProjection": "active_verified_projection_required_before_authorization",
+      "permission": "published_exact_plane_permission_required",
+      "operationBinding": "published_exact_entity_operation_binding_required",
+      "scope": "typed_nonempty_target_and_compatible_propagation_required",
+      "entitlement": "required_before_any_allow_proof",
+      "mfa": "permission_risk_and_assurance_policy_required",
+      "separationOfDuties": "required_before_any_allow_proof",
+      "policy": "hard_policy_must_pass",
+      "deny": "matching_deny_has_absolute_precedence",
+      "allow": "active_role_delegation_acl_or_approved_finite_override_proof_required",
+      "cleanSlate": "admitted_subjects_are_quarantined_with_zero_allow_edges"
+    },
+    "scopePropagation": [
+      "exact",
+      "subtree",
+      "member_companies",
+      "relationship_participants"
+    ]
+  },
+  "permissionCatalog": {
+    "version": "2.0.0",
+    "operations": [
+      {
+        "permissionId": "fbaf0f38-a596-514c-bec3-e849f011f22f",
+        "canonicalPermissionCode": "mesh.catalog.attachment.create",
+        "plane": "mesh",
+        "entityCode": "attachment",
+        "operationCode": "create",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "858929810f8fcbf5bc0d1af0babd846cf76f8eb9d543737acf26a66df082aae4",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "b9c7a97c-da53-5480-8040-32af7629f091",
+        "canonicalPermissionCode": "mesh.catalog.attachment.delete",
+        "plane": "mesh",
+        "entityCode": "attachment",
+        "operationCode": "delete",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "1c9e262bcd2f54a8c2d1d774276e2a75c05c19cca7174c61d5986420b0f75fb3",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "889a0d70-db07-5397-8943-d3f8ee351759",
+        "canonicalPermissionCode": "mesh.catalog.attachment.read",
+        "plane": "mesh",
+        "entityCode": "attachment",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "5bff8b0bf8a20a280124ca0103b0886635ce24453e6e8e7d4d397b536e99e6ad",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "89eaebc7-696a-5edd-96c6-2c62351c8c50",
+        "canonicalPermissionCode": "mesh.catalog.attachment.share",
+        "plane": "mesh",
+        "entityCode": "attachment",
+        "operationCode": "share",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "d2be35dd7b9c59e64e668e01448d9fd8e43a7ed28f056253b12ac25147a581dc",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "c7c07d88-d19e-5f5e-8091-253549aa571a",
+        "canonicalPermissionCode": "mesh.catalog.bank_account.read",
+        "plane": "mesh",
+        "entityCode": "bank_account",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "103264b36a6192a7a734902056a6fc2a6bf78b9e080f7b0d179959b53b6e9ede",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "626f8c95-3d63-5b9e-ac47-ecefb26c67c1",
+        "canonicalPermissionCode": "mesh.catalog.bank_account.update",
+        "plane": "mesh",
+        "entityCode": "bank_account",
+        "operationCode": "update",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "1ad54547ee00872af67c18fd2e9bbbb72e4374cffdb3e520e8951a5dfe30e10e",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "691672f0-7dea-5e00-835d-3ae47cf7169f",
+        "canonicalPermissionCode": "mesh.catalog.bank_account.verify",
+        "plane": "mesh",
+        "entityCode": "bank_account",
+        "operationCode": "verify",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "ec865902806b2b235c22721388888f8fd67c417325286b306ec55033ca898c6e",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "33276bb3-efa9-5a82-9254-f2386da05ebe",
+        "canonicalPermissionCode": "mesh.catalog.catalog.publish",
+        "plane": "mesh",
+        "entityCode": "catalog",
+        "operationCode": "publish",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "5f3d3cb312653354cf4e2018df875d019b9647793757df98eb9a3b0d976ce0d8",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "bcc5c6af-3dac-5380-964f-dfec4c85e1cc",
+        "canonicalPermissionCode": "mesh.catalog.catalog.read",
+        "plane": "mesh",
+        "entityCode": "catalog",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "251c651ac24c3b7f3206e4325d0f1721a2b7c95c037f3e9639b953fb1517d90e",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "edbcd215-d483-5642-8d5d-bde1dc9d88b0",
+        "canonicalPermissionCode": "mesh.catalog.content_item.create",
+        "plane": "mesh",
+        "entityCode": "content_item",
+        "operationCode": "create",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "e9f02799d5194b6925499aa1a9d33010bbd2c0ad145ca639a3561ff499860d5e",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "a8f91068-1571-566e-afae-ebf5b8b60921",
+        "canonicalPermissionCode": "mesh.catalog.content_item.read",
+        "plane": "mesh",
+        "entityCode": "content_item",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "cffba8e5885d2a56f0d23d46a67e0b74d4715e96a8a21f656089cdfacb0047a0",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "3863f174-93ed-5e5d-917a-50d7ed678ab8",
+        "canonicalPermissionCode": "mesh.catalog.content_item.share",
+        "plane": "mesh",
+        "entityCode": "content_item",
+        "operationCode": "share",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "2fc14717ebb4d7450ed1c2a617bcca32500cc96cbdd10756fce9ea160a473a1f",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "b51f3f6b-b381-5dfb-af78-f83c73988b02",
+        "canonicalPermissionCode": "mesh.catalog.content_item.update",
+        "plane": "mesh",
+        "entityCode": "content_item",
+        "operationCode": "update",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "884513c6053fbc0584b7f01c380c1dca9ae6a884d4f0bcbcdba649fddb0a77d3",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "c51c81f2-9dbf-5961-b639-667ae1f0a414",
+        "canonicalPermissionCode": "mesh.catalog.conversation.add_participant",
+        "plane": "mesh",
+        "entityCode": "conversation",
+        "operationCode": "add_participant",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "5f2b018b882ab2c9dc5299e5ee1c2b1ae0a4a9eec115c11431fa662bc6d27ebd",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "8820b416-5112-58a5-940e-aa5768bdbac2",
+        "canonicalPermissionCode": "mesh.catalog.conversation.create",
+        "plane": "mesh",
+        "entityCode": "conversation",
+        "operationCode": "create",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a53befbb8a1678396e00c7cd5ee2d3c192e702a1d047240888eed5070ec37368",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "bb7fb46e-d69c-58d2-a271-049d57097259",
+        "canonicalPermissionCode": "mesh.catalog.conversation.read",
+        "plane": "mesh",
+        "entityCode": "conversation",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "e3892e24ea4301fe3685d8924cd107b59aa808c098f2b302543dc9c7c562d066",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "a78beffd-65fd-5537-bdc6-c27a277e5669",
+        "canonicalPermissionCode": "mesh.catalog.conversation.remove_participant",
+        "plane": "mesh",
+        "entityCode": "conversation",
+        "operationCode": "remove_participant",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a9fbed165e154a4ca837bab47bc7a0c41ce826f85b371fd05357eafd301f73fd",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "2bab1ca5-6d0c-50ac-a98c-cee4d015b8b4",
+        "canonicalPermissionCode": "mesh.catalog.document_envelope.acknowledge",
+        "plane": "mesh",
+        "entityCode": "document_envelope",
+        "operationCode": "acknowledge",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "8e2017e5c33afc7ca012847b6207779bb9eb653ec891375949fba8c314ce5d1d",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "5f9510ca-6a0d-5115-81f2-e75b8c0ba2ca",
+        "canonicalPermissionCode": "mesh.catalog.document_envelope.publish",
+        "plane": "mesh",
+        "entityCode": "document_envelope",
+        "operationCode": "publish",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "274e6d4986e08ccf5b0262b2cc79b386baf5199db51a62623c3d76699faa0989",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "5406636e-d3e7-527e-99ff-4c8313003b33",
+        "canonicalPermissionCode": "mesh.catalog.document_envelope.read",
+        "plane": "mesh",
+        "entityCode": "document_envelope",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c3a165860e4cf50d012c624595c30da8fa498dea2fd070e9aed2ab97e7ff1bca",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "746b6529-9a5f-5c8e-a381-acd7008bde67",
+        "canonicalPermissionCode": "mesh.catalog.document_envelope.replay",
+        "plane": "mesh",
+        "entityCode": "document_envelope",
+        "operationCode": "replay",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "493bd066a3f964fed840d59b5116c8a32dae80e9373e893652c5a4e246054f60",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "9603dd0b-b2e1-5337-8942-e793aecf5725",
+        "canonicalPermissionCode": "mesh.catalog.network_account.connect",
+        "plane": "mesh",
+        "entityCode": "network_account",
+        "operationCode": "connect",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "7dee37f90ea551fecda15e4123a114252f7222b10dd6d4cbb8433b37d7114a1d",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "c511cc34-48b3-5f00-8a96-89cdb5606c5d",
+        "canonicalPermissionCode": "mesh.catalog.network_account.invite",
+        "plane": "mesh",
+        "entityCode": "network_account",
+        "operationCode": "invite",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "5e72786e1b21d0a4804187facf4c40a2f6df1e24c472fa12e3791010ad910f64",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "860e6fbe-b7f7-562f-9582-6813a126af27",
+        "canonicalPermissionCode": "mesh.catalog.network_account.read",
+        "plane": "mesh",
+        "entityCode": "network_account",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "e2697ea58983a03f7d4267d959ed3d4c39a4f7c001e5a97f65b202443849a645",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "2a1553fc-9558-53aa-b034-4334bc7f3335",
+        "canonicalPermissionCode": "mesh.catalog.network_account.update",
+        "plane": "mesh",
+        "entityCode": "network_account",
+        "operationCode": "update",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "ad23daff72ff2b306eb96c0316eabcde378701acfbe5f12ab14184849be7c9f0",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "68854fc1-df99-52f4-bc03-27852b157fa8",
+        "canonicalPermissionCode": "mesh.catalog.network_relationship.accept",
+        "plane": "mesh",
+        "entityCode": "network_relationship",
+        "operationCode": "accept",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "ba0cea3b8dd67c097ee38261b0f0df7c359c829e54cc975c8b23a8b34cdb16d3",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "7fe1adba-94f5-53bd-bb4c-bdc9ff96a141",
+        "canonicalPermissionCode": "mesh.catalog.network_relationship.read",
+        "plane": "mesh",
+        "entityCode": "network_relationship",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "244543f1fefe6f4a27e8d9f159a8e204775cd1382ac957b70d97746c7ab27e1c",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "bdc4714c-f66e-5a99-aa6c-898f3e8b855e",
+        "canonicalPermissionCode": "mesh.catalog.network_relationship.suspend",
+        "plane": "mesh",
+        "entityCode": "network_relationship",
+        "operationCode": "suspend",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c7b2332c025e89bc324fef583928bc41156981c63d5c672ff568c29a1f7120c3",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "7f8a5cad-efd1-5048-950f-2ea59372f2f2",
+        "canonicalPermissionCode": "mesh.catalog.network_relationship.terminate",
+        "plane": "mesh",
+        "entityCode": "network_relationship",
+        "operationCode": "terminate",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "c927a4140dd717334137b002ef0ef7386186aca4abcfbbfd36ea161573fc869b",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "21717d0f-f729-5db0-b161-bcc2efa6d5c4",
+        "canonicalPermissionCode": "mesh.catalog.supplier_profile_verification.read",
+        "plane": "mesh",
+        "entityCode": "supplier_profile_verification",
+        "operationCode": "read",
+        "operationKind": "read",
+        "riskTier": "low",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "a63bee9d2a4bfc37075d1d1b873cdb4731a164e1af870e718b7f716435d5d650",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "2def555d-3c03-51b7-9132-7731837881a3",
+        "canonicalPermissionCode": "mesh.catalog.supplier_profile_verification.reject",
+        "plane": "mesh",
+        "entityCode": "supplier_profile_verification",
+        "operationCode": "reject",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "77160c9285e3cf200ba104edbc503c9dd7038c8747819aa10339756e123d04d6",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
+        "permissionId": "dfd17bd7-fb5c-55f6-b1ab-d9bfe68bcfb1",
+        "canonicalPermissionCode": "mesh.catalog.supplier_profile_verification.verify",
+        "plane": "mesh",
+        "entityCode": "supplier_profile_verification",
+        "operationCode": "verify",
+        "operationKind": "mutation",
+        "riskTier": "high",
+        "requiresMfa": true,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "6f0370db47043ec21e8f5a9a8a50fa91c376da4eaa57c8798b34b430b11c6b81",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      }
+    ]
+  },
+  "permissionScopeCompatibility": {
+    "contractVersion": "athyper.authorization.scope-compatibility.v1",
+    "scopeVersion": "1.0.0",
+    "plane": "mesh",
+    "defaultScopeBehavior": "deny_undeclared",
+    "permissions": [
+      {
+        "permissionCode": "mesh.catalog.attachment.create",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.attachment.delete",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.attachment.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.attachment.share",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.bank_account.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.bank_account.update",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.bank_account.verify",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.catalog.publish",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.catalog.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.content_item.create",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.content_item.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.content_item.share",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.content_item.update",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.conversation.add_participant",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.conversation.create",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.conversation.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.conversation.remove_participant",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.document_envelope.acknowledge",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.document_envelope.publish",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.document_envelope.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.document_envelope.replay",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_account.connect",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_account.invite",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_account.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_account.update",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_relationship.accept",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_relationship.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_relationship.suspend",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.network_relationship.terminate",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.supplier_profile_verification.read",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.supplier_profile_verification.reject",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
+        "permissionCode": "mesh.catalog.supplier_profile_verification.verify",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "resource",
+            "propagation": "exact"
+          }
+        ]
+      }
+    ],
+    "sha256": "6d25ef074944c14117b44819de953d21e705daa94916349b9120cce00b94871c"
+  },
+  "authority": {
+    "version": "authorization.clean-slate.v1",
+    "permissionSets": [],
+    "roles": [],
+    "groups": [
+      {
+        "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+        "code": "mesh.access.quarantine",
+        "plane": "mesh",
+        "roleIds": [],
+        "scopeKind": "tenant",
+        "zeroGrant": true
+      }
+    ],
+    "proofEdges": []
+  },
+  "tenantAuthorityProjection": {
+    "contractVersion": "athyper.authorization.tenant-authority-projection.v1",
+    "plane": "mesh",
+    "definitions": {
+      "roles": [],
+      "rolePermissions": [],
+      "principalGroups": [
+        {
+          "id": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "templateGroupId": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+          "code": "mesh.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        },
+        {
+          "id": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "templateGroupId": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+          "code": "mesh.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        },
+        {
+          "id": "e26e7998-7c55-5615-8e90-4ec2c4585af7",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "templateGroupId": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+          "code": "mesh.access.quarantine",
+          "name": "Quarantine",
+          "zeroGrant": true
+        }
+      ]
+    },
+    "assignments": {
+      "planeMemberships": [
+        {
+          "id": "07ec2d7b-bbbf-5e01-b833-bd5dd8cab270",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "d465bc1d-5ce5-538b-8404-3c39805aaaa3",
+          "keycloakSubject": "aa020004-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "08dece08-a9aa-5a5c-af85-bfa36d6cedfd",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "864829fe-bd19-5082-b045-f584f020a5a7",
+          "keycloakSubject": "aa011107-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "0f75dbf1-1d01-54d6-bdc6-68bca117f971",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "4ebb1dbb-5211-58ab-942d-e143f5fc1cc9",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000005",
+          "status": "active"
+        },
+        {
+          "id": "11dce6d5-a6d2-5a3c-85a5-208c6f162a15",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "1bff63ed-8283-56b3-addc-47edc3006d18",
+          "keycloakSubject": "aa010a06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "1486ab97-fa68-521b-a97c-385040f83d3d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "1e4ba178-6d85-5752-85e1-6d3afc339aeb",
+          "keycloakSubject": "aa010f06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "19dffe55-4235-5525-841c-62afe5eb5550",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "fbfbd996-9de5-532f-aea2-4bff197f4d51",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000013",
+          "status": "active"
+        },
+        {
+          "id": "2ad8b9fe-b355-552a-91ad-94fb4e8bae7d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "bf5a8656-aa95-55ed-a7db-f3f6fcac1306",
+          "keycloakSubject": "aa011006-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "2df22cb4-4558-5242-a182-f984f9a4b426",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "640a19f4-7e4b-516e-96d1-3860c70ba68f",
+          "keycloakSubject": "aa010807-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "30785309-6d2a-5ed1-b185-be00aa731d61",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "3f775eb8-e729-5395-89e8-c5eab6a13051",
+          "keycloakSubject": "aa010906-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "3678c985-d894-5265-bc04-c369c075156e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "52096b2a-c7e0-550d-b4bc-c22392fe1804",
+          "keycloakSubject": "aa010d06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "3eaa8164-f5c2-5825-9d65-7030a9f75508",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "885f3cc7-0f68-5e7a-8bcc-31aa57d3e80b",
+          "keycloakSubject": "aa020001-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "4225dfcf-4f53-53cd-8483-590cb8b14fce",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "ee1c5e10-c4d7-57e5-9c36-750df6cbf73f",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000001",
+          "status": "active"
+        },
+        {
+          "id": "437fdbfd-d068-5ff1-a036-c09ba96a749a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "74edeee2-c36a-5a3a-a19e-4382de25858d",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000014",
+          "status": "active"
+        },
+        {
+          "id": "43e8b72b-b8d2-5cd1-910e-e72f85b6d02e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "9e3ab766-abee-55c7-8a01-591f8a64db6c",
+          "keycloakSubject": "aa010207-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "458d8edc-4933-56e8-bf85-7c62b4d336c7",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "0ea46ea9-3451-5a8f-a0d9-5cb2fbed36e5",
+          "keycloakSubject": "aa010306-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "467022dc-42d8-557b-a8db-f1cc6b17643f",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "8ba978c4-7a23-5041-9dcd-5ad2360fcb3d",
+          "keycloakSubject": "aa010606-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "47d9c68e-bead-5b4e-9c59-5714d1936087",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "3637a835-3d14-5e1c-b4e9-1baffeb84d75",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000011",
+          "status": "active"
+        },
+        {
+          "id": "4b31a672-faf9-50b8-8ae4-e5831942ad9e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "349f60d3-208d-55d8-89a1-42c0341dfc85",
+          "keycloakSubject": "aa020007-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "4e6887aa-86a0-5b66-a483-d6aa80038bf2",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "fbec2c68-ca55-55d0-b1f3-dacb1bae5ada",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000002",
+          "status": "active"
+        },
+        {
+          "id": "53dea6ee-640d-5ca9-badd-8f2fa1011259",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "b5113e8b-cd2c-5f2f-823b-2718a65d2d9a",
+          "keycloakSubject": "aa010006-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "5430543a-20f9-518d-9141-4d0d866a8c40",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "47ac62fc-b01c-5af4-ba14-789e97e3b9c6",
+          "keycloakSubject": "aa010907-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "54461977-e3c0-5653-a8d6-30ee0b48c831",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "principalId": "dc4ef163-269a-5b83-90ef-5b71a56087c6",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000001",
+          "status": "active"
+        },
+        {
+          "id": "54fb8c47-6ab9-5d96-8ace-41caa417ebcd",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "be3a9b82-b192-50a7-af91-0dcae3b80ccb",
+          "keycloakSubject": "aa010c06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "58f30347-c480-5bd5-a9d6-d315f3af6abe",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "49ae41c1-b748-57fc-8d7e-2dc5cb6107b3",
+          "keycloakSubject": "aa010b06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "5d89bb82-8979-5ea1-b0fd-7c5c4cb4be8d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "76db1629-82c7-5ece-84c6-4b51a2c16d3c",
+          "keycloakSubject": "aa010e06-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "637c673b-3366-59ed-8774-bd75554353a5",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "b30e135b-5a2f-5552-89c7-adef040ac440",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000012",
+          "status": "active"
+        },
+        {
+          "id": "6b66ff0f-d7c9-570e-86dc-e70875546352",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "5ea2dea4-b2c7-528e-865e-852b3c12f8f9",
+          "keycloakSubject": "aa010106-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "6d3322a6-e003-50ae-a0d4-5d812cfa6cc0",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "83ad5424-3c8d-5c67-a976-3212d79619b4",
+          "keycloakSubject": "aa010806-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "7255b4c0-a7f1-5452-a181-1a394267f3be",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "5a2a7cbf-9c25-5187-ab85-cdf900bf6c5d",
+          "keycloakSubject": "aa010e07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "730266e3-d81e-557c-b7e1-f04a1245964d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "f9cd6f50-af14-5dd5-ad23-0914290446ed",
+          "keycloakSubject": "aa010007-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "759ed3f2-1cf7-50fc-a667-378acd0de00b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "79e93265-9d71-53bc-a73b-51f0a74d60da",
+          "keycloakSubject": "aa010d07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "79532436-c316-58d1-9ab5-7505b9937b06",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "a54fc9fd-8254-5361-b431-afbd3668f4b9",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000011",
+          "status": "active"
+        },
+        {
+          "id": "7a52c207-c2d5-5e4d-b4d3-31eeef272496",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "2dd26927-4de3-5e37-9779-7e1bc79c7474",
+          "keycloakSubject": "aa010607-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "83a49225-ff3a-58eb-b7bb-5a1ebc97a2c9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "a2d5fc62-a1c7-5269-bf95-d53d458c05b4",
+          "keycloakSubject": "aa010706-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "89fe709e-a707-583d-a9a7-b90622c85893",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "9ef7fde8-ccfb-53ca-adb5-5a322ff9f3d5",
+          "keycloakSubject": "aa010b07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "905c82dc-9a5d-5a2d-8f25-fafdf59ddbf5",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "fc90ef29-f287-5a56-9427-eada047ea626",
+          "keycloakSubject": "aa010506-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "955dc089-bca8-5591-8f55-33ffcdf31adb",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "555a9748-d6f6-5563-8525-ed96d6058068",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000003",
+          "status": "active"
+        },
+        {
+          "id": "962852d3-a628-5a25-98bc-e37059dd09f9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "eec96fc7-abd0-54dd-92a6-5bdb58378c02",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000012",
+          "status": "active"
+        },
+        {
+          "id": "9a370a17-8289-5b3b-ae99-2175616c4903",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "7893bb4c-f5ee-57f2-98f9-3c01cd7c87a7",
+          "keycloakSubject": "aa010707-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "a352119b-aa3e-5edd-909a-fe3e094724fc",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "dbb5355d-0950-555c-bf16-096794c5414f",
+          "keycloakSubject": "aa010307-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "abd5ebf2-1178-52d0-a001-ed68920d78de",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "753b0b49-0535-5726-a79c-da67838e6a95",
+          "keycloakSubject": "aa010c07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "b30cf586-98f4-5dee-9829-a07e35a1eb7f",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "7a8c4d90-06e8-5194-832a-b654ba660d9a",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000013",
+          "status": "active"
+        },
+        {
+          "id": "b830c796-0fac-57fe-85ed-94ab19032c02",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "a46533e1-c2fc-509f-872f-902fdae68714",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000004",
+          "status": "active"
+        },
+        {
+          "id": "b8c59895-590c-5022-aeb3-008e733af43e",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "principalId": "8ceb9be9-404a-5ab6-9926-a502d6809fd4",
+          "keycloakSubject": "cc002001-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "cef701f6-9587-5a95-8ccc-bee35068f880",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "9d90f63d-ae6c-5e66-bcc5-7c3fdc5c9fa2",
+          "keycloakSubject": "aa010f07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "d92a741d-076f-55d6-8d92-9d3f6c8ac837",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c99bcc9f-d7df-5dbb-96ad-043480d319d4",
+          "keycloakSubject": "aa010407-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "e04306ac-6203-53c4-804f-716e5163e5b1",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "c2f253c7-76b4-5d57-952f-7d18e34baac5",
+          "keycloakSubject": "aa010a07-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "e9208832-5cdc-5ae6-a8fa-c86d5184fa91",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "46a8eed0-68a7-5805-8e48-93a0c4601e43",
+          "keycloakSubject": "aa010507-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "e9e6767c-4f55-5129-868b-5fa5a483f864",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "2858af2c-f0a6-5aab-9d86-5305b237218b",
+          "keycloakSubject": "aa010406-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "ee838aab-afa6-5347-a87f-88d482275d2b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "1257f27b-b6c5-5c2e-87f3-87dc3ef7e41a",
+          "keycloakSubject": "aa010107-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "f012ea44-fd45-56ae-8b7f-acf16d44739e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "7618aaee-23f0-5271-9f4c-0629d10421a5",
+          "keycloakSubject": "aa010206-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "f4005955-4474-542e-bf3a-6dca3592651c",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "cd4d73ab-8394-5c7f-8aca-f09c6f2889d5",
+          "keycloakSubject": "aa011007-0000-0000-0000-000000000000",
+          "status": "active"
+        },
+        {
+          "id": "f723c343-cc82-53c0-bc00-8858fe452596",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "principalId": "3dd93048-ac4b-54a7-b820-32d0c457691b",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000002",
+          "status": "active"
+        },
+        {
+          "id": "ff30549a-c8f3-522c-add4-6009641fad6b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "principalId": "aedf524c-84e3-55c2-995a-c36fb7dee696",
+          "keycloakSubject": "aa011106-0000-0000-0000-000000000000",
+          "status": "active"
+        }
+      ],
+      "scopeTargets": [
+        {
+          "id": "5284c9ea-33aa-54ce-99b3-ab1c796ad34c",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "scopeKind": "tenant",
+          "scopeKey": "cirrusatlantic",
+          "targetId": "44444444-4444-4444-8444-444444444444",
+          "parentScopeTargetId": null
+        },
+        {
+          "id": "7abac479-7fea-5e93-a1e0-aeb7a154cf81",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "scopeKind": "tenant",
+          "scopeKey": "athyper",
+          "targetId": "11111111-1111-4111-8111-111111111111",
+          "parentScopeTargetId": null
+        },
+        {
+          "id": "f55327fa-caf6-58a8-9f8a-51fd749641c4",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "scopeKind": "tenant",
+          "scopeKey": "technostat",
+          "targetId": "22222222-2222-4222-8222-222222222222",
+          "parentScopeTargetId": null
+        }
+      ],
+      "groupMembers": [
+        {
+          "id": "0020c946-d474-5b79-baa5-fc614f4ceffc",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "b30e135b-5a2f-5552-89c7-adef040ac440",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000012"
+        },
+        {
+          "id": "0a053a5a-0a70-57fa-88ba-2417e9a9d37a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "46a8eed0-68a7-5805-8e48-93a0c4601e43",
+          "keycloakSubject": "aa010507-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "0b4f45ff-138c-5b77-bfc6-b28f1361386e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "8ba978c4-7a23-5041-9dcd-5ad2360fcb3d",
+          "keycloakSubject": "aa010606-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "0c790978-66d0-5528-996a-d77ca6fb64aa",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "83ad5424-3c8d-5c67-a976-3212d79619b4",
+          "keycloakSubject": "aa010806-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "0ed4422d-d4ce-54df-81b2-696e3bcb3ffc",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "2858af2c-f0a6-5aab-9d86-5305b237218b",
+          "keycloakSubject": "aa010406-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "1012d241-7a55-5a88-8b11-3a989cea3b4a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "5ea2dea4-b2c7-528e-865e-852b3c12f8f9",
+          "keycloakSubject": "aa010106-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "138b6ea7-f7d1-50b0-bd32-c7654adfb41b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "fbfbd996-9de5-532f-aea2-4bff197f4d51",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000013"
+        },
+        {
+          "id": "17492f0d-deea-551c-a915-e220f72db570",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "8ceb9be9-404a-5ab6-9926-a502d6809fd4",
+          "keycloakSubject": "cc002001-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "221663b9-0d5e-5ce1-8579-616797c0e23e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "9ef7fde8-ccfb-53ca-adb5-5a322ff9f3d5",
+          "keycloakSubject": "aa010b07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "23054ec7-2f2a-5001-9b8d-87b124510c19",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "fc90ef29-f287-5a56-9427-eada047ea626",
+          "keycloakSubject": "aa010506-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "2697d559-7175-5be4-8895-39789edc48c2",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "b5113e8b-cd2c-5f2f-823b-2718a65d2d9a",
+          "keycloakSubject": "aa010006-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "280af819-0a9a-53f7-ab9b-f92b598841d9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "cd4d73ab-8394-5c7f-8aca-f09c6f2889d5",
+          "keycloakSubject": "aa011007-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "2cdd4a1e-989b-50bd-847c-433b99fb9f70",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "bf5a8656-aa95-55ed-a7db-f3f6fcac1306",
+          "keycloakSubject": "aa011006-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "310e619e-e9f6-56ca-b964-16652e05fb8d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "2dd26927-4de3-5e37-9779-7e1bc79c7474",
+          "keycloakSubject": "aa010607-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "332124bd-13f0-5423-9123-37c4125d72b9",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "4ebb1dbb-5211-58ab-942d-e143f5fc1cc9",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000005"
+        },
+        {
+          "id": "3b29a2c4-3dc1-54fa-9aec-bae1bee16b25",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "groupId": "e26e7998-7c55-5615-8e90-4ec2c4585af7",
+          "principalId": "dc4ef163-269a-5b83-90ef-5b71a56087c6",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "3b5fa464-8db7-5d7d-8b14-de8a36602aa2",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "555a9748-d6f6-5563-8525-ed96d6058068",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000003"
+        },
+        {
+          "id": "50cc1b89-dd5b-559c-83fc-054a46a4aec6",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "349f60d3-208d-55d8-89a1-42c0341dfc85",
+          "keycloakSubject": "aa020007-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5171b8c8-82dc-53a7-a15d-33fed80a5611",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "dbb5355d-0950-555c-bf16-096794c5414f",
+          "keycloakSubject": "aa010307-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5337c8c9-4915-5eae-9817-6e6ea8ed1c2c",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "1bff63ed-8283-56b3-addc-47edc3006d18",
+          "keycloakSubject": "aa010a06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5733974a-e60e-5a47-b745-e79d47253ab9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "1e4ba178-6d85-5752-85e1-6d3afc339aeb",
+          "keycloakSubject": "aa010f06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5879ef3f-fa62-55dd-b125-92c4739cd353",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "864829fe-bd19-5082-b045-f584f020a5a7",
+          "keycloakSubject": "aa011107-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5cb8b53f-0f59-5ffa-a03b-fa4f1f488eb4",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "47ac62fc-b01c-5af4-ba14-789e97e3b9c6",
+          "keycloakSubject": "aa010907-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "5cf4be28-9173-5df1-9a23-3a1f67b5d033",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "640a19f4-7e4b-516e-96d1-3860c70ba68f",
+          "keycloakSubject": "aa010807-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "61697572-af54-5e0c-897a-bdbb978f4ebe",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "79e93265-9d71-53bc-a73b-51f0a74d60da",
+          "keycloakSubject": "aa010d07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "67f6d016-c512-5b40-8f89-c00c6307966e",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "52096b2a-c7e0-550d-b4bc-c22392fe1804",
+          "keycloakSubject": "aa010d06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "68c06873-0d7c-5da6-b3c3-e9c50d9e7eec",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "0ea46ea9-3451-5a8f-a0d9-5cb2fbed36e5",
+          "keycloakSubject": "aa010306-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "6d8a232c-e386-5d48-94f7-5350328ca0d0",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "a54fc9fd-8254-5361-b431-afbd3668f4b9",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000011"
+        },
+        {
+          "id": "73b754a9-c6dd-53d2-bc50-519e3cd5db7a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "1257f27b-b6c5-5c2e-87f3-87dc3ef7e41a",
+          "keycloakSubject": "aa010107-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "74e7eb5e-f051-5b37-97ee-2f3139ce6eca",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "9e3ab766-abee-55c7-8a01-591f8a64db6c",
+          "keycloakSubject": "aa010207-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "767e0b73-3373-5fc7-819d-07a942bd730b",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "753b0b49-0535-5726-a79c-da67838e6a95",
+          "keycloakSubject": "aa010c07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "7ac5da78-3084-5f2c-801d-8cfa443e3fad",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "49ae41c1-b748-57fc-8d7e-2dc5cb6107b3",
+          "keycloakSubject": "aa010b06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "7e29d81c-d84b-5dcc-9946-6fd9abd74be5",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "c2f253c7-76b4-5d57-952f-7d18e34baac5",
+          "keycloakSubject": "aa010a07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "81ddb191-b72d-5249-acc3-234f033b2ceb",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "5a2a7cbf-9c25-5187-ab85-cdf900bf6c5d",
+          "keycloakSubject": "aa010e07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "834fe4fb-657a-59e4-8817-0389358d56af",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "ee1c5e10-c4d7-57e5-9c36-750df6cbf73f",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "84f8dde7-911d-56d6-a4ca-08c3b2901484",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "3637a835-3d14-5e1c-b4e9-1baffeb84d75",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000011"
+        },
+        {
+          "id": "85bd0991-e9cf-54a5-a116-f69798095823",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "eec96fc7-abd0-54dd-92a6-5bdb58378c02",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000012"
+        },
+        {
+          "id": "86d11fc0-9da2-5353-9f42-235f57ac6b8a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "9d90f63d-ae6c-5e66-bcc5-7c3fdc5c9fa2",
+          "keycloakSubject": "aa010f07-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "86f64a8b-94a6-5d28-ab32-c2135254475a",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "3f775eb8-e729-5395-89e8-c5eab6a13051",
+          "keycloakSubject": "aa010906-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "8e9e08ca-f247-5615-b46a-9865e15ddff9",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "7618aaee-23f0-5271-9f4c-0629d10421a5",
+          "keycloakSubject": "aa010206-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "8eed1b09-459a-5ca4-a7be-5dbc86a90cf7",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "a2d5fc62-a1c7-5269-bf95-d53d458c05b4",
+          "keycloakSubject": "aa010706-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "b2daba39-6b14-5b80-adfa-a46c423a921f",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "76db1629-82c7-5ece-84c6-4b51a2c16d3c",
+          "keycloakSubject": "aa010e06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "b4c3c2ca-f7bb-5c9f-8404-2105859b2850",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "7893bb4c-f5ee-57f2-98f9-3c01cd7c87a7",
+          "keycloakSubject": "aa010707-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "be0c7c7a-ceea-56f4-8e5f-6ba70199bb82",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "a46533e1-c2fc-509f-872f-902fdae68714",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000004"
+        },
+        {
+          "id": "bf6144d5-4411-58fa-90fe-3c36ed7f4138",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "f9cd6f50-af14-5dd5-ad23-0914290446ed",
+          "keycloakSubject": "aa010007-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "c9a2561b-f087-5289-887b-c05fb540d07d",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "74edeee2-c36a-5a3a-a19e-4382de25858d",
+          "keycloakSubject": "ee001000-0000-0000-0000-000000000014"
+        },
+        {
+          "id": "d1bd316a-0491-536d-bccf-54b77457d599",
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "groupId": "e26e7998-7c55-5615-8e90-4ec2c4585af7",
+          "principalId": "3dd93048-ac4b-54a7-b820-32d0c457691b",
+          "keycloakSubject": "aa003000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "d489e6dc-2175-5461-966d-da90bee8dc90",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "c99bcc9f-d7df-5dbb-96ad-043480d319d4",
+          "keycloakSubject": "aa010407-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "d581513e-856f-5fb6-b2b2-4b699910a7dc",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "d465bc1d-5ce5-538b-8404-3c39805aaaa3",
+          "keycloakSubject": "aa020004-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "d604dd6f-30bd-5a23-941a-ad9cfdc58bcf",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "885f3cc7-0f68-5e7a-8bcc-31aa57d3e80b",
+          "keycloakSubject": "aa020001-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "de6913d2-d428-5575-b95c-6fdaa35740d7",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "be3a9b82-b192-50a7-af91-0dcae3b80ccb",
+          "keycloakSubject": "aa010c06-0000-0000-0000-000000000000"
+        },
+        {
+          "id": "e6584644-f433-598c-ba10-cf8dd40ef116",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "7a8c4d90-06e8-5194-832a-b654ba660d9a",
+          "keycloakSubject": "ee002000-0000-0000-0000-000000000013"
+        },
+        {
+          "id": "e8775451-a14d-539a-b0ce-1deb6c929718",
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "groupId": "cb245186-e4aa-5a9b-b27a-3cfc1efc5961",
+          "principalId": "fbec2c68-ca55-55d0-b1f3-dacb1bae5ada",
+          "keycloakSubject": "cc001000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "ef3492b0-500c-5251-8c3d-2a47efc24059",
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "groupId": "4e2367a2-c29d-5139-9b02-a62a24c1f126",
+          "principalId": "aedf524c-84e3-55c2-995a-c36fb7dee696",
+          "keycloakSubject": "aa011106-0000-0000-0000-000000000000"
+        }
+      ],
+      "groupRoles": []
+    },
+    "sha256": "46d820301cc3703b7ba13d07e379ceb93a00ed1cf50880266597201a3e48c1e3"
+  },
+  "subjectAssignments": [
+    {
+      "keycloakSubject": "aa003000-0000-0000-0000-000000000001",
+      "username": "catl.admin",
+      "principalId": "aa003000-0000-0000-0000-000000000001",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa003000-0000-0000-0000-000000000002",
+      "username": "catl.owner",
+      "principalId": "aa003000-0000-0000-0000-000000000002",
+      "tenantCodes": [
+        "cirrusatlantic"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010006-0000-0000-0000-000000000000",
+      "username": "athyper.owner",
+      "principalId": "aa010006-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010007-0000-0000-0000-000000000000",
+      "username": "athyper.admin",
+      "principalId": "aa010007-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010106-0000-0000-0000-000000000000",
+      "username": "athq.owner",
+      "principalId": "aa010106-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010107-0000-0000-0000-000000000000",
+      "username": "athq.admin",
+      "principalId": "aa010107-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010206-0000-0000-0000-000000000000",
+      "username": "acfb.owner",
+      "principalId": "aa010206-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010207-0000-0000-0000-000000000000",
+      "username": "acfb.admin",
+      "principalId": "aa010207-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010306-0000-0000-0000-000000000000",
+      "username": "adpm.owner",
+      "principalId": "aa010306-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010307-0000-0000-0000-000000000000",
+      "username": "adpm.admin",
+      "principalId": "aa010307-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010406-0000-0000-0000-000000000000",
+      "username": "aitm.owner",
+      "principalId": "aa010406-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010407-0000-0000-0000-000000000000",
+      "username": "aitm.admin",
+      "principalId": "aa010407-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010506-0000-0000-0000-000000000000",
+      "username": "ajed.owner",
+      "principalId": "aa010506-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010507-0000-0000-0000-000000000000",
+      "username": "ajed.admin",
+      "principalId": "aa010507-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010606-0000-0000-0000-000000000000",
+      "username": "amre.owner",
+      "principalId": "aa010606-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010607-0000-0000-0000-000000000000",
+      "username": "amre.admin",
+      "principalId": "aa010607-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010706-0000-0000-0000-000000000000",
+      "username": "aphs.owner",
+      "principalId": "aa010706-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010707-0000-0000-0000-000000000000",
+      "username": "aphs.admin",
+      "principalId": "aa010707-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010806-0000-0000-0000-000000000000",
+      "username": "aqts.owner",
+      "principalId": "aa010806-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010807-0000-0000-0000-000000000000",
+      "username": "aqts.admin",
+      "principalId": "aa010807-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010906-0000-0000-0000-000000000000",
+      "username": "aqtu.owner",
+      "principalId": "aa010906-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010907-0000-0000-0000-000000000000",
+      "username": "aqtu.admin",
+      "principalId": "aa010907-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010a06-0000-0000-0000-000000000000",
+      "username": "asac.owner",
+      "principalId": "aa010a06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010a07-0000-0000-0000-000000000000",
+      "username": "asac.admin",
+      "principalId": "aa010a07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010b06-0000-0000-0000-000000000000",
+      "username": "asah.owner",
+      "principalId": "aa010b06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010b07-0000-0000-0000-000000000000",
+      "username": "asah.admin",
+      "principalId": "aa010b07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010c06-0000-0000-0000-000000000000",
+      "username": "asgf.owner",
+      "principalId": "aa010c06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010c07-0000-0000-0000-000000000000",
+      "username": "asgf.admin",
+      "principalId": "aa010c07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010d06-0000-0000-0000-000000000000",
+      "username": "aspe.owner",
+      "principalId": "aa010d06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010d07-0000-0000-0000-000000000000",
+      "username": "aspe.admin",
+      "principalId": "aa010d07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010e06-0000-0000-0000-000000000000",
+      "username": "atem.owner",
+      "principalId": "aa010e06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010e07-0000-0000-0000-000000000000",
+      "username": "atem.admin",
+      "principalId": "aa010e07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010f06-0000-0000-0000-000000000000",
+      "username": "auet.owner",
+      "principalId": "aa010f06-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa010f07-0000-0000-0000-000000000000",
+      "username": "auet.admin",
+      "principalId": "aa010f07-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011006-0000-0000-0000-000000000000",
+      "username": "auic.owner",
+      "principalId": "aa011006-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011007-0000-0000-0000-000000000000",
+      "username": "auic.admin",
+      "principalId": "aa011007-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011106-0000-0000-0000-000000000000",
+      "username": "auka.owner",
+      "principalId": "aa011106-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa011107-0000-0000-0000-000000000000",
+      "username": "auka.admin",
+      "principalId": "aa011107-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa020001-0000-0000-0000-000000000000",
+      "username": "athyper.apac.procurement",
+      "principalId": "aa020001-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa020004-0000-0000-0000-000000000000",
+      "username": "athyper.emea.procurement",
+      "principalId": "aa020004-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "aa020007-0000-0000-0000-000000000000",
+      "username": "athyper.americas.procurement",
+      "principalId": "aa020007-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000001",
+      "username": "tksa.owner",
+      "principalId": "cc001000-0000-0000-0000-000000000001",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000002",
+      "username": "tksa.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000002",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000003",
+      "username": "ssk.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000003",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000004",
+      "username": "tegy.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000004",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc001000-0000-0000-0000-000000000005",
+      "username": "sdtx.admin",
+      "principalId": "cc001000-0000-0000-0000-000000000005",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "cc002001-0000-0000-0000-000000000000",
+      "username": "tech.procurement",
+      "principalId": "cc002001-0000-0000-0000-000000000000",
+      "tenantCodes": [
+        "technostat"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee001000-0000-0000-0000-000000000011",
+      "username": "nim.owner",
+      "principalId": "ee001000-0000-0000-0000-000000000011",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee001000-0000-0000-0000-000000000012",
+      "username": "nim.manager",
+      "principalId": "ee001000-0000-0000-0000-000000000012",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee001000-0000-0000-0000-000000000013",
+      "username": "nim.agent",
+      "principalId": "ee001000-0000-0000-0000-000000000013",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee001000-0000-0000-0000-000000000014",
+      "username": "nim.finance",
+      "principalId": "ee001000-0000-0000-0000-000000000014",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee002000-0000-0000-0000-000000000011",
+      "username": "str.owner",
+      "principalId": "ee002000-0000-0000-0000-000000000011",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee002000-0000-0000-0000-000000000012",
+      "username": "str.manager",
+      "principalId": "ee002000-0000-0000-0000-000000000012",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    },
+    {
+      "keycloakSubject": "ee002000-0000-0000-0000-000000000013",
+      "username": "str.agent",
+      "principalId": "ee002000-0000-0000-0000-000000000013",
+      "tenantCodes": [
+        "athyper"
+      ],
+      "disposition": "clean_slate_quarantine",
+      "planes": [
+        {
+          "plane": "mesh",
+          "membershipStatus": "active",
+          "group": {
+            "id": "c50b39d1-ee87-54aa-bd7f-b74c40302ba5",
+            "code": "mesh.access.quarantine",
+            "plane": "mesh",
+            "roleIds": [],
+            "scopeKind": "tenant",
+            "zeroGrant": true
+          },
+          "scopedRoleAssignments": []
+        }
+      ]
+    }
+  ],
+  "policy": {
+    "accountEntitlement": {
+      "authority": "mesh.auth_account_entitlement",
+      "unavailableBehavior": "deny_before_role_or_override",
+      "neonPlanRead": "forbidden"
+    }
+  },
+  "identityContract": {
+    "realm": "athyper",
+    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "enabledSubjectCount": 161,
+    "mappedSubjectCount": 161,
+    "unmanagedKeycloakUsers": "deny",
+    "fieldConflictBehavior": "fail"
+  },
+  "mutationPolicy": {
+    "truncate": "forbidden",
+    "authorizationWideDelete": "forbidden",
+    "apply": "idempotent_upsert_seed_owned_rows_only"
+  }
+}

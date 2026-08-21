@@ -1,0 +1,1857 @@
+-- 010_test_invoice_lifecycle.sql
+-- Purpose:
+--   Create 10 ATHQ purchase invoices for Athyper Group Holdings, one per major
+--   invoice lifecycle status, with invoice lines, workflow/approval state,
+--   accounting entries where applicable, and UI-oriented process metadata.
+--   This file mirrors the root TestInvoice.sql artifact and is intentionally
+--   placed in the tenant seed tree so DB reset/provision replays the data.
+--
+-- Assumptions:
+--   - Tenant realm/code is athyper.
+--   - Company code ATHQ represents Athyper Group Holdings.
+--   - TI-ATHQ-2026-002 uses a 2-level approval route:
+--       level 1: athq.admin + athq.manager in parallel,
+--       level 2: athq.owner as the serial approver after level 1 completes.
+--   - The script is additive. If an invoice number already exists, that invoice
+--     is left unchanged so re-running the script does not duplicate child rows.
+
+DO $$
+DECLARE
+  v_tenant_id uuid;
+  v_company_code_id uuid;
+  v_supplier_id uuid;
+  v_supplier_name text := 'ATHQ Test Supplier';
+  v_admin_id uuid;
+  v_parallel_approver_1_id uuid; -- athq.admin
+  v_parallel_approver_2_id uuid; -- athq.manager
+  v_serial_approver_id uuid; -- athq.owner
+  v_book_id uuid;
+  v_fiscal_period_id uuid;
+  v_payment_term_id uuid;
+  v_fiscal_year integer;
+  v_period_number integer;
+  v_postable_mv_ready boolean := false;
+  v_expense_gl_account_id uuid;
+  v_ap_gl_account_id uuid;
+  v_existing_invoice_id uuid;
+  v_invoice_id uuid;
+  v_workflow_request_id uuid;
+  v_workflow_stage_id uuid;
+  v_parallel_stage_id uuid;
+  v_serial_stage_id uuid;
+  v_journal_entry_id uuid;
+  v_reference_line_id uuid;
+  v_anchor timestamptz;
+  v_line_1_amount numeric(18, 2);
+  v_line_2_amount numeric(18, 2);
+  v_due_date date;
+  v_approved_at timestamptz;
+  r record;
+BEGIN
+  SELECT t.id
+    INTO v_tenant_id
+  FROM master.tenant t
+  WHERE t.realm_key = 'athyper'
+    AND t.code = 'athyper'
+  LIMIT 1;
+
+  IF v_tenant_id IS NULL THEN
+    RAISE EXCEPTION 'Tenant athyper was not found.';
+  END IF;
+
+  SELECT id INTO v_admin_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.admin';
+
+  SELECT id INTO v_parallel_approver_2_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.manager';
+
+  SELECT id INTO v_serial_approver_id
+  FROM master.principal
+  WHERE tenant_id = v_tenant_id AND code = 'athq.owner';
+
+  v_parallel_approver_1_id := v_admin_id;
+
+  IF v_admin_id IS NULL OR v_parallel_approver_2_id IS NULL OR v_serial_approver_id IS NULL THEN
+    RAISE EXCEPTION 'Required ATHQ approval principals were not found. Resolved athq.admin %, athq.manager %, athq.owner %.',
+      v_parallel_approver_1_id, v_parallel_approver_2_id, v_serial_approver_id;
+  END IF;
+
+  PERFORM set_config('app.current_tenant_id',   v_tenant_id::text, true);
+  PERFORM set_config('app.current_principal_id', v_admin_id::text, true);
+  PERFORM set_config('app.database_plane',       'neon',            true);
+
+  SELECT cc.id
+    INTO v_company_code_id
+  FROM master.company_code cc
+  WHERE cc.tenant_id = v_tenant_id
+    AND cc.code = 'ATHQ'
+  LIMIT 1;
+
+  IF v_company_code_id IS NULL THEN
+    RAISE EXCEPTION 'Company code ATHQ for Athyper Group Holdings was not found.';
+  END IF;
+
+  SELECT pt.id
+    INTO v_payment_term_id
+  FROM master.payment_term pt
+  WHERE pt.tenant_id = v_tenant_id
+    AND pt.code = 'PT-NET30'
+    AND pt.status = 'active'
+  ORDER BY pt.version DESC
+  LIMIT 1;
+
+  IF v_payment_term_id IS NULL THEN
+    RAISE EXCEPTION 'Active payment term PT-NET30 was not found for tenant athyper.';
+  END IF;
+
+  SELECT s.id, COALESCE(bp.name, s.supplier_code, v_supplier_name)
+    INTO v_supplier_id, v_supplier_name
+  FROM master.supplier s
+  LEFT JOIN master.business_partner bp
+    ON bp.id = s.business_partner_id
+   AND bp.tenant_id = s.tenant_id
+  WHERE s.tenant_id = v_tenant_id
+    AND s.status = 'active'
+  ORDER BY CASE WHEN s.supplier_code ILIKE '%ATHQ%' THEN 0 ELSE 1 END,
+           s.supplier_code
+  LIMIT 1;
+
+  v_supplier_name := COALESCE(v_supplier_name, 'ATHQ Test Supplier');
+
+  SELECT cba.book_id
+    INTO v_book_id
+  FROM master.company_code_book_assignment cba
+  JOIN master.ledger_book lb
+    ON lb.id = cba.book_id
+   AND lb.tenant_id = cba.tenant_id
+  WHERE cba.tenant_id = v_tenant_id
+    AND cba.company_code_id = v_company_code_id
+    AND cba.status = 'active'
+    AND lb.status = 'active'
+  ORDER BY lb.is_primary DESC, cba.priority DESC, cba.created_at
+  LIMIT 1;
+
+  IF v_book_id IS NULL THEN
+    SELECT lb.id
+      INTO v_book_id
+    FROM master.ledger_book lb
+    WHERE lb.tenant_id = v_tenant_id
+      AND lb.status = 'active'
+    ORDER BY lb.is_primary DESC, lb.created_at
+    LIMIT 1;
+  END IF;
+
+  IF v_book_id IS NULL THEN
+    RAISE EXCEPTION 'No active ledger book was found for tenant athyper.';
+  END IF;
+
+  SELECT fp.id, fp.fiscal_year, fp.period_number
+    INTO v_fiscal_period_id, v_fiscal_year, v_period_number
+  FROM master.fiscal_period fp
+  WHERE fp.tenant_id = v_tenant_id
+    AND fp.company_code_id = v_company_code_id
+    AND fp.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::integer
+    AND fp.period_number = EXTRACT(MONTH FROM CURRENT_DATE)::integer
+    AND fp.status IN ('open', 'soft_close')
+  ORDER BY fp.start_date DESC
+  LIMIT 1;
+
+  IF v_fiscal_period_id IS NULL THEN
+    SELECT fp.id, fp.fiscal_year, fp.period_number
+      INTO v_fiscal_period_id, v_fiscal_year, v_period_number
+    FROM master.fiscal_period fp
+    WHERE fp.tenant_id = v_tenant_id
+      AND fp.company_code_id = v_company_code_id
+    ORDER BY fp.fiscal_year DESC, fp.period_number DESC
+    LIMIT 1;
+  END IF;
+
+  IF v_fiscal_period_id IS NULL THEN
+    RAISE EXCEPTION 'No fiscal period was found for company ATHQ.';
+  END IF;
+
+  SELECT COALESCE(c.relispopulated, false)
+    INTO v_postable_mv_ready
+  FROM pg_class c
+  WHERE c.oid = to_regclass('master.mv_company_postable_account');
+
+  IF v_postable_mv_ready THEN
+    SELECT mpa.gl_account_id
+      INTO v_expense_gl_account_id
+    FROM master.mv_company_postable_account mpa
+    WHERE mpa.tenant_id = v_tenant_id
+      AND mpa.company_code_id = v_company_code_id
+      AND lower(mpa.account_class) IN ('expense', 'expenses')
+    ORDER BY CASE
+               WHEN mpa.account_name ILIKE '%consult%' OR mpa.account_name ILIKE '%service%' OR mpa.account_code ILIKE '%exp%' THEN 0
+               ELSE 1
+             END,
+             mpa.account_code
+    LIMIT 1;
+  END IF;
+
+  IF v_expense_gl_account_id IS NULL THEN
+    SELECT ga.id
+      INTO v_expense_gl_account_id
+    FROM master.gl_account ga
+    WHERE ga.tenant_id = v_tenant_id
+      AND ga.status = 'active'
+      AND ga.node_type = 'posting'
+      AND lower(ga.account_class) IN ('expense', 'expenses')
+    ORDER BY CASE
+               WHEN ga.name ILIKE '%consult%' OR ga.name ILIKE '%service%' OR ga.code ILIKE '%exp%' THEN 0
+               ELSE 1
+             END,
+             ga.sort_order NULLS LAST,
+             ga.code
+    LIMIT 1;
+  END IF;
+
+  IF v_postable_mv_ready THEN
+    SELECT mpa.gl_account_id
+      INTO v_ap_gl_account_id
+    FROM master.mv_company_postable_account mpa
+    WHERE mpa.tenant_id = v_tenant_id
+      AND mpa.company_code_id = v_company_code_id
+      AND lower(mpa.account_class) IN ('liability', 'liabilities')
+    ORDER BY CASE
+               WHEN mpa.account_name ILIKE '%payable%' OR mpa.account_code ILIKE '%ap%' OR lower(COALESCE(mpa.subledger_type, '')) IN ('supplier', 'ap') THEN 0
+               ELSE 1
+             END,
+             mpa.account_code
+    LIMIT 1;
+  END IF;
+
+  IF v_ap_gl_account_id IS NULL THEN
+    SELECT ga.id
+      INTO v_ap_gl_account_id
+    FROM master.gl_account ga
+    WHERE ga.tenant_id = v_tenant_id
+      AND ga.status = 'active'
+      AND ga.node_type = 'posting'
+      AND lower(ga.account_class) IN ('liability', 'liabilities')
+    ORDER BY CASE
+               WHEN ga.name ILIKE '%payable%' OR ga.code ILIKE '%ap%' OR lower(COALESCE(ga.subledger_type, '')) IN ('supplier', 'ap') THEN 0
+               ELSE 1
+             END,
+             ga.sort_order NULLS LAST,
+             ga.code
+    LIMIT 1;
+  END IF;
+
+  IF v_expense_gl_account_id IS NULL OR v_ap_gl_account_id IS NULL THEN
+    RAISE EXCEPTION 'Required posting GL accounts were not found. Expense account: %, AP account: %',
+      v_expense_gl_account_id, v_ap_gl_account_id;
+  END IF;
+
+  FOR r IN
+    SELECT *
+    FROM jsonb_to_recordset(
+      '[
+        {
+          "idx": 1,
+          "invoice_id": "10000000-0000-0000-0000-000000000001",
+          "code": "TI-ATHQ-2026-001",
+          "supplier_invoice_number": "SUP-TI-001",
+          "title": "Draft software subscription invoice",
+          "description": "Draft header canary - MYR gross amount, no-match unmatched state.",
+          "status": "draft",
+          "invoice_type": "standard",
+          "amount": 1200.00,
+          "paid_amount": 0.00,
+          "tax_amount": 0.00,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "no_match",
+          "match_status": "unmatched",
+          "workflow": false,
+          "workflow_status": null,
+          "workflow_decision": null,
+          "stage_status": null,
+          "work_item_status": null,
+          "work_item_decision": null,
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "overview"
+        },
+        {
+          "idx": 2,
+          "invoice_id": "10000000-0000-0000-0000-000000000002",
+          "code": "TI-ATHQ-2026-002",
+          "supplier_invoice_number": "SUP-TI-002",
+          "title": "Approval requested facilities invoice",
+          "description": "Pending approval header canary - SAR transaction with MYR base equivalent.",
+          "status": "pending_approval",
+          "invoice_type": "standard",
+          "amount": 2450.00,
+          "paid_amount": 0.00,
+          "tax_amount": 220.50,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "SAR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.2500000000,
+          "match_type": "three_way",
+          "match_status": "unmatched",
+          "workflow": true,
+          "workflow_status": "pending",
+          "workflow_decision": null,
+          "stage_status": "active",
+          "work_item_status": "assigned",
+          "work_item_decision": null,
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "approvals"
+        },
+        {
+          "idx": 3,
+          "invoice_id": "10000000-0000-0000-0000-000000000003",
+          "code": "TI-ATHQ-2026-003",
+          "supplier_invoice_number": "SUP-TI-003",
+          "title": "Approved legal services invoice",
+          "description": "Approved header canary - USD gross with visible outstanding balance.",
+          "status": "approved",
+          "invoice_type": "standard",
+          "amount": 3180.00,
+          "paid_amount": 0.00,
+          "tax_amount": 0.00,
+          "withholding_tax_amount": 180.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "USD",
+          "base_currency_code": "MYR",
+          "exchange_rate": 4.7000000000,
+          "match_type": "two_way",
+          "match_status": "partially_matched",
+          "workflow": true,
+          "workflow_status": "approved",
+          "workflow_decision": "approve",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "approve",
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "workflow"
+        },
+        {
+          "idx": 4,
+          "invoice_id": "10000000-0000-0000-0000-000000000004",
+          "code": "TI-ATHQ-2026-004",
+          "supplier_invoice_number": "SUP-TI-004",
+          "title": "Posted data center invoice",
+          "description": "Posted header canary - fully matched three-way invoice awaiting payment.",
+          "status": "posted",
+          "invoice_type": "standard",
+          "amount": 4875.00,
+          "paid_amount": 0.00,
+          "tax_amount": 390.00,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "three_way",
+          "match_status": "fully_matched",
+          "workflow": true,
+          "workflow_status": "approved",
+          "workflow_decision": "approve",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "approve",
+          "create_posting": true,
+          "is_reversal": false,
+          "ui_focus": "versions"
+        },
+        {
+          "idx": 5,
+          "invoice_id": "10000000-0000-0000-0000-000000000005",
+          "code": "TI-ATHQ-2026-005",
+          "supplier_invoice_number": "SUP-TI-005",
+          "title": "Partially paid consulting invoice",
+          "description": "Partial payment header canary - outstanding balance after WHT and payment.",
+          "status": "partially_paid",
+          "invoice_type": "standard",
+          "amount": 5620.00,
+          "paid_amount": 2248.00,
+          "tax_amount": 505.80,
+          "withholding_tax_amount": 120.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "three_way",
+          "match_status": "partially_matched",
+          "workflow": true,
+          "workflow_status": "approved",
+          "workflow_decision": "approve",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "approve",
+          "create_posting": true,
+          "is_reversal": false,
+          "ui_focus": "versions"
+        },
+        {
+          "idx": 6,
+          "invoice_id": "10000000-0000-0000-0000-000000000006",
+          "code": "TI-ATHQ-2026-006",
+          "supplier_invoice_number": "SUP-TI-006",
+          "title": "Fully paid audit invoice",
+          "description": "Fully paid header canary - gross stays stable while outstanding hides at zero.",
+          "status": "fully_paid",
+          "invoice_type": "final",
+          "amount": 7050.00,
+          "paid_amount": 7050.00,
+          "tax_amount": 634.50,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "evaluated_receipt",
+          "match_status": "fully_matched",
+          "workflow": true,
+          "workflow_status": "approved",
+          "workflow_decision": "approve",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "approve",
+          "create_posting": true,
+          "is_reversal": false,
+          "ui_focus": "versions"
+        },
+        {
+          "idx": 7,
+          "invoice_id": "10000000-0000-0000-0000-000000000007",
+          "code": "TI-ATHQ-2026-007",
+          "supplier_invoice_number": "SUP-TI-007",
+          "title": "On hold procurement exception invoice",
+          "description": "On-hold header canary - three-way match exception with retention holdback.",
+          "status": "on_hold",
+          "invoice_type": "standard",
+          "amount": 1840.00,
+          "paid_amount": 0.00,
+          "tax_amount": 165.60,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 92.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "three_way",
+          "match_status": "match_exception",
+          "workflow": true,
+          "workflow_status": "pending",
+          "workflow_decision": null,
+          "stage_status": "active",
+          "work_item_status": "assigned",
+          "work_item_decision": null,
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "approvals"
+        },
+        {
+          "idx": 8,
+          "invoice_id": "10000000-0000-0000-0000-000000000008",
+          "code": "TI-ATHQ-2026-008",
+          "supplier_invoice_number": "SUP-TI-008",
+          "title": "Rejected duplicate invoice",
+          "description": "Rejected header canary - debit note classification with match exception.",
+          "status": "rejected",
+          "invoice_type": "debit_note",
+          "amount": 990.00,
+          "paid_amount": 0.00,
+          "tax_amount": 0.00,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "USD",
+          "base_currency_code": "MYR",
+          "exchange_rate": 4.7000000000,
+          "match_type": "two_way",
+          "match_status": "match_exception",
+          "workflow": true,
+          "workflow_status": "rejected",
+          "workflow_decision": "reject",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "reject",
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "workflow"
+        },
+        {
+          "idx": 9,
+          "invoice_id": "10000000-0000-0000-0000-000000000009",
+          "code": "TI-ATHQ-2026-009",
+          "supplier_invoice_number": "SUP-TI-009",
+          "title": "Cancelled vendor correction invoice",
+          "description": "Cancelled header canary - no-match invoice kept for lifecycle contrast.",
+          "status": "cancelled",
+          "invoice_type": "standard",
+          "amount": 1655.00,
+          "paid_amount": 0.00,
+          "tax_amount": 148.95,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "no_match",
+          "match_status": "unmatched",
+          "workflow": true,
+          "workflow_status": "canceled",
+          "workflow_decision": null,
+          "stage_status": "skipped",
+          "work_item_status": "skipped",
+          "work_item_decision": null,
+          "create_posting": false,
+          "is_reversal": false,
+          "ui_focus": "versions"
+        },
+        {
+          "idx": 10,
+          "invoice_id": "10000000-0000-0000-0000-000000000010",
+          "code": "TI-ATHQ-2026-010",
+          "supplier_invoice_number": "SUP-TI-010",
+          "title": "Reversed posted invoice",
+          "description": "Reversed header canary - credit note classification tied to posted invoice 004.",
+          "status": "reversed",
+          "invoice_type": "credit_note",
+          "amount": 4325.00,
+          "paid_amount": 0.00,
+          "tax_amount": 389.25,
+          "withholding_tax_amount": 0.00,
+          "retention_amount": 0.00,
+          "advance_deduction_amount": 0.00,
+          "currency_code": "MYR",
+          "base_currency_code": "MYR",
+          "exchange_rate": 1.0000000000,
+          "match_type": "three_way",
+          "match_status": "fully_matched",
+          "workflow": true,
+          "workflow_status": "approved",
+          "workflow_decision": "approve",
+          "stage_status": "completed",
+          "work_item_status": "completed",
+          "work_item_decision": "approve",
+          "create_posting": true,
+          "is_reversal": true,
+          "reversal_of_invoice_id": "10000000-0000-0000-0000-000000000004",
+          "ui_focus": "versions"
+        }
+      ]'::jsonb
+    ) AS s(
+      idx integer,
+      invoice_id uuid,
+      code text,
+      supplier_invoice_number text,
+      title text,
+      description text,
+      status text,
+      invoice_type text,
+      amount numeric,
+      paid_amount numeric,
+      tax_amount numeric,
+      withholding_tax_amount numeric,
+      retention_amount numeric,
+      advance_deduction_amount numeric,
+      currency_code text,
+      base_currency_code text,
+      exchange_rate numeric,
+      match_type text,
+      match_status text,
+      workflow boolean,
+      workflow_status text,
+      workflow_decision text,
+      stage_status text,
+      work_item_status text,
+      work_item_decision text,
+      create_posting boolean,
+      is_reversal boolean,
+      reversal_of_invoice_id uuid,
+      ui_focus text
+    )
+  LOOP
+    SELECT pi.id
+      INTO v_existing_invoice_id
+    FROM document.purchase_invoice pi
+    WHERE pi.tenant_id = v_tenant_id
+      AND pi.company_code_id = v_company_code_id
+      AND pi.code = r.code
+    LIMIT 1;
+
+    IF v_existing_invoice_id IS NOT NULL THEN
+      RAISE NOTICE 'Skipping existing invoice % (%).', r.code, v_existing_invoice_id;
+      CONTINUE;
+    END IF;
+
+    v_invoice_id := r.invoice_id;
+    v_workflow_request_id := NULL;
+    v_workflow_stage_id := NULL;
+    v_parallel_stage_id := NULL;
+    v_serial_stage_id := NULL;
+    v_journal_entry_id := NULL;
+    v_reference_line_id := NULL;
+    v_anchor := now() - ((12 - r.idx) * interval '1 day');
+    v_due_date := CURRENT_DATE + CASE WHEN r.idx = 2 THEN 1 ELSE 30 END;
+    v_line_1_amount := ROUND((r.amount * 0.65)::numeric, 2);
+    v_line_2_amount := r.amount - v_line_1_amount;
+    v_approved_at := CASE
+      WHEN r.status IN ('approved', 'posted', 'partially_paid', 'fully_paid', 'on_hold', 'reversed') THEN v_anchor + interval '6 hours'
+      ELSE NULL
+    END;
+
+    INSERT INTO document.purchase_invoice (
+      id,
+      tenant_id,
+      company_code_id,
+      code,
+      name,
+      invoice_source,
+      invoice_type,
+      supplier_id,
+      supplier_invoice_number,
+      supplier_invoice_date,
+      posting_date,
+      received_date,
+      due_date,
+      currency_code,
+      base_currency_code,
+      exchange_rate,
+      tax_amount,
+      tax_mode,
+      withholding_tax_amount,
+      retention_amount,
+      advance_deduction_amount,
+      total_amount,
+      paid_amount,
+      fiscal_year,
+      period_number,
+      status,
+      status_changed_at,
+      approved_at,
+      approved_by,
+      requested_by,
+      match_type,
+      match_status,
+      metadata,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_invoice_id,
+      v_tenant_id,
+      v_company_code_id,
+      r.code,
+      r.title,
+      'non_po',
+      r.invoice_type,
+      v_supplier_id,
+      r.supplier_invoice_number,
+      (v_anchor::date - 2),
+      v_anchor::date,
+      v_anchor::date,
+      v_due_date,
+      r.currency_code,
+      r.base_currency_code,
+      r.exchange_rate,
+      r.tax_amount,
+      CASE WHEN r.tax_amount > 0 THEN 'exclusive' ELSE 'out_of_scope' END,
+      r.withholding_tax_amount,
+      r.retention_amount,
+      r.advance_deduction_amount,
+      r.amount,
+      r.paid_amount,
+      v_fiscal_year,
+      v_period_number,
+      'draft',
+      v_anchor,
+      v_approved_at,
+      CASE WHEN v_approved_at IS NOT NULL THEN v_admin_id ELSE NULL END,
+      v_admin_id,
+      r.match_type,
+      r.match_status,
+      jsonb_build_object(
+        'seed', 'TestInvoice.sql',
+        'seedUser', 'athq.admin',
+        'legalEntity', 'Athyper Group Holdings',
+        'title', r.title,
+        'headerBarCanary', jsonb_build_object(
+          'description', r.description,
+          'currencyCode', r.currency_code,
+          'baseCurrencyCode', r.base_currency_code,
+          'exchangeRate', r.exchange_rate,
+          'matchType', r.match_type,
+          'matchStatus', r.match_status,
+          'expectedOutstandingVisible', r.status IN ('approved', 'posted', 'partially_paid')
+        ),
+        'runtime', jsonb_build_object(
+          'descriptorContract', 'MetaEntityRuntimeDescriptor',
+          'recordStatusField', 'status',
+          'processState', jsonb_build_object(
+            'lifecycle', jsonb_build_object(
+              'currentState', r.status,
+              'terminal', r.status IN ('fully_paid', 'cancelled', 'reversed', 'rejected')
+            ),
+            'workflow', jsonb_build_object(
+              'enabled', r.workflow,
+              'status', r.workflow_status,
+              'currentStage', CASE
+                WHEN r.idx = 2 THEN 'Level 1 Parallel Approval'
+                WHEN r.workflow THEN 'Invoice Approval'
+                ELSE NULL
+              END,
+              'pendingTasks', CASE
+                WHEN r.idx = 2 THEN 2
+                WHEN r.work_item_status IN ('assigned', 'in_progress') THEN 1
+                ELSE 0
+              END
+            )
+          )
+        ),
+        'uiPresentation', jsonb_build_object(
+          'defaultProcessTab', r.ui_focus,
+          'workflow', jsonb_build_object(
+            'surface', 'right_process_panel',
+            'summary', CASE
+              WHEN r.workflow_status = 'pending' THEN 'Approval in progress'
+              WHEN r.workflow_status = 'approved' THEN 'Workflow approved'
+              WHEN r.workflow_status = 'rejected' THEN 'Workflow rejected'
+              WHEN r.workflow_status = 'canceled' THEN 'Workflow canceled'
+              ELSE 'No workflow request'
+            END
+          ),
+          'approvals', jsonb_build_object(
+            'headline', CASE
+              WHEN r.idx = 2 THEN 'Your approval is requested - due tomorrow'
+              WHEN r.work_item_status = 'assigned' THEN 'Approval action is pending'
+              WHEN r.work_item_status = 'completed' THEN 'Approval completed'
+              WHEN r.work_item_status = 'skipped' THEN 'Approval skipped'
+              ELSE 'No approval task'
+            END,
+            'actions', CASE
+              WHEN r.work_item_status IN ('assigned', 'in_progress') THEN jsonb_build_array('Approve', 'Reject', 'Request changes')
+              ELSE '[]'::jsonb
+            END,
+            'assignedTo', CASE
+              WHEN r.idx = 2 THEN 'athq.admin, athq.manager'
+              WHEN r.work_item_status IN ('assigned', 'in_progress') THEN 'athq.admin'
+              ELSE NULL
+            END,
+            'dueDate', CASE WHEN r.work_item_status IN ('assigned', 'in_progress') THEN v_due_date ELSE NULL END
+          ),
+          'versions', jsonb_build_array(
+            jsonb_build_object('version', 1, 'label', 'Created', 'status', 'completed', 'actor', 'athq.admin', 'at', v_anchor),
+            jsonb_build_object('version', 2, 'label', 'Current lifecycle: ' || r.status, 'status', 'current', 'actor', 'athq.admin', 'at', v_anchor + interval '8 hours')
+          )
+        )
+      ),
+      v_admin_id,
+      v_admin_id,
+      v_anchor,
+      v_anchor + interval '8 hours'
+    );
+
+    -- Phase 1 canonical PIL shape: no line lifecycle status; header owns lifecycle.
+    INSERT INTO document.purchase_invoice_line (
+      tenant_id,
+      company_code_id,
+      purchase_invoice_id,
+      line_no,
+      item_description,
+      procurement_type,
+      uom_code,
+      quantity,
+      unit_price,
+      currency_code,
+      tax_amount,
+      withholding_tax_amount,
+      match_status,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES
+      (
+        v_tenant_id,
+        v_company_code_id,
+        v_invoice_id,
+        1,
+        r.title || ' - service component',
+        'services',
+        'EA',
+        1,
+        v_line_1_amount,
+        r.currency_code,
+        0,
+        0,
+        r.match_status,
+        v_admin_id,
+        v_admin_id,
+        v_anchor,
+        v_anchor
+      ),
+      (
+        v_tenant_id,
+        v_company_code_id,
+        v_invoice_id,
+        2,
+        r.title || ' - support component',
+        'services',
+        'EA',
+        1,
+        v_line_2_amount,
+        r.currency_code,
+        0,
+        0,
+        r.match_status,
+        v_admin_id,
+        v_admin_id,
+        v_anchor,
+        v_anchor
+      );
+
+    -- Line sync triggers may recompute the header totals. Stamp the UI header
+    -- canary values after lines so list/detail screenshots exercise the exact
+    -- amount and match combinations declared in the recordset above.
+    UPDATE document.purchase_invoice
+       SET tax_amount = r.tax_amount,
+           withholding_tax_amount = r.withholding_tax_amount,
+           retention_amount = r.retention_amount,
+           advance_deduction_amount = r.advance_deduction_amount,
+           total_amount = r.amount,
+           paid_amount = r.paid_amount,
+           match_type = r.match_type,
+           match_status = r.match_status,
+           updated_by = v_admin_id,
+           updated_at = v_anchor + interval '2 hours'
+     WHERE id = v_invoice_id;
+
+    -- Demo invoices are written in-place at advanced statuses. Identity
+    -- display resolves from document header fields through live master joins.
+
+    INSERT INTO document.payment_term_application (
+      tenant_id,
+      invoice_id,
+      payment_term_id,
+      term_snapshot,
+      clause_snapshot,
+      clause_type,
+      clause_code,
+      calculated_basis_amount,
+      default_amount,
+      applied_amount,
+      evaluation_sequence_no,
+      running_total_amount,
+      remaining_balance_amount,
+      base_event_date,
+      days_applied,
+      resolved_due_date,
+      application_status,
+      metadata,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_tenant_id,
+      v_invoice_id,
+      v_payment_term_id,
+      jsonb_build_object(
+        'code', 'PT-NET30',
+        'name', 'Net 30 Days',
+        'baseEvent', 'INVOICE_DATE',
+        'dueRuleType', 'NET_DAYS',
+        'dueDays', 30,
+        'seed', 'TestInvoice.sql'
+      ),
+      jsonb_build_object(
+        'clauseType', 'DUE_DATE',
+        'clauseCode', 'DUE_DATE',
+        'baseEventDate', v_anchor::date,
+        'daysApplied', CASE WHEN r.idx = 2 THEN 1 ELSE 30 END,
+        'resolvedDueDate', v_due_date,
+        'seed', 'TestInvoice.sql'
+      ),
+      'DUE_DATE',
+      'DUE_DATE',
+      r.amount,
+      0,
+      0,
+      1,
+      r.amount,
+      r.amount,
+      v_anchor::date,
+      CASE WHEN r.idx = 2 THEN 1 ELSE 30 END,
+      v_due_date,
+      'APPLIED',
+      jsonb_build_object(
+        'seed', 'TestInvoice.sql',
+        'explanation', CASE WHEN r.idx = 2 THEN 'Level 1 parallel approvals due tomorrow for athq.admin and athq.manager.' ELSE 'Standard net 30 test term.' END
+      ),
+      v_admin_id,
+      v_admin_id,
+      v_anchor,
+      v_anchor
+    );
+
+    INSERT INTO document.invoice_match_case (
+      tenant_id,
+      company_code_id,
+      purchase_invoice_id,
+      match_type,
+      match_result,
+      total_quantity_variance,
+      total_price_variance,
+      total_amount_variance,
+      has_exceptions,
+      exception_count,
+      matched_at,
+      matched_by,
+      status,
+      metadata,
+      created_by,
+      updated_by,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      v_tenant_id,
+      v_company_code_id,
+      v_invoice_id,
+      r.match_type,
+      CASE
+        WHEN r.match_status = 'match_exception' THEN 'exception'
+        WHEN r.status = 'rejected' THEN 'rejected'
+        WHEN r.match_status = 'unmatched' THEN 'pending'
+        WHEN r.match_status = 'partially_matched' THEN 'matched_with_tolerance'
+        WHEN r.match_status = 'fully_matched' THEN 'matched'
+        ELSE 'matched'
+      END,
+      0,
+      0,
+      CASE WHEN r.match_status = 'match_exception' THEN 125.00 ELSE 0 END,
+      r.match_status = 'match_exception',
+      CASE WHEN r.match_status = 'match_exception' THEN 1 ELSE 0 END,
+      CASE WHEN r.match_status IN ('partially_matched', 'fully_matched') THEN v_anchor + interval '3 hours' ELSE NULL END,
+      CASE WHEN r.match_status IN ('partially_matched', 'fully_matched') THEN v_admin_id ELSE NULL END,
+      CASE
+        WHEN r.match_status = 'match_exception' THEN 'exception'
+        WHEN r.status = 'cancelled' THEN 'cancelled'
+        WHEN r.match_status = 'unmatched' THEN 'pending'
+        ELSE 'completed'
+      END,
+      jsonb_build_object(
+        'seed', 'TestInvoice.sql',
+        'headerMatchBadge', jsonb_build_object(
+          'matchType', r.match_type,
+          'matchStatus', r.match_status
+        ),
+        'rules', jsonb_build_array(
+          jsonb_build_object('rule', 'supplier_snapshot', 'result', 'passed'),
+          jsonb_build_object('rule', 'amount_validation', 'result', CASE WHEN r.match_status = 'match_exception' THEN 'exception' ELSE 'passed' END),
+          jsonb_build_object('rule', 'approval_visibility', 'result', CASE WHEN r.idx = 2 THEN 'parallel_level_1_assigned_to_athq_admin_and_athq_manager' ELSE 'not_applicable' END)
+        ),
+        'exceptionSummary', CASE WHEN r.match_status = 'match_exception' THEN 'Procurement exception review is required before approval can continue.' ELSE NULL END
+      ),
+      v_admin_id,
+      v_admin_id,
+      v_anchor,
+      v_anchor
+    );
+
+    IF r.workflow THEN
+      v_workflow_request_id := shared.uuidv7();
+      v_workflow_stage_id := shared.uuidv7();
+
+      INSERT INTO document.workflow_request (
+        id,
+        tenant_id,
+        workflow_type,
+        entity_type,
+        entity_id,
+        entity_snapshot,
+        requested_by,
+        requested_at,
+        status,
+        decision,
+        decided_by,
+        decided_at,
+        reason,
+        metadata,
+        created_by,
+        updated_by,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        v_workflow_request_id,
+        v_tenant_id,
+        'approval',
+        'purchase_invoice',
+        v_invoice_id::text,
+        jsonb_build_object(
+          'invoiceNumber', r.code,
+          'status', r.status,
+          'amount', r.amount,
+          'currencyCode', r.currency_code,
+          'baseCurrencyCode', r.base_currency_code,
+          'exchangeRate', r.exchange_rate,
+          'legalEntity', 'Athyper Group Holdings'
+        ),
+        v_admin_id,
+        v_anchor + interval '1 hour',
+        r.workflow_status,
+        r.workflow_decision,
+        CASE WHEN r.workflow_decision IS NOT NULL THEN v_admin_id ELSE NULL END,
+        CASE WHEN r.workflow_decision IS NOT NULL THEN v_anchor + interval '5 hours' ELSE NULL END,
+        CASE
+          WHEN r.workflow_decision = 'reject' THEN 'Rejected as part of TestInvoice lifecycle coverage.'
+          WHEN r.workflow_decision = 'approve' THEN 'Approved as part of TestInvoice lifecycle coverage.'
+          ELSE NULL
+        END,
+        jsonb_build_object(
+          'seed', 'TestInvoice.sql',
+          'approvalCard', jsonb_build_object(
+            'headline', CASE WHEN r.idx = 2 THEN 'Your approval is requested - due tomorrow' ELSE NULL END,
+            'actions', CASE WHEN r.idx IN (2, 7) THEN jsonb_build_array('Approve', 'Reject', 'Request changes') ELSE '[]'::jsonb END
+          ),
+          'approvalTopology', jsonb_build_object(
+            'mode', CASE WHEN r.idx = 2 THEN 'parallel_then_serial' ELSE 'single_stage' END,
+            'stages', CASE
+              WHEN r.idx = 2 THEN jsonb_build_array(
+                jsonb_build_object(
+                  'stageNo', 1,
+                  'name', 'Level 1 Parallel Approval',
+                  'mode', 'parallel',
+                  'required', 2,
+                  'approvers', jsonb_build_array('athq.admin', 'athq.manager'),
+                  'status', 'active'
+                ),
+                jsonb_build_object(
+                  'stageNo', 2,
+                  'name', 'Level 2 CFO Approval',
+                  'mode', 'serial',
+                  'required', 1,
+                  'approvers', jsonb_build_array('athq.owner'),
+                  'status', 'pending'
+                )
+              )
+              ELSE jsonb_build_array(
+                jsonb_build_object(
+                  'stageNo', 1,
+                  'name', 'Invoice Approval',
+                  'mode', 'serial',
+                  'required', 1,
+                  'status', r.stage_status
+                )
+              )
+            END
+          )
+        ),
+        v_admin_id,
+        v_admin_id,
+        v_anchor + interval '1 hour',
+        v_anchor + interval '5 hours'
+      );
+
+      IF r.idx = 2 THEN
+        v_parallel_stage_id := v_workflow_stage_id;
+        v_serial_stage_id := shared.uuidv7();
+
+        INSERT INTO document.workflow_stage (
+          id,
+          tenant_id,
+          workflow_request_id,
+          stage_no,
+          name,
+          mode,
+          quorum,
+          status,
+          started_at,
+          completed_at,
+          outcome,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES
+          (
+            v_parallel_stage_id,
+            v_tenant_id,
+            v_workflow_request_id,
+            1,
+            'Level 1 Parallel Approval',
+            'parallel',
+            jsonb_build_object('strategy', 'unanimous', 'required', 2, 'mode', 'parallel', 'approvalLevel', 1),
+            'active',
+            v_anchor + interval '1 hour',
+            NULL,
+            NULL,
+            v_admin_id,
+            v_admin_id,
+            v_anchor + interval '1 hour',
+            v_anchor + interval '1 hour'
+          ),
+          (
+            v_serial_stage_id,
+            v_tenant_id,
+            v_workflow_request_id,
+            2,
+            'Level 2 CFO Approval',
+            'serial',
+            jsonb_build_object('strategy', 'count', 'required', 1, 'mode', 'serial', 'approvalLevel', 2),
+            'pending',
+            NULL,
+            NULL,
+            NULL,
+            v_admin_id,
+            v_admin_id,
+            v_anchor + interval '1 hour',
+            v_anchor + interval '1 hour'
+          );
+
+        INSERT INTO event.work_item (
+          id,
+          tenant_id,
+          task_type,
+          workflow_request_id,
+          workflow_stage_id,
+          designated_id,
+          assignee_id,
+          order_index,
+          status,
+          assigned_at,
+          started_at,
+          completed_at,
+          due_at,
+          decision,
+          reason,
+          metadata,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES
+          (
+            shared.uuidv7(),
+            v_tenant_id,
+            'approval',
+            v_workflow_request_id,
+            v_parallel_stage_id,
+            v_parallel_approver_1_id,
+            v_parallel_approver_1_id,
+            1,
+            'assigned',
+            v_anchor + interval '1 hour',
+            NULL,
+            NULL,
+            v_due_date::timestamp + time '17:00',
+            NULL,
+            'Level 1 parallel approval pending for athq.admin.',
+            jsonb_build_object(
+              'seed', 'TestInvoice.sql',
+              'principalAware', true,
+              'visibleTo', jsonb_build_array('athq.admin'),
+              'uiMessage', 'Your approval is requested - due tomorrow',
+              'actions', jsonb_build_array('Approve', 'Reject', 'Request changes'),
+              'approvalLevel', 1,
+              'sequenceMode', 'parallel',
+              'parallelGroup', 'level_1',
+              'nextStage', 'Level 2 CFO Approval'
+            ),
+            v_admin_id,
+            v_admin_id,
+            v_anchor + interval '1 hour',
+            v_anchor + interval '1 hour'
+          ),
+          (
+            shared.uuidv7(),
+            v_tenant_id,
+            'approval',
+            v_workflow_request_id,
+            v_parallel_stage_id,
+            v_parallel_approver_2_id,
+            v_parallel_approver_2_id,
+            1,
+            'assigned',
+            v_anchor + interval '1 hour',
+            NULL,
+            NULL,
+            v_due_date::timestamp + time '17:00',
+            NULL,
+            'Level 1 parallel approval pending for athq.manager.',
+            jsonb_build_object(
+              'seed', 'TestInvoice.sql',
+              'principalAware', true,
+              'visibleTo', jsonb_build_array('athq.manager'),
+              'uiMessage', 'Parallel approval is requested - due tomorrow',
+              'actions', jsonb_build_array('Approve', 'Reject', 'Request changes'),
+              'approvalLevel', 1,
+              'sequenceMode', 'parallel',
+              'parallelGroup', 'level_1',
+              'nextStage', 'Level 2 CFO Approval'
+            ),
+            v_admin_id,
+            v_admin_id,
+            v_anchor + interval '1 hour',
+            v_anchor + interval '1 hour'
+          ),
+          (
+            shared.uuidv7(),
+            v_tenant_id,
+            'approval',
+            v_workflow_request_id,
+            v_serial_stage_id,
+            v_serial_approver_id,
+            v_serial_approver_id,
+            1,
+            'pending',
+            NULL,
+            NULL,
+            NULL,
+            (v_due_date + 2)::timestamp + time '17:00',
+            NULL,
+            'Waiting for level 1 parallel approvals before CFO review.',
+            jsonb_build_object(
+              'seed', 'TestInvoice.sql',
+              'principalAware', true,
+              'visibleTo', jsonb_build_array('athq.owner'),
+              'uiMessage', 'Waiting for level 1 parallel approvals.',
+              'actions', '[]'::jsonb,
+              'approvalLevel', 2,
+              'sequenceMode', 'serial',
+              'dependsOn', 'level_1'
+            ),
+            v_admin_id,
+            v_admin_id,
+            v_anchor + interval '1 hour',
+            v_anchor + interval '1 hour'
+          );
+      ELSE
+        INSERT INTO document.workflow_stage (
+          id,
+          tenant_id,
+          workflow_request_id,
+          stage_no,
+          name,
+          mode,
+          quorum,
+          status,
+          started_at,
+          completed_at,
+          outcome,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          v_workflow_stage_id,
+          v_tenant_id,
+          v_workflow_request_id,
+          1,
+          'Invoice Approval',
+          'serial',
+          jsonb_build_object('required', 1, 'mode', 'single_approver'),
+          r.stage_status,
+          CASE WHEN r.stage_status IN ('active', 'completed', 'skipped', 'canceled') THEN v_anchor + interval '1 hour' ELSE NULL END,
+          CASE WHEN r.stage_status IN ('completed', 'skipped', 'canceled') THEN v_anchor + interval '5 hours' ELSE NULL END,
+          CASE
+            WHEN r.workflow_decision = 'approve' THEN 'approved'
+            WHEN r.workflow_decision = 'reject' THEN 'rejected'
+            WHEN r.stage_status = 'skipped' THEN 'skipped'
+            ELSE NULL
+          END,
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '1 hour',
+          v_anchor + interval '5 hours'
+        );
+
+        INSERT INTO event.work_item (
+          id,
+          tenant_id,
+          task_type,
+          workflow_request_id,
+          workflow_stage_id,
+          designated_id,
+          assignee_id,
+          order_index,
+          status,
+          assigned_at,
+          started_at,
+          completed_at,
+          due_at,
+          decision,
+          reason,
+          metadata,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          shared.uuidv7(),
+          v_tenant_id,
+          'approval',
+          v_workflow_request_id,
+          v_workflow_stage_id,
+          v_admin_id,
+          v_admin_id,
+          1,
+          r.work_item_status,
+          CASE WHEN r.work_item_status IN ('assigned', 'in_progress', 'completed', 'skipped', 'escalated') THEN v_anchor + interval '1 hour' ELSE NULL END,
+          CASE WHEN r.work_item_status IN ('in_progress', 'completed') THEN v_anchor + interval '2 hours' ELSE NULL END,
+          CASE WHEN r.work_item_status IN ('completed', 'skipped', 'escalated') THEN v_anchor + interval '5 hours' ELSE NULL END,
+          CASE WHEN r.work_item_status IN ('assigned', 'in_progress') THEN (v_due_date::timestamp + time '17:00') ELSE NULL END,
+          r.work_item_decision,
+          CASE
+            WHEN r.status = 'on_hold' THEN 'On hold until procurement exception is cleared.'
+            WHEN r.workflow_decision = 'reject' THEN 'Rejected during test approval route.'
+            WHEN r.workflow_decision = 'approve' THEN 'Approved during test approval route.'
+            ELSE NULL
+          END,
+          jsonb_build_object(
+            'seed', 'TestInvoice.sql',
+            'principalAware', true,
+            'visibleTo', jsonb_build_array('athq.admin'),
+            'uiMessage', NULL,
+            'actions', CASE WHEN r.work_item_status IN ('assigned', 'in_progress') THEN jsonb_build_array('Approve', 'Reject', 'Request changes') ELSE '[]'::jsonb END
+          ),
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '1 hour',
+          v_anchor + interval '5 hours'
+        );
+      END IF;
+
+      UPDATE document.purchase_invoice
+      SET workflow_request_id = v_workflow_request_id,
+          updated_by = v_admin_id,
+          updated_at = v_anchor + interval '5 hours'
+      WHERE id = v_invoice_id;
+
+      PERFORM set_config('app.current_tenant_id',    v_tenant_id::text, true);
+      PERFORM set_config('app.current_principal_id', v_admin_id::text,  true);
+      PERFORM audit.append_event(
+        'inbox.action_taken',
+        'execute'::audit.operation_d,
+        'purchase_invoice',
+        v_invoice_id,
+        'success'::audit.outcome_d,
+        'info'::audit.event_severity_d,
+        'tenant',
+        NULL::uuid,
+        NULL::uuid,
+        NULL,
+        jsonb_build_object('status', 'draft'),
+        jsonb_build_object(
+          'status', r.workflow_status,
+          'stage',  r.stage_status,
+          'currentStage', CASE WHEN r.idx = 2 THEN 'Level 1 Parallel Approval' ELSE 'Invoice Approval' END
+        ),
+        NULL::text[],
+        jsonb_build_object(
+          'workflow_event_type', 'workflow.transition',
+          'instance_id',         v_workflow_request_id::text,
+          'step_instance_id',    v_workflow_stage_id::text,
+          'action',              COALESCE(r.workflow_decision, 'submit'),
+          'comment',             CASE WHEN r.idx = 2 THEN 'Waiting for level 1 parallel approvals - due tomorrow' ELSE 'Test invoice workflow state seeded.' END,
+          'severity',            'info',
+          'transition_name',     CASE WHEN r.idx = 2 THEN 'Level 1 Parallel Approval' ELSE 'Invoice Approval' END,
+          'detail',              jsonb_build_object(
+            'seed',              'TestInvoice.sql',
+            'invoiceNumber',     r.code,
+            'approvalTopology',  CASE
+              WHEN r.idx = 2 THEN jsonb_build_object(
+                'mode',                     'parallel_then_serial',
+                'activeStage',              'Level 1 Parallel Approval',
+                'pendingParallelApprovers', jsonb_build_array('athq.admin', 'athq.manager'),
+                'nextSerialApprover',       'athq.owner'
+              )
+              ELSE jsonb_build_object('mode', 'single_stage')
+            END
+          )
+        ),
+        NULL::uuid,
+        NULL,
+        v_anchor + interval '5 hours'
+      );
+    END IF;
+
+    IF r.create_posting THEN
+      v_journal_entry_id := shared.uuidv7();
+
+      INSERT INTO document.journal_entry (
+        id,
+        tenant_id,
+        code,
+        name,
+        company_code_id,
+        book_id,
+        fiscal_period_id,
+        fiscal_year,
+        period_number,
+        je_number,
+        document_date,
+        posting_date,
+        source_doc_type,
+        source_doc_id,
+        transaction_currency,
+        base_currency,
+        total_debit,
+        total_credit,
+        line_count,
+        is_reversal,
+        status,
+        posted_at,
+        posted_by,
+        description,
+        metadata,
+        created_by,
+        updated_by,
+        created_at,
+        updated_at
+      )
+      VALUES (
+        v_journal_entry_id,
+        v_tenant_id,
+        'JE-' || r.code,
+        CASE WHEN r.is_reversal THEN 'Reversal accounting for ' || r.code ELSE 'AP recognition for ' || r.code END,
+        v_company_code_id,
+        v_book_id,
+        v_fiscal_period_id,
+        v_fiscal_year,
+        v_period_number,
+        'JE-' || r.code,
+        v_anchor::date,
+        v_anchor::date,
+        CASE WHEN r.is_reversal THEN 'reversal' ELSE 'purchase_invoice' END,
+        v_invoice_id,
+        r.currency_code,
+        r.base_currency_code,
+        r.amount,
+        r.amount,
+        2,
+        false,
+        'draft',
+        NULL,
+        NULL,
+        CASE WHEN r.is_reversal THEN 'Reversal accounting for ' || r.code ELSE 'AP recognition for ' || r.code END,
+        jsonb_build_object('seed', 'TestInvoice.sql', 'invoiceNumber', r.code, 'lifecycleStatus', r.status),
+        v_admin_id,
+        v_admin_id,
+        v_anchor + interval '9 hours',
+        v_anchor + interval '9 hours'
+      );
+
+      IF r.is_reversal THEN
+        INSERT INTO document.journal_line (
+          tenant_id,
+          journal_entry_id,
+          company_code_id,
+          book_id,
+          fiscal_period_id,
+          fiscal_year,
+          period_number,
+          posting_date,
+          line_no,
+          gl_account_id,
+          description,
+          transaction_currency,
+          transaction_debit,
+          transaction_credit,
+          base_currency,
+          base_debit,
+          base_credit,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          v_tenant_id,
+          v_journal_entry_id,
+          v_company_code_id,
+          v_book_id,
+          v_fiscal_period_id,
+          v_fiscal_year,
+          v_period_number,
+          v_anchor::date,
+          1,
+          v_ap_gl_account_id,
+          'Reverse AP liability for ' || r.code,
+          r.currency_code,
+          r.amount,
+          0,
+          r.base_currency_code,
+          ROUND((r.amount * r.exchange_rate)::numeric, 2),
+          0,
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '9 hours',
+          v_anchor + interval '9 hours'
+        )
+        RETURNING id INTO v_reference_line_id;
+
+        INSERT INTO document.journal_line (
+          tenant_id,
+          journal_entry_id,
+          company_code_id,
+          book_id,
+          fiscal_period_id,
+          fiscal_year,
+          period_number,
+          posting_date,
+          line_no,
+          gl_account_id,
+          description,
+          transaction_currency,
+          transaction_debit,
+          transaction_credit,
+          base_currency,
+          base_debit,
+          base_credit,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          v_tenant_id,
+          v_journal_entry_id,
+          v_company_code_id,
+          v_book_id,
+          v_fiscal_period_id,
+          v_fiscal_year,
+          v_period_number,
+          v_anchor::date,
+          2,
+          v_expense_gl_account_id,
+          'Reverse expense for ' || r.code,
+          r.currency_code,
+          0,
+          r.amount,
+          r.base_currency_code,
+          0,
+          ROUND((r.amount * r.exchange_rate)::numeric, 2),
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '9 hours',
+          v_anchor + interval '9 hours'
+        );
+      ELSE
+        INSERT INTO document.journal_line (
+          tenant_id,
+          journal_entry_id,
+          company_code_id,
+          book_id,
+          fiscal_period_id,
+          fiscal_year,
+          period_number,
+          posting_date,
+          line_no,
+          gl_account_id,
+          description,
+          transaction_currency,
+          transaction_debit,
+          transaction_credit,
+          base_currency,
+          base_debit,
+          base_credit,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          v_tenant_id,
+          v_journal_entry_id,
+          v_company_code_id,
+          v_book_id,
+          v_fiscal_period_id,
+          v_fiscal_year,
+          v_period_number,
+          v_anchor::date,
+          1,
+          v_expense_gl_account_id,
+          'Invoice expense for ' || r.code,
+          r.currency_code,
+          r.amount,
+          0,
+          r.base_currency_code,
+          ROUND((r.amount * r.exchange_rate)::numeric, 2),
+          0,
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '9 hours',
+          v_anchor + interval '9 hours'
+        );
+
+        INSERT INTO document.journal_line (
+          tenant_id,
+          journal_entry_id,
+          company_code_id,
+          book_id,
+          fiscal_period_id,
+          fiscal_year,
+          period_number,
+          posting_date,
+          line_no,
+          gl_account_id,
+          description,
+          transaction_currency,
+          transaction_debit,
+          transaction_credit,
+          base_currency,
+          base_debit,
+          base_credit,
+          created_by,
+          updated_by,
+          created_at,
+          updated_at
+        )
+        VALUES (
+          v_tenant_id,
+          v_journal_entry_id,
+          v_company_code_id,
+          v_book_id,
+          v_fiscal_period_id,
+          v_fiscal_year,
+          v_period_number,
+          v_anchor::date,
+          2,
+          v_ap_gl_account_id,
+          'AP liability for ' || r.code,
+          r.currency_code,
+          0,
+          r.amount,
+          r.base_currency_code,
+          0,
+          ROUND((r.amount * r.exchange_rate)::numeric, 2),
+          v_admin_id,
+          v_admin_id,
+          v_anchor + interval '9 hours',
+          v_anchor + interval '9 hours'
+        )
+        RETURNING id INTO v_reference_line_id;
+      END IF;
+
+      INSERT INTO document.journal_line_reference (
+        tenant_id,
+        journal_line_id,
+        ref_type,
+        ref_doc_type,
+        ref_doc_id,
+        allocated_amount,
+        currency_code,
+        base_amount,
+        metadata,
+        created_by
+      )
+      VALUES (
+        v_tenant_id,
+        v_reference_line_id,
+        'invoice_adjustment',
+        'purchase_invoice',
+        v_invoice_id,
+        r.amount,
+        r.currency_code,
+        ROUND((r.amount * r.exchange_rate)::numeric, 2),
+        jsonb_build_object('seed', 'TestInvoice.sql', 'invoiceNumber', r.code),
+        v_admin_id
+      );
+
+      UPDATE document.journal_entry
+      SET status = 'created',
+          updated_by = v_admin_id,
+          updated_at = v_anchor + interval '9 hours'
+      WHERE id = v_journal_entry_id;
+
+      UPDATE document.journal_entry
+      SET status = 'posted',
+          posted_at = v_anchor + interval '9 hours',
+          posted_by = v_admin_id,
+          updated_by = v_admin_id,
+          updated_at = v_anchor + interval '9 hours'
+      WHERE id = v_journal_entry_id;
+
+      UPDATE document.purchase_invoice
+      SET ap_je_id = v_journal_entry_id,
+          updated_by = v_admin_id,
+          updated_at = v_anchor + interval '9 hours'
+      WHERE id = v_invoice_id;
+    END IF;
+
+    IF r.status = 'cancelled' THEN
+      UPDATE document.purchase_invoice
+      SET status = 'cancelled',
+          updated_by = v_admin_id,
+          updated_at = v_anchor + interval '10 hours'
+      WHERE id = v_invoice_id;
+    ELSE
+      IF r.status IN ('pending_approval', 'approved', 'posted', 'partially_paid', 'fully_paid', 'on_hold', 'rejected', 'reversed') THEN
+        UPDATE document.purchase_invoice
+        SET status = 'pending_approval',
+            updated_by = v_admin_id,
+            updated_at = v_anchor + interval '10 hours'
+        WHERE id = v_invoice_id;
+      END IF;
+
+      IF r.status = 'rejected' THEN
+        UPDATE document.purchase_invoice
+        SET status = 'rejected',
+            updated_by = v_admin_id,
+            updated_at = v_anchor + interval '10 hours'
+        WHERE id = v_invoice_id;
+      ELSIF r.status IN ('approved', 'posted', 'partially_paid', 'fully_paid', 'on_hold', 'reversed') THEN
+        UPDATE document.purchase_invoice
+        SET status = 'approved',
+            updated_by = v_admin_id,
+            updated_at = v_anchor + interval '10 hours'
+        WHERE id = v_invoice_id;
+
+        IF r.status = 'on_hold' THEN
+          UPDATE document.purchase_invoice
+          SET status = 'on_hold',
+              updated_by = v_admin_id,
+              updated_at = v_anchor + interval '10 hours'
+          WHERE id = v_invoice_id;
+        ELSIF r.status IN ('posted', 'partially_paid', 'fully_paid', 'reversed') THEN
+          UPDATE document.purchase_invoice
+          SET status = 'posted',
+              updated_by = v_admin_id,
+              updated_at = v_anchor + interval '10 hours'
+          WHERE id = v_invoice_id;
+
+          IF r.status IN ('partially_paid', 'fully_paid') THEN
+            UPDATE document.purchase_invoice
+            SET status = 'partially_paid',
+                updated_by = v_admin_id,
+                updated_at = v_anchor + interval '10 hours'
+            WHERE id = v_invoice_id;
+          END IF;
+
+          IF r.status = 'fully_paid' THEN
+            UPDATE document.purchase_invoice
+            SET status = 'fully_paid',
+                updated_by = v_admin_id,
+                updated_at = v_anchor + interval '10 hours'
+            WHERE id = v_invoice_id;
+          ELSIF r.status = 'reversed' THEN
+            UPDATE document.purchase_invoice
+            SET status = 'reversed',
+                updated_by = v_admin_id,
+                updated_at = v_anchor + interval '10 hours'
+            WHERE id = v_invoice_id;
+          END IF;
+        END IF;
+      END IF;
+    END IF;
+
+    INSERT INTO log.entity_lifecycle_log (
+      tenant_id,
+      entity_type,
+      entity_id,
+      lifecycle_id,
+      operation_code,
+      from_status,
+      to_status,
+      actor_id,
+      company_code_id,
+      remarks,
+      payload,
+      created_by,
+      created_at
+    )
+    VALUES (
+      v_tenant_id,
+      'purchase_invoice',
+      v_invoice_id,
+      NULL,
+      CASE r.status
+        WHEN 'draft' THEN 'create'
+        WHEN 'pending_approval' THEN 'submit'
+        WHEN 'approved' THEN 'approve'
+        WHEN 'posted' THEN 'post'
+        WHEN 'partially_paid' THEN 'record_partial_payment'
+        WHEN 'fully_paid' THEN 'record_full_payment'
+        WHEN 'on_hold' THEN 'hold'
+        WHEN 'rejected' THEN 'reject'
+        WHEN 'cancelled' THEN 'cancel'
+        WHEN 'reversed' THEN 'reverse'
+        ELSE 'update'
+      END,
+      'draft',
+      r.status,
+      v_admin_id,
+      v_company_code_id,
+      'Seeded by TestInvoice.sql for lifecycle/runtime UI coverage.',
+      jsonb_build_object(
+        'seed', 'TestInvoice.sql',
+        'invoiceNumber', r.code,
+        'status', r.status,
+        'workflowRequestId', v_workflow_request_id,
+        'journalEntryId', v_journal_entry_id
+      ),
+      v_admin_id,
+      v_anchor + interval '10 hours'
+    );
+
+    PERFORM audit.append_event(
+      'record.created', 'create'::audit.operation_d, 'purchase_invoice', v_invoice_id,
+      DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT,
+      NULL, NULL, NULL,
+      jsonb_build_object(
+        'domain', 'document', 'activity_type', 'document.created',
+        'company_code_id', v_company_code_id::text,
+        'seed', 'TestInvoice.sql', 'invoiceNumber', r.code, 'version', 1
+      ),
+      v_invoice_id, NULL, v_anchor
+    );
+    PERFORM audit.append_event(
+      'record.updated', 'update'::audit.operation_d, 'purchase_invoice', v_invoice_id,
+      DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT, DEFAULT,
+      NULL, NULL, NULL,
+      jsonb_build_object(
+        'domain', 'document', 'activity_type', 'document.updated',
+        'company_code_id', v_company_code_id::text,
+        'seed', 'TestInvoice.sql', 'invoiceNumber', r.code,
+        'fromStatus', 'draft', 'toStatus', r.status, 'version', 2
+      ),
+      v_invoice_id, NULL, v_anchor + interval '10 hours'
+    );
+
+    RAISE NOTICE 'Created invoice % in status %.', r.code, r.status;
+  END LOOP;
+END $$;
+
+-- UI layout recommendation encoded by this data set:
+--   Header: lifecycle chip from purchase_invoice.status.
+--   Tabs: Overview, Workflow, Approvals, Versions.
+--   Right process rail:
+--     - Workflow shows request status, current stage, task count, SLA/due date.
+--     - Approvals shows only principal-visible work items. For TI-ATHQ-2026-002,
+--       level 1 is active with two parallel work items:
+--         athq.admin + athq.manager, both due tomorrow.
+--       level 2 is pending with athq.owner as the serial approver.
+--     - Versions shows activity/version events first, then accounting/workflow links.

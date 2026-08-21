@@ -1,0 +1,73 @@
+{
+  "defaultReason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
+  "debtSnapshot": {
+    "namedRoutes": 32,
+    "sourceExcludedRoutes": 67,
+    "sourceExclusions": 7,
+    "totalRawRoutes": 99
+  },
+  "routes": [
+  "POST /api/meta-entity-authoring/change-sets",
+  "PUT /api/meta-entity-authoring/change-sets/:id/graph",
+  "POST /api/meta-entity-authoring/releases/:id/activate",
+  "POST /api/meta-entity-authoring/releases/:id/rollback",
+  "POST /api/meta-entity-authoring/change-sets/:id/${name}",
+  "GET /api/audit/status",
+  "GET /api/notifications/preferences",
+  "PATCH /api/notifications/preferences",
+  "POST /api/notifications/preferences/preview",
+  "GET /api/notifications/deliveries/:id/timeline",
+  "GET /api/operations/notifications/deliveries/:id/timeline",
+  "POST /api/operations/notifications/deliveries/:id/replay",
+  "GET /api/notifications/inbox",
+  "POST /api/notifications/:id/read",
+  "GET /api/notifications/stream",
+  "POST /api/notifications/push-subscriptions",
+  "DELETE /api/notifications/push-subscriptions/:id",
+  "POST /api/policy/evaluate",
+  "POST /api/policy/simulate",
+  "GET /api/platform/preferences/saved-views",
+  "POST /api/platform/preferences/saved-views",
+  "PUT /api/platform/preferences/saved-views/:id",
+  "GET /api/search/documents",
+  "GET /api/workflow/requests/:id/context",
+  "GET /api/workflow/inbox",
+  "POST /api/workflow/work-items",
+  "POST /api/workflow/work-items/:workItemId/${action}",
+  "POST /api/workflow/items/:id/actions/:action",
+  "POST /api/attachments/stage",
+  "POST /api/attachments/:attachmentId/finalize",
+  "POST /api/documents/render",
+  "POST /api/documents/:documentId/download"
+  ],
+  "sources": [
+    {
+      "source": "server/packages/planes/studio/onboarding/src/routes.ts",
+      "reason": "New conditional adapter; its durable repository and transport composition must stabilize before publishing the external schema."
+    },
+    {
+      "source": "server/packages/platform/collaboration/src/collaboration-routes.ts",
+      "reason": "Collaboration route contracts are awaiting response-schema extraction from the legacy client compatibility suite."
+    },
+    {
+      "source": "server/packages/platform/preferences/src/saved-view-routes.ts",
+      "reason": "Saved-view aliases and legacy actions require compatibility-schema consolidation before one public OpenAPI contract is emitted."
+    },
+    {
+      "source": "server/packages/services/attachments/src/attachment-routes.ts",
+      "reason": "Attachment routes remain raw while binary and content-scoped upload schemas are consolidated."
+    },
+    {
+      "source": "server/packages/services/content/src/content-routes.ts",
+      "reason": "Content ACL/grant compatibility and content-scoped attachment response schemas remain under contract qualification."
+    },
+    {
+      "source": "server/packages/services/integration/src/integration-routes.ts",
+      "reason": "Integration management and signed webhook schemas require external-secret redaction and legacy compatibility qualification."
+    },
+    {
+      "source": "server/packages/services/master-data/src/master-data-routes.ts",
+      "reason": "Master-data adapter is deployment-disabled until its plane repository and evidence verifier are composed."
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "reportVersion": "wave2.authorization-catalog.verification.v1",
+  "reproducibleInputSha256": "549995fcf64cb585e3a3b12ebc2dea3c29496e75ef5a7bbe4856cc80e5135e85",
+  "catalogId": "mesh",
+  "manifestVersion": "wave2.mesh.catalog.v1",
+  "contractVersion": "wave2.authorization-catalog.semantic.v1",
+  "status": "pass",
+  "counts": {
+    "sourceTuples": 32,
+    "operations": 32,
+    "permissions": 32,
+    "contextualAliases": 0,
+    "referenceSources": 1,
+    "highRiskOperations": 10
+  },
+  "gates": {
+    "oneToOneOperationPermission": true,
+    "zeroAmbiguousContextualAlias": true,
+    "noGenericVerbMutationAuthority": true,
+    "highRiskMetadataComplete": true,
+    "meshCompiledWithoutNeonCatalogRead": true,
+    "runtimeUsesExactPermissionId": true,
+    "liveReferenceCoverage": "deployment_gate_required"
+  },
+  "readAudit": [
+    "catalog/authorization-catalog-semantic-contract.v1.json",
+    "catalog/mesh/catalog.v1.json"
+  ],
+  "warnings": [],
+  "failures": []
+}

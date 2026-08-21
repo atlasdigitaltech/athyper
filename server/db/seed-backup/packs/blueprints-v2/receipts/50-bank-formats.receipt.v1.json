@@ -1,0 +1,20 @@
+{
+  "contractVersion": "athyper.blueprint-application-receipt.v1",
+  "packCode": "bank-formats",
+  "packVersion": "2.0.0",
+  "packChecksum": "3215bdeefd42f3ceedf2acbf6ec30f6f4e00998b720f090c67eeda23330607f9",
+  "plane": "athyper",
+  "tenantId": null,
+  "status": "validated-disposable-athyper",
+  "appliedAt": "2026-08-03",
+  "payloadResults": [
+    {"payload":"001_bank_format_rule_defaults.sql","status":"passed-twice","rowCounts":{"globalRules":14,"distinctCodes":14}}
+  ],
+  "assertionResults": [
+    {"assertion":"plane-and-authority-scope","status":"passed","evidence":"payload requires app.database_plane=athyper and an existing master.principal"},
+    {"assertion":"global-policy-scope","status":"passed","evidence":"all 14 authored revisions have tenant_id NULL"},
+    {"assertion":"country-reference-integrity","status":"passed","evidence":"all rule country codes resolve against 247 shared.country rows"},
+    {"assertion":"uniqueness-and-semantics","status":"passed","evidence":"14 distinct lowercase codes, version 1, active from 2026-01-01"},
+    {"assertion":"idempotent-convergence","status":"passed","evidence":"second pass retained 14 revisions without changing created_at"}
+  ]
+}

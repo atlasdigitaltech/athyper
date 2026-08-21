@@ -1,0 +1,28 @@
+{
+  "name": "@athyper/server-adapter-db-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./pool": "./src/pool.ts",
+    "./retry": "./src/retry.ts",
+    "./transaction": "./src/transaction.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@athyper/server-foundation": "workspace:*",
+    "kysely": "^0.28.16",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.11.10",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.4"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "profiles": {
+    "small": {
+      "tenants": 1,
+      "principalsPerTenant": 25,
+      "entitiesPerTenant": 40,
+      "recordsPerMasterEntity": 1000,
+      "documentsPerOperationalEntity": 10000,
+      "averageChildrenPerDocument": 5,
+      "referenceCardinality": 250,
+      "description": "Developer and smoke baseline; fits on a laptop."
+    },
+    "medium": {
+      "tenants": 10,
+      "principalsPerTenant": 500,
+      "entitiesPerTenant": 100,
+      "recordsPerMasterEntity": 100000,
+      "documentsPerOperationalEntity": 1000000,
+      "averageChildrenPerDocument": 12,
+      "referenceCardinality": 10000,
+      "description": "Production qualification baseline with realistic indexes and statistics."
+    },
+    "skewed": {
+      "tenants": 20,
+      "principalsPerTenant": 1000,
+      "entitiesPerTenant": 120,
+      "recordsPerMasterEntity": 250000,
+      "documentsPerOperationalEntity": 5000000,
+      "averageChildrenPerDocument": 30,
+      "referenceCardinality": 50000,
+      "hotTenantTrafficShare": 0.8,
+      "hotEntityTrafficShare": 0.7,
+      "description": "Noisy-neighbor and tenant-skew profile; one tenant carries 80% of traffic."
+    }
+  }
+}

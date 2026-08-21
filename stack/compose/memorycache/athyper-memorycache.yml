@@ -1,0 +1,66 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-memorycache-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  memorycache:
+    image: redis:7.4.8-alpine
+    profiles: ["core", "memorycache"]
+    user: "9100:9100"
+    deploy:
+      resources:
+        limits:
+          memory: "${MEMORYCACHE_MEMORY_LIMIT}"
+    command:
+      - sh
+      - -c
+      - |
+        set -eu
+        : "$${MEMORYCACHE_PASSWORD:?MEMORYCACHE_PASSWORD is empty — refusing to start}"
+        if grep -qE '__(APP|EXPORTER|GLITCHTIP|BULLBOARD|INFISICAL|ADMIN)_HASH__' /usr/local/etc/redis/redis-acl.conf; then
+          echo "FATAL: redis-acl.conf still has unrendered hash markers." >&2
+          echo "       Run validate-env.sh before starting the stack." >&2
+          exit 1
+        fi
+        exec redis-server /usr/local/etc/redis/redis.conf \
+          --requirepass "$$MEMORYCACHE_PASSWORD" \
+          --aclfile /usr/local/etc/redis/redis-acl.conf
+    environment:
+      # Only MEMORYCACHE_PASSWORD is needed at runtime (--requirepass).
+      # All other password hashes are pre-computed into redis-acl.conf by
+      # validate-env.sh before the stack starts — they are not injected here.
+      MEMORYCACHE_PASSWORD: ${MEMORYCACHE_PASSWORD}
+    volumes:
+      - ${ATHYPER_CONFIG}/memorycache/cache.conf:/usr/local/etc/redis/redis.conf:ro
+      - ${ATHYPER_CONFIG}/memorycache/redis-acl.conf:/usr/local/etc/redis/redis-acl.conf:ro
+      - ${ATHYPER_DATA}/memorycache:/data
+    networks: [internal]
+    healthcheck:
+      # PING as the app user verifies both connectivity and that ACL auth succeeded.
+      # REDISCLI_AUTH keeps the password out of the process table (no -a flag).
+      test:
+        [
+          "CMD-SHELL",
+          'result=$$(REDISCLI_AUTH="$$MEMORYCACHE_PASSWORD" redis-cli --user app --no-auth-warning ping 2>/dev/null); test "$$result" = "PONG"',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    # Shutdown: 20s — allow RDB/AOF persistence flush before exit
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }

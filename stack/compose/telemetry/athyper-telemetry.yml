@@ -1,0 +1,63 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : local | staging | production
+# Version     : 1.0.0
+# Compose     : athyper-telemetry-config
+#
+# Description :
+#
+# =======================================================================
+
+services:
+  telemetry:
+    image: grafana/grafana:12.4.3
+    profiles: ["telemetry"]
+    user: "9102:9102"
+    deploy:
+      resources:
+        limits:
+          memory: "${TELEMETRY_MEMORY_LIMIT}"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${TELEMETRY_ADMIN_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${TELEMETRY_ADMIN_PASSWORD}
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/provisioning:/etc/grafana/provisioning:ro
+      - ${ATHYPER_DATA}/telemetry/observability:/var/lib/grafana
+    networks: [edge, internal]
+    depends_on:
+      gateway:
+        condition: service_healthy
+      metrics:
+        condition: service_started
+      logging:
+        condition: service_started
+      tracing:
+        condition: service_started
+    healthcheck:
+      test:
+        ["CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    # Shutdown: 20s — Grafana has no critical state to flush
+    stop_grace_period: 20s
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    labels:
+      - traefik.docker.network=athyper-edge
+      - traefik.enable=true
+      - traefik.http.routers.telemetry.entrypoints=websecure
+      - traefik.http.routers.telemetry.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.routers.telemetry.rule=Host(`${TELEMETRY_HOST}`)
+      - traefik.http.routers.telemetry.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.telemetry.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.telemetry.tls=true
+      - traefik.http.services.telemetry.loadbalancer.server.port=3000

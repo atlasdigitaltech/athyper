@@ -1,0 +1,9 @@
+{
+  "type": "urn:athyper:problem:auth-token-required",
+  "title": "Unauthorized",
+  "status": 401,
+  "code": "AUTH_TOKEN_REQUIRED",
+  "detail": "Sign in to continue.",
+  "requestId": "req-phase0-1",
+  "instance": "/api/iam/me"
+}

@@ -1,0 +1,9 @@
+{
+  "generatedAtUtc": "2026-07-14T03:09:28.803Z",
+  "scope": [
+    "packages/apps",
+    "packages/shared",
+    "server/packages"
+  ],
+  "violations": []
+}

@@ -1,0 +1,280 @@
+{
+  "contractVersion": "athyper.tenant-scenario.v1",
+  "packVersion": "2.0.0",
+  "plane": "neon",
+  "tenantCode": "technostat",
+  "complexity": "medium",
+  "tenantProfile": {
+    "countryCode": "SA",
+    "localeCode": "en-SA",
+    "timezoneCode": "Asia/Riyadh",
+    "languageCode": "en",
+    "dateFormat": "DD/MM/YYYY",
+    "numberFormat": "1,234.56",
+    "weekStart": 0,
+    "weekendDays": [
+      5,
+      6
+    ]
+  },
+  "legalEntities": [
+    {
+      "scopeKey": "ORG-1000000018",
+      "code": "le-tksa",
+      "name": "Technostat Group",
+      "legalName": "Technostat Group Company",
+      "registrationCountryCode": "SA",
+      "functionalCurrency": "SAR",
+      "reportingCurrency": "USD",
+      "regionCode": "middle_east"
+    },
+    {
+      "scopeKey": "ORG-1000000019",
+      "code": "le-ssk",
+      "name": "SSK Saudi",
+      "legalName": "SSK Saudi Company",
+      "parentScopeKey": "ORG-1000000018",
+      "registrationCountryCode": "SA",
+      "functionalCurrency": "SAR",
+      "reportingCurrency": "USD",
+      "regionCode": "middle_east"
+    },
+    {
+      "scopeKey": "ORG-1000000020",
+      "code": "le-tegy",
+      "name": "Technostat Egypt",
+      "legalName": "Technostat Egypt S.A.E.",
+      "parentScopeKey": "ORG-1000000018",
+      "registrationCountryCode": "EG",
+      "functionalCurrency": "EGP",
+      "reportingCurrency": "USD",
+      "regionCode": "north_africa"
+    },
+    {
+      "scopeKey": "ORG-1000000021",
+      "code": "le-sdtx",
+      "name": "Satellites for Digital Transformation",
+      "legalName": "Satellites for Digital Transformation S.A.E.",
+      "parentScopeKey": "ORG-1000000020",
+      "registrationCountryCode": "EG",
+      "functionalCurrency": "EGP",
+      "reportingCurrency": "USD",
+      "regionCode": "north_africa"
+    }
+  ],
+  "companyCodes": [
+    {
+      "code": "tksa",
+      "legalEntityScopeKey": "ORG-1000000018",
+      "name": "Technostat Saudi",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "ssk",
+      "legalEntityScopeKey": "ORG-1000000019",
+      "name": "SSK Saudi",
+      "functionalCurrency": "SAR",
+      "countryCode": "SA",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Asia/Riyadh",
+      "localeCode": "en-SA",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "tegy",
+      "legalEntityScopeKey": "ORG-1000000020",
+      "name": "Technostat Egypt",
+      "functionalCurrency": "EGP",
+      "countryCode": "EG",
+      "fiscalYearStartMonth": 7,
+      "timezoneCode": "Africa/Cairo",
+      "localeCode": "en-EG",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    },
+    {
+      "code": "sdtx",
+      "legalEntityScopeKey": "ORG-1000000021",
+      "name": "SDTX Egypt",
+      "functionalCurrency": "EGP",
+      "countryCode": "EG",
+      "fiscalYearStartMonth": 1,
+      "timezoneCode": "Africa/Cairo",
+      "localeCode": "en-EG",
+      "companyPurpose": "statutory",
+      "readinessProfile": "finance_baseline_v1"
+    }
+  ],
+  "operatingOrganizations": [
+    {
+      "code": "tech.procurement",
+      "name": "Technostat Shared Procurement",
+      "domain": "procurement"
+    },
+    {
+      "code": "tech.finance",
+      "name": "Technostat Shared Finance",
+      "domain": "finance"
+    },
+    {
+      "code": "tech.people",
+      "name": "Technostat Shared People",
+      "domain": "people"
+    }
+  ],
+  "operatingOrganizationCompanyAssignments": [
+    {
+      "organizationCode": "tech.procurement",
+      "companyCode": "tksa",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "tech.procurement",
+      "companyCode": "ssk",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.procurement",
+      "companyCode": "tegy",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.procurement",
+      "companyCode": "sdtx",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.finance",
+      "companyCode": "tksa",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "tech.finance",
+      "companyCode": "ssk",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.finance",
+      "companyCode": "tegy",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.finance",
+      "companyCode": "sdtx",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.people",
+      "companyCode": "tksa",
+      "participationRole": "lead"
+    },
+    {
+      "organizationCode": "tech.people",
+      "companyCode": "ssk",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.people",
+      "companyCode": "tegy",
+      "participationRole": "participant"
+    },
+    {
+      "organizationCode": "tech.people",
+      "companyCode": "sdtx",
+      "participationRole": "participant"
+    }
+  ],
+  "orgUnitTypes": [
+    {
+      "code": "group",
+      "name": "Group",
+      "levelOrder": 10
+    },
+    {
+      "code": "country",
+      "name": "Country",
+      "levelOrder": 20
+    },
+    {
+      "code": "company",
+      "name": "Company",
+      "levelOrder": 30
+    },
+    {
+      "code": "department",
+      "name": "Department",
+      "levelOrder": 40
+    }
+  ],
+  "orgUnits": [
+    {
+      "code": "tech.group",
+      "name": "Technostat Group",
+      "typeCode": "group",
+      "sortOrder": 10
+    },
+    {
+      "code": "tech.sa",
+      "name": "Saudi Arabia",
+      "typeCode": "country",
+      "parentCode": "tech.group",
+      "sortOrder": 20
+    },
+    {
+      "code": "tech.eg",
+      "name": "Egypt",
+      "typeCode": "country",
+      "parentCode": "tech.group",
+      "sortOrder": 30
+    },
+    {
+      "code": "tech.tksa",
+      "name": "Technostat Saudi",
+      "typeCode": "company",
+      "parentCode": "tech.sa",
+      "sortOrder": 40
+    },
+    {
+      "code": "tech.ssk",
+      "name": "SSK Saudi",
+      "typeCode": "company",
+      "parentCode": "tech.sa",
+      "sortOrder": 50
+    },
+    {
+      "code": "tech.tegy",
+      "name": "Technostat Egypt",
+      "typeCode": "company",
+      "parentCode": "tech.eg",
+      "sortOrder": 60
+    },
+    {
+      "code": "tech.sdtx",
+      "name": "SDTX Egypt",
+      "typeCode": "company",
+      "parentCode": "tech.tegy",
+      "sortOrder": 70
+    },
+    {
+      "code": "tech.finance",
+      "name": "Group Finance",
+      "typeCode": "department",
+      "parentCode": "tech.group",
+      "sortOrder": 80
+    },
+    {
+      "code": "tech.delivery",
+      "name": "Regional Delivery",
+      "typeCode": "department",
+      "parentCode": "tech.group",
+      "sortOrder": 90
+    }
+  ]
+}

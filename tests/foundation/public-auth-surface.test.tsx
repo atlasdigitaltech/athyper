@@ -1,0 +1,65 @@
+import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
+import { describe, it } from "node:test";
+import * as React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ContextGatePage, LoginGatePage, LogoutGatePage } from "../../packages/platform/iam/identity-gate/src/index";
+import { getPlaneBrand, getPlaneWebMetadata } from "../../packages/platform/foundation/brand/src/index";
+
+describe("production identity-gate experience", () => {
+  it("renders one focused identity card with the approved wordmark in every plane", () => {
+    for (const plane of ["neon", "mesh", "studio"] as const) {
+      const brand = getPlaneBrand(plane); const html = renderToStaticMarkup(<LoginGatePage plane={plane} />);
+      assert.match(html, new RegExp(brand.wordmark.src.replaceAll("/", "\\/"))); assert.match(html, new RegExp(`alt="${brand.wordmark.alt}"`));
+      assert.equal((html.match(/a-presentation-card/g) ?? []).length, 1); assert.match(html, /Continue securely/);
+      assert.doesNotMatch(html, /a-identity-story|a-identity-signal|Server-managed sessions|No browser tokens|a-auth-wordmark/);
+    }
+  });
+
+  it("renders safe production recovery, context, and logout states", () => {
+    const failure = renderToStaticMarkup(<LoginGatePage plane="neon" reason="access" requestId="req-safe-42" returnTo="https://evil.example" />);
+    assert.match(failure, /Access could not be confirmed/); assert.match(failure, /Use a different account/); assert.match(failure, /Try this account again/); assert.match(failure, /req-safe-42/); assert.match(failure, /returnTo=%2F/);
+    assert.match(failure, /mode=switch/); assert.match(failure, /mode=retry/); assert.doesNotMatch(failure, /active membership|evil\.example|auth\.invalid_identity/);
+    assert.match(renderToStaticMarkup(<ContextGatePage plane="mesh" />), /No active context is available/);
+    const logout = renderToStaticMarkup(<LogoutGatePage plane="studio" csrfToken="csrf-safe" />); assert.match(logout, /Sign out of Studio/); assert.match(logout, /Sign out of Athyper everywhere/); assert.match(logout, /name="_csrf" value="csrf-safe"/);
+  });
+
+  it("renders exact-plane context choices with plane-specific work-scope summaries", () => {
+    const examples = [
+      { plane: "neon", noun: "business context", description: "Business operations, finance and governed execution", badges: ["2 legal entities", "4 operating organizations"] },
+      { plane: "mesh", noun: "network workspace", description: "Verified buyer and supplier network participation", badges: ["1 buyer account", "2 supplier accounts"] },
+      { plane: "studio", noun: "administration context", description: "Platform administration and governed tenant operations", badges: ["Administrative authority", "Audited access"] },
+    ] as const;
+    for (const example of examples) {
+      const html = renderToStaticMarkup(<ContextGatePage plane={example.plane} contexts={[{ tenantId: "tenant-1", tenantCode: "athyper", tenantName: "Athyper Group", principalId: "principal-1", description: example.description, badges: example.badges }]} />);
+      assert.match(html, new RegExp(`Choose your ${example.noun}`)); assert.match(html, /Athyper Group/); assert.match(html, new RegExp(example.description));
+      for (const badge of example.badges) assert.match(html, new RegExp(badge));
+      assert.match(html, /Use a different account/); assert.match(html, /Sign out securely/);
+    }
+  });
+
+  it("uses the same recovery structure for every supported reason, including pasted trailing punctuation", () => {
+    for (const reason of ["access", "service", "retry", "expired", "signed-out", "signed-out-everywhere", "logout-incomplete", "access;"] as const) {
+      for (const plane of ["neon", "mesh", "studio"] as const) {
+        const html = renderToStaticMarkup(<LoginGatePage plane={plane} reason={reason} />);
+        assert.equal((html.match(/a-presentation-card/g) ?? []).length, 1);
+        assert.equal((html.match(/a-notice/g) ?? []).length >= 1, true);
+        assert.match(html, new RegExp(getPlaneBrand(plane).wordmark.src.replaceAll("/", "\\/")));
+      }
+    }
+  });
+
+  it("ships complete metadata and approved assets for every plane", () => {
+    for (const plane of ["neon", "mesh", "studio"] as const) {
+      const metadata = getPlaneWebMetadata(plane); const root = `apps/${plane}/public`;
+      for (const asset of [metadata.favicon, metadata.appleTouchIcon, metadata.manifest]) assert.equal(existsSync(`${root}${asset}`), true, `${plane} missing ${asset}`);
+    }
+  });
+
+  it("uses semantic tokens and has no backup runtime dependency", () => {
+    const css = readFileSync("packages/platform/iam/identity-gate/src/styles.css", "utf8");
+    const source = readFileSync("packages/platform/iam/identity-gate/src/index.tsx", "utf8");
+    assert.doesNotMatch(css, /#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/i);
+    assert.doesNotMatch(`${css}\n${source}`, /apps-backup|packages-backup/);
+  });
+});

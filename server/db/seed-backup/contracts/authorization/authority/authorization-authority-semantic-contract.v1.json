@@ -1,0 +1,43 @@
+{
+  "contractVersion": "wave3.authorization-authority.semantic.v1",
+  "dependsOn": "wave2.authorization-catalog.semantic.v1",
+  "rules": {
+    "neonAdminRolePermissionMembership": "active_direct_exact_permission_id_edges",
+    "meshPermissionSetMembership": "exact_permission_id_only",
+    "rolePublication": "plane_local_authority_only",
+    "planeAdmission": "explicit_membership_required",
+    "groupAssignment": "tenant_and_plane_consistent",
+    "scope": "typed_nonempty_target_required",
+    "emptyScope": "deny_never_tenant_or_account_wide",
+    "inactiveAuthority": "grants_nothing",
+    "existingUser": "preserve_exact_membership_or_quarantine_zero_grant",
+    "legacyTierInput": "one_time_mapping_only_never_runtime_authority",
+    "meshRepositoryEnablement": "complete_local_proof_graph_required"
+  },
+  "subjectDispositions": [
+    "mapped",
+    "quarantined_zero_grant",
+    "excluded_non_human",
+    "retired"
+  ],
+  "scopeKinds": {
+    "neonAdmin": [
+      "tenant",
+      "company_code",
+      "legal_entity",
+      "operating_organization"
+    ],
+    "mesh": [
+      "account",
+      "network_relationship",
+      "resource"
+    ]
+  },
+  "requiredProofEdges": [
+    "subject_to_plane_membership",
+    "subject_to_group",
+    "group_to_scoped_role",
+    "role_to_plane_local_permission_authority",
+    "permission_to_local_plane"
+  ]
+}

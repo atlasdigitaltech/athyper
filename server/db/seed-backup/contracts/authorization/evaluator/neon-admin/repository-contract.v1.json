@@ -1,0 +1,33 @@
+{
+  "contractVersion": "wave4.canonical-evaluator.v1",
+  "repositoryId": "wave4.neon-admin.repository.v1",
+  "authority": "neon_admin",
+  "database": "neon",
+  "planes": ["neon", "admin"],
+  "facts": {
+    "identity": "master.principal_identity_binding",
+    "principal": "master.principal",
+    "planeMembership": "master.auth_current_plane_membership_v",
+    "operationPermission": "control.entity_operation plus control.auth_permission",
+    "permissionPlane": "control.auth_permission_plane",
+    "groupRole": "master.auth_current_group_member_v plus master.auth_current_group_role_v plus master.auth_published_role_permission_v",
+    "deny": "master.auth_deny_rule specialized subject bindings",
+    "override": "master.auth_override",
+    "recordAcl": "master.auth_record_acl plus master.auth_record_acl_permission",
+    "delegation": "master.auth_delegation plus permission-scoped scope children"
+  },
+  "entitlement": {
+    "neon": "master.resolve_neon_permission_entitlement",
+    "admin": "control.auth_admin_entitlement_policy platform_managed"
+  },
+  "forbiddenReads": [
+    "shared.persona",
+    "shared.persona_permission",
+    "master.principal_persona",
+    "master.access_grant",
+    "master.group_feature_grant",
+    "master.principal_feature_grant",
+    "mesh.*"
+  ],
+  "consumerStatus": "shadow_until_wave5"
+}

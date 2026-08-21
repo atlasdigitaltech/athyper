@@ -29,6 +29,13 @@ pids/
 *.lcov
 .nyc_output/
 
+# Playwright browser tests — never commit sign-in session state or
+# the test report bundle. Reference screenshots in __screenshots__/
+# ARE committed (they're the regression baseline).
+tests/e2e/.auth/
+tests/e2e/.playwright-output/
+playwright-report/
+
 # =========================
 # Build / Output
 # =========================
@@ -41,6 +48,7 @@ pids/
 # =========================
 # Turbo
 # =========================
+.turbo/
 **/.turbo/
 
 # =========================
@@ -63,6 +71,7 @@ pids/
 **/.vite/
 
 # Next.js
+next-env.d.ts
 .next-env.d.ts
 
 # =========================
@@ -80,7 +89,16 @@ pids/
 # =========================
 .env
 .env.*
+*.env
 !.env.example
+!*.env.example
+
+# Grafana provisioning config dirs are named *.env but contain YAML, not secrets
+!stack/config/telemetry/provisioning.env/
+!stack/config/telemetry/provisioning.env/**
+
+# Sentry CLI auth token (used by @sentry/nextjs source-map upload)
+.sentryclirc
 
 # =========================
 # Vite / VitePress
@@ -104,29 +122,39 @@ Desktop.ini
 !.vscode/settings.json
 !.vscode/launch.json
 .vscode-test/
+.history/
+
+# Editor backups / swap files
+*.swp
+*.swo
+*~
+*.bak
+*.orig
 
 # =========================
-# Athyper / Mesh (IMPORTANT)
+# Athyper / stack (IMPORTANT)
 # =========================
 
 # Docker volume data / runtime data
-mesh/data/
-mesh/**/data/
-mesh/logs/
-mesh/tmp/
+/data/
+stack/data/
+stack/**/data/
+stack/logs/
+stack/tmp/
 
 # Generated TLS / secrets (if any)
-mesh/config/**/certs/*.key
-mesh/config/**/certs/*.crt
-mesh/config/**/certs/*.pem
-mesh/config/**/certs/*.pfx
-mesh/config/**/certs/*.p12
-mesh/config/**/certs/ca.*
+stack/config/**/certs/*.key
+stack/config/**/certs/*.crt
+stack/config/**/certs/*.pem
+stack/config/**/certs/*.pfx
+stack/config/**/certs/*.p12
+stack/config/**/certs/ca.*
 
 # Tool outputs
 tools/**/tmp/
 tools/**/output/
-tools/SAMPLE TEMPLATES
+.codex-logs/
+.weekly-db-checks/
 
 # =========================
 # Prisma / DB artifacts
@@ -139,13 +167,52 @@ tools/SAMPLE TEMPLATES
 **/*.db-shm
 
 # =========================
+# Python
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+
+# =========================
 # Misc
 # =========================
-nul
+
+# pnpm monorepo — ignore accidental npm lock files
+**/package-lock.json
 
 # Generated (output dirs only — do NOT ignore source packages)
 **/generated/
-!framework/adapters/db/src/generated/
 **/codegen/
-!tools/codegen/
 **/.prisma/
+
+# Versioned DDL-to-service coverage evidence is generated but reviewable.
+!docs/architecture/generated/
+docs/architecture/generated/*
+!docs/architecture/generated/ddl-service-coverage.json
+
+# =========================
+# Scratch / Prototype work
+# =========================
+tmp/
+.tmp/
+
+# =========================
+# Local-only docs (not synced to GitHub)
+# =========================
+docs/local/
+
+# Local database backups and diagnostic evidence
+**/.local-backups/
+**/.local-evidence/
+
+# Server backup directory
+server-backup/
+
+# Backup directories
+apps-backup/
+packages-backup/
+
+# =========================
+# Claude Code artifacts
+# =========================
+.codex/

@@ -1,8 +1,14 @@
 #!/usr/bin/env bash
 # ─────────────────────────────────────────────────────────────
 # pre-commit hook — athyper
-# Blocks direct commits to the 'main' branch.
+# Blocks direct commits to protected branches: main, develop.
 # Use a feature/fix branch and open a Pull Request instead.
+#
+# Protected:  main    ← merged from develop via PR only
+#             develop ← merged from feature/* via PR only
+#
+# Also: if brand source assets change, auto-regenerates KC theme
+# brand assets so they never drift from the canonical source.
 #
 # To bypass in a genuine emergency:
 #   git commit --no-verify -m "your message"
@@ -10,19 +16,45 @@
 
 BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
 
-if [ "$BRANCH" = "main" ]; then
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
   echo ""
-  echo "  ✖  Direct commits to 'main' are not allowed."
+  echo "  ✖  Direct commits to '$BRANCH' are not allowed."
   echo ""
   echo "  Branch workflow:"
-  echo "    1. git checkout -b feature/your-feature"
-  echo "    2. git commit -m 'feat: your change'"
-  echo "    3. git push origin feature/your-feature"
-  echo "    4. Open a Pull Request on GitHub"
+  echo "    1. git checkout develop"
+  echo "    2. git checkout -b feature/your-feature"
+  echo "    3. git commit -m 'feat: your change'"
+  echo "    4. git push origin feature/your-feature"
+  echo "    5. Open a Pull Request → develop on GitHub"
   echo ""
   echo "  Emergency bypass: git commit --no-verify"
   echo ""
   exit 1
+fi
+
+# ── Brand asset sync ──────────────────────────────────────────
+# If canonical brand source files are staged, regenerate KC theme
+# brand assets and stage them automatically.
+
+BRAND_CHANGED=$(git diff --cached --name-only | grep -E '^packages/shared/foundation/brand/src/' || true)
+
+if [ -n "$BRAND_CHANGED" ]; then
+  echo ""
+  echo "  [brand] Source assets changed — regenerating KC theme brand assets..."
+  pnpm brand:refresh
+  BRAND_STATUS=$?
+  if [ $BRAND_STATUS -ne 0 ]; then
+    echo "  ✖  brand:refresh failed. Fix the error and retry."
+    exit 1
+  fi
+  # Stage the generated outputs
+  git add \
+    "mesh/config/iam/themes/neon/login/_neon-brand-logo.ftl" \
+    "mesh/config/iam/themes/neon/login/_neon-brand-mobile.ftl" \
+    "mesh/config/iam/themes/neon/login/resources/img/" \
+    "packages/shared/foundation/brand/dist/" 2>/dev/null || true
+  echo "  ✓  KC brand assets updated and staged."
+  echo ""
 fi
 
 exit 0

@@ -1,0 +1,65 @@
+{
+  "contractVersion": "athyper.blueprint-pack.v1",
+  "packCode": "ap-non-po",
+  "version": "2.0.0",
+  "executionOrder": 120,
+  "plane": "neon",
+  "tenantScope": "tenant",
+  "compatibleDdl": {
+    "contract": "foundation-v2",
+    "layers": "02-11"
+  },
+  "dependencies": [
+    "spend-taxonomy-business-intents",
+    "tax-fx",
+    "payment-holiday",
+    "coa-frameworks",
+    "governance"
+  ],
+  "checksumAlgorithm": "sha256",
+  "checksum": "5e944c6432230fd0067a11368b6e1b8b803a3de587bd3b9532a460761e647aee",
+  "payloads": [
+    {
+      "order": 1,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/020_accounting_profiles.sql",
+      "sha256": "992ac7b5bae96d08bb25a0d369ed31f058e640d082265d6b817fba1ea14d0d1d",
+      "bytes": 4028,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    },
+    {
+      "order": 2,
+      "path": "server/db/seed/blueprints/modules/ap_non_po/025_accounting_policy_aggregate.sql",
+      "sha256": "4f08f2575673a3a72f33b8fa8e4cd2e8704513cd46a1e8a99e10cd5b602cf103",
+      "bytes": 10267,
+      "permanentDdl": false,
+      "requiredRewrites": []
+    }
+  ],
+  "preconditions": {
+    "requiredSetting": "app.seed_tenant_id",
+    "requiredRelations": [
+      "master.accounting_profile",
+      "control.accounting_profile_policy",
+      "authz.permission"
+    ],
+    "permanentDdlAllowed": false
+  },
+  "applicationReceipt": {
+    "contract": "athyper.blueprint-application-receipt.v1",
+    "status": "pending-validation",
+    "receiptPath": "server/db/seed/packs/blueprints-v2/receipts/120-ap-non-po.receipt.v1.json"
+  },
+  "postApplicationAssertions": [
+    "tenant-scope",
+    "expected-count",
+    "orphan",
+    "uniqueness",
+    "semantic",
+    "idempotent-convergence"
+  ],
+  "registryIntegration": {
+    "mode": "immutable-pack-metadata",
+    "controlTableIntegration": "pending"
+  }
+}

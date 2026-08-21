@@ -1,0 +1,59 @@
+{
+  "packId": "athyper.meta-entity",
+  "version": "1.0.0",
+  "databasePlane": "athyper",
+  "manifest": "payload-manifest.txt",
+  "defaultProfile": "core",
+  "legacyDiscovery": false,
+  "targetSchemas": ["metadata", "snapshot", "authz", "control"],
+  "prerequisites": {
+    "principalId": "00000000-0000-0000-0000-000000000000",
+    "moduleCode": "META"
+  },
+  "files": [
+    "010_reference/010_entity_class_profiles.sql",
+    "020_authorization/010_metadata_entity_permissions.sql",
+    "100_entity_examples/000_seed_graph_helpers.sql",
+    "100_entity_examples/005_entity_identities.sql",
+    "100_entity_examples/010_address_and_business_partner.sql",
+    "100_entity_examples/020_supplier_and_customer.sql",
+    "100_entity_examples/030_identifier_and_address_link.sql",
+    "100_entity_examples/040_contact_link.sql",
+    "110_studio_drafts/010_business_partner_studio_draft.sql",
+    "120_surface_operations/010_business_partner_surfaces_operations.sql",
+    "130_flow_policy_tests/010_business_partner_flow_policy_tests.sql",
+    "140_lifecycle_examples/010_business_partner_lifecycle.sql",
+    "150_numbering_examples/010_business_partner_numbering.sql",
+    "160_operation_scope_examples/010_business_partner_and_mesh_document_envelope.sql",
+    "990_assertions/010_contract_assertions.sql",
+    "990_assertions/020_flow_policy_assertions.sql",
+    "990_assertions/030_lifecycle_assertions.sql",
+    "990_assertions/040_numbering_assertions.sql"
+  ],
+  "profiles": {
+    "core": [
+      "010_reference/010_entity_class_profiles.sql",
+      "020_authorization/010_metadata_entity_permissions.sql"
+    ],
+    "validation": [
+      "010_reference/010_entity_class_profiles.sql",
+      "020_authorization/010_metadata_entity_permissions.sql",
+      "100_entity_examples/000_seed_graph_helpers.sql",
+      "100_entity_examples/005_entity_identities.sql",
+      "100_entity_examples/010_address_and_business_partner.sql",
+      "100_entity_examples/020_supplier_and_customer.sql",
+      "100_entity_examples/030_identifier_and_address_link.sql",
+      "100_entity_examples/040_contact_link.sql",
+      "110_studio_drafts/010_business_partner_studio_draft.sql",
+      "120_surface_operations/010_business_partner_surfaces_operations.sql",
+      "130_flow_policy_tests/010_business_partner_flow_policy_tests.sql",
+      "140_lifecycle_examples/010_business_partner_lifecycle.sql",
+      "150_numbering_examples/010_business_partner_numbering.sql",
+      "160_operation_scope_examples/010_business_partner_and_mesh_document_envelope.sql",
+      "990_assertions/010_contract_assertions.sql",
+      "990_assertions/020_flow_policy_assertions.sql",
+      "990_assertions/030_lifecycle_assertions.sql",
+      "990_assertions/040_numbering_assertions.sql"
+    ]
+  }
+}

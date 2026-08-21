@@ -1,0 +1,187 @@
+name: Meta-entity performance qualification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 2 * * 1-5"
+
+concurrency:
+  group: meta-entity-performance-qualification
+  cancel-in-progress: false
+
+jobs:
+  qualify:
+    name: Stable environment qualification
+    runs-on: ubuntu-latest
+    environment: performance
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: athyperadmin
+          POSTGRES_PASSWORD: athyperadmin
+          POSTGRES_DB: athyper_qualification
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U athyperadmin -d athyper_qualification"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_ADMIN_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_qualification
+      DATABASE_URL: postgresql://athyperadmin:athyperadmin@127.0.0.1:5432/athyper_qualification
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Fetch signed qualification report
+        env:
+          REPORT_URL: ${{ vars.META_ENTITY_QUALIFICATION_REPORT_URL }}
+          REPORT_TOKEN: ${{ secrets.META_ENTITY_QUALIFICATION_TOKEN }}
+        run: |
+          if [ -z "$REPORT_URL" ]; then
+            echo "META_ENTITY_QUALIFICATION_REPORT_URL is required for the blocking release gate."
+            exit 1
+          fi
+          mkdir -p perf/qualification/evidence
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${REPORT_TOKEN}" \
+            "${REPORT_URL}" \
+            -o perf/qualification/current-report.json
+
+      - name: Fetch signed release evidence bundle
+        env:
+          EVIDENCE_URL: ${{ vars.META_ENTITY_QUALIFICATION_EVIDENCE_URL }}
+          EVIDENCE_TOKEN: ${{ secrets.META_ENTITY_QUALIFICATION_TOKEN }}
+        run: |
+          if [ -z "$EVIDENCE_URL" ]; then
+            echo "META_ENTITY_QUALIFICATION_EVIDENCE_URL is required for the blocking release gate."
+            exit 1
+          fi
+          curl --fail --silent --show-error \
+            --retry 3 --retry-all-errors \
+            -H "Authorization: Bearer ${EVIDENCE_TOKEN}" \
+            "${EVIDENCE_URL}" \
+            -o /tmp/athyper-release-evidence.zip
+          unzip -oq /tmp/athyper-release-evidence.zip -d perf/qualification
+
+      - name: Prepare qualification database
+        run: |
+          for i in {1..30}; do
+            pg_isready -h 127.0.0.1 -U athyperadmin -d athyper_qualification && break
+            sleep 1
+          done
+          pnpm --filter @athyper/db run db:setup:ddl
+          pnpm --filter @athyper/db run db:setup:system
+
+      - name: Create NOBYPASSRLS verification role
+        env:
+          PGPASSWORD: athyperadmin
+        run: |
+          psql "$DATABASE_ADMIN_URL" <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp_test') THEN
+              CREATE ROLE athyperapp_test LOGIN NOBYPASSRLS PASSWORD 'athyperapp_test';
+            END IF;
+          END $$;
+          GRANT athyperapp TO athyperapp_test;
+          SQL
+
+      - name: Run RLS verification under NOBYPASSRLS
+        env:
+          DATABASE_URL: postgresql://athyperapp_test:athyperapp_test@127.0.0.1:5432/athyper_qualification
+        run: pnpm --dir server exec tsx scripts/verify-rls.ts --json > perf/qualification/evidence/rls.json
+
+      - name: Run outbox durability tests
+        run: >-
+          pnpm --dir server exec vitest run --config vitest.config.ts
+          packages/services/shared/__tests__/durable-side-effects.test.ts
+          packages/services/records/__tests__/phase7-transactional-side-effects.test.ts
+      - name: Record outbox durability evidence
+        run: >-
+          node scripts/performance/record-release-evidence.mjs
+          --name=outboxDurability
+          --artifact=perf/qualification/evidence/outbox-durability.json
+          --test=durable-side-effects-and-transactional-side-effects
+          --replace=true
+
+      - name: Run Redis degradation and cache recovery tests
+        run: >-
+          pnpm --dir server exec vitest run --config vitest.config.ts
+          packages/adapters/telemetry/src/__tests__/framework-performance.test.ts
+          src/services/cache-invalidation/__tests__/listener-recovery.test.ts
+      - name: Record Redis degradation evidence
+        run: >-
+          node scripts/performance/record-release-evidence.mjs
+          --name=redisDegradation
+          --artifact=perf/qualification/evidence/redis-degradation.json
+          --test=telemetry-and-cache-invalidation-recovery
+          --replace=true
+
+      - name: Run attachment quarantine contract tests
+        run: >-
+          pnpm --dir server exec vitest run --config vitest.config.ts
+          packages/services/documents/routes/__tests__/presigned-upload-contract.test.ts
+      - name: Record attachment quarantine evidence
+        run: >-
+          node scripts/performance/record-release-evidence.mjs
+          --name=attachmentQuarantine
+          --artifact=perf/qualification/evidence/attachment-quarantine.json
+          --test=presigned-upload-checksum-quarantine-contract
+          --replace=true
+
+      - name: Run SSE reconnect and fanout contract tests
+        run: >-
+          pnpm --dir server exec vitest run --config vitest.config.ts
+          packages/services/records/__tests__/sse-fanout-contract.test.ts
+      - name: Record SSE reconnect/catch-up evidence
+        run: >-
+          node scripts/performance/record-release-evidence.mjs
+          --name=sseReconnectCatchup
+          --artifact=perf/qualification/evidence/sse-reconnect-catchup.json
+          --test=shared-fanout-last-event-id-catch-up-contract
+          --replace=true
+
+      - name: Validate tenant-size load evidence
+        run: node scripts/performance/verify-tenant-size-load-evidence.mjs
+
+      - name: Enforce budgets, regression ceiling, and parity
+        run: >-
+          node scripts/performance/qualify-meta-entity.mjs
+          --current=perf/qualification/current-report.json
+          --output=perf/qualification/result.json
+          --readOutput=perf/qualification/company-code-read.json
+          --mutationOutput=perf/qualification/company-code-mutation.json
+
+      - name: Enforce release gate
+        run: pnpm policy:release-gate --qualification=perf/qualification/result.json
+
+      - name: Validate complete qualification artifact schemas
+        run: >-
+          node scripts/policy/verify-qualification-artifacts.mjs
+          --qualification=perf/qualification/result.json
+          --output=perf/qualification/artifact-validation.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-entity-qualification-${{ github.run_id }}
+          path: perf/qualification/
+          retention-days: 90

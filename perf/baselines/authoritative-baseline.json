@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "commit": "561bf48b36fceca36804971172143f01c9eebc1e",
+  "tag": "athyper-perf-baseline-2026-07-15",
+  "selectedAt": "2026-07-15",
+  "selection": "Latest committed HEAD before Phase 0 implementation work.",
+  "workingTreePolicy": {
+    "dirtyAtSelection": true,
+    "trackedChangesExcluded": true,
+    "untrackedChangesExcluded": true,
+    "note": "Performance artifacts must record this commit and must not be attributed to working-tree experiments."
+  }
+}

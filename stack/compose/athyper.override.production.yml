@@ -1,0 +1,167 @@
+# =======================================================================
+# Stack       : athyper Stack – Core Infrastructure & Observability
+# Maintainer  : Atlas Digital Technology Solutions (athyper Team)
+# Environment : production
+# Version     : 1.0.0
+# Compose     : athyper-override-production-config
+#
+# Description :
+#   Production environment overrides for athyper Stack.
+#   - Keycloak runs in optimized mode (start, not start-dev)
+#   - API and worker scaled to 2 replicas for availability
+#   - Resource reservations for critical services
+#   - Named Docker volumes for stateful services (I-08)
+#
+# =======================================================================
+
+# Named volumes for stateful services.
+# Docker manages the lifecycle — data survives `docker compose down` and is
+# not tied to ATHYPER_DATA on the host. To migrate from a prior bind-mount:
+#   docker run --rm -v ${ATHYPER_DATA}/db:/src -v athyper-stack_athyper_db_data:/dst \
+#     alpine sh -c "cp -a /src/. /dst/"
+# Volume names are prefixed with the compose project name (athyper-stack_).
+volumes:
+  athyper_db_data:
+    driver: local
+
+services:
+  # Keycloak: optimized mode — disables dev defaults, enables theme caching
+  # No --import-realm in production; realms managed via API/terraform
+  iam:
+    command: ["start"]
+    environment:
+      KC_SMTP_USERNAME: ${KC_SMTP_USERNAME}
+      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
+
+  # Neon Web: fix build context (base file resolves ../.. from apps/ subfolder)
+  neon-web:
+    build:
+      context: ../..
+
+  mesh-web:
+    build:
+      context: ../..
+
+  studio-web:
+    build:
+      context: ../..
+
+  # API: 2 replicas behind Traefik load balancer.
+  # Dockerfile.prod compiles TS → JS and strips devDeps; Dockerfile.dev is
+  # local-only (tsx watch).
+  api:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile.prod
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "${APPS_ATHYPER_MEMORY_LIMIT}"
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+
+  # Worker: 2 replicas for job throughput
+  worker:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile.prod
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "${APPS_ATHYPER_MEMORY_LIMIT}"
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+
+  # Scheduler: uses the same compiled image as api/worker
+  scheduler:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile.prod
+
+  # Grafana: strict provisioning — edits and deletions blocked in the UI.
+  # All dashboard changes must go through the JSON files in provisioning/dashboards/json/.
+  telemetry:
+    volumes:
+      - ${ATHYPER_CONFIG}/telemetry/provisioning.env/dashboards.production.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+
+  # Database: guaranteed memory + named volume (I-08).
+  # The named volume overrides the bind-mount from athyper-db.yml by target
+  # path (/var/lib/postgresql/data); config file mounts are inherited as-is.
+  db:
+    volumes:
+      - athyper_db_data:/var/lib/postgresql/data
+    deploy:
+      resources:
+        limits:
+          memory: "${DB_MEMORY_LIMIT}"
+        reservations:
+          memory: 1g
+
+  # Redis: guaranteed memory reservation
+  memorycache:
+    deploy:
+      resources:
+        limits:
+          memory: "${MEMORYCACHE_MEMORY_LIMIT}"
+        reservations:
+          memory: 256M
+
+  # Gateway: ACME cert resolver for production Let's Encrypt certificates.
+  # command: is a full replacement (Docker Compose scalar merge) — replicates
+  # all base flags from athyper-gateway.yml and appends the three ACME lines.
+  # volumes: merges by target path; /certs without :ro lets ACME write acme.json.
+  gateway:
+    command:
+      - --accesslog=${GATEWAY_ACCESSLOG:-true}
+      - --accesslog.format=json
+      - --accesslog.fields.defaultMode=keep
+      - --accesslog.fields.names.RequestPath=drop
+      - --accesslog.fields.headers.defaultMode=drop
+      - --accesslog.fields.headers.names.Authorization=drop
+      - --accesslog.fields.headers.names.Cookie=drop
+      - --accesslog.fields.headers.names.Set-Cookie=drop
+      - --accesslog.fields.headers.names.User-Agent=keep
+      - --accesslog.fields.headers.names.X-Forwarded-For=keep
+      - --api.dashboard=true
+      - --api.insecure=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.websecure.forwardedHeaders.insecure=false
+      - --entrypoints.websecure.http.encodeQuerySemicolons=true
+      - --entrypoints.websecure.http.tls=true
+      - --entrypoints.websecure.http.tls.certResolver=letsencrypt
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      - --log.format=json
+      - --log.level=${GATEWAY_LOG_LEVEL:-INFO}
+      - --ping=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=athyper-edge
+      - --providers.docker=true
+      - --providers.file.directory=/etc/traefik/dynamic
+      - --providers.file.watch=true
+      - --serversTransport.forwardingTimeouts.dialTimeout=30s
+      - --serversTransport.insecureSkipVerify=false
+      - --certificatesResolvers.letsencrypt.acme.email=${ACME_EMAIL}
+      - --certificatesResolvers.letsencrypt.acme.storage=/certs/acme.json
+      - --certificatesResolvers.letsencrypt.acme.httpChallenge.entryPoint=web
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${ATHYPER_CONFIG}/gateway/dynamic:/etc/traefik/dynamic:ro
+      - ${ATHYPER_SECRETS_ROOT}/gateway/certs:/certs
+
+  dbpool-apps:
+    volumes:
+      - ${ATHYPER_SECRETS_ROOT}/dbpool:/etc/pgbouncer/certs:ro
+
+  dbpool-session:
+    volumes:
+      - ${ATHYPER_SECRETS_ROOT}/dbpool:/etc/pgbouncer/certs:ro

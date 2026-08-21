@@ -1,0 +1,53 @@
+# =======================================================================
+# Stack       : athyper Stack – IAM
+# Service     : mailtrap — local SMTP capture for development
+#
+# Description :
+#   Catches all outbound email (Keycloak + app notification channel)
+#   during local development. SMTP listens on port 1025 (reachable from
+#   containers as "mailtrap:1025"). Web UI on port 8025.
+#
+#   NOT for staging or production — dev only.
+#
+#   Uses Mailpit (axllent/mailpit) — the actively maintained successor to
+#   MailHog. Drop-in replacement: same ports, same no-auth default.
+# =======================================================================
+
+services:
+  mailtrap:
+    image: axllent/mailpit:v1.30.6
+    profiles: ["dev"]
+    deploy:
+      resources:
+        limits:
+          memory: "32m"
+    networks: [edge, internal]
+    environment:
+      MP_SMTP_BIND_ADDR: "0.0.0.0:1025"
+      MP_UI_BIND_ADDR: "0.0.0.0:8025"
+      MP_MAX_MESSAGES: "500"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:8025/livez || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    init: true
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=athyper-edge
+      - traefik.http.routers.mailtrap.rule=Host(`${MAILTRAP_HOST:-mailtrap.athyper.local}`)
+      - traefik.http.routers.mailtrap.entrypoints=websecure
+      - traefik.http.routers.mailtrap.tls=true
+      - traefik.http.routers.mailtrap.tls.options=${GATEWAY_TLS_OPTIONS}
+      - traefik.http.routers.mailtrap.tls.certresolver=${GATEWAY_CERT_RESOLVER}
+      - traefik.http.routers.mailtrap.middlewares=${DASHBOARD_AUTH_MW}
+      - traefik.http.services.mailtrap.loadbalancer.server.port=8025

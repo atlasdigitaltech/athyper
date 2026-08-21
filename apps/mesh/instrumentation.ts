@@ -1,0 +1,5 @@
+export function register() { console.info("[frontend-runtime]", { event: "instrumentation_registered", plane: "mesh", runtime: process.env.NEXT_RUNTIME ?? "nodejs" }); }
+export function onRequestError(error: unknown, request: Readonly<{ path?: string }>, context: Readonly<{ routePath?: string; routeType?: string }>) { const digest = safeDigest(error); console.error("[frontend-request-error]", { plane: "mesh", route: safeRoute(context.routePath ?? request.path), routeType: safeText(context.routeType), ...(digest ? { digest } : {}) }); }
+function safeDigest(error: unknown): string | undefined { const value = error && typeof error === "object" ? (error as { digest?: unknown }).digest : undefined; return typeof value === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(value) ? value : undefined; }
+function safeRoute(value: unknown): string { return typeof value === "string" && /^\/[A-Za-z0-9_\-\/\[\].()]{0,180}$/.test(value) ? value : "unknown"; }
+function safeText(value: unknown): string | undefined { return typeof value === "string" && /^[A-Za-z0-9_-]{1,50}$/.test(value) ? value : undefined; }

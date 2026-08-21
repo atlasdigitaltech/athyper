@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "criteria": [
+    { "id": "canonical-graph", "evidence": ["config/governance/frontend-spine-packages.json", "scripts/policy/verify-canonical-package-rules.mjs"] },
+    { "id": "backup-isolation", "evidence": ["scripts/policy/verify-frontend-spine-governance.mjs", "docs/architecture/frontend-spine-reference-disposition.md"] },
+    { "id": "authoritative-contracts", "evidence": ["packages/contracts/platform/fixtures/platform-bootstrap.v1.json", "tests/contracts/frontend-spine-browser-contracts.test.ts", "tests/contracts/frontend-spine-server-contracts.test.ts"] },
+    { "id": "server-only-session", "evidence": ["scripts/policy/verify-auth-session-phase3.mjs", "tests/contracts/auth-session-foundation.test.ts"] },
+    { "id": "same-origin-relay", "evidence": ["scripts/policy/verify-bff-relay-phase4.mjs", "tests/contracts/bff-relay-security.test.ts"] },
+    { "id": "exact-plane-bootstrap", "evidence": ["server/packages/platform/experience/src/service.ts", "server/packages/platform/experience/src/routes.ts", "server/packages/adapters/experience-postgres/src/experience.postgres.test.ts"] },
+    { "id": "prepaint-theme-locale", "evidence": ["scripts/policy/verify-foundation-phase1.mjs", "scripts/verification/verify-foundation-production-render.mjs"] },
+    { "id": "query-lifecycle", "evidence": ["scripts/policy/verify-provider-query-phase6.mjs", "tests/contracts/query-provider-lifecycle.test.ts"] },
+    { "id": "hydration-boundaries", "evidence": ["scripts/policy/verify-error-boundaries-phase7.mjs", "tests/foundation-browser/error-boundaries.spec.ts"] },
+    { "id": "derived-navigation", "evidence": ["scripts/policy/verify-shared-shell-phase8.mjs", "tests/contracts/shared-shell-navigation.test.ts", "scripts/policy/verify-access-consumption-phase9.mjs"] },
+    { "id": "server-authority", "evidence": ["server/packages/runtime/http/src/route-contract.ts", "server/packages/platform/experience/src/routes.ts", "tests/contracts/access-consumption-phase9.test.ts"] },
+    { "id": "three-plane-qualification", "evidence": ["scripts/policy/verify-app-composition-phase10.mjs", "tests/contracts/app-composition-phase10.test.ts", "config/deployment/profiles.json"] },
+    { "id": "rollback-observability", "evidence": ["docs/architecture/frontend-pilot-cutover.md", "docs/runbooks/frontend-spine-production-observability.md", "stack/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"] },
+    { "id": "business-module-readiness", "evidence": ["docs/architecture/frontend-first-business-module.md", "tests/contracts/first-business-module-readiness.test.ts"] }
+  ]
+}

@@ -1,0 +1,76 @@
+﻿{
+  "schemaVersion": 1,
+  "catalogId": "authorization-wave0-high-risk-actions",
+  "selection": {
+    "permissionStatus": "active",
+    "riskLevels": [
+      "high",
+      "critical"
+    ],
+    "source": "live shared.permission",
+    "includeEverySelectedPermission": true
+  },
+  "operationMapping": {
+    "source": "live control.entity_operation",
+    "join": "control.entity_operation.permission_code = shared.permission.code",
+    "includeEveryActiveMapping": true,
+    "unmappedPermissionRequiresClassification": true
+  },
+  "requiredLegacyEngines": {
+    "neon": [
+      "legacy_single",
+      "legacy_batch"
+    ],
+    "studio": [
+      "legacy_admin"
+    ],
+    "mesh": [
+      "legacy_mesh"
+    ]
+  },
+  "requiredContextClasses": [
+    "tenant_capability",
+    "owned_record",
+    "in_scope_record",
+    "out_of_scope_record",
+    "cross_tenant_sentinel",
+    "missing_record",
+    "explicit_deny",
+    "expired_authority",
+    "entitlement_unavailable",
+    "workflow_mfa_sod_failure"
+  ],
+  "privacy": {
+    "forbiddenFields": [
+      "name",
+      "display_name",
+      "email",
+      "username",
+      "subject_id",
+      "idp_snapshot",
+      "provider_attributes",
+      "token",
+      "credential",
+      "secret"
+    ],
+    "subjectIdentifiers": "sha256 only",
+    "repositoryStorage": "schema and non-PII catalog only; environment corpus belongs in restricted evidence storage"
+  },
+  "knownLegacyFindings": [
+    {
+      "id": "single-batch-plan-deny-precedence",
+      "status": "unapproved",
+      "description": "Legacy single checks plan before principal deny; legacy batch checks deny before plan."
+    },
+    {
+      "id": "admin-access-grant-missing-tenant-predicate",
+      "status": "security_finding",
+      "description": "Legacy Admin allow and deny access-grant reads omit the target tenant predicate."
+    },
+    {
+      "id": "mesh-cross-database-authority",
+      "status": "boundary_finding",
+      "description": "Legacy Mesh admission is read from Mesh while permission and access-grant authority are read from Neon."
+    }
+  ]
+}

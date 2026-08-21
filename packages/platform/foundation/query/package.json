@@ -1,0 +1,14 @@
+{
+  "name": "@athyper/platform-query",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "sideEffects": false,
+  "exports": { ".": "./src/index.tsx", "./server": "./src/core.ts" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": { "@athyper/contract-platform-auth-session": "workspace:*", "@athyper/platform-api-client": "workspace:*", "@tanstack/query-core": "^5.101.4", "@tanstack/react-query": "^5.101.4" },
+  "peerDependencies": { "react": "^19.2.5" },
+  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "releaseWindowsStable": 0,
+  "observations": [
+    {
+      "entityCode": "company_code",
+      "tenantId": null,
+      "stage": "internal_company_code",
+      "crossTenantAccess": 0,
+      "partialPublication": 0,
+      "hashMismatch": 0,
+      "unexplainedDescriptorDrift": 0,
+      "cacheInvalidationFailure": 0,
+      "routeErrorRate": 0.001,
+      "baselineRouteErrorRate": 0.001,
+      "descriptorP95Ms": 40,
+      "descriptorBudgetMs": 100,
+      "bootstrapP95Ms": 80,
+      "bootstrapBudgetMs": 200,
+      "listP95Ms": 180,
+      "listBudgetMs": 400,
+      "detailP95Ms": 160,
+      "detailBudgetMs": 400
+    }
+  ]
+}
