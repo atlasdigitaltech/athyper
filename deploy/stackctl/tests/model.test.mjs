@@ -354,3 +354,9 @@ test("every external base for a published image is digest-pinned", () => {
     }
   }
 });
+
+test("Keycloak optimized builds retain every recorded runtime dependency", () => {
+  const dockerfile = readFileSync(join(defaultRepoRoot, "stack/config/iam/Dockerfile"), "utf8");
+  assert.match(dockerfile, /kc\.sh build --db=postgres/u);
+  assert.doesNotMatch(dockerfile, /rm\s+-f[\s\S]*mssql-jdbc/u);
+});

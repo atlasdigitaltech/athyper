@@ -15,6 +15,4 @@ COPY --from=extension-build \
     /opt/keycloak/providers/iam-presentation-context.jar
 COPY realm-athyper-clean-slate.json /opt/keycloak/data/import/athyper-realm.json
 COPY realm-platform-control-clean-slate.json /opt/keycloak/data/import/platform-control-realm.json
-# ATHYPER is PostgreSQL-only; omit the unused SQL Server driver and its attack surface.
-RUN /opt/keycloak/bin/kc.sh build --db=postgres \
-    && rm -f /opt/keycloak/lib/lib/main/com.microsoft.sqlserver.mssql-jdbc-*.jar
+RUN /opt/keycloak/bin/kc.sh build --db=postgres
