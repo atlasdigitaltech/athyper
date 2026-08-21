@@ -75,6 +75,15 @@ test("DEV exposes only the MinIO console through the TLS gateway", () => {
   }
 });
 
+test("read-only Alloy stores runtime state only in tmpfs", () => {
+  const operations = read("deploy/compose/operations/compose.yaml");
+  const alloy = operations.services.logshipper;
+  assert.equal(alloy.read_only, true);
+  assert.ok(alloy.tmpfs.includes("/tmp"));
+  assert.ok(alloy.command.includes("--storage.path=/tmp/data-alloy"));
+  assert.deepEqual(alloy.volumes, ["./config/alloy.alloy:/etc/alloy/config.alloy:ro"]);
+});
+
 test("web session storage reaches Redis without joining the data network", () => {
   const instance = read("deploy/compose/instance/compose.yaml");
   const parity = read("deploy/compose/instance/compose.parity.yaml");
