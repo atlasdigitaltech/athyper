@@ -126,6 +126,16 @@ Lite mode publishes Grafana on `127.0.0.1:53902`, Prometheus on
 Compose project's `docker logs` streams through the local Docker CLI and pushes
 normalized labels to Alloy. No workload or telemetry container receives the
 Docker socket, and `docker logs` remains available as the fallback authority.
+Open Grafana at `http://127.0.0.1:53902`, sign in as `athyper-admin`, and read
+the local password with `cat ~/.athyper/operations/secrets/grafana-admin-password`.
+In **Explore**, select the Loki data source and start with `{instance="dev"}` or
+scope a workload with `{instance="dev", service="api"}`. Loki itself remains
+internal and has no host-published port.
+
+The Grafana bootstrap reads the owner-only Compose secret before dropping to
+Grafana UID 472. The controller reconciles the same credential through stdin so
+retained Grafana volumes remain accessible after restarts; the value is not
+placed in controller receipts or host command arguments.
 
 `athyper plan dev` now treats the machine qualification evidence as a hard
 deployment input. Aggregate host qualification and Defender/WSL cold-start

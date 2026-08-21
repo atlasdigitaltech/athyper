@@ -63,6 +63,8 @@ services:
 
   telemetry:
     image: grafana/grafana:12.4.3
+    user: "0:0"
+    entrypoint: [/bin/bash, /athyper/bin/start-grafana.sh]
     restart: unless-stopped
     depends_on: { metrics: { condition: service_healthy }, logging: { condition: service_started } }
     environment:
@@ -72,7 +74,7 @@ services:
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
     secrets: [grafana-admin-password]
     ports: ["127.0.0.1:53902:3000"]
-    volumes: [telemetry-data:/var/lib/grafana, ./config/grafana:/etc/grafana/provisioning:ro]
+    volumes: [telemetry-data:/var/lib/grafana, ./config/grafana:/etc/grafana/provisioning:ro, ./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro]
     networks: [operations, host-access]
     healthcheck: { test: [CMD-SHELL, wget -q --spider http://127.0.0.1:3000/api/health], interval: 15s, timeout: 5s, retries: 10, start_period: 30s }
     security_opt: [no-new-privileges:true]

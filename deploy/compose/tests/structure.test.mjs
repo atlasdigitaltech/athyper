@@ -100,6 +100,18 @@ test("operations UIs and receiver use loopback ports through a non-internal netw
   }
 });
 
+test("Grafana reads the owner-only secret only during privilege-dropping bootstrap", () => {
+  const operations = read("deploy/compose/operations/compose.yaml");
+  const grafana = operations.services.telemetry;
+  const bootstrap = readFileSync(join(repoRoot, "deploy/compose/operations/scripts/start-grafana.sh"), "utf8");
+  assert.equal(grafana.user, "0:0");
+  assert.deepEqual(grafana.entrypoint, ["/bin/bash", "/athyper/bin/start-grafana.sh"]);
+  assert.ok(grafana.volumes.includes("./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro"));
+  assert.match(bootstrap, /GF_SECURITY_ADMIN_PASSWORD="\$\(<"\$\{secret_file\}"\)"/u);
+  assert.match(bootstrap, /unset GF_SECURITY_ADMIN_PASSWORD__FILE/u);
+  assert.match(bootstrap, /exec setpriv --reuid=472 --regid=0 --clear-groups \/run\.sh/u);
+});
+
 test("web session storage reaches Redis without joining the data network", () => {
   const instance = read("deploy/compose/instance/compose.yaml");
   const parity = read("deploy/compose/instance/compose.parity.yaml");

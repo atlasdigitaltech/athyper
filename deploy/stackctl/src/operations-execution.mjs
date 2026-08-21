@@ -106,6 +106,7 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
         compose([...profiles, "config", "--quiet"]);
         compose([...profiles, "up", "--detach", "--wait", "--remove-orphans"]);
         compose(["exec", "-T", "metrics", "sh", "-ec", "attempt=0; until wget -q --spider http://logging:3100/ready; do attempt=$((attempt+1)); [ \"$attempt\" -ge 30 ] && exit 1; sleep 2; done"]);
+        compose(["exec", "-T", "--user", "0", "telemetry", "bash", "-ec", "cat /run/secrets/grafana-admin-password | grafana cli --homepath=/usr/share/grafana --config=/etc/grafana/grafana.ini admin reset-admin-password --password-from-stdin >/dev/null"]);
         invoke("curl", ["--fail", "--silent", "--show-error", "http://127.0.0.1:53902/api/health"]);
         invoke("curl", ["--fail", "--silent", "--show-error", "--request", "POST", "--header", "content-type: application/json", "--data", "{\"streams\":[]}", "http://127.0.0.1:53901/loki/api/v1/push"]);
         const pid = (dependencies.startForwarder ?? defaultStartForwarder)(repoRoot, forwarderDirectory, revision);
