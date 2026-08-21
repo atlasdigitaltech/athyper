@@ -108,6 +108,7 @@ docker compose \
   config --no-interpolate --quiet
 pnpm stack:v2:test
 pnpm athyper catalog inspect --json
+pnpm athyper operations plan lite --json
 athyper plan dev
 ```
 

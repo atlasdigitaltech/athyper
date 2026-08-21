@@ -1,6 +1,6 @@
 # Stack v2 workload placement
 
-**Status:** Implemented authority; shared operations composition remains pending  
+**Status:** Operations-lite composed; heavy monitoring adapters remain pending
 **Reviewed:** 2026-08-21
 
 ## Inventory result
@@ -22,7 +22,8 @@ an ephemeral test fixture and is not an application workload.
 |---|---:|---|---|---|
 | `instance-runtime` | 20 | One copy per DEV/QA/STG instance | Instance preset | Composed |
 | `instance-operator-tools` | 5 | Instance-scoped, loopback-only | Explicit profile | Composed |
-| `shared-observability` | 9 | One host operations project | Platform policy | Partial |
+| `instance-telemetry-exporter` | 1 | Beside the instance Redis provider | Explicit profile | Composed |
+| `shared-observability` | 8 | One host operations project | Platform policy | Partial |
 | `shared-monitoring` | 3 | One host operations project | Platform policy | Design required |
 | `retired-legacy-discovery` | 2 | Prohibited | Never | Retired |
 
@@ -44,13 +45,20 @@ DEV/QA/STG data must have separate retention and query boundaries.
 The local Loki and Tempo configurations use filesystem storage, so their legacy
 S3 bucket initialization jobs must not run locally. They remain catalogued for
 remote object-storage mode and must produce one-shot completion receipts there.
-Alloy should receive OTLP and forward structured logs without Docker API access.
+Alloy receives Loki-compatible push traffic and forwards structured logs without Docker API access.
 The two legacy socket proxies remain prohibited; direct `docker.sock` mounting
 is also prohibited.
 
-`shared-observability` requires at least `laptop-64`. On `laptop-32`, use an
-external operations endpoint or run a short, explicitly bounded diagnostic
-profile rather than keeping the full suite resident beside DEV.
+The `athyper-operations` project now provides the bounded
+`laptop-32-ops-lite` model. Prometheus, Loki, Grafana, Alloy, and Alertmanager
+use 1,408 MiB/1.35 CPU of a 3,072 MiB/3 CPU operations budget. Tempo is an
+explicit `tracing` mode and raises that envelope to 1,792 MiB/1.7 CPU. Alloy
+accepts push-based Loki traffic on a loopback binding and has no Docker API
+discovery.
+
+The controller accepts exactly one operations mode at a time. It has no `full`
+mode and rejects attempts to combine tracing and monitoring modes. This keeps
+the full legacy observability/monitoring suite off `laptop-32`.
 
 ### Shared monitoring
 
@@ -64,6 +72,11 @@ External event-ingest endpoints may bypass interactive gateway authentication
 only when protected by service-specific DSNs or signed tokens. Operator UIs must
 remain authenticated and loopback-only on workstations.
 
+Uptime Kuma is composed as the on-demand `statuswatch` mode at 1,600 MiB/1.55
+CPU including the lite baseline. `cronwatch` and `errorcollect` are recognized
+controller modes but remain blocked until their dedicated PostgreSQL/cache
+roles, file-secret adapters, migration receipts, and backup contracts exist.
+
 ### Operator tools
 
 Infisical, Metabase, Pgweb, Bull Board, and the separate jobs Redis are optional
@@ -73,21 +86,24 @@ Board are on-demand and must not use `restart: unless-stopped`.
 
 ## Required completion order
 
-1. Add `deploy/compose/operations/` with an independent project receipt and
-   resource profile.
-2. Move the six already-composed observability services out of the instance
+1. Add controlled `operations up/down` execution and an independent project
+   ownership receipt; planning remains read-only today.
+2. Remove the transitional six-service observability copy from the instance
    optional overlay.
-3. Add push-based Alloy ingestion without Docker API access.
-4. Add monitoring database initialization and least-privilege roles.
+3. Add controller-rendered Prometheus targets with mandatory instance labels.
+4. Add monitoring database initialization, file-secret adapters, and least-privilege roles.
 5. Compose and qualify Uptime Kuma, Healthchecks, and GlitchTip.
 6. Add backup/restore receipts for operations state.
-7. Run DEV and operations concurrently on `laptop-64`, then execute QA isolation
-   twice before enabling shared operations for STG.
+7. Run DEV with each operations mode independently on `laptop-32`, then execute
+   QA isolation twice before enabling shared operations for STG.
 
 Run the reconciliation at any time with:
 
 ```sh
 pnpm athyper catalog inspect --json
+pnpm athyper operations plan lite --json
+pnpm athyper operations plan tracing --json
+pnpm athyper operations plan statuswatch --json
 ```
 
 The command returns exit code `2` while a workload set is `partial` or

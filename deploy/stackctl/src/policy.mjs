@@ -21,6 +21,11 @@ export function checkPolicy(repoRoot) {
   const platformPath = join(repoRoot, "deploy/compose/platform/compose.yaml");
   const platform = readFileSync(platformPath, "utf8");
   const platformModel = readYaml(platformPath);
+  const operationsPath = join(repoRoot, "deploy/compose/operations/compose.yaml");
+  const operations = readFileSync(operationsPath, "utf8");
+  const operationsModel = YAML.parse(operations);
+  const operationsProfilePath = join(repoRoot, "deploy/resources/laptop-32-ops-lite.yaml");
+  const operationsProfile = readYaml(operationsProfilePath);
   const composeModel = {
     ...baseModel,
     services: { ...baseModel.services, ...parityModel.services, ...optionalModel.services },
@@ -123,6 +128,33 @@ export function checkPolicy(repoRoot) {
     errors.push(`${platformPath}: outer ingress must be the sole loopback owner of ports 80 and 443`);
   }
   if (platform.includes("docker.sock")) errors.push(`${platformPath}: outer ingress mounts the Docker socket`);
+  if (operationsModel.name !== "athyper-operations") errors.push(`${operationsPath}: project name must be athyper-operations`);
+  if (operations.includes("docker.sock") || /discovery\.docker/u.test(operations)) {
+    errors.push(`${operationsPath}: operations-lite must use push-based collection without Docker discovery`);
+  }
+  if (operationsModel.networks?.operations?.internal !== true) errors.push(`${operationsPath}: operations network must be internal`);
+  const requiredOperations = ["metrics", "logging", "alertmanager", "logshipper", "telemetry", "tracing", "statuswatch"];
+  for (const id of requiredOperations) if (!operationsModel.services?.[id]) errors.push(`${operationsPath}: missing operations service ${id}`);
+  for (const [id, service] of Object.entries(operationsModel.services ?? {})) {
+    if ((service.profiles ?? []).length > 1) errors.push(`${operationsPath}: ${id} belongs to multiple concurrent profiles`);
+    if ((service.profiles ?? []).length && service.restart !== "no") errors.push(`${operationsPath}: on-demand service ${id} must use restart: no`);
+    for (const port of service.ports ?? []) {
+      if (!String(port).startsWith("127.0.0.1:")) errors.push(`${operationsPath}: ${id} publishes a non-loopback port`);
+    }
+  }
+  const allowedProfiles = new Set(["tracing", "monitor-status"]);
+  for (const service of Object.values(operationsModel.services ?? {})) {
+    for (const profile of service.profiles ?? []) if (!allowedProfiles.has(profile)) errors.push(`${operationsPath}: unsupported operations profile ${profile}`);
+  }
+  const baseServices = Object.values(operationsModel.services ?? {}).filter((service) => !(service.profiles ?? []).length);
+  for (const profile of [null, "tracing", "monitor-status"]) {
+    const selected = [...baseServices, ...Object.values(operationsModel.services ?? {}).filter((service) => profile && (service.profiles ?? []).includes(profile))];
+    const memory = selected.reduce((total, service) => total + Number(String(service.mem_limit).replace(/m$/u, "")), 0);
+    const cpu = selected.reduce((total, service) => total + Number(service.cpus), 0);
+    if (memory > operationsProfile.spec.maxContainerMemoryMiB || cpu > operationsProfile.spec.maxContainerCpu) {
+      errors.push(`${operationsPath}: operations mode ${profile ?? "lite"} exceeds laptop-32-ops-lite`);
+    }
+  }
   return {
     apiVersion: "athyper.io/v1alpha1",
     kind: "PolicyReport",

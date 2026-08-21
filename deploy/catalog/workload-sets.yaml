@@ -19,12 +19,20 @@ sets:
     services: [memorycache-jobs, secretstore, dbconsole, queueconsole, analyticsboard]
     rationale: Optional stateful or privileged tools remain instance-scoped and loopback-only with explicit activation.
 
+  - id: instance-telemetry-exporter
+    placement: instance
+    activation: explicit-profile
+    implementation: composed
+    hostProfiles: [laptop-32, laptop-64, workstation-128]
+    services: [memorycache-exporter]
+    rationale: Redis metrics are exported beside each isolated Redis provider and scraped by the shared operations authority.
+
   - id: shared-observability
     placement: shared-platform
     activation: platform-policy
     implementation: partial
     hostProfiles: [laptop-64, workstation-128]
-    services: [memorycache-exporter, metrics, logging, logging-bucket-init, tracing, tracing-bucket-init, telemetry, logshipper, alertmanager]
+    services: [metrics, logging, logging-bucket-init, tracing, tracing-bucket-init, telemetry, logshipper, alertmanager]
     rationale: A single host observability plane avoids per-instance duplication and requires mandatory instance labels and retention boundaries.
 
   - id: shared-monitoring

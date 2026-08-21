@@ -8,7 +8,7 @@
 Current new-machine position (2026-08-21): Ubuntu 24.04 and source are on `D:`,
 the laptop-32 WSL envelope is active, Node 24.19.0/pnpm 10.33.0 are
 normalized, machine-phase and clean-slate disposition evidence exist, and the
-Stack v2 controller/Compose suite passes 36/36. The elevated cold-start evidence
+Stack v2 controller/Compose suite passes 38/38. The elevated cold-start evidence
 passes with Defender platform `4.18.25080.5`, Docker Engine `29.7.2`, BitLocker,
 Secure Boot, Ubuntu, and Docker-distribution checks all valid. The previous
 unmanaged `athyper-dev` resources were checksummed into an owner-only quarantine
@@ -38,7 +38,7 @@ Continue in this order:
 1. **Complete:** Docker Desktop integration is available in `Ubuntu-24.04`.
 2. **Complete:** Defender recovery and valid elevated cold-start evidence.
 3. **Complete in implementation:** make `plan` consume the mandatory admission gates used by `up`.
-4. **Complete in implementation:** deterministic controller/Compose suite passes 36/36.
+4. **Complete in implementation:** deterministic controller/Compose suite passes 38/38.
 5. **Complete:** `athyper up dev --confirm dev` produced active and migration receipts.
 6. **Complete:** live backup `20260821T081919Z` restored successfully into isolated volume `athyper-dev-restore-20260821t081919z_db-data`.
 7. **Complete:** five immutable application digests and the candidate image-set were published from revision `d3a77f476c1c9639f21fb0ddb7a31316beea1591`.
@@ -646,6 +646,13 @@ The authoritative placement and reconciliation rules are maintained in
 `deploy/catalog/workload-sets.yaml`. `athyper catalog inspect` proves that the
 legacy Compose tree, the resolved-v1 service catalog, and workload dispositions
 remain an exact set match.
+
+For the 32 GB workstation, shared operations use the separate
+`athyper-operations` project and `laptop-32-ops-lite` budget. The lite baseline
+is capped at 1,408 MiB/1.35 CPU; Tempo and Uptime Kuma are mutually exclusive
+on-demand modes. Healthchecks and GlitchTip remain blocked until their isolated
+state and file-secret adapters are qualified. No full-observability or combined
+monitoring mode is defined for this host.
 
 This ledger accounts for every one of the 39 services currently returned by Compose with all profiles enabled:
 
