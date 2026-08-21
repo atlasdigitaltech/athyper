@@ -94,6 +94,10 @@ test("operations UIs and receiver use loopback ports through a non-internal netw
     assert.ok(operations.services[service].ports.every((port) => port.startsWith("127.0.0.1:")));
   }
   assert.deepEqual(operations.services.logging.networks, ["operations"]);
+  const alloy = readFileSync(join(repoRoot, "deploy/compose/operations/config/alloy.alloy"), "utf8");
+  for (const label of ["instance", "environment", "service", "container", "stream", "source_revision"]) {
+    assert.match(alloy, new RegExp(`values = \\[.*\"${label}\"`));
+  }
 });
 
 test("web session storage reaches Redis without joining the data network", () => {

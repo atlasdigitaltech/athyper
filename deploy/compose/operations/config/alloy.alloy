@@ -14,7 +14,7 @@ loki.process "normalize" {
     drop_counter_reason = "entry_too_old"
   }
   stage.label_keep {
-    values = ["instance", "environment", "service", "source_revision"]
+    values = ["instance", "environment", "service", "container", "stream", "source_revision"]
   }
   forward_to = [loki.write.local.receiver]
 }

@@ -39,8 +39,8 @@ function stopForwarder(pidPath) {
 }
 function defaultStartForwarder(repoRoot, directory, revision) {
   mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const stdout = openSync(join(directory, "forwarder.log"), "a", 0o600);
-  const stderr = openSync(join(directory, "forwarder-error.log"), "a", 0o600);
+  const stdout = openSync(join(directory, "forwarder.log"), "w", 0o600);
+  const stderr = openSync(join(directory, "forwarder-error.log"), "w", 0o600);
   const child = spawn(process.execPath, [join(repoRoot, "deploy/stackctl/src/docker-log-forwarder.mjs"),
     "--project", "athyper-dev", "--endpoint", "http://127.0.0.1:53901/loki/api/v1/push",
     "--instance", "dev", "--environment", "development", "--source-revision", revision,
