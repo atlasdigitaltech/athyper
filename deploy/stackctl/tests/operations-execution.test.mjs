@@ -31,6 +31,7 @@ test("operations up is confirmed, receipt-owned, and starts Compose before forwa
   assert.equal(receipt.spec.artifacts.forwarderPid, 4242);
   assert.ok(context.calls[0].includes("config"));
   assert.ok(context.calls[1].includes("up"));
+  assert.ok(context.calls[2].join(" ").includes("until wget -q --spider http://logging:3100/ready"));
   const active = JSON.parse(readFileSync(join(context.root, "operations/receipts/active.json"), "utf8"));
   assert.equal(active.spec.project, "athyper-operations");
   assert.equal(active.spec.state, "running");
