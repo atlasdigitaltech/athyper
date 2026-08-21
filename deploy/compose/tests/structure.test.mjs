@@ -62,3 +62,13 @@ test("MinIO bootstrap has enough memory for concurrent full-stack startup", () =
   assert.equal(instance.services["objectstorage-init"].mem_limit, "128m");
   assert.equal(service.resources.memoryMiB, 128);
 });
+
+test("web session storage reaches Redis without joining the data network", () => {
+  const instance = read("deploy/compose/instance/compose.yaml");
+  const parity = read("deploy/compose/instance/compose.parity.yaml");
+  assert.deepEqual(instance.services.memorycache.networks.sort(), ["app", "data"]);
+  assert.deepEqual(parity["x-web-common"].networks.sort(), ["app", "edge"]);
+  for (const service of ["studio-web", "neon-web", "mesh-web"]) {
+    assert.ok(parity.services[service].secrets.includes("redis-password"));
+  }
+});

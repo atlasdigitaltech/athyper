@@ -152,7 +152,10 @@ services:
     volumes:
       - memorycache-data:/data
       - ./scripts/start-redis.sh:/athyper/bin/start-redis.sh:ro
-    networks: [data]
+    # Browser sessions are server-side and fail closed through Redis. Expose
+    # Redis only to the private application network in addition to data; the
+    # web containers deliberately do not join the broader data network.
+    networks: [app, data]
     healthcheck:
       test: [CMD-SHELL, 'redis-cli --no-auth-warning -a "$$(cat /run/secrets/redis-password)" ping | grep -qx PONG']
       interval: 10s

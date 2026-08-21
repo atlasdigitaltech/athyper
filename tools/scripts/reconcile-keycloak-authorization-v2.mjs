@@ -168,8 +168,25 @@ async function main() {
   const tenantManifest = tenantManifestPath
     ? JSON.parse(await readFile(tenantManifestPath, "utf8"))
     : null;
+  const baseUrl = requiredEnv("KEYCLOAK_BASE_URL").replace(/\/$/, "");
+  const adminRealm = process.env.KEYCLOAK_ADMIN_REALM?.trim() || "master";
+  const username = requiredEnv("KEYCLOAK_ADMIN_USERNAME");
+  const password = requiredEnv("KEYCLOAK_ADMIN_PASSWORD");
+  const token = await adminToken(baseUrl, adminRealm, username, password);
+  const realmPath = `/admin/realms/${encodeURIComponent(desired.realm)}`;
+  const [clients, groups, organizations, users] = await Promise.all([
+    requestJson(baseUrl, `${realmPath}/clients?first=0&max=500`, token),
+    requestJson(baseUrl, `${realmPath}/groups?first=0&max=500&briefRepresentation=false`, token),
+    tenantManifest
+      ? requestJson(baseUrl, `${realmPath}/organizations?first=0&max=500&briefRepresentation=false`, token)
+      : Promise.resolve([]),
+    userManifest
+      ? requestJson(baseUrl, `${realmPath}/users?first=0&max=1000`, token)
+      : Promise.resolve([]),
+  ]);
+  const runtimeSubjectByUsername = new Map(users.map((user) => [user.username, user.id]));
   const desiredMemberships = userManifest
-    ? compileDesiredMemberships(userManifest, desired.realm)
+    ? compileDesiredMemberships(userManifest, desired.realm, runtimeSubjectByUsername)
     : [];
   for (const membership of desiredMemberships) {
     if (!desired.groups.some((group) => group.name === membership.groupName)) {
@@ -182,19 +199,6 @@ async function main() {
       });
     }
   }
-  const baseUrl = requiredEnv("KEYCLOAK_BASE_URL").replace(/\/$/, "");
-  const adminRealm = process.env.KEYCLOAK_ADMIN_REALM?.trim() || "master";
-  const username = requiredEnv("KEYCLOAK_ADMIN_USERNAME");
-  const password = requiredEnv("KEYCLOAK_ADMIN_PASSWORD");
-  const token = await adminToken(baseUrl, adminRealm, username, password);
-  const realmPath = `/admin/realms/${encodeURIComponent(desired.realm)}`;
-  const [clients, groups, organizations] = await Promise.all([
-    requestJson(baseUrl, `${realmPath}/clients?first=0&max=500`, token),
-    requestJson(baseUrl, `${realmPath}/groups?first=0&max=500&briefRepresentation=false`, token),
-    tenantManifest
-      ? requestJson(baseUrl, `${realmPath}/organizations?first=0&max=500&briefRepresentation=false`, token)
-      : Promise.resolve([]),
-  ]);
   const plan = planKeycloakReconciliation({ clients, groups }, desired);
   const organizationPlan = tenantManifest
     ? planTenantOrganizationReconciliation(organizations, tenantManifest, desired.realm)
@@ -248,6 +252,7 @@ async function main() {
       userManifest,
       tenantManifest,
       desired.realm,
+      runtimeSubjectByUsername,
     );
     const currentOrganizationMemberships = [];
     for (const tenant of tenantManifest.tenants) {
@@ -415,7 +420,7 @@ export function planTenantOrganizationMembershipReconciliation(current, desired)
       || left.keycloakSubject.localeCompare(right.keycloakSubject));
 }
 
-export function compileDesiredTenantOrganizationMemberships(manifest, tenantManifest, realm) {
+export function compileDesiredTenantOrganizationMemberships(manifest, tenantManifest, realm, runtimeSubjectByUsername) {
   if (
     manifest.contractVersion !== "athyper.authorization.keycloak-admission.v1"
     || manifest.realm !== realm
@@ -428,11 +433,12 @@ export function compileDesiredTenantOrganizationMemberships(manifest, tenantMani
   const tenantsByCode = new Map(tenantManifest.tenants.map((tenant) => [tenant.code, tenant]));
   const memberships = [];
   for (const [keycloakSubject, mapping] of Object.entries(manifest.subjectMappings)) {
+    const runtimeSubject = resolveRuntimeSubject(keycloakSubject, mapping, runtimeSubjectByUsername);
     for (const tenantCode of mapping.tenantCodes ?? []) {
       const tenant = tenantsByCode.get(tenantCode);
       if (!tenant) throw new Error(`unknown tenant code for subject ${keycloakSubject}: ${tenantCode}`);
       memberships.push({
-        keycloakSubject,
+        keycloakSubject: runtimeSubject,
         organizationAlias: tenant.keycloakOrganizationAlias,
         tenantCode,
       });
@@ -464,7 +470,7 @@ export function planManagedMembershipReconciliation(current, desired, managedGro
     || left.kind.localeCompare(right.kind));
 }
 
-function compileDesiredMemberships(manifest, realm) {
+function compileDesiredMemberships(manifest, realm, runtimeSubjectByUsername) {
   if (
     manifest.contractVersion !== "athyper.authorization.keycloak-admission.v1"
     || manifest.realm !== realm
@@ -476,16 +482,25 @@ function compileDesiredMemberships(manifest, realm) {
   }
   const memberships = [];
   for (const [keycloakSubject, mapping] of Object.entries(manifest.subjectMappings)) {
+    const runtimeSubject = resolveRuntimeSubject(keycloakSubject, mapping, runtimeSubjectByUsername);
     for (const plane of mapping.planes ?? []) {
       const groupName = plane.quarantineGroupCode;
       if (!groupName) throw new Error(`missing canonical group for subject ${keycloakSubject}`);
-      memberships.push({ keycloakSubject, groupName, plane: plane.plane });
+      memberships.push({ keycloakSubject: runtimeSubject, groupName, plane: plane.plane });
     }
   }
   return memberships.sort((left, right) =>
     left.keycloakSubject.localeCompare(right.keycloakSubject)
       || left.groupName.localeCompare(right.groupName)
   );
+}
+
+function resolveRuntimeSubject(sourceSubject, mapping, runtimeSubjectByUsername) {
+  if (!runtimeSubjectByUsername) return sourceSubject;
+  const username = mapping.username?.trim();
+  const runtimeSubject = username ? runtimeSubjectByUsername.get(username) : null;
+  if (!runtimeSubject) throw new Error(`managed Keycloak subject is absent at runtime: ${username || sourceSubject}`);
+  return runtimeSubject;
 }
 
 async function adminToken(baseUrl, realm, username, password) {

@@ -60,6 +60,34 @@ test("compiled subjects are added to tenant organizations without removing legac
   }]);
 });
 
+test("tenant memberships resolve fixture subjects to Keycloak runtime IDs by username", () => {
+  const tenantManifest = {
+    tenants: [
+      { code: "athyper", keycloakOrganizationAlias: "11111111-1111-4111-8111-111111111111" },
+    ],
+  };
+  const manifest = {
+    contractVersion: "athyper.authorization.keycloak-admission.v1",
+    realm: "athyper",
+    unresolvedSubjectBehavior: "deny",
+    mappedSubjectCount: 1,
+    enabledSubjectCount: 1,
+    subjectMappings: {
+      "aa010107-0000-0000-0000-000000000000": {
+        username: "athyper.owner",
+        tenantCodes: ["athyper"],
+      },
+    },
+  };
+  const desired = compileDesiredTenantOrganizationMemberships(
+    manifest,
+    tenantManifest,
+    "athyper",
+    new Map([["athyper.owner", "runtime-subject-id"]]),
+  );
+  assert.equal(desired[0].keycloakSubject, "runtime-subject-id");
+});
+
 test("managed admission membership is exact while unmanaged groups remain untouched", () => {
   const operations = planManagedMembershipReconciliation(
     [
