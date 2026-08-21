@@ -162,6 +162,9 @@ jobs:
           sbom: true
 
       - name: Create GitHub build provenance attestation
+        # Private organization plans may not expose the repository-attestation
+        # API. BuildKit registry provenance and SBOM above remain mandatory.
+        continue-on-error: true
         uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
         with:
           subject-name: ${{ matrix.image }}
