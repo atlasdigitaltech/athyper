@@ -75,7 +75,7 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
     const receiptPath = join(receiptDirectory, `${id}.json`);
     const revision = dependencies.sourceRevision ?? sourceRevision(repoRoot);
     const composeFile = join(repoRoot, "deploy/compose/operations/compose.yaml");
-    const env = { ...process.env, ATHYPER_RUNTIME_ROOT: root };
+    const env = { ...process.env, ATHYPER_RUNTIME_ROOT: root, ...(operation === "up" ? { ATHYPER_OPERATIONS_MODE: mode } : {}) };
     const run = dependencies.run ?? defaultRun;
     const commands = [];
     const invoke = (program, args) => {

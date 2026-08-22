@@ -163,6 +163,7 @@ services:
     secrets: [postgres-password]
     volumes:
       - ./scripts/run-foundation.sh:/athyper/bin/run-foundation.sh:ro
+      - ./scripts/runtime-worker-grants-v1.sql:/athyper/reconciliation/runtime-worker-grants-v1.sql:ro
       - ../../../server/db/ddl:/athyper/ddl:ro
     networks: [data]
     read_only: true
@@ -173,20 +174,19 @@ services:
   virusscan:
     image: clamav/clamav:1.5.2
     restart: unless-stopped
-    environment:
-      FRESHCLAM_NO_DAEMON: "true"
     volumes:
       - virusscan-data:/var/lib/clamav
-    networks: [data]
+    # Signatures require outbound connectivity. Only the scanner joins this
+    # dedicated egress network; port 3310 remains private on the data network.
+    networks: [data, signature-egress]
     healthcheck:
-      test: [CMD-SHELL, echo PING | nc -w 3 127.0.0.1 3310 | grep -q PONG]
+      test: [CMD-SHELL, "echo PING | nc -w 3 127.0.0.1 3310 | grep -q PONG && find /var/lib/clamav -maxdepth 1 -name 'daily.c?d' -mtime -2 -print | grep -q ."]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 120s
     stop_grace_period: 15s
     security_opt: [no-new-privileges:true]
-    init: true
     mem_limit: 1280m
     cpus: 1.0
 

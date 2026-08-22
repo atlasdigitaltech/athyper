@@ -15,4 +15,5 @@ COPY --from=extension-build \
     /opt/keycloak/providers/iam-presentation-context.jar
 COPY realm-athyper-clean-slate.json /opt/keycloak/data/import/athyper-realm.json
 COPY realm-platform-control-clean-slate.json /opt/keycloak/data/import/platform-control-realm.json
+COPY themes /opt/keycloak/themes
 RUN /opt/keycloak/bin/kc.sh build --db=postgres

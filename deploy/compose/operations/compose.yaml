@@ -72,9 +72,10 @@ services:
       GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-admin-password
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      ATHYPER_OPERATIONS_MODE: ${ATHYPER_OPERATIONS_MODE:-lite}
     secrets: [grafana-admin-password]
     ports: ["127.0.0.1:53902:3000"]
-    volumes: [telemetry-data:/var/lib/grafana, ./config/grafana:/etc/grafana/provisioning:ro, ./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro]
+    volumes: [telemetry-data:/var/lib/grafana, ./config/grafana:/athyper/provisioning-source:ro, ./scripts/start-grafana.sh:/athyper/bin/start-grafana.sh:ro]
     networks: [operations, host-access]
     healthcheck: { test: [CMD-SHELL, wget -q --spider http://127.0.0.1:3000/api/health], interval: 15s, timeout: 5s, retries: 10, start_period: 30s }
     security_opt: [no-new-privileges:true]

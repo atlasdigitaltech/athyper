@@ -56,6 +56,16 @@ test("server bootstrap redirects before experience access and hydrates one safe 
   assert.equal(ready.state, "ready"); if (ready.state === "ready") { assert.equal(ready.dehydratedState.queries.length, 1); assert.deepEqual(ready.dehydratedState.queries[0]?.queryKey, experienceQueryKeys.bootstrap(scopeA)); ready.queryClient.clear(); }
 });
 
+test("protected bootstrap treats logout between session and experience reads as unauthenticated", async () => {
+  const result = await readProtectedBootstrap({
+    request: new Request("https://neon.local/system/verification"),
+    returnTo: "/system/verification",
+    readSession: async () => Response.json(session),
+    readExperience: async () => new Response(null, { status: 401 }),
+  });
+  assert.deepEqual(result, { state: "redirect", location: "/api/auth/login?returnTo=%2Fsystem%2Fverification", reason: "unauthenticated" });
+});
+
 test("provider source preserves the required focused nesting order", async () => {
   const source = await readFile(new URL("../../packages/platform/shell/app-foundation/src/index.tsx", import.meta.url), "utf8");
   const names = ["AppearanceProvider", "SessionProvider", "ExperienceBootstrapProvider", "ApiClientProvider", "PlatformQueryProvider", "PermissionProvider", "FeatureProvider", "ToastProvider", "SurfaceStackProvider", "AuthenticationFailureBridge"];

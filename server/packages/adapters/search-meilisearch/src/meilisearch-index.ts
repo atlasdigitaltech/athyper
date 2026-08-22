@@ -77,7 +77,13 @@ export function createMeilisearchIndex(config:MeilisearchIndexConfig):Meilisearc
 
   return {
     async initialize(){
-      await acceptedTask("/indexes",{method:"POST",body:JSON.stringify({uid:indexUid,primaryKey:"id"})},"index_already_exists");
+      const existing=await request(`/indexes/${index}`);
+      if(existing.status===404){
+        await acceptedTask("/indexes",{method:"POST",body:JSON.stringify({uid:indexUid,primaryKey:"id"})},"index_already_exists");
+      }else if(!existing.ok){
+        const body=(await existing.text().catch(()=>"")).slice(0,500);
+        throw new Error(`Meilisearch ${existing.status}: ${body}`);
+      }
       await acceptedTask(`/indexes/${index}/settings`,{method:"PATCH",body:JSON.stringify({searchableAttributes:["title","text","file_name","entity_type"],filterableAttributes:["plane_key","tenant_id","entity_type","attachment_id","resource_type","resource_id"],sortableAttributes:["updated_at"]})});
     },
     async upsert(document:SearchDocument){await acceptedTask(`/indexes/${index}/documents`,{method:"POST",body:JSON.stringify([toStored(document)])});},

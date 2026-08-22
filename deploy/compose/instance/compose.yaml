@@ -246,6 +246,7 @@ networks:
   app: {}
   data:
     internal: true
+  signature-egress: {}
   ops:
     internal: true
   # The one deliberate cross-project network. It is created and owned by the

@@ -24,6 +24,10 @@ export async function readProtectedBootstrap(input: ProtectedBootstrapDependenci
   const scope = principalQueryScope(session);
   if (!scope) return Object.freeze({ state: "redirect", location: "/select-context", reason: "context_required" });
   const experienceResponse = await input.readExperience(input.request.clone(), session);
+  // Logout can revoke the server session between the two reads. Treat that
+  // normal race as unauthenticated instead of surfacing a false application
+  // error in the web and Loki logs.
+  if (experienceResponse.status === 401) return Object.freeze({ state: "redirect", location: loginLocation(input.returnTo), reason: "unauthenticated" });
   if (!experienceResponse.ok) throw new Error(`Experience bootstrap failed (${experienceResponse.status})`);
   const bootstrap = parseExperienceBootstrap(await experienceResponse.json());
   if (bootstrap.planeKey !== scope.plane || bootstrap.tenantId !== scope.tenantId || bootstrap.principalId !== scope.principalId) throw new Error("Experience bootstrap does not match the sanitized session context");

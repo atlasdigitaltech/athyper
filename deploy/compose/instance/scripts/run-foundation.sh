@@ -95,4 +95,14 @@ GRANT athyper_trustiam_service TO athyper_runtime;
 GRANT athyper_jobs_service TO athyper_worker;
 SQL
 
+# Reconcile the narrow worker contract independently from the immutable
+# foundation checksum. This runs for both freshly built and existing matching
+# foundations, so operational grants can be repaired without pretending that
+# the original foundation transaction was replayed.
+for plane in studio neon mesh; do
+  psql --no-psqlrc --set ON_ERROR_STOP=1 \
+    --dbname "athyper_${plane}" \
+    --file /athyper/reconciliation/runtime-worker-grants-v1.sql
+done
+
 unset PGPASSWORD

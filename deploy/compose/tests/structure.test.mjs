@@ -53,6 +53,12 @@ test("database role membership is granted only after foundation roles exist", ()
   assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyperapp TO athyper_runtime/u);
   assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyper_trustiam_service TO athyper_runtime/u);
   assert.match(foundation, /apply_plane mesh[\s\S]*GRANT athyper_jobs_service TO athyper_worker/u);
+  assert.match(foundation, /runtime-worker-grants-v1\.sql/u);
+  const workerGrants = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/runtime-worker-grants-v1.sql"), "utf8");
+  assert.match(workerGrants, /GRANT USAGE ON SCHEMA shared, event TO athyper_jobs_service/u);
+  assert.match(workerGrants, /authorization_invalidation_jobs_service_access/u);
+  assert.match(workerGrants, /descriptor_invalidation_jobs_service_access/u);
+  assert.doesNotMatch(workerGrants, /GRANT athyperapp TO athyper_worker/u);
 });
 
 test("MinIO bootstrap has enough memory for concurrent full-stack startup", () => {
