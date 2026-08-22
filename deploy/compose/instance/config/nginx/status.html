@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="color-scheme" content="light">
+  <title>Athyper service unavailable</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f4f6f8;
+      --foreground: #172033;
+      --muted: #5d687b;
+      --border: #d5dce7;
+      --contrast: #151515;
+      --danger: #b42318;
+      --shadow: 0 24px 70px rgba(23,32,51,.13);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: radial-gradient(circle at 50% 0, #fff 0, var(--background) 48%, #f1f4f8 100%);
+      color: var(--foreground);
+      font: 16px/1.5 Geist, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    .card {
+      width: min(900px, 100%);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    header {
+      min-height: 92px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wordmark { width: 176px; height: 44px; color: var(--contrast); }
+    .wordmark [data-plane-brand] { display: none; }
+    body[data-plane="neon"] .wordmark [data-plane-brand="neon"],
+    body[data-plane="mesh"] .wordmark [data-plane-brand="mesh"],
+    body[data-plane="studio"] .wordmark [data-plane-brand="studio"] { display: block; }
+    .availability {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+    .availability-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--contrast); animation: availability-pulse 2.4s ease-in-out infinite; }
+    main { padding: 38px 38px 34px; }
+    .eyebrow { color: var(--contrast); font-size: 13px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    h1 { margin: 9px 0 12px; font-size: clamp(32px, 5vw, 48px); line-height: 1.08; letter-spacing: -.035em; }
+    .message { max-width: 730px; margin: 0; color: var(--muted); font-size: 18px; }
+    .flow { display: grid; grid-template-columns: 1fr minmax(50px,.45fr) 1fr minmax(50px,.45fr) 1fr; align-items: center; margin: 34px 0; }
+    .node {
+      position: relative;
+      z-index: 2;
+      min-height: 92px;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      gap: 7px;
+      padding: 12px 8px;
+      border: 1px solid var(--border);
+      border-radius: 15px;
+      background: var(--surface);
+      text-align: center;
+      font-weight: 720;
+    }
+    .node svg { width: 27px; height: 27px; color: var(--contrast); }
+    .node.gateway { border-color: #9299a6; background: var(--surface-subtle); animation: gateway-breathe 2.8s ease-in-out infinite; }
+    .node.application { border-style: dashed; }
+    .route { position: relative; height: 2px; background: repeating-linear-gradient(90deg,#9199a8 0 7px,transparent 7px 13px); }
+    .route-dot {
+      position: absolute;
+      top: 50%; left: 0;
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: var(--contrast);
+      box-shadow: 0 0 0 5px rgba(21,21,21,.09);
+      transform: translate(-50%,-50%);
+      animation: route-travel 2.6s linear infinite;
+    }
+    .route.blocked { background: repeating-linear-gradient(90deg,#a8aeba 0 7px,transparent 7px 13px); }
+    .route.blocked .route-dot { animation: blocked-travel 2.6s ease-in-out infinite; }
+    .route.blocked::after {
+      content: "\00d7";
+      position: absolute;
+      z-index: 3;
+      top: 50%; left: 50%;
+      width: 24px; height: 24px;
+      display: grid;
+      place-items: center;
+      transform: translate(-50%,-50%);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--danger);
+      font-size: 18px;
+      line-height: 1;
+    }
+    body[data-mode="maintenance"] .route.blocked::after { content: "\2016"; color: var(--contrast); font-size: 13px; font-weight: 800; }
+    .recovery {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      align-items: center;
+      gap: 16px;
+      padding: 17px 19px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-subtle);
+    }
+    .countdown {
+      --progress: 1;
+      width: 44px; height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: conic-gradient(var(--contrast) calc(var(--progress) * 1turn), #dfe3e9 0);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .countdown::before { content: ""; grid-area: 1/1; width: 34px; height: 34px; border-radius: 50%; background: var(--surface); }
+    .countdown span { z-index: 1; }
+    .recovery strong { display: block; margin-bottom: 2px; font-size: 17px; }
+    .recovery p { margin: 0; color: var(--muted); }
+    footer { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-top: 24px; }
+    .actions { display: flex; align-items: center; gap: 12px; }
+    button {
+      min-height: 44px;
+      border: 1px solid var(--contrast);
+      border-radius: 10px;
+      padding: 10px 20px;
+      background: var(--contrast);
+      color: #fff;
+      font: inherit;
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .15s ease, background-color .15s ease;
+    }
+    button:hover { background: #303030; transform: translateY(-1px); }
+    button:focus-visible { outline: 3px solid rgba(21,21,21,.24); outline-offset: 3px; }
+    button[disabled] { cursor: wait; opacity: .7; transform: none; }
+    .reference { color: var(--muted); font-size: 13px; }
+    .reference code { color: var(--foreground); font: 600 13px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    @keyframes route-travel { from { left: 0; opacity: .2; } 15%,85% { opacity: 1; } to { left: 100%; opacity: .2; } }
+    @keyframes blocked-travel { 0% { left: 0; opacity: .2; } 55% { left: 45%; opacity: 1; } 68%,100% { left: 45%; opacity: 0; } }
+    @keyframes gateway-breathe { 0%,100% { box-shadow: 0 0 0 0 rgba(21,21,21,0); } 50% { box-shadow: 0 0 0 8px rgba(21,21,21,.07); } }
+    @keyframes availability-pulse { 0%,100% { opacity: .42; transform: scale(.85); } 50% { opacity: 1; transform: scale(1); } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+    }
+    @media (max-width: 680px) {
+      body { padding: 0; background: var(--surface); }
+      .card { min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; }
+      header { min-height: 82px; padding: 20px 22px; }
+      .wordmark { width: 145px; }
+      .availability span:last-child { display: none; }
+      main { padding: 30px 22px; }
+      .message { font-size: 16px; }
+      .flow { grid-template-columns: 1fr; gap: 8px; margin: 28px 0; }
+      .node { min-height: 74px; grid-template-columns: auto auto; place-content: center; gap: 9px; }
+      .node svg { width: 23px; height: 23px; }
+      .route { width: 2px; height: 28px; justify-self: center; background: repeating-linear-gradient(180deg,#9199a8 0 7px,transparent 7px 13px); }
+      .route-dot { top: 0; left: 50%; animation-name: route-travel-vertical; }
+      .route.blocked .route-dot { animation-name: blocked-travel-vertical; }
+      .route.blocked::after { top: 50%; left: 50%; }
+      footer { align-items: flex-start; flex-direction: column; }
+      @keyframes route-travel-vertical { from { top: 0; opacity: .2; } 15%,85% { opacity: 1; } to { top: 100%; opacity: .2; } }
+      @keyframes blocked-travel-vertical { 0% { top: 0; opacity: .2; } 55% { top: 45%; opacity: 1; } 68%,100% { top: 45%; opacity: 0; } }
+    }
+  </style>
+</head>
+<body data-plane="neon" data-mode="__STATUS_MODE__">
+  <section class="card" aria-labelledby="page-title">
+    <header>
+      <svg id="wordmark" class="wordmark" viewBox="0 0 176 44" role="img" aria-label="Athyper Neon">
+        <g data-plane-brand="neon" fill="currentColor"><path d="M3 22 15 5h14l12 17-12 17H15L3 22Zm12 0 7 9 7-9-7-9-7 9Z"/><text x="52" y="29" font-family="Arial,sans-serif" font-size="20" font-weight="700">NEON</text></g>
+        <g data-plane-brand="mesh" fill="none" stroke="currentColor" stroke-width="3.5"><circle cx="10" cy="22" r="6"/><circle cx="31" cy="11" r="6"/><circle cx="31" cy="33" r="6"/><path d="m15 19 11-6m-11 12 11 6"/><text x="52" y="29" fill="currentColor" stroke="none" font-family="Arial,sans-serif" font-size="20" font-weight="700">MESH</text></g>
+        <g data-plane-brand="studio" fill="currentColor"><path d="M3 7h39v8H23v6h14v7H23v7H3v-8h11v-6H8v-7h6V7H3Z"/><text x="52" y="29" font-family="Arial,sans-serif" font-size="20" font-weight="700">STUDIO</text></g>
+      </svg>
+      <div class="availability"><span class="availability-dot" aria-hidden="true"></span><span>Secure gateway online</span></div>
+    </header>
+    <main>
+      <div id="eyebrow" class="eyebrow">Application unavailable</div>
+      <h1 id="page-title">Service temporarily unavailable.</h1>
+      <p id="message" class="message">The application is not responding yet. The gateway remains online.</p>
+      <div class="flow" aria-label="Connection status">
+        <div class="node">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="5" width="22" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3 24h26M12 24l-1 3h10l-1-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span>You</span>
+        </div>
+        <div class="route"><span class="route-dot"></span></div>
+        <div class="node gateway">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 7v8c0 7-4.5 11.5-11 14-6.5-2.5-11-7-11-14V7l11-4Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m11 16 3 3 7-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Gateway online</span>
+        </div>
+        <div class="route blocked"><span class="route-dot"></span></div>
+        <div class="node application">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="5" y="6" width="22" height="20" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 12h22M10 9h.1M14 9h.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span id="application">Neon unavailable</span>
+        </div>
+      </div>
+      <div class="recovery" aria-live="polite">
+        <div id="countdown" class="countdown" aria-hidden="true"><span id="countdown-value">15</span></div>
+        <div><strong id="notice">Automatic recovery checks are active</strong><p id="detail">No action is required. This page will retry in 15 seconds.</p></div>
+      </div>
+      <footer>
+        <div class="actions"><button type="button" id="retry">Retry now</button></div>
+        <div class="reference">Reference&nbsp; <code id="reference"></code></div>
+      </footer>
+    </main>
+  </section>
+  <script>
+    (() => {
+      const plane = ["neon", "mesh", "studio"].find((value) => location.hostname.toLowerCase().startsWith(`${value}.`)) || "neon";
+      const labels = { neon:"Neon", mesh:"Mesh", studio:"Studio" };
+      const label = labels[plane];
+      const maintenance = document.body.dataset.mode === "maintenance";
+      const retrySeconds = 15;
+      const retry = document.getElementById("retry");
+      const countdown = document.getElementById("countdown");
+      const countdownValue = document.getElementById("countdown-value");
+      document.body.dataset.plane = plane;
+      document.getElementById("wordmark").setAttribute("aria-label", `Athyper ${label}`);
+      document.getElementById("application").textContent = `${label} ${maintenance ? "maintenance" : "unavailable"}`;
+      document.getElementById("eyebrow").textContent = maintenance ? "Planned maintenance" : "Application unavailable";
+      document.getElementById("page-title").textContent = maintenance ? "Planned maintenance in progress." : "Service temporarily unavailable.";
+      document.getElementById("message").textContent = maintenance
+        ? `${label} is temporarily unavailable while planned maintenance is completed. Secure access will resume after final health checks.`
+        : `${label} is not responding yet. The secure gateway remains online and access will resume automatically when the application is healthy.`;
+      document.getElementById("notice").textContent = maintenance ? "Final health checks will restore access" : "Automatic recovery checks are active";
+      document.getElementById("detail").textContent = maintenance ? "Please retry after maintenance is complete." : `No action is required. This page will retry in ${retrySeconds} seconds.`;
+      document.getElementById("reference").textContent = maintenance ? "maintenance" : `outage-${new Date().toISOString().slice(0,16).replace(/[-T:]/g, "")}`;
+      document.title = maintenance ? `${label} - Planned maintenance` : `${label} - Service unavailable`;
+
+      const reload = () => {
+        retry.disabled = true;
+        retry.textContent = "Checking\u2026";
+        document.getElementById("notice").textContent = "Checking application health";
+        location.reload();
+      };
+      retry.addEventListener("click", reload);
+      if (maintenance) {
+        countdown.hidden = true;
+        return;
+      }
+      let remaining = retrySeconds;
+      const update = () => {
+        countdownValue.textContent = String(remaining);
+        countdown.style.setProperty("--progress", String(remaining / retrySeconds));
+        if (remaining === 0) return reload();
+        remaining -= 1;
+      };
+      update();
+      setInterval(update, 1000);
+    })();
+  </script>
+</body>
+</html>

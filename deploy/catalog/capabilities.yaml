@@ -4,6 +4,7 @@ metadata:
   name: athyper-capabilities
 services:
   - { id: platform-ingress, class: platform, lifecycle: long-running, ledger: v2-addition, image: "traefik:v3.6.13", stateful: false, profiles: [platform], presets: [], resources: { memoryMiB: 256, cpu: 0.5 }, backupOwner: source, secrets: [platform-tls-certificate, platform-tls-private-key] }
+  - { id: platform-outage, class: platform, lifecycle: long-running, ledger: v2-addition, image: "nginxinc/nginx-unprivileged:1.27-alpine", stateful: false, profiles: [platform], presets: [], resources: { memoryMiB: 64, cpu: 0.1 }, backupOwner: source, secrets: [] }
   - { id: gateway, class: platform, lifecycle: long-running, ledger: resolved-v1, image: "traefik:v3.6.13", stateful: false, profiles: [], presets: [dev-lite, dev-full, qa-standard, stg-standard, validation-full], resources: { memoryMiB: 256, cpu: 0.5 }, backupOwner: source, secrets: [] }
   - { id: gateway-outage, class: platform, lifecycle: long-running, ledger: resolved-v1, image: "nginxinc/nginx-unprivileged:1.27-alpine", stateful: false, profiles: [], presets: [dev-lite, dev-full, qa-standard, stg-standard, validation-full], resources: { memoryMiB: 128, cpu: 0.1 }, backupOwner: source, secrets: [] }
   - { id: socket-proxy-gateway, class: platform, lifecycle: long-running, ledger: resolved-v1, image: "tecnativa/docker-socket-proxy:0.3.0", stateful: false, profiles: [legacy-discovery], presets: [], resources: { memoryMiB: 64, cpu: 0.1 }, backupOwner: source, secrets: [] }

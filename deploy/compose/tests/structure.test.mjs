@@ -22,6 +22,9 @@ test("shared platform ingress exclusively owns workstation HTTP ports", () => {
   assert.equal(platform.networks["platform-ingress"].name, "athyper-platform-ingress");
   assert.equal(instance.networks["platform-ingress"].external, true);
   assert.equal(instance.networks["platform-ingress"].name, "athyper-platform-ingress");
+  assert.deepEqual(platform.services["platform-outage"].ports ?? [], []);
+  assert.equal(platform.services["platform-outage"].read_only, true);
+  assert.ok(platform.services["platform-outage"].security_opt.includes("no-new-privileges:true"));
 });
 
 test("instance gateway has a unique shared-network alias and no Docker socket", () => {
@@ -36,12 +39,65 @@ test("instance gateway has a unique shared-network alias and no Docker socket", 
 test("platform ingress routes each instance suffix to its isolated gateway", () => {
   const dynamic = read("deploy/compose/platform/ingress/dynamic.yaml");
   for (const id of ["dev", "qa", "stg"]) {
-    assert.equal(dynamic.http.routers[id].service, `gateway-${id}`);
+    assert.equal(dynamic.http.routers[id].service, `gateway-${id}-failover`);
+    assert.deepEqual(dynamic.http.services[`gateway-${id}-failover`].failover, {
+      healthCheck: {}, service: `gateway-${id}`, fallback: "platform-outage",
+    });
     assert.equal(
       dynamic.http.services[`gateway-${id}`].loadBalancer.servers[0].url,
       `http://gateway-${id}:8080`,
     );
+    assert.deepEqual(dynamic.http.services[`gateway-${id}`].loadBalancer.healthCheck, {
+      path: "/ping", port: 8082, interval: "10s", timeout: "3s",
+    });
   }
+  assert.equal(dynamic.http.services["platform-outage"].loadBalancer.servers[0].url, "http://platform-outage:8080");
+});
+
+test("unhealthy browser planes fail over to branded HTML while APIs retain problem JSON", () => {
+  for (const environment of ["dev", "qa", "stg"]) {
+    const dynamic = read(`deploy/compose/instance/config/traefik/${environment}.yaml`);
+    for (const plane of ["neon", "mesh", "studio"]) {
+      assert.equal(dynamic.http.routers[plane].service, `${plane}-failover`);
+      assert.deepEqual(dynamic.http.services[`${plane}-failover`].failover, {
+        healthCheck: {}, service: plane, fallback: "outage",
+      });
+      assert.equal(dynamic.http.services[plane].loadBalancer.healthCheck.path, "/");
+    }
+    assert.equal(dynamic.http.routers.api.service, "api-failover");
+    assert.equal(dynamic.http.services["api-failover"].failover.fallback, "problem");
+    assert.equal(dynamic.http.services.api.loadBalancer.healthCheck.path, "/livez");
+    assert.equal(dynamic.http.services.outage.loadBalancer.servers[0].url, "http://gateway-outage:8080");
+    assert.equal(dynamic.http.services.maintenance.loadBalancer.servers[0].url, "http://gateway-outage:8081");
+    assert.equal(dynamic.http.services.problem.loadBalancer.servers[0].url, "http://gateway-outage:8082");
+    assert.ok(!Object.values(dynamic.http.routers).some(({ service }) => service === "maintenance"));
+  }
+
+  const nginx = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/outage.conf"), "utf8");
+  const page = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/status.html"), "utf8");
+  assert.match(nginx, /listen 8080;[\s\S]*sub_filter '__STATUS_MODE__' 'outage'/u);
+  assert.match(nginx, /listen 8081;[\s\S]*sub_filter '__STATUS_MODE__' 'maintenance'/u);
+  assert.match(nginx, /listen 8082;[\s\S]*default_type application\/problem\+json/u);
+  assert.match(nginx, /Cache-Control "no-store" always/u);
+  assert.match(nginx, /Retry-After "60" always/u);
+  assert.match(page, /studio:"Studio"/u);
+  assert.doesNotMatch(page, /admin:"Studio"/u);
+  assert.match(page, /data-plane-brand="neon"/u);
+  assert.match(page, /data-plane-brand="mesh"/u);
+  assert.match(page, /data-plane-brand="studio"/u);
+  assert.match(page, /--contrast: #151515/u);
+  assert.match(page, /@media \(prefers-reduced-motion: reduce\)/u);
+  assert.match(page, /@keyframes blocked-travel/u);
+  assert.match(page, /const retrySeconds = 15/u);
+});
+
+test("platform outage page uses the same self-contained monochrome recovery design", () => {
+  const page = readFileSync(join(repoRoot, "deploy/compose/platform/outage/status.html"), "utf8");
+  assert.match(page, /aria-label="Athyper"/u);
+  assert.match(page, /--contrast:#151515/u);
+  assert.match(page, /Platform gateway online/u);
+  assert.match(page, /@media \(prefers-reduced-motion:reduce\)/u);
+  assert.doesNotMatch(page, /https?:\/\//u);
 });
 
 test("database role membership is granted only after foundation roles exist", () => {

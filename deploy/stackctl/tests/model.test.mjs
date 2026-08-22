@@ -18,7 +18,7 @@ test("catalog accounts for all 39 resolved Stack v1 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
   assert.equal(model.services.filter((service) => service.ledger === "resolved-v1").length, 39);
   assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
-  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 5);
+  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 6);
 });
 
 test("DEV render is project-scoped and uses the laptop-32 envelope", () => {

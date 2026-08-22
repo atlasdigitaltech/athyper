@@ -43,6 +43,25 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  platform-outage:
+    image: nginxinc/nginx-unprivileged:1.27-alpine
+    restart: unless-stopped
+    volumes:
+      - ./outage/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./outage/status.html:/usr/share/nginx/html/status.html:ro
+    networks: [platform-ingress]
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/healthz]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    read_only: true
+    tmpfs: [/tmp, /var/cache/nginx, /var/run]
+    mem_limit: 64m
+    cpus: 0.1
+
 networks:
   platform-ingress:
     # A fixed name is intentional only for this controller-owned cross-project
