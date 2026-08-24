@@ -75,7 +75,34 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
   </AppearanceProvider>;
 }
 
-function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) { return <AppearanceContext.Provider value={profile}>{children}</AppearanceContext.Provider>; }
+function AppearanceProvider({ profile, children }: { readonly profile: ExperienceProfile; readonly children: ReactNode }) {
+  useEffect(() => {
+    const root = document.documentElement;
+    const dark = window.matchMedia("(prefers-color-scheme: dark)");
+    const contrast = window.matchMedia("(forced-colors: active), (prefers-contrast: more)");
+    const apply = () => {
+      const mode = resolveProfileColorMode(profile.appearanceMode, dark.matches, contrast.matches);
+      root.dataset.theme = mode;
+      root.dataset.density = profile.densityCode;
+      root.style.colorScheme = mode === "dark" || mode === "high-contrast" ? "dark" : "light";
+    };
+    apply();
+    if (profile.appearanceMode !== "system") return;
+    dark.addEventListener("change", apply);
+    contrast.addEventListener("change", apply);
+    return () => {
+      dark.removeEventListener("change", apply);
+      contrast.removeEventListener("change", apply);
+    };
+  }, [profile.appearanceMode, profile.densityCode]);
+  return <AppearanceContext.Provider value={profile}>{children}</AppearanceContext.Provider>;
+}
+
+export function resolveProfileColorMode(appearanceMode: ExperienceProfile["appearanceMode"], systemDark = false, systemHighContrast = false): "light" | "dark" | "high-contrast" {
+  if (appearanceMode === "high_contrast" || (appearanceMode === "system" && systemHighContrast)) return "high-contrast";
+  if (appearanceMode === "dark" || (appearanceMode === "system" && systemDark)) return "dark";
+  return "light";
+}
 function SessionProvider({ session, lifecycle, children }: { readonly session: SanitizedSession; readonly lifecycle: PrincipalQueryLifecycle; readonly children: ReactNode }) {
   const scope = principalQueryScope(session);
   const identity = useMemo(() => Object.freeze({ state: session.state, ...(scope ? { scope } : {}) }), [session.state, scope?.plane, scope?.tenantId, scope?.principalId, scope?.authEpoch]);

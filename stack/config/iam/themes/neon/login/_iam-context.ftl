@@ -15,8 +15,8 @@
   <#assign iamPlane = "neon">
 <#elseif iamClientId?contains("mesh")>
   <#assign iamPlane = "mesh">
-<#elseif iamClientId?contains("admin") || iamClientId?contains("platform")>
-  <#assign iamPlane = "admin">
+<#elseif iamClientId?contains("studio") || iamClientId?contains("admin") || iamClientId?contains("platform")>
+  <#assign iamPlane = "studio">
 <#else>
   <#assign iamLegacyPlane = "">
   <#if request?? && request.getParameter("athyper_plane")??>
@@ -24,24 +24,33 @@
   </#if>
   <#if iamLegacyPlane == "neon" || iamLegacyPlane == "mesh">
     <#assign iamPlane = iamLegacyPlane>
-  <#elseif iamLegacyPlane == "admin" || iamLegacyPlane == "platform-control">
-    <#assign iamPlane = "admin">
+  <#elseif iamLegacyPlane == "studio" || iamLegacyPlane == "admin" || iamLegacyPlane == "platform-control">
+    <#assign iamPlane = "studio">
   </#if>
 </#if>
 
 <#assign iamProductName = "Athyper">
-<#assign iamBrowserTitle = "Athyper Studio - Business Technology Platform">
+<#assign iamBrowserTitle = "Studio — Business Technology Platform">
+<#assign iamDescriptor = "Business Technology Platform">
+<#assign iamStoryHeading = "Build and manage Athyper.">
+<#assign iamStoryCopy = "Manage access, settings, data, and platform operations.">
 <#if iamPlane == "neon">
   <#assign iamProductName = "Neon">
-  <#assign iamBrowserTitle = "Athyper Neon - Business Operating Platform">
+  <#assign iamBrowserTitle = "Neon — Business Operating Platform">
+  <#assign iamDescriptor = "Business Operating Platform">
+  <#assign iamStoryHeading = "Run your business.">
+  <#assign iamStoryCopy = "Manage finance, operations, and daily work in one place.">
 <#elseif iamPlane == "mesh">
   <#assign iamProductName = "Mesh">
-  <#assign iamBrowserTitle = "Athyper Mesh - Business Collaboration Network">
-<#elseif iamPlane == "admin">
+  <#assign iamBrowserTitle = "Mesh — Business Collaboration Network">
+  <#assign iamDescriptor = "Business Collaboration Network">
+  <#assign iamStoryHeading = "Work better together.">
+  <#assign iamStoryCopy = "Connect with buyers, suppliers, and partners.">
+<#elseif iamPlane == "studio">
   <#assign iamProductName = "Studio">
-  <#assign iamBrowserTitle = "Athyper Studio - Business Technology Platform">
+  <#assign iamBrowserTitle = "Studio — Business Technology Platform">
 </#if>
 
 <#function iamTitle pageTitle>
-  <#return iamBrowserTitle>
+  <#return pageTitle + " — " + iamProductName>
 </#function>

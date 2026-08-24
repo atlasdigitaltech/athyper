@@ -7,7 +7,7 @@ import { importSpecifiers } from "./frontend-spine-governance.mjs";
 const root = resolve(new URL("../..", import.meta.url).pathname.replace(/^\/(?:[A-Za-z]:)/, (value) => value.slice(1)));
 const foundation = join(root, "packages", "platform", "foundation");
 const packageRules = {
-  brand: { allowed: [] }, theme: { allowed: ["react"] }, icons: { allowed: ["react"] },
+  brand: { allowed: [] }, theme: { allowed: ["react", "@athyper/platform-brand"] }, icons: { allowed: ["react"] },
   ui: { allowed: ["react", "@athyper/platform-theme"] },
   "surface-kit": { allowed: ["react", "@athyper/platform-ui"] },
 };
@@ -57,7 +57,7 @@ for (const plane of ["neon", "mesh", "studio"]) {
 const authCss = readFileSync(join(root, "packages", "platform", "iam", "identity-gate", "src", "styles.css"), "utf8");
 const authSource = readFileSync(join(root, "packages", "platform", "iam", "identity-gate", "src", "index.tsx"), "utf8");
 if (/#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/i.test(authCss)) violations.push("Identity-gate CSS contains literal colors instead of semantic theme tokens");
-if (!authSource.includes("brand.wordmark.src") || authSource.includes("a-auth-wordmark")) violations.push("Identity gate does not render registered product wordmarks");
+if (!authSource.includes("brand.identityLockup.src") || authSource.includes("a-auth-wordmark")) violations.push("Identity gate does not render registered pre-authentication plane lockups");
 if (/--a-auth-/.test(readFileSync(join(root, "packages", "platform", "foundation", "theme", "src", "styles.css"), "utf8"))) violations.push("Global theme exposes component-specific authentication tokens");
 if (/\.a-identity-/.test(readFileSync(join(root, "packages", "platform", "foundation", "theme", "src", "styles.css"), "utf8"))) violations.push("Global theme owns identity-gate selectors");
 if (!authCss.includes('@import "@athyper/platform-surface-kit/styles.css"')) violations.push("Identity gate does not compose the shared surface-kit stylesheet");
@@ -67,6 +67,7 @@ const iamLoginCss = readFileSync(join(root, "stack", "config", "iam", "themes", 
 const iamTokenCss = readFileSync(join(root, "stack", "config", "iam", "themes", "neon", "login", "resources", "css", "iam.tokens.css"), "utf8");
 if (/#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/i.test(iamLoginCss)) violations.push("Keycloak login composition contains literal colors instead of active semantic theme tokens");
 if (!iamTokenCss.includes("GENERATED from @athyper/platform-theme/src/tokens.ts")) violations.push("Keycloak token sheet is not generated from the active theme authority");
+if (!iamTokenCss.includes("--a-theme-family:atlas-modern") || !iamTokenCss.includes("--a-primary: #234B84")) violations.push("Keycloak token sheet does not default to Atlas Modern");
 for (const token of ["background", "border", "contrast", "contrast-foreground"]) if (!iamLoginCss.includes(`var(--a-${token})`)) violations.push(`Keycloak login surface does not consume universal --a-${token}`);
 
 if (violations.length) { console.error(["Foundation Phase 1 policy failed:", ...violations.map((item) => `- ${item}`)].join("\n")); process.exitCode = 1; }

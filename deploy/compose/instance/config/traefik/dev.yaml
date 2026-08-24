@@ -3,6 +3,8 @@ http:
     iam: { rule: Host(`iam.dev.athyper.test`), entryPoints: [web], service: iam }
     api: { rule: Host(`api.dev.athyper.test`), entryPoints: [web], service: api-failover }
     neon: { rule: Host(`neon.dev.athyper.test`), entryPoints: [web], service: neon-failover }
+    neon-maintenance-preview: { rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__maintenance-preview`)", entryPoints: [web], service: maintenance, priority: 10000 }
+    neon-outage-preview: { rule: "Host(`neon.dev.athyper.test`) && PathPrefix(`/__outage-preview`)", entryPoints: [web], service: outage, priority: 10000 }
     mesh: { rule: Host(`mesh.dev.athyper.test`), entryPoints: [web], service: mesh-failover }
     studio: { rule: Host(`studio.dev.athyper.test`), entryPoints: [web], service: studio-failover }
     mail: { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }

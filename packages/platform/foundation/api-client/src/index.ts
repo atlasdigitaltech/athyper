@@ -4,6 +4,7 @@ export { parseApiProblem } from "@athyper/contract-platform-api";
 export * from "./bootstrap";
 export * from "./work-context";
 export * from "./operating-organization";
+export * from "./network-account";
 export * from "./verification";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";

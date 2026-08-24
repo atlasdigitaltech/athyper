@@ -518,9 +518,15 @@ importers:
 
   packages/planes/mesh/shell:
     dependencies:
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/api-client
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../platform/shell/shell
+      '@athyper/platform-shell-app-foundation':
+        specifier: workspace:*
+        version: link:../../../platform/shell/app-foundation
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1001,6 +1007,10 @@ importers:
         version: 6.0.3
 
   packages/platform/foundation/theme:
+    dependencies:
+      '@athyper/platform-brand':
+        specifier: workspace:*
+        version: link:../brand
     devDependencies:
       '@athyper/config':
         specifier: workspace:*

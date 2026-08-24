@@ -10,8 +10,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex, nofollow" />
   <title>${iamTitle("Register Security Key")}</title>
-  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
-  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/neon-icon.png" />
+  <link rel="icon" type="image/png" href="${url.resourcesPath}/img/athyper-favicon.png" />
+  <link rel="shortcut icon" type="image/png" href="${url.resourcesPath}/img/athyper-favicon.png" />
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>

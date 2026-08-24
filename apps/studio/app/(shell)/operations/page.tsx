@@ -1,1 +1,5 @@
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "Operations" };
+
 export default function OperationsPage() { return <section aria-labelledby="page-title"><p>Platform Operations</p><h1 id="page-title">Operations</h1><p>Operational control capabilities will arrive through governed vertical slices.</p></section>; }

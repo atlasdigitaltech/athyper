@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { canAccessRoute, definePlaneRoutes, deriveBreadcrumbs, deriveShellNavigation, selectLandingRoute } from "../../packages/platform/shell/shell/src/core";
 
@@ -46,4 +47,69 @@ test("breadcrumbs preserve workspace and permitted route ancestry", () => {
 test("rejects unsafe, duplicate, and traversing route declarations", () => {
   assert.throws(() => definePlaneRoutes([{ id: "bad.route", moduleCode: "acc", href: "//evil" as `/${string}`, label: "Bad", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }]));
   assert.throws(() => definePlaneRoutes([{ id: "same.route", moduleCode: "acc", href: "/x", label: "X", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }, { id: "same.route", moduleCode: "buy", href: "/y", label: "Y", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }]));
+});
+
+test("shared shell keeps global actions and breadcrumbs in compact separate rows", async () => {
+  const [source, styles] = await Promise.all([
+    readFile(new URL("../../packages/platform/shell/shell/src/client.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../../packages/platform/shell/shell/src/styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(source, /<BusinessContext /);
+  assert.match(source, /className="athyper-shell__rail-brand"/);
+  assert.match(source, /className="athyper-shell__mobile-brand"/);
+  assert.match(source, /className="athyper-shell__product-wordmark"/);
+  assert.match(source, /className="athyper-shell__plane-badge"/);
+  assert.match(source, /className="athyper-shell__rail-toggle"/);
+  assert.match(source, /aria-label=\{collapsed \? "Expand navigation" : "Collapse navigation"\}/);
+  assert.match(source, /className="athyper-shell__brand-tooltip"/);
+  assert.match(source, /className="athyper-shell__navigation-peek"/);
+  assert.match(source, /className="athyper-shell__rail-status"/);
+  assert.match(source, /className="athyper-shell__nav-label"/);
+  assert.match(source, /onPointerEnter=/);
+  assert.match(source, /min-width: 761px\) and \(max-width: 1100px/);
+  assert.match(source, /athyper_shell_collapsed=\$\{next\}/);
+  assert.match(source, /aria-label=\{`\$\{applicationName\} home`\}/);
+  assert.doesNotMatch(source, /title=\{`\$\{applicationName\} home`\}/);
+  assert.doesNotMatch(source, /className="athyper-shell__brand"/);
+  assert.doesNotMatch(source, /<ContextSwitcher /);
+  assert.match(source, /Switch your authorized workspace/);
+  assert.match(source, /fetch\("\/api\/auth\/contexts"/);
+  assert.match(source, /<HeaderActions navigation=\{navigation\}/);
+  for (const action of ["search", "notifications", "inbox", "agent"]) {
+    assert.match(source, new RegExp(`kind="${action}"`));
+  }
+  assert.match(source, /className="athyper-shell__breadcrumbs"/);
+  assert.match(styles, /--shell-topbar:3\.5rem/);
+  assert.match(styles, /--shell-crumbs:2\.25rem/);
+  assert.match(styles, /athyper-shell__rail-brand\{[^}]*height:var\(--shell-topbar\)/);
+  assert.match(styles, /athyper-shell__rail-toggle\{[^}]*height:var\(--shell-crumbs\)/);
+  assert.match(styles, /product-wordmark img\{position:static;[^}]*object-fit:contain;object-position:left center/);
+  assert.match(styles, /\.athyper-shell__action-panel/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__rail-brand/);
+  assert.match(styles, /athyper-shell__mobile-brand\{display:flex/);
+  assert.match(styles, /athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:none/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:block/);
+  assert.match(styles, /max-width:760px.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame.*display:none/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__plane-badge\{display:grid/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__rail-toggle\{justify-content:center/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__workspace\+\.athyper-shell__workspace/);
+  assert.match(styles, /athyper-shell__navigation-peek\{/);
+  assert.match(styles, /athyper-navigation-peek-in/);
+  assert.match(styles, /athyper-shell__rail-status\{/);
+  assert.match(styles, /max-width:760px.*athyper-shell__navigation-peek\{display:none/);
+  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__rail-toggle/);
+  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__brand-mark-frame/);
+  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__navigation-peek/);
+});
+
+test("plane shells prefer named context and use outlined product lockups", async () => {
+  const sources = await Promise.all(["neon", "mesh", "studio"].map((plane) => readFile(new URL(`../../packages/planes/${plane}/shell/src/index.tsx`, import.meta.url), "utf8")));
+  for (const source of sources) {
+    assert.match(source, /planeWordmarkSrc="\/brand\/(neon|mesh|studio)\/identity-lockup\.svg"/);
+  }
+  for (const source of sources.slice(1)) {
+    assert.match(source, /bootstrap\.tenant\?\.displayName \?\? bootstrap\.tenantId/);
+    assert.match(source, /bootstrap\.identity\?\.displayName \?\? principalId/);
+  }
 });

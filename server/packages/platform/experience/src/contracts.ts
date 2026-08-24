@@ -82,6 +82,31 @@ export interface NeonOperatingOrganizationCatalog {
   readonly organizations: readonly NeonOperatingOrganization[];
 }
 
+export interface MeshNetworkAccount {
+  readonly networkAccountId: string; readonly code: string; readonly displayName: string;
+  readonly legalName?: string; readonly role: "buyer" | "supplier" | "both";
+  readonly countryCode?: string; readonly defaultCurrency?: string;
+  readonly source: "neon_projection" | "mesh"; readonly relatedAccountCount: number;
+}
+export interface MeshNetworkAccountCatalog {
+  readonly schemaVersion: 1; readonly revision: string; readonly tenantId: string;
+  readonly accounts: readonly MeshNetworkAccount[];
+}
+
+export const meshNetworkAccountCatalogSchema = {
+  $id: "https://schemas.athyper.dev/mesh/network-account-catalog.v1.json",
+  type: "object", additionalProperties: false,
+  required: ["schemaVersion", "revision", "tenantId", "accounts"],
+  properties: {
+    schemaVersion: { const: 1 }, revision: { type: "string", minLength: 16, maxLength: 128 }, tenantId: { type: "string", format: "uuid" },
+    accounts: { type: "array", items: { type: "object", additionalProperties: false, required: ["networkAccountId", "code", "displayName", "role", "source", "relatedAccountCount"], properties: {
+      networkAccountId: { type: "string", format: "uuid" }, code: { type: "string", minLength: 3, maxLength: 63 }, displayName: { type: "string", minLength: 1, maxLength: 256 }, legalName: { type: "string", minLength: 1, maxLength: 256 },
+      role: { enum: ["buyer", "supplier", "both"] }, countryCode: { type: "string", pattern: "^[A-Z]{2}$" }, defaultCurrency: { type: "string", pattern: "^[A-Z]{3}$" },
+      source: { enum: ["neon_projection", "mesh"] }, relatedAccountCount: { type: "integer", minimum: 1, maximum: 1000 },
+    } } },
+  },
+} as const;
+
 export const experienceBootstrapSchema = {
   $id: "https://schemas.athyper.dev/platform/experience-bootstrap.v1.json",
   type: "object",

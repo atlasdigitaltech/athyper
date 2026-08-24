@@ -1,8 +1,8 @@
 <#include "_iam-head.ftl">
 <script>
 (function () {
-  var fallbackTheme = "neon-base";
-  var allowedThemes = ["neon-base"];
+  var fallbackTheme = "atlas-modern";
+  var allowedThemes = ["atlas-modern"];
 
   function applyTheme(value) {
     if (allowedThemes.indexOf(value) === -1) return false;
@@ -38,9 +38,8 @@
   if (!themeApplied) applyTheme(fallbackTheme);
 
   document.documentElement.setAttribute("data-plane", "${iamPlane}");
+  document.documentElement.setAttribute("data-theme-family", fallbackTheme);
   document.documentElement.setAttribute("data-athyper-product", "${iamProductName}");
-
-  document.title = "${iamBrowserTitle}";
 
 })();
 </script>

@@ -71,9 +71,25 @@ export function NotFoundBoundary({ applicationName = "Athyper" }: { readonly app
 
 export function EmptyStateBoundary({ title = "Nothing here yet", description = "There is no content to show.", action }: { readonly title?: string; readonly description?: string; readonly action?: ReactNode }) { return <section style={styles.empty} aria-labelledby="empty-state-title"><h2 id="empty-state-title" style={styles.emptyTitle}>{title}</h2><p style={styles.description}>{description}</p>{action}</section>; }
 
-export function AppLoadingBoundary({ kind = "bootstrap", label }: { readonly kind?: "bootstrap" | "public" | "refresh"; readonly label?: string }) {
-  if (kind === "refresh") return <div role="status" aria-live="polite" aria-atomic="true" style={styles.refresh}><span style={styles.refreshMark} aria-hidden="true" />{label ?? "Updating content"}</div>;
-  return <main style={styles.loadingPage} aria-busy="true" aria-labelledby="loading-title"><section style={kind === "public" ? styles.publicSkeleton : styles.shellSkeleton}><h1 id="loading-title" style={styles.srOnly}>{label ?? (kind === "public" ? "Loading sign in" : "Loading application")}</h1><div style={styles.skeletonLine} /><div style={styles.skeletonTitle} /><div style={styles.skeletonBlock} /><span role="status" aria-live="polite" style={styles.srOnly}>{label ?? "Loading"}</span></section></main>;
+export function AppLoadingBoundary({ kind = "bootstrap", label, collapsed = false, applicationName = "Athyper", planeDescriptor = "Business workspace", planeIconSrc, planeWordmarkSrc }: { readonly kind?: "bootstrap" | "public" | "refresh"; readonly label?: string; readonly collapsed?: boolean; readonly applicationName?: string; readonly planeDescriptor?: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string }) {
+  const status = label ?? (kind === "public" ? "Loading sign in" : kind === "refresh" ? "Updating content" : "Loading application");
+  if (kind === "refresh") return <section className="a-app-loader a-app-loader--content" aria-busy="true" aria-labelledby="content-loading-title">
+    <h1 id="content-loading-title" style={styles.srOnly}>{status}</h1>
+    <div className="a-app-loader__eyebrow" aria-hidden="true" />
+    <div className="a-app-loader__title" aria-hidden="true" />
+    <div className="a-app-loader__summary" aria-hidden="true" />
+    <div className="a-app-loader__grid" aria-hidden="true"><span /><span /><span /></div>
+    <span role="status" aria-live="polite" style={styles.srOnly}>{status}</span>
+  </section>;
+  if (kind === "public") return <main className="a-app-loader a-app-loader--public" aria-busy="true" aria-labelledby="loading-title">
+    <section className="a-app-loader__public-card"><h1 id="loading-title" style={styles.srOnly}>{status}</h1><div className="a-app-loader__eyebrow" /><div className="a-app-loader__title" /><div className="a-app-loader__field" /><div className="a-app-loader__field" /><span role="status" aria-live="polite" style={styles.srOnly}>{status}</span></section>
+  </main>;
+  return <main className="a-app-loader a-app-loader--bootstrap" data-collapsed={collapsed} aria-busy="true" aria-labelledby="loading-title">
+    <h1 id="loading-title" style={styles.srOnly}>{status}</h1>
+    <aside className="a-app-loader__rail" aria-hidden="true"><div className="a-app-loader__rail-brand"><span className="a-app-loader__brand-primary">{collapsed ? (planeIconSrc ? <img className="a-app-loader__brand-icon" src={planeIconSrc} alt="" /> : <b>{applicationName.slice(0,1)}</b>) : (planeWordmarkSrc ? <img className="a-app-loader__brand-wordmark" src={planeWordmarkSrc} alt="" /> : <b>{applicationName}</b>)}</span><small><span>{planeDescriptor}</span><b>{collapsed ? "›" : "‹"}</b></small></div><div className="a-app-loader__rail-nav"><span /><span /><span /></div></aside>
+    <section className="a-app-loader__shell" aria-hidden="true"><header><span /><span /></header><div className="a-app-loader__crumb" /><div className="a-app-loader__canvas"><div className="a-app-loader__eyebrow" /><div className="a-app-loader__title" /><div className="a-app-loader__summary" /><div className="a-app-loader__grid"><span /><span /><span /></div></div></section>
+    <span role="status" aria-live="polite" style={styles.srOnly}>{status}</span>
+  </main>;
 }
 
 export async function clearLocalPrincipalState(): Promise<void> { const client = getBrowserQueryClient(); await client.cancelQueries(); client.clear(); }
@@ -90,19 +106,11 @@ const styles = {
   description: { margin: "12px 0 0", color: "#536176", fontSize: "16px", lineHeight: 1.6 } satisfies CSSProperties,
   requestId: { margin: "20px 0 0", color: "#536176", fontSize: "13px" } satisfies CSSProperties,
   actions: { display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "24px" } satisfies CSSProperties,
-  primary: { minHeight: "44px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 18px", border: "1px solid #175cd3", borderRadius: "8px", color: "#fff", background: "#175cd3", font: `600 15px ${baseFont}`, textDecoration: "none", cursor: "pointer" } satisfies CSSProperties,
+  primary: { minHeight: "44px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 18px", border: "1px solid var(--a-primary)", borderRadius: "8px", color: "var(--a-primary-foreground)", background: "var(--a-primary)", font: `600 15px ${baseFont}`, textDecoration: "none", cursor: "pointer" } satisfies CSSProperties,
   secondary: { minHeight: "44px", padding: "0 18px", border: "1px solid #9aa7b8", borderRadius: "8px", color: "#18212f", background: "#fff", font: `600 15px ${baseFont}`, cursor: "pointer" } satisfies CSSProperties,
   notice: { marginTop: "20px", padding: "12px 16px", borderRadius: "8px", background: "#fff8e8", color: "#634400" } satisfies CSSProperties,
   noticeTitle: { margin: 0, fontWeight: 700 } satisfies CSSProperties,
   empty: { minHeight: "240px", display: "grid", alignContent: "center", justifyItems: "center", padding: "24px", textAlign: "center", fontFamily: baseFont } satisfies CSSProperties,
   emptyTitle: { margin: 0, fontSize: "24px" } satisfies CSSProperties,
-  loadingPage: { minHeight: "100vh", padding: "24px", boxSizing: "border-box", background: "#f5f7fa", fontFamily: baseFont } satisfies CSSProperties,
-  shellSkeleton: { minHeight: "520px", maxWidth: "1120px", margin: "0 auto", padding: "28px", boxSizing: "border-box", borderRadius: "16px", background: "#fff" } satisfies CSSProperties,
-  publicSkeleton: { minHeight: "420px", maxWidth: "480px", margin: "8vh auto 0", padding: "32px", boxSizing: "border-box", borderRadius: "16px", background: "#fff" } satisfies CSSProperties,
-  skeletonLine: { width: "96px", height: "14px", borderRadius: "7px", background: "#e4e9f0" } satisfies CSSProperties,
-  skeletonTitle: { width: "min(70%, 360px)", height: "34px", marginTop: "24px", borderRadius: "8px", background: "#dce3ec" } satisfies CSSProperties,
-  skeletonBlock: { width: "100%", height: "240px", marginTop: "32px", borderRadius: "12px", background: "#edf1f5" } satisfies CSSProperties,
-  refresh: { minHeight: "44px", display: "inline-flex", alignItems: "center", gap: "10px", color: "#536176", fontFamily: baseFont } satisfies CSSProperties,
-  refreshMark: { width: "10px", height: "10px", borderRadius: "50%", background: "#175cd3" } satisfies CSSProperties,
   srOnly: { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 } satisfies CSSProperties,
 };

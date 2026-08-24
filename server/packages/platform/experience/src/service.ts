@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { EffectiveFeature, ExperienceBootstrap, ExperienceModule, ExperienceProfile, ExperienceWorkspace, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
+import type { EffectiveFeature, ExperienceBootstrap, ExperienceModule, ExperienceProfile, ExperienceWorkspace, MeshNetworkAccountCatalog, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
 import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceRepositoryProvider } from "./ports.js";
 
 export class ExperienceAccessError extends Error {
@@ -103,6 +103,17 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         return [{id:organization.id,code:organization.code,displayName:organization.displayName,domain:organization.domain,...(organization.parentId?{parentId:organization.parentId}:{}),path:organization.path,capabilities:operatingOrganizationCapabilities(organization.domain),procurementProfileConfigured:organization.procurementProfileConfigured,salesProfileConfigured:organization.salesProfileConfigured,companyAssignments:Object.freeze(assignments.map((assignment)=>({companyCodeId:assignment.companyCodeId,participationRole:assignment.participationRole,effectiveFrom:assignment.effectiveFrom,...(assignment.effectiveUntil?{effectiveUntil:assignment.effectiveUntil}:{})}))),defaults:Object.freeze({...(organization.leadCompanyCodeId&&permittedCompanies.has(organization.leadCompanyCodeId)?{leadCompanyCodeId:organization.leadCompanyCodeId}:{}),...(organization.bookingCompanyCodeId&&permittedCompanies.has(organization.bookingCompanyCodeId)?{bookingCompanyCodeId:organization.bookingCompanyCodeId}:{}),...(organization.invoicingCompanyCodeId&&permittedCompanies.has(organization.invoicingCompanyCodeId)?{invoicingCompanyCodeId:organization.invoicingCompanyCodeId}:{}),...(organization.defaultCurrency?{currency:organization.defaultCurrency}:{})})}];
       });
       return Object.freeze({schemaVersion:1,revision:revision({tenantId:context.tenantId,effectiveAt:at.toISOString(),auth:authorizationRevision(context),rows:visible}),tenantId:context.tenantId,effectiveAt:at.toISOString(),organizations:Object.freeze(visible)});
+    },
+    async meshNetworkAccounts(context: VerifiedRequestContext): Promise<MeshNetworkAccountCatalog> {
+      assertSnapshotBoundToContext(context);
+      if(context.planeKey!=="mesh")deny("EXPERIENCE_MESH_CONTEXT_REQUIRED","Network accounts are available only in Mesh");
+      const repository=options.repositories.require("mesh"),rows=await repository.readNetworkAccounts(context),scopes=context.permissions.authorizationScopes;
+      const tenantWide=scopes.some((scope)=>scope.tenantWide),accountIds=new Set(scopes.flatMap((scope)=>scope.networkMembershipIds));
+      const visible=rows.filter((row)=>tenantWide||accountIds.has(row.id));
+      const relatedCounts=new Map<string,number>();
+      for(const row of visible){const key=row.canonicalPartyId??row.id;relatedCounts.set(key,(relatedCounts.get(key)??0)+1);}
+      const accounts=visible.map((row)=>Object.freeze({networkAccountId:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency}:{}),source:row.source,relatedAccountCount:relatedCounts.get(row.canonicalPartyId??row.id)??1}));
+      return Object.freeze({schemaVersion:1,revision:revision({tenantId:context.tenantId,auth:authorizationRevision(context),rows:visible}),tenantId:context.tenantId,accounts:Object.freeze(accounts)});
     },
   });
 }

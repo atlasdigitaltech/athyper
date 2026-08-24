@@ -1,233 +1,143 @@
 #!/usr/bin/env tsx
-/**
- * Verify generated brand targets are current.
- *
- * Run:
- *   pnpm brand:verify
- */
-
+/** Verify the active platform brand registry and every deployed browser target. */
 import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ATLAS_MODERN_BRAND, BRAND_PLANES, getPlaneBrand } from "../../packages/platform/foundation/brand/src/index";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "../..");
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const failures: string[] = [];
 
-const brandSrc = path.join(repoRoot, "packages/planes/neon/brand/src");
-const brandDist = path.join(repoRoot, "packages/shared/ui-platform/brand/dist");
-const kcLogin = path.join(repoRoot, "stack/config/iam/themes/neon/login");
-const kcImg = path.join(kcLogin, "resources/img");
-
-const APP_TARGETS = {
-  neon:   "apps/neon/public/brand",
-  mesh:   "apps/mesh/public/brand",
-  studio: "apps/studio/public/brand",
-} as const;
-
-const PUBLIC_OUTPUT_FILES = {
-  wordmarkBlack: "wordmark-black.png",
-  wordmarkWhite: "wordmark-white.png",
-  wordmarkOnBlack: "wordmark-on-black.png",
-  wordmarkOnWhite: "wordmark-on-white.png",
-  icon: "icon.png",
-  appIcon: "appicon.png",
-  favicon: "favicon.png",
-} as const;
-
-type ProductCode = keyof typeof APP_TARGETS;
-type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
-
-const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:   "packages/planes/neon/brand/src",
-  mesh:   "packages/planes/mesh/brand/src",
-  studio: "packages/planes/studio/brand/src",
-};
-
-interface KeycloakBrandManifest {
-  logoFiles: {
-    primary: string;
-    icon: string;
-    [key: string]: string;
-  };
+async function read(relative: string): Promise<Buffer> {
+  return fs.readFile(path.join(repoRoot, relative));
 }
 
-interface AppBrandManifest {
-  productCode: ProductCode;
-  productName: string;
-  descriptor: string;
-  publicAssets: Record<PublicAssetKey, string>;
+async function text(relative: string): Promise<string> {
+  return fs.readFile(path.join(repoRoot, relative), "utf8");
 }
 
-async function sha256(file: string): Promise<string> {
-  const buf = await fs.readFile(file);
-  return crypto.createHash("sha256").update(buf).digest("hex");
-}
-
-function hashString(value: string): string {
-  return crypto.createHash("sha256").update(value).digest("hex");
-}
-
-async function exists(p: string): Promise<boolean> {
+async function exists(relative: string): Promise<boolean> {
   try {
-    await fs.access(p);
+    await fs.access(path.join(repoRoot, relative));
     return true;
   } catch {
     return false;
   }
 }
 
-function generatedHeader(): string[] {
-  return [
-    `<#-- Generated from packages/planes/neon/brand/src/ -->`,
-    `<#-- DO NOT EDIT DIRECTLY - run: pnpm brand:refresh -->`,
-  ];
+function sha256(value: Buffer): string {
+  return crypto.createHash("sha256").update(value).digest("hex");
 }
 
-async function expectedBrandLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
-  return [
-    ...generatedHeader(),
-    `<div class="kc-brand-logo">`,
-    `  <img src="\${url.resourcesPath}/img/neon-${manifest.logoFiles.primary}" alt="Neon — Business Operating Platform" />`,
-    `</div>`,
-    "",
-  ].join("\n");
-}
-
-async function expectedMobileLogoFtl(manifest: KeycloakBrandManifest): Promise<string> {
-  return [
-    ...generatedHeader(),
-    `<div class="kc-mobile-logo">`,
-    `  <img src="\${url.resourcesPath}/img/neon-${manifest.logoFiles.icon}" width="24" height="24" alt="" />`,
-    `  <span>Neon</span>`,
-    `</div>`,
-    "",
-  ].join("\n");
-}
-
-function publicUrl(file: string): string {
-  return `/brand/${file}`;
-}
-
-async function verifyKeycloak(failures: string[]): Promise<void> {
-  const manifest = JSON.parse(
-    await fs.readFile(path.join(brandSrc, "manifest.json"), "utf8"),
-  ) as KeycloakBrandManifest;
-
-  for (const file of Object.values(manifest.logoFiles)) {
-    const src = path.join(brandSrc, file);
-    const dest = path.join(kcImg, `neon-${file}`);
-    if (!(await exists(dest))) {
-      failures.push(`Missing Keycloak image: resources/img/neon-${file}`);
-      continue;
+async function verifyApplications(): Promise<void> {
+  const canonicalFavicon = sha256(await read("packages/platform/foundation/brand/assets/athyper-favicon.png"));
+  for (const plane of BRAND_PLANES) {
+    const brand = getPlaneBrand(plane);
+    const root = `apps/${plane}/public`;
+    if (brand.themeColor !== ATLAS_MODERN_BRAND.colors.primary) failures.push(`${plane} browser theme color is not Atlas Modern`);
+    for (const descriptor of [brand.wordmark, brand.inverseWordmark, brand.appIcon]) {
+      const target = `${root}${descriptor.src}`;
+      if (!(await exists(target))) failures.push(`${plane} is missing registered asset ${descriptor.src}`);
     }
-
-    const [sourceHash, destHash] = await Promise.all([sha256(src), sha256(dest)]);
-    if (sourceHash !== destHash) {
-      failures.push(`Stale Keycloak image: resources/img/neon-${file}`);
-    }
-  }
-
-  const ftlChecks = [
-    {
-      label: "_neon-brand-logo.ftl",
-      actual: path.join(kcLogin, "_neon-brand-logo.ftl"),
-      expected: await expectedBrandLogoFtl(manifest),
-    },
-    {
-      label: "_neon-brand-mobile.ftl",
-      actual: path.join(kcLogin, "_neon-brand-mobile.ftl"),
-      expected: await expectedMobileLogoFtl(manifest),
-    },
-  ];
-
-  for (const { label, actual, expected } of ftlChecks) {
-    if (!(await exists(actual))) {
-      failures.push(`Missing Keycloak include: ${label}`);
-      continue;
-    }
-
-    const actualContent = await fs.readFile(actual, "utf8");
-    if (
-      !actualContent.includes("iamBrandPlane") ||
-      !actualContent.includes("${iamBrandPlane}") ||
-      !actualContent.includes("iamProductName")
-    ) {
-      failures.push(`Stale Keycloak include: ${label}`);
-    }
-  }
-}
-
-async function verifyApps(failures: string[]): Promise<void> {
-  for (const product of Object.keys(APP_TARGETS) as ProductCode[]) {
-    const manifestPath = path.join(brandDist, product, "manifest.json");
+    const canonicalLockup = `packages/platform/foundation/brand/assets/plane-lockups/${plane}.svg`;
+    const identityLockup = `${root}${brand.identityLockup.src}`;
+    if (!(await exists(identityLockup)) || sha256(await read(identityLockup)) !== sha256(await read(canonicalLockup))) failures.push(`${plane} pre-authentication identity lockup is stale`);
+    const favicon = `${root}${brand.favicon}`;
+    if (!(await exists(favicon)) || sha256(await read(favicon)) !== canonicalFavicon) failures.push(`${plane} universal favicon is stale`);
+    const manifestPath = `${root}${brand.manifest}`;
     if (!(await exists(manifestPath))) {
-      failures.push(`Missing brand dist manifest for ${product}; run pnpm brand:build`);
+      failures.push(`${plane} is missing ${brand.manifest}`);
       continue;
     }
-
-    const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as AppBrandManifest;
-    const targetDir = path.join(repoRoot, APP_TARGETS[product]);
-
-    const expectedPublicManifest = {
-      productCode: product,
-      productName: manifest.productName,
-      descriptor: manifest.descriptor,
-      generatedFrom: PRODUCT_SOURCES[product],
-      assets: Object.fromEntries(
-        Object.entries(PUBLIC_OUTPUT_FILES).map(([key, outputFile]) => [key, publicUrl(outputFile)]),
-      ),
-    };
-
-    for (const [key, outputFile] of Object.entries(PUBLIC_OUTPUT_FILES) as Array<[PublicAssetKey, string]>) {
-      const sourceFile = manifest.publicAssets[key];
-      const sourcePath = path.join(brandDist, product, sourceFile);
-      const targetPath = path.join(targetDir, outputFile);
-
-      if (!(await exists(targetPath))) {
-        failures.push(`Missing app brand asset: ${APP_TARGETS[product]}/${outputFile}`);
-        continue;
-      }
-
-      const [sourceHash, targetHash] = await Promise.all([sha256(sourcePath), sha256(targetPath)]);
-      if (sourceHash !== targetHash) {
-        failures.push(`Stale app brand asset: ${APP_TARGETS[product]}/${outputFile}`);
-      }
-    }
-
-    const appManifestPath = path.join(targetDir, "brand-manifest.json");
-    if (!(await exists(appManifestPath))) {
-      failures.push(`Missing app brand manifest: ${APP_TARGETS[product]}/brand-manifest.json`);
-      continue;
-    }
-
-    const expectedContent = `${JSON.stringify(expectedPublicManifest, null, 2)}\n`;
-    const actualContent = await fs.readFile(appManifestPath, "utf8");
-    if (hashString(actualContent) !== hashString(expectedContent)) {
-      failures.push(`Stale app brand manifest: ${APP_TARGETS[product]}/brand-manifest.json`);
+    const manifest = JSON.parse(await text(manifestPath)) as Record<string, unknown>;
+    if (manifest.name !== brand.applicationName || manifest.short_name !== brand.shortName || manifest.description !== brand.description) failures.push(`${plane} web manifest identity is stale`);
+    if (manifest.theme_color !== ATLAS_MODERN_BRAND.colors.primary) failures.push(`${plane} web manifest does not use Atlas Modern`);
+    const lightSvg = `apps/${plane}/public/brand/${plane}/wordmark.svg`;
+    const inverseSvg = `apps/${plane}/public/brand/${plane}/wordmark-inverse.svg`;
+    if (plane === "neon") {
+      if (sha256(await read(lightSvg)) !== sha256(await read("packages/platform/foundation/brand/assets/master-wordmarks/neon.svg"))) failures.push("Neon light wordmark is not the approved Illustrator master");
+      if (sha256(await read(inverseSvg)) !== sha256(await read("packages/platform/foundation/brand/assets/master-wordmarks/neon-reverse.svg"))) failures.push("Neon inverse wordmark is not the approved Illustrator master");
+    } else {
+      if ((await exists(lightSvg)) && !(await text(lightSvg)).includes(ATLAS_MODERN_BRAND.colors.primary)) failures.push(`${plane} light SVG does not use the shared brand color`);
+      if ((await exists(inverseSvg)) && !(await text(inverseSvg)).includes("#A9C7F0")) failures.push(`${plane} inverse SVG does not use the Atlas Modern dark-surface accent`);
     }
   }
+}
+
+async function verifyKeycloak(): Promise<void> {
+  const root = "stack/config/iam/themes/neon/login";
+  const resolver = await text(`${root}/_theme-resolver.ftl`);
+  const tokens = await text(`${root}/resources/css/iam.tokens.css`);
+  const head = await text(`${root}/_iam-head.ftl`);
+  if (!resolver.includes('fallbackTheme = "atlas-modern"')) failures.push("Keycloak does not default to Atlas Modern");
+  if (
+    !tokens.includes("--a-brand: #234B84;")
+    || !tokens.includes("--a-primary: var(--a-brand);")
+    || !tokens.includes("--plane-accent:var(--a-primary)")
+  ) failures.push("Keycloak interaction tokens are stale");
+  if (!head.includes('theme-color" content="#234B84"')) failures.push("Keycloak browser theme color is stale");
+  const header = await text(`${root}/_iam-header.ftl`);
+  if (!header.includes('${iamBrandPlane}-advertising.svg')) failures.push("Keycloak header does not use the approved advertising wordmarks");
+  for (const product of ["neon", "mesh", "studio"] as const) {
+    const canonical = `packages/platform/foundation/brand/assets/plane-lockups/${product}.svg`;
+    const asset = `${root}/resources/img/${product}-advertising.svg`;
+    if (!(await exists(canonical))) {
+      failures.push(`Canonical brand assets are missing ${product}.svg`);
+      continue;
+    }
+    if (!(await exists(asset)) || sha256(await read(asset)) !== sha256(await read(canonical))) {
+      failures.push(`Keycloak ${product} pre-authentication lockup is stale`);
+      continue;
+    }
+    const svg = await text(canonical);
+    if (!svg.includes("#234B84")) failures.push(`${product} advertising wordmark is not Atlas Modern blue`);
+    if (/<(?:text|image|script|foreignObject)[\s>]/iu.test(svg)) failures.push(`${product} advertising wordmark is not self-contained path-only SVG`);
+  }
+  for (const product of ["neon", "mesh", "admin"] as const) {
+    for (const suffix of ["wordmark-black.png", "icon.png"] as const) {
+      if (!(await exists(`${root}/resources/img/${product}-${suffix}`))) failures.push(`Keycloak is missing ${product}-${suffix}`);
+    }
+  }
+}
+
+async function verifyGateways(): Promise<void> {
+  for (const page of [
+    "deploy/compose/instance/config/nginx/status.html",
+    "deploy/compose/platform/outage/status.html",
+    "stack/config/gateway/fallback/status.html",
+  ]) {
+    const html = await text(page);
+    if (!html.includes('data-theme-family="atlas-modern"')) failures.push(`${page} does not declare Atlas Modern`);
+    if (!html.includes('theme-color" content="#234B84"')) failures.push(`${page} browser theme color is stale`);
+  }
+
+  const instancePage = await text("deploy/compose/instance/config/nginx/status.html");
+  const legacyPage = await text("stack/config/gateway/fallback/status.html");
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    const canonical = await read(`packages/platform/foundation/brand/assets/plane-lockups/${plane}.svg`);
+    const legacy = `stack/config/gateway/fallback/brand/${plane}-advertising.svg`;
+    if (!(await exists(legacy)) || sha256(await read(legacy)) !== sha256(canonical)) failures.push(`Legacy gateway ${plane} pre-authentication lockup is stale`);
+    if (!instancePage.includes(`data-plane-brand="${plane}" src="data:image/svg+xml;base64,${canonical.toString("base64")}"`)) failures.push(`Stack v2 gateway ${plane} embedded lockup is stale`);
+    if (!legacyPage.includes(`wordmark: "/brand/${plane}-advertising.svg"`)) failures.push(`Legacy gateway does not select the ${plane} pre-authentication lockup`);
+  }
+  if (legacyPage.includes("admin-wordmark-black.png")) failures.push("Legacy gateway still maps Studio through the obsolete admin brand");
 }
 
 async function main(): Promise<void> {
-  const failures: string[] = [];
+  await verifyApplications();
+  await verifyKeycloak();
+  await verifyGateways();
 
-  await verifyKeycloak(failures);
-  await verifyApps(failures);
-
-  if (failures.length > 0) {
-    console.error("\nBrand sync verification FAILED:\n");
-    for (const failure of failures) {
-      console.error(`  - ${failure}`);
-    }
-    console.error("\nRun: pnpm brand:refresh\n");
-    process.exit(1);
+  if (failures.length) {
+    console.error(["Brand sync verification FAILED:", ...failures.map((failure) => `- ${failure}`)].join("\n"));
+    process.exitCode = 1;
+  } else {
+    console.log(`Brand sync verified for ${ATLAS_MODERN_BRAND.name}, ${BRAND_PLANES.length} planes, Keycloak, and both gateway layers.`);
   }
-
-  console.log("Brand sync verified.");
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exitCode = 1;
 });

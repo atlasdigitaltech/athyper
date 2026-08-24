@@ -6,6 +6,7 @@
   --color-surface: var(--a-surface);
   --color-muted: var(--a-muted);
   --color-primary: var(--a-primary);
+  --color-brand: var(--a-brand);
   --color-danger: var(--a-danger);
   --color-border: var(--a-border);
   --font-sans: var(--a-font-sans);

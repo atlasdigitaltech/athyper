@@ -21,11 +21,11 @@ function compatibilityAliases(): string[] {
     "--athyper-color-bg:var(--a-background)", "--athyper-color-surface:var(--a-muted)",
     "--athyper-color-surface-raised:var(--a-surface-raised)", "--athyper-color-text:var(--a-foreground)",
     "--athyper-color-muted:var(--a-muted-foreground)", "--athyper-color-border:var(--a-border)",
-    "--athyper-color-primary:var(--a-contrast)", "--athyper-color-primary-foreground:var(--a-contrast-foreground)",
+    "--athyper-color-primary:var(--a-primary)", "--athyper-color-primary-foreground:var(--a-primary-foreground)",
     "--athyper-color-success:var(--a-success)", "--athyper-color-warning:var(--a-warning)",
     "--athyper-color-danger:var(--a-danger)", "--athyper-color-info:var(--a-primary)",
-    "--athyper-color-neon:var(--a-contrast)", "--athyper-color-mesh:var(--a-contrast)",
-    "--athyper-color-studio:var(--a-contrast)", "--plane-accent:var(--a-contrast)",
+    "--athyper-color-neon:var(--a-brand)", "--athyper-color-mesh:var(--a-brand)",
+    "--athyper-color-studio:var(--a-brand)", "--plane-accent:var(--a-primary)",
     "--athyper-font-sans:var(--a-font-sans)", "--athyper-font-mono:var(--a-font-mono)",
     ...Object.keys(FOUNDATION_TOKENS.spacing).map((key) => `--athyper-space-${key}:var(--a-space-${key})`),
     "--athyper-radius-sm:var(--a-radius-sm)", "--athyper-radius-md:var(--a-radius-md)",
@@ -35,7 +35,7 @@ function compatibilityAliases(): string[] {
     "--athyper-motion-fast:var(--a-motion-fast)", "--athyper-motion-normal:var(--a-motion-normal)",
     "--background:var(--a-background)", "--foreground:var(--a-foreground)", "--card:var(--a-surface-raised)",
     "--card-foreground:var(--a-foreground)", "--popover:var(--a-surface-raised)", "--popover-foreground:var(--a-foreground)",
-    "--primary:var(--a-contrast)", "--primary-foreground:var(--a-contrast-foreground)",
+    "--primary:var(--a-primary)", "--primary-foreground:var(--a-primary-foreground)",
     "--secondary:var(--a-muted)", "--secondary-foreground:var(--a-foreground)",
     "--accent:var(--a-muted)", "--accent-foreground:var(--a-foreground)",
     "--muted:var(--a-muted)", "--muted-foreground:var(--a-muted-foreground)",
@@ -43,13 +43,14 @@ function compatibilityAliases(): string[] {
     "--success:var(--a-success)", "--warning:var(--a-warning)", "--info:var(--a-primary)",
     "--border:var(--a-border)", "--input:var(--a-input)", "--ring:var(--a-focus)",
     "--radius:var(--a-radius-md)", "--shadow-sm:var(--a-shadow-raised)", "--shadow-md:var(--a-shadow-raised)",
-    "--bg:var(--a-background)", "--fg:var(--a-foreground)", "--primary-fg:var(--a-contrast-foreground)",
+    "--bg:var(--a-background)", "--fg:var(--a-foreground)", "--primary-fg:var(--a-primary-foreground)",
     "--muted-fg:var(--a-muted-foreground)", "--input-bg:var(--a-surface-raised)",
   ].map((value) => `  ${value};`);
 }
 
 const t = FOUNDATION_TOKENS;
 const structural = [
+  `--a-theme-family:atlas-modern`,
   `--a-font-sans:${t.typography.sans}`, `--a-font-mono:${t.typography.mono}`,
   `--a-font-size-body:${t.typography.body}`, `--a-font-size-sm:${t.typography.small}`, `--a-font-size-title:${t.typography.title}`,
   `--a-line-height-body:${t.typography.bodyLineHeight}`, `--a-line-height-title:${t.typography.titleLineHeight}`, `--a-font-weight-regular:${t.typography.regularWeight}`, `--a-font-weight-strong:${t.typography.strongWeight}`,

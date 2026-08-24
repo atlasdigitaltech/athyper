@@ -2,7 +2,7 @@ import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import { validateRuntimeSchema } from "@athyper/server-runtime-http";
 import { describe, expect, it } from "vitest";
-import { experienceBootstrapSchema, neonOperatingOrganizationCatalogSchema } from "./contracts.js";
+import { experienceBootstrapSchema, meshNetworkAccountCatalogSchema, neonOperatingOrganizationCatalogSchema } from "./contracts.js";
 import type { ExperiencePlaneRepository } from "./ports.js";
 import { createExperienceInvalidationHooks, createExperienceService, createMemoryExperienceCache, ExperienceAccessError } from "./service.js";
 
@@ -22,6 +22,7 @@ function repository(overrides: Partial<ExperiencePlaneRepository> = {}): Experie
     async readFeatures() { return [{ id: "feature-1", code: "finance.invoice_v2", moduleId, kind: "release_gate", defaultEnabled: false, overrideEnabled: true, metadata: {}, revision: "flag:1" }, { id: "feature-2", code: "finance.future", moduleId, kind: "release_gate", defaultEnabled: true, metadata: { minimumClientVersion: "2.0.0" }, revision: "flag:2" }]; },
     async readWorkContexts(){return[];},
     async readOperatingOrganizations(){return[];},
+    async readNetworkAccounts(){return[];},
     ...overrides,
   };
 }
@@ -100,6 +101,17 @@ describe("experience effective-access projection", () => {
     const scoped={...context,permissions:{...context.permissions,authorizationScopes:[{permissionCode:"neon.procurement.purchase_order.create",tenantWide:false,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[organizationId],networkMembershipIds:[],visibility:"team" as const}]}};
     const repo=repository({async readOperatingOrganizations(){return[{id:organizationId,code:"global.buy",displayName:"Global Procurement",domain:"procurement",path:["Global Procurement"],procurementProfileConfigured:true,salesProfileConfigured:false,assignments:[{companyCodeId:"50000000-0000-4000-8000-000000000001",participationRole:"participant",effectiveFrom:"2026-01-01",revision:"assignment:a"}],revision:"organization:a"}];}});
     await expect(service(repo).neonOperatingOrganizations(scoped)).resolves.toMatchObject({organizations:[]});
+  });
+
+  it("returns only Mesh accounts in the principal authorization snapshot and flags related visible accounts",async()=>{
+    const accountA="80000000-0000-4000-8000-000000000001",accountB="80000000-0000-4000-8000-000000000002",accountC="80000000-0000-4000-8000-000000000003",party="90000000-0000-4000-8000-000000000001";
+    const meshContext={...context,planeKey:"mesh" as const,permissions:{...context.permissions,planeKey:"mesh" as const,authorizationScopes:[{permissionCode:"mesh.account.read",tenantWide:false,legalEntityIds:[],companyCodeIds:[],operatingOrganizationIds:[],networkMembershipIds:[accountA,accountB],visibility:"team" as const}]}};
+    const repo=repository({async readNetworkAccounts(){return[{id:accountA,code:"buyer.apac",displayName:"Athyper APAC Procurement",role:"buyer",canonicalPartyId:party,source:"neon_projection",revision:"account:a"},{id:accountB,code:"supplier.apac",displayName:"Athyper Supplier APAC",role:"supplier",canonicalPartyId:party,source:"mesh",revision:"account:b"},{id:accountC,code:"supplier.hidden",displayName:"Hidden Supplier",role:"supplier",source:"mesh",revision:"account:c"}];}});
+    const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({mesh:repo})});
+    const result=await projection.meshNetworkAccounts(meshContext);
+    expect(result.accounts).toHaveLength(2);
+    expect(result.accounts.map((account)=>account.relatedAccountCount)).toEqual([2,2]);
+    expect(validateRuntimeSchema(meshNetworkAccountCatalogSchema,result)).toBe(result);
   });
 
   it("keeps rollout cohorts stable and invalidates cached authorization projections", async () => {

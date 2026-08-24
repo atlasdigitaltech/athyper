@@ -14,6 +14,28 @@ export interface ProtectedBootstrapDependencies {
   readonly returnTo?: string;
 }
 
+export interface ExistingSessionLandingDependencies {
+  readonly request: Request;
+  readSession(request: Request): Promise<Response>;
+  readonly home?: string;
+}
+
+/**
+ * Keeps browser back-navigation out of a stale sign-in surface once an
+ * application session already exists. Anonymous and unavailable session
+ * checks deliberately remain on the public recovery page.
+ */
+export async function resolveExistingSessionLanding(input: ExistingSessionLandingDependencies): Promise<string | undefined> {
+  const response = await input.readSession(input.request.clone());
+  if (!response.ok) return undefined;
+  let session: SanitizedSession;
+  try { session = parseSanitizedSession(await response.json()); } catch { return undefined; }
+  if (session.state === "authenticated") return safeLocalPath(input.home);
+  if (session.state === "context_required") return "/select-context";
+  if (session.state === "required_action") return "/auth/required-action";
+  return undefined;
+}
+
 export async function readProtectedBootstrap(input: ProtectedBootstrapDependencies): Promise<ProtectedBootstrapResult> {
   const sessionResponse = await input.readSession(input.request.clone());
   if (sessionResponse.status === 401) return Object.freeze({ state: "redirect", location: loginLocation(input.returnTo), reason: "unauthenticated" });
@@ -39,6 +61,7 @@ export async function readProtectedBootstrap(input: ProtectedBootstrapDependenci
 }
 
 function loginLocation(returnTo = "/"): string { const safe = returnTo.startsWith("/") && !returnTo.startsWith("//") && !returnTo.includes("\\") ? returnTo : "/"; return `/api/auth/login?returnTo=${encodeURIComponent(safe)}`; }
+function safeLocalPath(value = "/"): string { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/"; }
 
 export type BootstrapRevalidationReason = "expiry" | "auth_epoch" | "context" | "experience_revision";
 export function bootstrapRevalidationReason(previous: Readonly<{ session: SanitizedSession; bootstrap: ExperienceBootstrap }>, next: Readonly<{ session: SanitizedSession; bootstrap: ExperienceBootstrap }>, now = Date.now(), expirySkewMs = 60_000): BootstrapRevalidationReason | undefined {

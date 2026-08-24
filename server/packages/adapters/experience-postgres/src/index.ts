@@ -1,5 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceWorkContextRecord } from "@athyper/server-platform-experience/ports";
+import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceWorkContextRecord } from "@athyper/server-platform-experience/ports";
 import { sql, type Kysely } from "kysely";
 
 type Database = Kysely<Record<string, never>>;
@@ -196,6 +196,34 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       organizations.set(row.id,Object.freeze({id:row.id,code:row.code,displayName:row.displayName,domain:row.domain,...(row.parentId?{parentId:row.parentId}:{}),path:Object.freeze([...row.path]),procurementProfileConfigured:row.procurementProfileConfigured,salesProfileConfigured:row.salesProfileConfigured,...(row.leadCompanyCodeId?{leadCompanyCodeId:row.leadCompanyCodeId}:{}),...(row.bookingCompanyCodeId?{bookingCompanyCodeId:row.bookingCompanyCodeId}:{}),...(row.invoicingCompanyCodeId?{invoicingCompanyCodeId:row.invoicingCompanyCodeId}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim()}:{}),assignments:Object.freeze([assignment]),revision:`${row.organizationRevision}:${row.assignmentRevision}`}));
     }
     return Object.freeze([...organizations.values()]);
+    });
+  }
+
+  async readNetworkAccounts(context: VerifiedRequestContext): Promise<readonly ExperienceNetworkAccountRecord[]> {
+    if (context.planeKey !== "mesh") return [];
+    return this.withContext(context, async (database) => {
+      const result = await sql<{
+        id:string;code:string;displayName:string;legalName:string|null;role:"buyer"|"supplier"|"both";
+        countryCode:string|null;defaultCurrency:string|null;canonicalPartyId:string|null;fromNeon:boolean;revision:string;
+      }>`
+        SELECT account.id::text AS id, account.account_code AS code,
+               account.display_name AS "displayName", account.legal_name AS "legalName",
+               account.network_role::text AS role, account.country_code::text AS "countryCode",
+               account.default_currency::text AS "defaultCurrency",
+               account.canonical_party_id::text AS "canonicalPartyId",
+               (account.network_role='buyer' OR EXISTS (
+                 SELECT 1 FROM mesh.network_account_reference reference
+                  WHERE reference.tenant_id=account.tenant_id
+                    AND reference.network_account_id=account.id
+                    AND reference.status='active'
+                    AND lower(reference.source_system) LIKE '%neon%'
+               )) AS "fromNeon",
+               COALESCE(account.updated_at,account.created_at)::text AS revision
+          FROM mesh.network_account account
+         WHERE account.tenant_id=${context.tenantId}::uuid AND account.status='active'
+         ORDER BY account.network_role,account.display_name,account.account_code
+      `.execute(database);
+      return Object.freeze(result.rows.map((row)=>Object.freeze({id:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim().toUpperCase()}:{}),...(row.canonicalPartyId?{canonicalPartyId:row.canonicalPartyId}:{}),source:row.fromNeon?"neon_projection" as const:"mesh" as const,revision:row.revision})));
     });
   }
 }

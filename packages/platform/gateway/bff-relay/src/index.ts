@@ -23,6 +23,7 @@ export const IAM_ME_OPERATION: RelayOperation = Object.freeze({ id: "iam.me", me
 export const EXPERIENCE_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({ id: "platform.experience.bootstrap", method: "GET", path: "/api/platform/experience/bootstrap", requestClass: "json", requiresTenant: true });
 export const NEON_WORK_CONTEXTS_OPERATION: RelayOperation = Object.freeze({ id: "neon.work-contexts", method: "GET", path: "/api/neon/work-contexts", requestClass: "json", requiresTenant: true });
 export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation = Object.freeze({ id: "neon.operating-organizations", method: "GET", path: "/api/neon/operating-organizations", requestClass: "json", requiresTenant: true });
+export const MESH_NETWORK_ACCOUNTS_OPERATION: RelayOperation = Object.freeze({ id: "mesh.network-accounts", method: "GET", path: "/api/mesh/network-accounts", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_SNAPSHOT_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.snapshot", method: "GET", path: "/api/platform/verification", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_RUN_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.run", method: "POST", path: "/api/platform/verification/runs", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 1024 });
 

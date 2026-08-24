@@ -1,3 +1,9 @@
+import { ATLAS_MODERN_BRAND } from "@athyper/platform-brand";
+
+export const THEME_FAMILIES = [ATLAS_MODERN_BRAND.id] as const;
+export type ThemeFamily = (typeof THEME_FAMILIES)[number];
+export const DEFAULT_THEME_FAMILY: ThemeFamily = ATLAS_MODERN_BRAND.id;
+
 export const COLOR_MODES = ["light", "dark", "high-contrast"] as const;
 export const DENSITY_MODES = ["compact", "comfortable"] as const;
 export type ColorMode = (typeof COLOR_MODES)[number];
@@ -9,6 +15,9 @@ export const REQUIRED_COLOR_TOKENS = [
   "border", "input", "primary", "primaryForeground", "danger", "dangerForeground",
   "warning", "warningForeground", "success", "successForeground", "focus", "scrim",
   "contrast", "contrastForeground", "warningSubtle", "warningSubtleForeground",
+  "brand", "brandForeground", "brandHover", "brandSoft",
+  "storyStart", "storyEnd", "storyForeground", "storyMuted", "storyEyebrow",
+  "storyWave", "storyWaveBright", "storyGlow", "storyDot",
 ] as const;
 
 export type ColorToken = (typeof REQUIRED_COLOR_TOKENS)[number];
@@ -18,18 +27,28 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> = Object.f
   light: Object.freeze({
     background: "#f8fafc", foreground: "#172033", surface: "#ffffff", surfaceRaised: "#ffffff",
     muted: "#eef2f7", mutedForeground: "#5b6578", border: "#d5dce7", input: "#aab4c5",
-    primary: "#175cd3", primaryForeground: "#ffffff", danger: "#b42318", dangerForeground: "#ffffff",
+    primary: "var(--a-brand)", primaryForeground: "var(--a-brand-foreground)", danger: "#b42318", dangerForeground: "#ffffff",
     warning: "#b54708", warningForeground: "#ffffff", success: "#067647", successForeground: "#ffffff",
     focus: "#2e90fa", scrim: "rgb(15 23 42 / 0.58)", contrast: "#151515", contrastForeground: "#ffffff",
     warningSubtle: "#fff8eb", warningSubtleForeground: "#172033",
+    brand: ATLAS_MODERN_BRAND.colors.primary, brandForeground: ATLAS_MODERN_BRAND.colors.primaryForeground,
+    brandHover: ATLAS_MODERN_BRAND.colors.primaryHover, brandSoft: ATLAS_MODERN_BRAND.colors.primarySoft,
+    storyStart: ATLAS_MODERN_BRAND.colors.storyStart, storyEnd: ATLAS_MODERN_BRAND.colors.storyEnd,
+    storyForeground: ATLAS_MODERN_BRAND.colors.storyForeground, storyMuted: ATLAS_MODERN_BRAND.colors.storyMuted, storyEyebrow: ATLAS_MODERN_BRAND.colors.storyEyebrow,
+    storyWave: ATLAS_MODERN_BRAND.colors.storyWave, storyWaveBright: ATLAS_MODERN_BRAND.colors.storyWaveBright, storyGlow: ATLAS_MODERN_BRAND.colors.storyGlow, storyDot: ATLAS_MODERN_BRAND.colors.storyDot,
   }),
   dark: Object.freeze({
     background: "#0b1220", foreground: "#e8edf5", surface: "#111b2e", surfaceRaised: "#17243a",
     muted: "#1d2a40", mutedForeground: "#a8b3c7", border: "#33425a", input: "#52627a",
-    primary: "#84adff", primaryForeground: "#071225", danger: "#f97066", dangerForeground: "#230402",
+    primary: "color-mix(in srgb, var(--a-brand) 32%, white)", primaryForeground: "color-mix(in srgb, var(--a-brand) 24%, black)", danger: "#f97066", dangerForeground: "#230402",
     warning: "#fec84b", warningForeground: "#241400", success: "#47cd89", successForeground: "#031b12",
     focus: "#84caff", scrim: "rgb(0 0 0 / 0.72)", contrast: "#f4f6f8", contrastForeground: "#11151c",
     warningSubtle: "#2b2110", warningSubtleForeground: "#f5f7fa",
+    brand: ATLAS_MODERN_BRAND.colors.primary, brandForeground: ATLAS_MODERN_BRAND.colors.primaryForeground,
+    brandHover: "color-mix(in srgb, var(--a-brand) 32%, white)", brandSoft: "color-mix(in srgb, var(--a-brand) 52%, black)",
+    storyStart: ATLAS_MODERN_BRAND.colors.storyStart, storyEnd: ATLAS_MODERN_BRAND.colors.storyEnd,
+    storyForeground: ATLAS_MODERN_BRAND.colors.storyForeground, storyMuted: ATLAS_MODERN_BRAND.colors.storyMuted, storyEyebrow: ATLAS_MODERN_BRAND.colors.storyEyebrow,
+    storyWave: ATLAS_MODERN_BRAND.colors.storyWave, storyWaveBright: ATLAS_MODERN_BRAND.colors.storyWaveBright, storyGlow: ATLAS_MODERN_BRAND.colors.storyGlow, storyDot: ATLAS_MODERN_BRAND.colors.storyDot,
   }),
   "high-contrast": Object.freeze({
     background: "#000000", foreground: "#ffffff", surface: "#000000", surfaceRaised: "#0a0a0a",
@@ -38,6 +57,9 @@ export const COLOR_TOKENS: Readonly<Record<ColorMode, ColorTokenSet>> = Object.f
     warning: "#ffff00", warningForeground: "#000000", success: "#66ff99", successForeground: "#000000",
     focus: "#00ffff", scrim: "rgb(0 0 0 / 0.88)", contrast: "#ffff00", contrastForeground: "#000000",
     warningSubtle: "#000000", warningSubtleForeground: "#ffffff",
+    brand: "#ffff00", brandForeground: "#000000", brandHover: "#ffffff", brandSoft: "#000000",
+    storyStart: "#000000", storyEnd: "#000000", storyForeground: "#ffffff", storyMuted: "#ffffff", storyEyebrow: "#ffff00",
+    storyWave: "#ffff00", storyWaveBright: "#ffffff", storyGlow: "transparent", storyDot: "#ffffff",
   }),
 });
 

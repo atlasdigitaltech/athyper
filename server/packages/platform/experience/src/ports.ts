@@ -56,6 +56,19 @@ export interface ExperienceOperatingOrganizationRecord {
   readonly revision: string;
 }
 
+export interface ExperienceNetworkAccountRecord {
+  readonly id: string;
+  readonly code: string;
+  readonly displayName: string;
+  readonly legalName?: string;
+  readonly role: "buyer" | "supplier" | "both";
+  readonly countryCode?: string;
+  readonly defaultCurrency?: string;
+  readonly canonicalPartyId?: string;
+  readonly source: "neon_projection" | "mesh";
+  readonly revision: string;
+}
+
 export interface ExperienceProfileRecord {
   readonly tenant?: Readonly<Record<string, unknown>>;
   readonly principal?: Readonly<Record<string, unknown>>;
@@ -88,6 +101,7 @@ export interface ExperiencePlaneRepository {
   readFeatures(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceFeatureRecord[]>;
   readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]>;
   readOperatingOrganizations(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceOperatingOrganizationRecord[]>;
+  readNetworkAccounts(context: VerifiedRequestContext): Promise<readonly ExperienceNetworkAccountRecord[]>;
 }
 
 export type ExperienceRepositoryProvider = ExactPlaneRepositoryProvider<ExperiencePlaneRepository>;

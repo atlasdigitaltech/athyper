@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { ApiTransportError, experienceQueryKeys, parseExperienceBootstrap, type ExperienceBootstrap } from "@athyper/platform-api-client";
 import { applyVersionedOptimisticUpdate, createServerQueryClient, dehydratePrincipalQueries, PrincipalQueryLifecycle, shouldRetrySafeRead } from "@athyper/platform-query/server";
-import { readProtectedBootstrap } from "@athyper/platform-shell-app-foundation/server";
+import { readProtectedBootstrap, resolveExistingSessionLanding } from "@athyper/platform-shell-app-foundation/server";
 import { sessionExpiryWarningDelay, sessionExpiryWarningTarget, shouldSendSessionTouch } from "@athyper/platform-shell-app-foundation";
 import type { PrincipalQueryScope, SanitizedSession } from "@athyper/contract-platform-auth-session";
 
@@ -64,6 +64,17 @@ test("protected bootstrap treats logout between session and experience reads as 
     readExperience: async () => new Response(null, { status: 401 }),
   });
   assert.deepEqual(result, { state: "redirect", location: "/api/auth/login?returnTo=%2Fsystem%2Fverification", reason: "unauthenticated" });
+});
+
+test("existing application sessions bypass stale sign-in history safely", async () => {
+  const request = new Request("https://neon.local/sign-in?reason=retry");
+  const resolve = (value: unknown, home?: string) => resolveExistingSessionLanding({ request, home, readSession: async () => Response.json(value) });
+  assert.equal(await resolve({ schemaVersion: 1, state: "anonymous", plane: "neon", requiredActions: [] }), undefined);
+  assert.equal(await resolve(session), "/");
+  assert.equal(await resolve(session, "/inventory"), "/inventory");
+  assert.equal(await resolve(session, "https://evil.example"), "/");
+  assert.equal(await resolve({ schemaVersion: 1, state: "context_required", plane: "neon", realmKey: "athyper", sessionVersion: 1, configurationRevision: "1", expiresAt: session.expiresAt, idleExpiresAt: session.idleExpiresAt, absoluteExpiresAt: session.absoluteExpiresAt, assurance: "baseline", requiredActions: [], allowedNextActions: ["select_context", "logout"] }), "/select-context");
+  assert.equal(await resolveExistingSessionLanding({ request, readSession: async () => new Response(null, { status: 503 }) }), undefined);
 });
 
 test("provider source preserves the required focused nesting order", async () => {

@@ -5,7 +5,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiTransportError } from "@athyper/platform-api-client";
-import { AppErrorBoundary, AppLoadingBoundary, classifyAppError, createRedactedBoundaryEvent, safeLocalReturnTo } from "@athyper/platform-shell-app-foundation";
+import { AppErrorBoundary, AppLoadingBoundary, classifyAppError, createRedactedBoundaryEvent, resolveProfileColorMode, safeLocalReturnTo } from "@athyper/platform-shell-app-foundation";
 
 const cases = [
   ["authentication", new ApiTransportError("authentication", "secret bearer token", 401)],
@@ -47,10 +47,24 @@ test("rejects unsafe return paths", () => {
 });
 
 test("loading markup distinguishes stable bootstrap and local refresh states", () => {
-  const bootstrap = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" />), refresh = renderToStaticMarkup(<AppLoadingBoundary kind="refresh" />);
+  const bootstrap = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" />), collapsed = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" collapsed applicationName="Neon" planeDescriptor="Business Operating Platform" planeIconSrc="/icon.png" />), refresh = renderToStaticMarkup(<AppLoadingBoundary kind="refresh" />);
   assert.match(bootstrap, /aria-busy="true"/);
+  assert.match(bootstrap, /a-app-loader__rail/);
+  assert.match(collapsed, /data-collapsed="true"/);
+  assert.match(collapsed, />›</);
+  assert.doesNotMatch(collapsed, />BOP</);
+  assert.match(collapsed, /a-app-loader__brand-icon/);
   assert.match(refresh, /Updating content/);
+  assert.match(refresh, /a-app-loader__grid/);
   assert.match(refresh, /aria-live="polite"/);
+});
+
+test("profile appearance resolves explicit and operating-system themes deterministically", () => {
+  assert.equal(resolveProfileColorMode("light", true, true), "light");
+  assert.equal(resolveProfileColorMode("dark"), "dark");
+  assert.equal(resolveProfileColorMode("high_contrast"), "high-contrast");
+  assert.equal(resolveProfileColorMode("system", true, false), "dark");
+  assert.equal(resolveProfileColorMode("system", true, true), "high-contrast");
 });
 
 test("route error focuses its announced heading without a provider tree", async () => {

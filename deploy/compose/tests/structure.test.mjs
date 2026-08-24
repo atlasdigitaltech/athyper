@@ -36,20 +36,20 @@ test("instance gateway has a unique shared-network alias and no Docker socket", 
   assert.equal(instance.networks.ops.internal, true);
 });
 
-test("platform ingress routes each instance suffix to its isolated gateway", () => {
+test("platform ingress routes only DEV while QA and staging are parked", () => {
   const dynamic = read("deploy/compose/platform/ingress/dynamic.yaml");
-  for (const id of ["dev", "qa", "stg"]) {
-    assert.equal(dynamic.http.routers[id].service, `gateway-${id}-failover`);
-    assert.deepEqual(dynamic.http.services[`gateway-${id}-failover`].failover, {
-      healthCheck: {}, service: `gateway-${id}`, fallback: "platform-outage",
-    });
-    assert.equal(
-      dynamic.http.services[`gateway-${id}`].loadBalancer.servers[0].url,
-      `http://gateway-${id}:8080`,
-    );
-    assert.deepEqual(dynamic.http.services[`gateway-${id}`].loadBalancer.healthCheck, {
-      path: "/ping", port: 8082, interval: "10s", timeout: "3s",
-    });
+  assert.equal(dynamic.http.routers.dev.service, "gateway-dev-failover");
+  assert.deepEqual(dynamic.http.services["gateway-dev-failover"].failover, {
+    healthCheck: {}, service: "gateway-dev", fallback: "platform-outage",
+  });
+  assert.equal(dynamic.http.services["gateway-dev"].loadBalancer.servers[0].url, "http://gateway-dev:8080");
+  assert.deepEqual(dynamic.http.services["gateway-dev"].loadBalancer.healthCheck, {
+    path: "/ping", port: 8082, interval: "10s", timeout: "3s",
+  });
+  for (const parked of ["qa", "stg"]) {
+    assert.equal(dynamic.http.routers[parked], undefined);
+    assert.equal(dynamic.http.services[`gateway-${parked}-failover`], undefined);
+    assert.equal(dynamic.http.services[`gateway-${parked}`], undefined);
   }
   assert.equal(dynamic.http.services["platform-outage"].loadBalancer.servers[0].url, "http://platform-outage:8080");
 });
@@ -70,34 +70,74 @@ test("unhealthy browser planes fail over to branded HTML while APIs retain probl
     assert.equal(dynamic.http.services.outage.loadBalancer.servers[0].url, "http://gateway-outage:8080");
     assert.equal(dynamic.http.services.maintenance.loadBalancer.servers[0].url, "http://gateway-outage:8081");
     assert.equal(dynamic.http.services.problem.loadBalancer.servers[0].url, "http://gateway-outage:8082");
-    assert.ok(!Object.values(dynamic.http.routers).some(({ service }) => service === "maintenance"));
+    const maintenanceRouters = Object.entries(dynamic.http.routers)
+      .filter(([, { service }]) => service === "maintenance")
+      .map(([name]) => name);
+    assert.deepEqual(maintenanceRouters, environment === "dev" ? ["neon-maintenance-preview"] : []);
   }
 
   const nginx = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/outage.conf"), "utf8");
   const page = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/status.html"), "utf8");
+  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/athyper-favicon.png")).toString("base64");
   assert.match(nginx, /listen 8080;[\s\S]*sub_filter '__STATUS_MODE__' 'outage'/u);
   assert.match(nginx, /listen 8081;[\s\S]*sub_filter '__STATUS_MODE__' 'maintenance'/u);
   assert.match(nginx, /listen 8082;[\s\S]*default_type application\/problem\+json/u);
   assert.match(nginx, /Cache-Control "no-store" always/u);
   assert.match(nginx, /Retry-After "60" always/u);
-  assert.match(page, /studio:"Studio"/u);
-  assert.doesNotMatch(page, /admin:"Studio"/u);
+  assert.match(page, /studio: \{ label: "Studio", description: "Business Technology Platform" \}/u);
+  assert.match(page, /neon: \{ label: "Neon", description: "Business Operating Platform" \}/u);
+  assert.match(page, /mesh: \{ label: "Mesh", description: "Business Collaboration Network" \}/u);
+  assert.doesNotMatch(page, /admin: \{ label: "Studio"/u);
   assert.match(page, /data-plane-brand="neon"/u);
   assert.match(page, /data-plane-brand="mesh"/u);
   assert.match(page, /data-plane-brand="studio"/u);
+  assert.equal((page.match(/src="data:image\/svg\+xml;base64,/gu) ?? []).length, 3);
+  for (const plane of ["neon", "mesh", "studio"]) {
+    const lockup = readFileSync(join(repoRoot, `packages/platform/foundation/brand/assets/plane-lockups/${plane}.svg`)).toString("base64");
+    assert.ok(page.includes(`data-plane-brand="${plane}" src="data:image/svg+xml;base64,${lockup}"`));
+  }
+  assert.doesNotMatch(page, /<text[^>]*>\s*(?:NEON|MESH|STUDIO)\s*<\/text>/u);
   assert.match(page, /--contrast: #151515/u);
+  assert.match(page, /--brand: #234B84/u);
   assert.match(page, /@media \(prefers-reduced-motion: reduce\)/u);
   assert.match(page, /@keyframes blocked-travel/u);
   assert.match(page, /const retrySeconds = 15/u);
+  assert.match(page, /\.countdown span \{ grid-area: 1\/1;/u);
+  assert.match(page, /id="maintenance-plane"/u);
+  assert.match(page, /id="maintenance-window"/u);
+  assert.match(page, /new URLSearchParams\(location\.search\)/u);
+  assert.match(page, /end > start/u);
+  assert.match(page, /timeZoneName: "short"/u);
+  assert.match(page, /\[hidden\] \{ display: none !important; \}/u);
+  assert.ok(page.includes(`href="data:image/png;base64,${favicon}"`));
+  assert.equal((page.match(/data-universal-favicon/gu) ?? []).length, 3);
+  assert.match(page, /querySelectorAll\("\[data-universal-favicon\]"\)/u);
+  assert.match(page, /`Maintenance — \$\{label\}`/u);
+  assert.match(page, /`Service unavailable — \$\{label\}`/u);
+});
+
+test("DEV exposes explicit Neon maintenance and outage previews without replacing the live plane", () => {
+  const dynamic = read("deploy/compose/instance/config/traefik/dev.yaml");
+  assert.equal(dynamic.http.routers.neon.service, "neon-failover");
+  assert.equal(dynamic.http.routers["neon-maintenance-preview"].service, "maintenance");
+  assert.equal(dynamic.http.routers["neon-outage-preview"].service, "outage");
+  assert.equal(dynamic.http.routers["neon-maintenance-preview"].priority, 10000);
+  assert.equal(dynamic.http.routers["neon-outage-preview"].priority, 10000);
+  assert.match(dynamic.http.routers["neon-maintenance-preview"].rule, /PathPrefix\(`\/__maintenance-preview`\)/u);
+  assert.match(dynamic.http.routers["neon-outage-preview"].rule, /PathPrefix\(`\/__outage-preview`\)/u);
 });
 
 test("platform outage page uses the same self-contained monochrome recovery design", () => {
   const page = readFileSync(join(repoRoot, "deploy/compose/platform/outage/status.html"), "utf8");
+  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/athyper-favicon.png")).toString("base64");
   assert.match(page, /aria-label="Athyper"/u);
   assert.match(page, /--contrast:#151515/u);
+  assert.match(page, /--brand:#234B84/u);
   assert.match(page, /Platform gateway online/u);
+  assert.match(page, /<title>Platform unavailable — Athyper<\/title>/u);
   assert.match(page, /@media \(prefers-reduced-motion:reduce\)/u);
   assert.doesNotMatch(page, /https?:\/\//u);
+  assert.ok(page.includes(`href="data:image/png;base64,${favicon}"`));
 });
 
 test("database role membership is granted only after foundation roles exist", () => {
