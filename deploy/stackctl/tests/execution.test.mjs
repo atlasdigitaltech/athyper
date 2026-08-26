@@ -155,14 +155,14 @@ test("QA initialization foundations, baselines, then verifies forward migrations
   );
 });
 
-test("database initialization is restricted to QA", () => {
+test("database initialization is restricted to QA and STG", () => {
   const context = fixture();
   assert.throws(
     () => executeStackOperation(defaultRepoRoot, "up", "dev", {
       confirm: "dev",
       initializeDatabase: true,
     }, context.dependencies),
-    /restricted to the QA instance/u,
+    /restricted to QA and STG instances/u,
   );
 });
 

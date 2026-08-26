@@ -30,6 +30,6 @@ cat > /tmp/athyper-app-policy.json <<'JSON'
 }
 JSON
 mc admin policy create local athyper-app /tmp/athyper-app-policy.json
-mc admin user add local "$app_access_key" "$app_secret_key"
-mc admin policy attach local athyper-app --user "$app_access_key"
+printf '%s\n%s\n' "$app_access_key" "$app_secret_key" | mc admin user add local
+mc admin policy attach local athyper-app --user="$app_access_key"
 unset app_access_key app_secret_key

@@ -13,9 +13,21 @@ instance_root="$runtime_root/instances/$instance"
 secret_root="$instance_root/secrets"
 
 command -v openssl >/dev/null || { echo "openssl is required" >&2; exit 1; }
+preserve_stg_vapid=false
 if [[ -e "$secret_root" ]]; then
-  echo "Refusing to overwrite existing $instance secrets: $secret_root" >&2
-  exit 1
+  if [[ "$instance" != "stg" || -e "$instance_root/secrets-receipt.json" ]]; then
+    echo "Refusing to overwrite existing $instance secrets: $secret_root" >&2
+    exit 1
+  fi
+  existing_count="$(find "$secret_root" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
+  [[ "$existing_count" == "3" ]] || { echo "Refusing unrecognized pre-existing STG secret set" >&2; exit 1; }
+  for name in vapid-subject vapid-public-key vapid-private-key; do
+    [[ -f "$secret_root/$name" && -s "$secret_root/$name" ]] \
+      || { echo "Refusing incomplete pre-existing STG VAPID set" >&2; exit 1; }
+    mode="$(stat -c '%a' "$secret_root/$name")"
+    [[ "$mode" == "600" ]] || { echo "Pre-existing STG VAPID files must be owner-only" >&2; exit 1; }
+  done
+  preserve_stg_vapid=true
 fi
 
 mkdir -p "$instance_root"
@@ -23,6 +35,10 @@ chmod 700 "$runtime_root" "$runtime_root/instances" "$instance_root" 2>/dev/null
 staging="$(mktemp -d "$instance_root/.secrets-staging.XXXXXXXX")"
 cleanup() { rm -rf -- "$staging"; }
 trap cleanup EXIT INT TERM
+
+if [[ "$preserve_stg_vapid" == "true" ]]; then
+  cp -- "$secret_root/vapid-subject" "$secret_root/vapid-public-key" "$secret_root/vapid-private-key" "$staging/"
+fi
 
 random_urlsafe() { openssl rand -base64 48 | tr -d '\r\n' | tr '+/' '-_'; }
 random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
@@ -37,10 +53,31 @@ done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
 random_base64_32 > "$staging/session-token-encryption-key"
 
+if [[ "$instance" == "stg" && "$preserve_stg_vapid" == "false" ]]; then
+  node - "$staging" <<'NODE'
+const { generateKeyPairSync } = require("node:crypto");
+const { writeFileSync } = require("node:fs");
+const root = process.argv[2];
+const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+const { x, y, d } = privateKey.export({ format: "jwk" });
+writeFileSync(`${root}/vapid-subject`, "mailto:notifications@stg.athyper.test\n", { mode: 0o600 });
+writeFileSync(`${root}/vapid-public-key`, `${Buffer.concat([Buffer.from([4]), Buffer.from(x, "base64url"), Buffer.from(y, "base64url")]).toString("base64url")}\n`, { mode: 0o600 });
+writeFileSync(`${root}/vapid-private-key`, `${d}\n`, { mode: 0o600 });
+NODE
+fi
+
 chmod 600 "$staging"/*
+expected=15
+[[ "$instance" == "stg" ]] && expected=18
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
-[[ "$count" == "15" ]] || { echo "Expected 15 secrets, generated $count" >&2; exit 1; }
-mv "$staging" "$secret_root"
+[[ "$count" == "$expected" ]] || { echo "Expected $expected secrets, generated $count" >&2; exit 1; }
+if [[ "$preserve_stg_vapid" == "true" ]]; then
+  mv "$secret_root" "$instance_root/.preserved-vapid"
+  mv "$staging" "$secret_root"
+  rm -rf -- "$instance_root/.preserved-vapid"
+else
+  mv "$staging" "$secret_root"
+fi
 trap - EXIT INT TERM
 
 receipt="$instance_root/secrets-receipt.json"
@@ -51,7 +88,7 @@ cat > "$receipt" <<EOF
   "kind": "InstanceSecretsReceipt",
   "generatedAt": "$generated_at",
   "instance": "$instance",
-  "secretCount": 15,
+  "secretCount": $expected,
   "directoryMode": "0700",
   "fileMode": "0600",
   "source": "cryptographic-random-isolated-instance",
@@ -59,4 +96,4 @@ cat > "$receipt" <<EOF
 }
 EOF
 chmod 600 "$receipt"
-echo "Generated 15 owner-only $instance secrets under $secret_root; values were not printed."
+echo "Generated $expected owner-only $instance secrets under $secret_root; values were not printed."

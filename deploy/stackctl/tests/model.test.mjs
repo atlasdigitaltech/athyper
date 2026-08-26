@@ -203,7 +203,8 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   assert.equal(plan.status, "blocked");
   assert.equal(plan.promotion.rebuildAllowed, false);
   assert.equal(plan.promotion.images.length, 5);
-  assert.equal(plan.promotion.exactDigestMatch, false);
+  assert.equal(plan.promotion.exactDigestMatch, true);
+  assert.equal(plan.promotion.sourceRevisionMatch, true);
   assert.equal(plan.dataPolicy.classification, "sanitized");
   assert.ok(plan.dataPolicy.prohibitedContent.includes("credentials"));
   assert.equal(plan.integrationPolicy.defaultAction, "deny");
@@ -212,7 +213,7 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   assert.equal(plan.isolation.project, "athyper-stg");
   assert.deepEqual(plan.isolation.protectedProjects, ["athyper-dev", "athyper-qa"]);
   assert.deepEqual(plan.isolation.hostBindings, { postgres: "127.0.0.1:56432" });
-  assert.ok(plan.blockers.some((message) => message.includes("Promotion digest mismatch or absence")));
+  assert.ok(!plan.blockers.some((message) => message.includes("Promotion digest mismatch or absence")));
   assert.ok(plan.blockers.some((message) => message.includes("sanitizedDataManifest")));
   const stageIds = plan.stages.map(({ id }) => id);
   assert.ok(stageIds.indexOf("capture-pre-migration-backup") < stageIds.indexOf("run-stg-migration"));
@@ -236,7 +237,7 @@ test("production rehearsal is isolated, immutable, canary-first, and read-only",
   assert.ok(plan.credentialPolicy.authority.prohibitedNamespaces.includes("athyper/stg"));
   assert.equal(plan.promotion.rebuildAllowed,false);
   assert.equal(plan.promotion.images.length,5);
-  assert.ok(plan.blockers.some((message)=>message.includes("Production promotion image")));
+  assert.ok(!plan.blockers.some((message)=>message.includes("Production promotion image")));
   assert.ok(plan.blockers.some((message)=>message.includes("emailCanary")));
   assert.equal(plan.rollout.automaticPauseOnFailure,true);
   assert.deepEqual(plan.actions,["No action: this command only validates and emits the production activation contract."]);

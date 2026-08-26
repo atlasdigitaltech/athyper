@@ -324,14 +324,14 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
       if (options.preserveDatabase && instanceId !== "dev") {
         throw new Error("--preserve-database is restricted to the DEV instance.");
       }
-      if (options.initializeDatabase && instanceId !== "qa") {
-        throw new Error("--initialize-database is restricted to the QA instance.");
+      if (options.initializeDatabase && !["qa", "stg"].includes(instanceId)) {
+        throw new Error("--initialize-database is restricted to QA and STG instances.");
       }
       if (options.initializeDatabase && options.preserveDatabase) {
         throw new Error("--initialize-database and --preserve-database are mutually exclusive.");
       }
       if (options.initializeDatabase && existsSync(join(receiptDirectory, "migration.json"))) {
-        throw new Error("QA database initialization already has a migration receipt; use normal forward-only startup.");
+        throw new Error("Database initialization already has a migration receipt; use normal forward-only startup.");
       }
       const preservedMigration = options.preserveDatabase
         ? readMigrationReceipt(validate, root, instanceId, project)
