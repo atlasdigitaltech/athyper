@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadModel } from "./model.mjs";
 import { runReadOnly, runtimeRoot } from "./io.mjs";
@@ -80,7 +80,7 @@ function writeEvidence(repoRoot, document, now) {
   return path;
 }
 
-export function evaluateDevQualification({ model, receipt, revision, containers, endpoints, qualifiedAt, verification }) {
+export function evaluateDevQualification({ model, receipt, revision, containers, endpoints, qualifiedAt, verification, sessionVerification, telemetryVerification }) {
   const checks = [];
   const expected = model.selected.filter((service) => ["long-running", "stateful"].includes(service.lifecycle));
   const expectedIds = expected.map((service) => service.id);
@@ -99,6 +99,29 @@ export function evaluateDevQualification({ model, receipt, revision, containers,
   checks.push(check(!restarted.length, "container-restarts", "topology", "No DEV container has restarted since deployment.", "Container restarts prevent clean-run qualification.", restarted.map(({ service, restartCount }) => ({ service, restartCount }))));
   for (const endpoint of endpoints) checks.push(check(endpoint.ok, endpoint.id, "functional", `${endpoint.label} returned HTTP 200.`, `${endpoint.label} did not return HTTP 200.`, { status: endpoint.status, ...(endpoint.details ? { details: endpoint.details } : {}), ...(endpoint.error ? { error: endpoint.error } : {}) }));
   for (const [id, message] of manualAcceptance) {
+    if (id === "auth-session-planes") {
+      const document = sessionVerification?.document;
+      const results = new Map((document?.results ?? []).map((item) => [item.plane, item]));
+      const required = ["studio", "neon", "mesh"];
+      const missing = required.filter((plane) => {
+        const result = results.get(plane);
+        return result?.status !== "passed" || result.sessionState !== "authenticated" || result.postLogoutState !== "anonymous";
+      });
+      const current = document?.sourceRevision === revision;
+      checks.push(check(Boolean(document) && document.status === "passed" && current && !missing.length, id, "functional",
+        "Authenticated browser fixtures proved login, session propagation, and logout on all three planes.",
+        sessionVerification?.error ? `Cross-plane browser verification failed: ${sessionVerification.error}` : message,
+        document ? { completedAt: document.completedAt, sourceRevision: document.sourceRevision, required, missing } : undefined));
+      continue;
+    }
+    if (id === "telemetry-dimensions") {
+      const document = telemetryVerification?.document;
+      checks.push(check(document?.status === "passed", id, "functional",
+        "Grafana, Prometheus, Loki, and the DEV log forwarder expose the required telemetry dimensions.",
+        telemetryVerification?.error ? `Operations telemetry verification failed: ${telemetryVerification.error}` : message,
+        document?.evidence));
+      continue;
+    }
     const required = automatedVerificationChecks[id];
     if (!required || !verification?.document) {
       checks.push(check(false, id, "functional", "", verification?.error && required ? `Automated platform verification failed: ${verification.error}` : message));
@@ -143,9 +166,64 @@ export function qualifyDev(repoRoot, dependencies = {}) {
   ];
   const endpoints = endpointSpecs.map(([id, label, host, path, capture]) => ({ id, label, ...curlProbe(run, host, path, capture) }));
   const verification = (dependencies.runVerification ?? runVerification)(run, repoRoot);
-  const document = evaluateDevQualification({ model, receipt, revision: revisionResult.stdout, containers, endpoints, qualifiedAt, verification });
+  const sessionVerification = (dependencies.runSessionVerification ?? runSessionVerification)(revisionResult.stdout);
+  const telemetryVerification = (dependencies.runTelemetryVerification ?? runTelemetryVerification)(run, revisionResult.stdout);
+  const document = evaluateDevQualification({ model, receipt, revision: revisionResult.stdout, containers, endpoints, qualifiedAt, verification, sessionVerification, telemetryVerification });
   const path = (dependencies.writeEvidence ?? writeEvidence)(repoRoot, document, qualifiedAt);
   return { document, path };
+}
+
+function runSessionVerification(revision) {
+  const path = process.env.SESSION_VERIFICATION_EVIDENCE?.trim();
+  if (!path) return undefined;
+  try {
+    const document = JSON.parse(readFileSync(path, "utf8"));
+    if (document.kind !== "CrossPlaneSessionVerification" || document.sourceRevision !== revision) throw new Error("evidence authority does not match the checked-out revision");
+    const completedAt = Date.parse(document.completedAt);
+    if (!Number.isFinite(completedAt) || Math.abs(Date.now() - completedAt) > 30 * 60_000) throw new Error("evidence is older than 30 minutes");
+    return { document };
+  } catch (error) { return { error: error.message }; }
+}
+
+function runTelemetryVerification(run, revision) {
+  try {
+    const requiredServices = ["metrics", "logging", "alertmanager", "logshipper", "telemetry"];
+    const containersResult = run("docker", ["ps", "-a", "--filter", "label=com.docker.compose.project=athyper-operations", "--format", "{{.Names}}|{{.Label \"com.docker.compose.service\"}}|{{.State}}|{{.Status}}"]);
+    if (!containersResult.ok) throw new Error(containersResult.stderr || containersResult.error || "operations inventory failed");
+    const rows = containersResult.stdout.split("\n").filter(Boolean).map((line) => { const [name, service, state, status] = line.split("|"); return { name, service, state, status }; });
+    const missingServices = requiredServices.filter((service) => !rows.some((row) => row.service === service && row.state === "running"));
+    const grafana = jsonRun(run, "curl", ["--fail", "--silent", "--show-error", "http://127.0.0.1:53902/api/health"]);
+    const prometheus = jsonRun(run, "curl", ["--fail", "--silent", "--show-error", "http://127.0.0.1:53900/api/v1/targets"]);
+    const activeTargets = prometheus?.data?.activeTargets ?? [];
+    const metricsUp = activeTargets.length > 0 && activeTargets.every((target) => target.health === "up");
+    const labels = lokiValues(run, "labels");
+    const instances = lokiValues(run, "label/instance/values");
+    const environments = lokiValues(run, "label/environment/values");
+    const services = lokiValues(run, "label/service/values");
+    const revisions = lokiValues(run, "label/source_revision/values");
+    const requiredLabels = ["instance", "environment", "service", "source_revision"];
+    const missingLabels = requiredLabels.filter((label) => !labels.includes(label));
+    const heartbeatPath = join(runtimeRoot(), "operations", "log-forwarder", "heartbeat");
+    const heartbeatAgeSeconds = existsSync(heartbeatPath) ? Math.max(0, (Date.now() - statSync(heartbeatPath).mtimeMs) / 1_000) : Number.POSITIVE_INFINITY;
+    const receiptPath = join(runtimeRoot(), "operations", "receipts", "active.json");
+    const operationsRevision = existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, "utf8")).spec?.sourceRevision : undefined;
+    const status = !missingServices.length && grafana?.database === "ok" && metricsUp && !missingLabels.length
+      && instances.includes("dev") && environments.includes("development") && services.includes("api")
+      && revisions.includes(revision) && heartbeatAgeSeconds <= 30 && operationsRevision === revision ? "passed" : "failed";
+    return { document: { status, evidence: { missingServices, grafanaDatabase: grafana?.database ?? "unavailable", prometheusTargets: activeTargets.map((target) => ({ health: target.health, labels: target.labels })), missingLabels, instances, environments, sampledServices: services, sourceRevisionPresent: revisions.includes(revision), heartbeatAgeSeconds: Math.round(heartbeatAgeSeconds), operationsRevisionCurrent: operationsRevision === revision } } };
+  } catch (error) { return { error: error.message }; }
+}
+
+function jsonRun(run, program, args) {
+  const result = run(program, args, { timeout: 15_000 });
+  if (!result.ok) throw new Error(result.stderr || result.error || `${program} failed`);
+  return JSON.parse(result.stdout);
+}
+
+function lokiValues(run, endpoint) {
+  const document = jsonRun(run, "docker", ["exec", "athyper-operations-telemetry-1", "wget", "-qO-", `http://logging:3100/loki/api/v1/${endpoint}`]);
+  if (document.status !== "success" || !Array.isArray(document.data)) throw new Error(`Loki ${endpoint} response is invalid`);
+  return document.data;
 }
 
 function runVerification(run, repoRoot) {

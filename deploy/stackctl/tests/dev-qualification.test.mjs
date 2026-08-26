@@ -63,3 +63,24 @@ test("DEV qualification reuses authenticated platform verification fixture evide
   assert.deepEqual(document.spec.blockers, ["auth-session-planes", "telemetry-dimensions"]);
   createValidator(repoRoot)(document, "unit-test");
 });
+
+test("DEV qualification accepts current cross-plane sessions and shared operations telemetry", () => {
+  const model = loadModel(repoRoot, "dev");
+  const expected = model.selected.filter((service) => ["long-running", "stateful"].includes(service.lifecycle));
+  const revision = "0123456789abcdef";
+  const verificationIds = ["identity.session", "identity.iam", "runtime.worker", "runtime.scheduler", "document.storage-round-trip", "document.clean-scan", "document.extract", "document.render", "search.round-trip", "mail.delivery"];
+  const document = evaluateDevQualification({
+    model,
+    receipt: { spec: { state: "running", project: "athyper-dev", sourceRevision: revision, updatedAt: "2026-08-21T00:00:00Z" } },
+    revision,
+    containers: expected.map((service) => ({ service: service.id, name: `athyper-dev-${service.id}-1`, image: service.image, state: "running", health: "healthy", restartCount: 0, cpuPercent: 0, memoryUsage: "1MiB / 1GiB" })),
+    endpoints: [],
+    qualifiedAt: "2026-08-21T00:00:00.000Z",
+    verification: { document: { runId: "verification-run", checks: verificationIds.map((id) => ({ id, status: "passed" })) } },
+    sessionVerification: { document: { kind: "CrossPlaneSessionVerification", status: "passed", sourceRevision: revision, completedAt: "2026-08-21T00:00:00.000Z", results: ["studio", "neon", "mesh"].map((plane) => ({ plane, status: "passed", sessionState: "authenticated", postLogoutState: "anonymous" })) } },
+    telemetryVerification: { document: { status: "passed", evidence: { instances: ["dev"] } } },
+  });
+  assert.equal(document.spec.status, "passed");
+  assert.deepEqual(document.spec.blockers, []);
+  createValidator(repoRoot)(document, "unit-test");
+});
