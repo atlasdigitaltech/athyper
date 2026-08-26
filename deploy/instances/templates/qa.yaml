@@ -8,7 +8,7 @@ spec:
   domainSuffix: qa.athyper.test
   preset: qa-standard
   hostProfile: laptop-32
-  imageSet: image-sets/candidates/qa-example.yaml
+  imageSet: image-sets/candidates/qa-local.yaml
   dataPolicy: disposable
   integrations: mock
   debugPorts:

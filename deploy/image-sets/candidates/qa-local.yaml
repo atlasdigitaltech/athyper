@@ -1,0 +1,18 @@
+apiVersion: athyper.io/v1alpha1
+kind: ImageSet
+metadata:
+  id: qa-local-qualified-dev
+  channel: candidate
+spec:
+  sourceRevision: working-tree
+  images:
+    - id: neon-web
+      reference: athyper/neon-web@sha256:fa3778b62077a2c8c282bf0bc746dcfadd5bb3a7c1e9ac336ed60e50e5a62588
+    - id: mesh-web
+      reference: athyper/mesh-web@sha256:2d1d86103575d69431aba40efdd1087a8157f6d71107311ab8275f54a910591b
+    - id: studio-web
+      reference: athyper/studio-web@sha256:c9f3f86834c1c81c97f461817cd08f36faa3d26d93e088e592484942fc71df0e
+    - id: runtime-server
+      reference: athyper/runtime-server@sha256:74e8f12c6d7c3f4e5e4ae81d1ca759b9c05440a2fe5dde1126346f0c9190c10f
+    - id: iam
+      reference: athyper/keycloak@sha256:a2e479a576c6f120f6834008e465d6ec47705699b6c0a671d07d98e923527736
