@@ -36,20 +36,17 @@ test("instance gateway has a unique shared-network alias and no Docker socket", 
   assert.equal(instance.networks.ops.internal, true);
 });
 
-test("platform ingress routes only DEV while QA and staging are parked", () => {
+test("platform ingress routes DEV, QA, and staging through isolated gateways", () => {
   const dynamic = read("deploy/compose/platform/ingress/dynamic.yaml");
-  assert.equal(dynamic.http.routers.dev.service, "gateway-dev-failover");
-  assert.deepEqual(dynamic.http.services["gateway-dev-failover"].failover, {
-    healthCheck: {}, service: "gateway-dev", fallback: "platform-outage",
-  });
-  assert.equal(dynamic.http.services["gateway-dev"].loadBalancer.servers[0].url, "http://gateway-dev:8080");
-  assert.deepEqual(dynamic.http.services["gateway-dev"].loadBalancer.healthCheck, {
-    path: "/ping", port: 8082, interval: "10s", timeout: "3s",
-  });
-  for (const parked of ["qa", "stg"]) {
-    assert.equal(dynamic.http.routers[parked], undefined);
-    assert.equal(dynamic.http.services[`gateway-${parked}-failover`], undefined);
-    assert.equal(dynamic.http.services[`gateway-${parked}`], undefined);
+  for (const environment of ["dev", "qa", "stg"]) {
+    assert.equal(dynamic.http.routers[environment].service, `gateway-${environment}-failover`);
+    assert.deepEqual(dynamic.http.services[`gateway-${environment}-failover`].failover, {
+      healthCheck: {}, service: `gateway-${environment}`, fallback: "platform-outage",
+    });
+    assert.equal(dynamic.http.services[`gateway-${environment}`].loadBalancer.servers[0].url, `http://gateway-${environment}:8080`);
+    assert.deepEqual(dynamic.http.services[`gateway-${environment}`].loadBalancer.healthCheck, {
+      path: "/ping", port: 8082, interval: "10s", timeout: "3s",
+    });
   }
   assert.equal(dynamic.http.services["platform-outage"].loadBalancer.servers[0].url, "http://platform-outage:8080");
 });
@@ -182,6 +179,20 @@ test("release instances use an image-contained fail-closed forward migration run
     const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
     assert.match(manifest, /20260825_notification_activity_center\.sql/u);
   }
+});
+
+test("QA has a fail-closed one-time migration baseline initializer", () => {
+  const parity = read("deploy/compose/instance/compose.parity.yaml");
+  const catalog = read("deploy/catalog/applications.yaml");
+  const service = parity.services["db-migration-baseline"];
+  const runner = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/baseline-forward-migrations.sh"), "utf8");
+  assert.deepEqual(service.entrypoint, ["/bin/sh", "/athyper/bin/baseline-forward-migrations.sh"]);
+  assert.equal(service.read_only, true);
+  assert.deepEqual(service.secrets, ["postgres-password"]);
+  assert.deepEqual(catalog.services.find(({ id }) => id === "db-migration-baseline").presets, ["qa-standard"]);
+  assert.match(runner, /foundation receipt does not match the approved DDL/u);
+  assert.match(runner, /already has a migration ledger; refusing baseline adoption/u);
+  assert.match(runner, /sha256sum/u);
 });
 
 test("MinIO bootstrap has enough memory for concurrent full-stack startup", () => {

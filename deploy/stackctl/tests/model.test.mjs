@@ -18,7 +18,7 @@ test("catalog accounts for all Stack v2 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
   assert.equal(model.services.filter((service) => service.ledger === "v2-native").length, 35);
   assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
-  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 7);
+  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 8);
 });
 
 test("DEV render is project-scoped and uses the laptop-32 envelope", () => {
@@ -132,7 +132,7 @@ test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   }
 });
 
-test("QA plan is independently addressed and rejects placeholder candidate images", () => {
+test("QA plan is independently addressed and uses complete immutable candidate images", () => {
   const plan = createPlan(defaultRepoRoot, "qa");
   assert.equal(plan.project, "athyper-qa");
   assert.equal(plan.preset, "qa-standard");
@@ -142,12 +142,15 @@ test("QA plan is independently addressed and rejects placeholder candidate image
   assert.ok(plan.networks.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.volumes.every((name) => name.startsWith("athyper-qa_")));
   assert.ok(plan.domains.every((name) => name.endsWith(".qa.athyper.test")));
-  assert.ok(plan.blockers.some((message) => message.includes("image set is incomplete")));
-  assert.ok(plan.blockers.some((message) => message.includes("source revision is an all-zero placeholder")));
-  assert.ok(plan.blockers.some((message) => message.includes("digest is an all-zero placeholder")));
+  assert.ok(!plan.blockers.some((message) => message.includes("image set is incomplete")));
+  assert.ok(!plan.blockers.some((message) => message.includes("source revision is an all-zero placeholder")));
+  assert.ok(!plan.blockers.some((message) => message.includes("digest is an all-zero placeholder")));
+  assert.ok(plan.services.some(({ id }) => id === "db-migration-baseline"));
+  assert.ok(plan.resources.memoryMiB <= plan.resources.limitMemoryMiB);
+  assert.ok(plan.resources.cpu <= plan.resources.limitCpu);
   assert.match(
     plan.services.find(({ id }) => id === "api").image,
-    /athyper-runtime-server@sha256:0{64}$/u,
+    /athyper\/runtime-server@sha256:[a-f0-9]{64}$/u,
   );
 });
 
@@ -167,7 +170,7 @@ test("QA lifecycle plans are read-only and cannot target DEV", () => {
       assert.equal(stage.command.environment.ATHYPER_INSTANCE, "qa");
       assert.equal(stage.command.environment.ATHYPER_HTTP_BIND, undefined);
       assert.equal(stage.command.environment.ATHYPER_POSTGRES_BIND, "127.0.0.1:55432");
-      assert.match(stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER, /@sha256:0{64}$/u);
+      assert.match(stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER, /@sha256:[a-f0-9]{64}$/u);
     }
   }
   assert.throws(

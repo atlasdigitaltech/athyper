@@ -106,8 +106,11 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
   const model = loadModel(repoRoot, instanceId);
   const instance = model.instance;
   const collisions = staticCollisionChecks(repoRoot);
-  const memoryMiB = model.selected.reduce((total, service) => total + service.resources.memoryMiB, 0);
-  const cpu = model.selected.reduce((total, service) => total + service.resources.cpu, 0);
+  // The QA baseline and forward runner execute serially under the controller;
+  // they share one migration slot and are never resident together.
+  const resourceServices = model.selected.filter(({ id }) => id !== "db-migration-baseline");
+  const memoryMiB = resourceServices.reduce((total, service) => total + service.resources.memoryMiB, 0);
+  const cpu = resourceServices.reduce((total, service) => total + service.resources.cpu, 0);
   const blockers = [];
   const infrastructure = probes.infrastructureGates ?? inspectInfrastructureGates(repoRoot, {
     qualification: probes.qualification,
@@ -184,7 +187,7 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
   const domains = ingressServices.map((service) => `${service}.${instance.spec.domainSuffix}`);
   const imageOverrides = new Map(model.imageSet.spec.images.map(({ id, reference }) => [id, reference]));
   const publishedImageId = (serviceId) => (
-    ["api", "worker", "scheduler", "db-migration", "db-forward-migration"].includes(serviceId) ? "runtime-server" : serviceId
+    ["api", "worker", "scheduler", "db-migration", "db-forward-migration", "db-migration-baseline"].includes(serviceId) ? "runtime-server" : serviceId
   );
   return {
     apiVersion: "athyper.io/v1alpha1",

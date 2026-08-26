@@ -191,6 +191,30 @@ services:
     mem_limit: 512m
     cpus: 1.0
 
+  # One-time QA initialization only. The current foundation checksum must be
+  # present in every plane before image-contained migrations may be baselined.
+  db-migration-baseline:
+    <<: *runtime-common
+    profiles: [migration]
+    restart: "no"
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      ATHYPER_DDL_SHA256: ${ATHYPER_DDL_SHA256:?set ATHYPER_DDL_SHA256}
+      ATHYPER_MIGRATION_ROOT: /app/migrations
+    entrypoint: [/bin/sh, /athyper/bin/baseline-forward-migrations.sh]
+    secrets: [postgres-password]
+    volumes:
+      - ./scripts/baseline-forward-migrations.sh:/athyper/bin/baseline-forward-migrations.sh:ro
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 1.0
+
   virusscan:
     image: clamav/clamav:1.5.2
     restart: unless-stopped

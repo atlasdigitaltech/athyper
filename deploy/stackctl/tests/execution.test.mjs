@@ -132,6 +132,40 @@ test("preserved-database up refuses an absent migration receipt", () => {
   assert.deepEqual(context.calls, []);
 });
 
+test("QA initialization foundations, baselines, then verifies forward migrations exactly once", () => {
+  const context = fixture();
+  const receipt = executeStackOperation(defaultRepoRoot, "up", "qa", {
+    confirm: "qa",
+    initializeDatabase: true,
+  }, context.dependencies);
+  const invocations = context.calls.map(({ args }) => args.join(" "));
+  const foundation = invocations.findIndex((line) => line.endsWith("run --rm db-migration"));
+  const baseline = invocations.findIndex((line) => line.endsWith("run --rm db-migration-baseline"));
+  const forward = invocations.findIndex((line) => line.endsWith("run --rm db-forward-migration"));
+  assert.ok(foundation > 0 && foundation < baseline && baseline < forward);
+  assert.equal(receipt.spec.artifacts.migrationMode, "fresh-database-foundation-baselined");
+  const migration = JSON.parse(readFileSync(join(context.root, "instances/qa/receipts/migration.json"), "utf8"));
+  assert.equal(migration.spec.mode, "fresh-database-foundation-baselined");
+  assert.throws(
+    () => executeStackOperation(defaultRepoRoot, "up", "qa", {
+      confirm: "qa",
+      initializeDatabase: true,
+    }, context.dependencies),
+    /already has a migration receipt/u,
+  );
+});
+
+test("database initialization is restricted to QA", () => {
+  const context = fixture();
+  assert.throws(
+    () => executeStackOperation(defaultRepoRoot, "up", "dev", {
+      confirm: "dev",
+      initializeDatabase: true,
+    }, context.dependencies),
+    /restricted to the QA instance/u,
+  );
+});
+
 test("down is receipt-owned and retains Docker volumes", () => {
   const context = fixture();
   executeStackOperation(defaultRepoRoot, "up", "dev", { confirm: "dev" }, context.dependencies);

@@ -324,6 +324,15 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
       if (options.preserveDatabase && instanceId !== "dev") {
         throw new Error("--preserve-database is restricted to the DEV instance.");
       }
+      if (options.initializeDatabase && instanceId !== "qa") {
+        throw new Error("--initialize-database is restricted to the QA instance.");
+      }
+      if (options.initializeDatabase && options.preserveDatabase) {
+        throw new Error("--initialize-database and --preserve-database are mutually exclusive.");
+      }
+      if (options.initializeDatabase && existsSync(join(receiptDirectory, "migration.json"))) {
+        throw new Error("QA database initialization already has a migration receipt; use normal forward-only startup.");
+      }
       const preservedMigration = options.preserveDatabase
         ? readMigrationReceipt(validate, root, instanceId, project)
         : null;
@@ -358,7 +367,15 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
           : ddlSha256;
         compose(["up", "--detach", "--wait", "db"]);
         compose(["run", "--rm", "db-init"]);
-        if (preservedMigration) {
+        if (options.initializeDatabase) {
+          compose(["run", "--rm", "db-migration"]);
+          compose(["run", "--rm", "db-migration-baseline"]);
+          compose(["run", "--rm", "db-forward-migration"]);
+          artifacts.migrationMode = "fresh-database-foundation-baselined";
+          artifacts.migrationSha256 = forwardMigrationSha256;
+          artifacts.foundationSha256 = ddlSha256;
+          writeMigrationReceipt("fresh-database-foundation-baselined", forwardMigrationSha256);
+        } else if (preservedMigration) {
           artifacts.migrationMode = "preserved-existing-database";
           artifacts.migrationReceipt = preservedMigration.path;
           artifacts.migrationSha256 = preservedMigration.receipt.spec.ddlSha256;
