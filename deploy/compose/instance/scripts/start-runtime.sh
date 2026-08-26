@@ -5,6 +5,24 @@ encode_file() {
   node -e 'const fs=require("fs");process.stdout.write(encodeURIComponent(fs.readFileSync(process.argv[1],"utf8").trim()))' "$1"
 }
 
+load_optional_secret() {
+  variable="$1"
+  eval "secret_file=\${${variable}_FILE:-}"
+  [ -n "$secret_file" ] || return 0
+  [ -f "$secret_file" ] || {
+    echo "Secret file configured by ${variable}_FILE is unavailable" >&2
+    exit 1
+  }
+  secret_value="$(cat "$secret_file")"
+  [ -n "$secret_value" ] || {
+    echo "Secret file configured by ${variable}_FILE is empty" >&2
+    exit 1
+  }
+  eval "$variable=\$secret_value"
+  export "$variable"
+  unset secret_file secret_value
+}
+
 runtime_password="$(encode_file /run/secrets/runtime-db-password)"
 worker_password="$(encode_file /run/secrets/worker-db-password)"
 redis_password="$(encode_file /run/secrets/redis-password)"
@@ -35,7 +53,22 @@ export S3_ENDPOINT=http://objectstorage:9000 S3_REGION=us-east-1 S3_BUCKET=athyp
 export CLAMD_HOST=virusscan CLAMD_PORT=3310 CLAMD_ON_UNAVAILABLE=fail-closed
 export DOCRENDER_BASE_URL=http://docrender:3000 DOCPARSER_URL=http://docparser:9998
 export SEARCHCORE_URL=http://searchcore:7700 SEARCHCORE_DOCUMENT_INDEX=documents
-export SMTP_HOST=mailtrap SMTP_PORT=1025 SMTP_SECURE=false SMTP_FROM="noreply@${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}"
+SMTP_HOST="${SMTP_HOST:-mailtrap}"
+SMTP_PORT="${SMTP_PORT:-1025}"
+SMTP_SECURE="${SMTP_SECURE:-false}"
+SMTP_FROM="${SMTP_FROM:-noreply@${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}}"
+export SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_FROM
+
+# Provider secrets may be injected directly by an orchestrator or through the
+# conventional *_FILE variables used by Docker/Kubernetes secret mounts. The
+# local stack intentionally supplies none of these and continues to use Mailpit.
+for provider_secret in \
+  SMTP_HOST SMTP_PORT SMTP_SECURE SMTP_FROM SMTP_USER SMTP_PASS \
+  PUSH_FCM_PROJECT_ID PUSH_FCM_CLIENT_EMAIL PUSH_FCM_PRIVATE_KEY \
+  VAPID_SUBJECT VAPID_PUBLIC_KEY VAPID_PRIVATE_KEY; do
+  load_optional_secret "$provider_secret"
+done
+unset provider_secret
 export PUBLICATION_API_ENABLED=false PUBLICATION_COMPILE_ENABLED=false
 export PUBLICATION_DISPATCH_ENABLED=false PUBLICATION_APPLY_ENABLED=false PUBLICATION_RECOVERY_ENABLED=false
 

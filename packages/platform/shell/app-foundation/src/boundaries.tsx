@@ -1,8 +1,9 @@
 "use client";
 
 import { getBrowserQueryClient } from "@athyper/platform-query";
+import { ActionButton, ActionLink, PresentationCard } from "@athyper/platform-ui";
 import * as React from "react";
-import { useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { classifyAppError, createRedactedBoundaryEvent, safeLocalReturnTo, safeLoginLocation, type AppErrorModel, type RedactedBoundaryEvent } from "./error-taxonomy";
 
 export interface AppErrorBoundaryProps {
@@ -36,81 +37,61 @@ export function AppErrorBoundary(props: AppErrorBoundaryProps) {
 }
 
 export function GlobalAppErrorBoundary(props: AppErrorBoundaryProps) {
-  return <html lang="en"><body style={{ margin: 0 }}><AppErrorBoundary {...props} /></body></html>;
+  return <html lang="en"><body><AppErrorBoundary {...props} /></body></html>;
 }
 
 export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [model.kind]);
-  return <main style={styles.page} data-error-kind={model.kind}>
-    <section style={styles.card} aria-labelledby="app-error-title" aria-describedby="app-error-description">
-      <div role="alert" aria-live="assertive" aria-atomic="true" style={styles.announcement}>An error needs your attention.</div>
-      <div aria-hidden="true" style={styles.mark}>!</div>
-      <p style={styles.eyebrow}>{applicationName}</p>
-      <h1 id="app-error-title" ref={heading} tabIndex={-1} style={styles.title}>{model.title}</h1>
-      <p id="app-error-description" style={styles.description}>{model.description}</p>
+  return <main className="a-error-surface" data-error-kind={model.kind}>
+    <PresentationCard className="a-error-surface__card" aria-labelledby="app-error-title" aria-describedby="app-error-description">
+      <div role="alert" aria-live="assertive" aria-atomic="true" className="a-visually-hidden">An error needs your attention.</div>
+      <div aria-hidden="true" className="a-error-surface__mark">!</div>
+      <p className="a-eyebrow">{applicationName}</p>
+      <h1 id="app-error-title" ref={heading} tabIndex={-1} className="a-error-surface__title">{model.title}</h1>
+      <p id="app-error-description" className="a-error-surface__description">{model.description}</p>
       {model.kind === "required-action" ? <IdentityActionList actions={model.requiredActions} /> : null}
-      {model.requestId ? <p style={styles.requestId}>Request ID: <code>{model.requestId}</code></p> : null}
-      <div style={styles.actions}>{actions(model, reset, onCompare)}</div>
-    </section>
+      {model.requestId ? <p className="a-error-surface__request">Request ID: <code>{model.requestId}</code></p> : null}
+      <div className="a-error-surface__actions">{actions(model, reset, onCompare)}</div>
+    </PresentationCard>
   </main>;
 }
 
 function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void): ReactNode {
   if (model.action === "none" || model.action === "correct-fields") return null;
-  if (model.action === "login") return <a style={styles.primary} href={safeLoginLocation("/")}>Sign in</a>;
-  if (model.action === "select-context") return <a style={styles.primary} href="/select-context">Choose context</a>;
-  if (model.action === "complete-action") return <a style={styles.primary} href="/auth/required-action">Continue identity check</a>;
-  return <><button type="button" style={styles.primary} onClick={() => reset?.()} disabled={!reset}>{model.action === "reload-compare" ? "Reload latest" : "Try again"}</button>{model.action === "reload-compare" && onCompare ? <button type="button" style={styles.secondary} onClick={onCompare}>Compare changes</button> : null}</>;
+  if (model.action === "login") return <ActionLink variant="primary" href={safeLoginLocation("/")}>Sign in</ActionLink>;
+  if (model.action === "select-context") return <ActionLink variant="primary" href="/select-context">Choose context</ActionLink>;
+  if (model.action === "complete-action") return <ActionLink variant="primary" href="/auth/required-action">Continue identity check</ActionLink>;
+  return <><ActionButton variant="primary" onClick={() => reset?.()} disabled={!reset}>{model.action === "reload-compare" ? "Reload latest" : "Try again"}</ActionButton>{model.action === "reload-compare" && onCompare ? <ActionButton variant="secondary" onClick={onCompare}>Compare changes</ActionButton> : null}</>;
 }
 
-function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div style={styles.notice}><p style={styles.noticeTitle}>Required actions</p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }
+function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div className="a-error-surface__notice"><p><strong>Required actions</strong></p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }
 function humanize(value: string): string { return value.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
 export function NotFoundBoundary({ applicationName = "Athyper" }: { readonly applicationName?: string }) { return <ErrorSurface applicationName={applicationName} model={Object.freeze({ kind: "unexpected", title: "Page not found", description: "The page may have moved or you may not have access to it.", action: "none", canRetry: false, preserveInput: false, requiredActions: [] })} />; }
 
-export function EmptyStateBoundary({ title = "Nothing here yet", description = "There is no content to show.", action }: { readonly title?: string; readonly description?: string; readonly action?: ReactNode }) { return <section style={styles.empty} aria-labelledby="empty-state-title"><h2 id="empty-state-title" style={styles.emptyTitle}>{title}</h2><p style={styles.description}>{description}</p>{action}</section>; }
+export function EmptyStateBoundary({ title = "Nothing here yet", description = "There is no content to show.", action }: { readonly title?: string; readonly description?: string; readonly action?: ReactNode }) { return <section className="a-empty-state" aria-labelledby="empty-state-title"><h2 id="empty-state-title">{title}</h2><p>{description}</p>{action}</section>; }
 
 export function AppLoadingBoundary({ kind = "bootstrap", label, collapsed = false, applicationName = "Athyper", planeDescriptor = "Business workspace", planeIconSrc, planeWordmarkSrc }: { readonly kind?: "bootstrap" | "public" | "refresh"; readonly label?: string; readonly collapsed?: boolean; readonly applicationName?: string; readonly planeDescriptor?: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string }) {
   const status = label ?? (kind === "public" ? "Loading sign in" : kind === "refresh" ? "Updating content" : "Loading application");
   if (kind === "refresh") return <section className="a-app-loader a-app-loader--content" aria-busy="true" aria-labelledby="content-loading-title">
-    <h1 id="content-loading-title" style={styles.srOnly}>{status}</h1>
+    <h1 id="content-loading-title" className="a-visually-hidden">{status}</h1>
     <div className="a-app-loader__eyebrow" aria-hidden="true" />
     <div className="a-app-loader__title" aria-hidden="true" />
     <div className="a-app-loader__summary" aria-hidden="true" />
     <div className="a-app-loader__grid" aria-hidden="true"><span /><span /><span /></div>
-    <span role="status" aria-live="polite" style={styles.srOnly}>{status}</span>
+    <span role="status" aria-live="polite" className="a-visually-hidden">{status}</span>
   </section>;
   if (kind === "public") return <main className="a-app-loader a-app-loader--public" aria-busy="true" aria-labelledby="loading-title">
-    <section className="a-app-loader__public-card"><h1 id="loading-title" style={styles.srOnly}>{status}</h1><div className="a-app-loader__eyebrow" /><div className="a-app-loader__title" /><div className="a-app-loader__field" /><div className="a-app-loader__field" /><span role="status" aria-live="polite" style={styles.srOnly}>{status}</span></section>
+    <section className="a-app-loader__public-card"><h1 id="loading-title" className="a-visually-hidden">{status}</h1><div className="a-app-loader__eyebrow" /><div className="a-app-loader__title" /><div className="a-app-loader__field" /><div className="a-app-loader__field" /><span role="status" aria-live="polite" className="a-visually-hidden">{status}</span></section>
   </main>;
   return <main className="a-app-loader a-app-loader--bootstrap" data-collapsed={collapsed} aria-busy="true" aria-labelledby="loading-title">
-    <h1 id="loading-title" style={styles.srOnly}>{status}</h1>
+    <h1 id="loading-title" className="a-visually-hidden">{status}</h1>
     <aside className="a-app-loader__rail" aria-hidden="true"><div className="a-app-loader__rail-brand"><span className="a-app-loader__brand-primary">{collapsed ? (planeIconSrc ? <img className="a-app-loader__brand-icon" src={planeIconSrc} alt="" /> : <b>{applicationName.slice(0,1)}</b>) : (planeWordmarkSrc ? <img className="a-app-loader__brand-wordmark" src={planeWordmarkSrc} alt="" /> : <b>{applicationName}</b>)}</span><small><span>{planeDescriptor}</span><b>{collapsed ? "›" : "‹"}</b></small></div><div className="a-app-loader__rail-nav"><span /><span /><span /></div></aside>
     <section className="a-app-loader__shell" aria-hidden="true"><header><span /><span /></header><div className="a-app-loader__crumb" /><div className="a-app-loader__canvas"><div className="a-app-loader__eyebrow" /><div className="a-app-loader__title" /><div className="a-app-loader__summary" /><div className="a-app-loader__grid"><span /><span /><span /></div></div></section>
-    <span role="status" aria-live="polite" style={styles.srOnly}>{status}</span>
+    <span role="status" aria-live="polite" className="a-visually-hidden">{status}</span>
   </main>;
 }
 
 export async function clearLocalPrincipalState(): Promise<void> { const client = getBrowserQueryClient(); await client.cancelQueries(); client.clear(); }
 export function reportRedactedBoundaryEvent(event: RedactedBoundaryEvent): void { console.error("[app-boundary]", event); }
-
-const baseFont = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
-const styles = {
-  page: { minHeight: "100vh", display: "grid", placeItems: "center", padding: "24px", boxSizing: "border-box", color: "#18212f", background: "#f5f7fa", fontFamily: baseFont } satisfies CSSProperties,
-  card: { width: "min(100%, 560px)", padding: "32px", boxSizing: "border-box", border: "1px solid #d7dee8", borderRadius: "16px", background: "#fff", boxShadow: "0 12px 36px rgba(20,35,55,.08)" } satisfies CSSProperties,
-  announcement: { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 } satisfies CSSProperties,
-  mark: { width: "44px", height: "44px", display: "grid", placeItems: "center", borderRadius: "50%", color: "#8b1d26", background: "#fdecee", fontWeight: 800, fontSize: "24px" } satisfies CSSProperties,
-  eyebrow: { margin: "20px 0 6px", color: "#536176", fontSize: "13px", fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase" } satisfies CSSProperties,
-  title: { margin: 0, fontSize: "clamp(28px,5vw,40px)", lineHeight: 1.15, outline: "none" } satisfies CSSProperties,
-  description: { margin: "12px 0 0", color: "#536176", fontSize: "16px", lineHeight: 1.6 } satisfies CSSProperties,
-  requestId: { margin: "20px 0 0", color: "#536176", fontSize: "13px" } satisfies CSSProperties,
-  actions: { display: "flex", flexWrap: "wrap", gap: "12px", marginTop: "24px" } satisfies CSSProperties,
-  primary: { minHeight: "44px", display: "inline-flex", alignItems: "center", justifyContent: "center", padding: "0 18px", border: "1px solid var(--a-primary)", borderRadius: "8px", color: "var(--a-primary-foreground)", background: "var(--a-primary)", font: `600 15px ${baseFont}`, textDecoration: "none", cursor: "pointer" } satisfies CSSProperties,
-  secondary: { minHeight: "44px", padding: "0 18px", border: "1px solid #9aa7b8", borderRadius: "8px", color: "#18212f", background: "#fff", font: `600 15px ${baseFont}`, cursor: "pointer" } satisfies CSSProperties,
-  notice: { marginTop: "20px", padding: "12px 16px", borderRadius: "8px", background: "#fff8e8", color: "#634400" } satisfies CSSProperties,
-  noticeTitle: { margin: 0, fontWeight: 700 } satisfies CSSProperties,
-  empty: { minHeight: "240px", display: "grid", alignContent: "center", justifyItems: "center", padding: "24px", textAlign: "center", fontFamily: baseFont } satisfies CSSProperties,
-  emptyTitle: { margin: 0, fontSize: "24px" } satisfies CSSProperties,
-  srOnly: { position: "absolute", width: "1px", height: "1px", padding: 0, margin: "-1px", overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 } satisfies CSSProperties,
-};

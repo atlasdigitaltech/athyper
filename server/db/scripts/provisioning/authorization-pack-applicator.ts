@@ -43,6 +43,9 @@ export async function applyPlaneSeed(
   for (const tenant of inputs.manifest.tenants) {
     provisionActors.set(tenant.id, await ensureProvisionActor(client, inputs, plane, tenant.id, tenant.code));
   }
+  for (const tenant of inputs.manifest.tenants) {
+    await applyTenantProfile(client, inputs, plane, tenant.id, tenant.code, provisionActors.get(tenant.id)!);
+  }
   await applyPlaneResources(client, inputs, plane, provisionActors);
   const applicationProjectionCount = await applyTenantApplicationProjections(client, inputs, plane, provisionActors);
   const pack = inputs.authorizationPacks[plane];
@@ -438,21 +441,23 @@ async function applyPlaneResources(
         INSERT INTO master.legal_entity (
           id,tenant_id,code,name,display_name,legal_name,entity_type,
           parent_legal_entity_id,registration_country_code,functional_currency,
-          reporting_currency,metadata,status,created_by
-        ) VALUES ($1::uuid,$2::uuid,$3,$4,$4,$5,'company',$10::uuid,$6,$7,$8,$9::jsonb,'active',$11::uuid)
+          reporting_currency,logo_asset_ref,metadata,status,created_by
+        ) VALUES ($1::uuid,$2::uuid,$3,$4,$4,$5,'company',$11::uuid,$6,$7,$8,$9,$10::jsonb,'active',$12::uuid)
         ON CONFLICT (tenant_id,code) DO UPDATE SET
           name=EXCLUDED.name,display_name=EXCLUDED.display_name,legal_name=EXCLUDED.legal_name,
           registration_country_code=EXCLUDED.registration_country_code,
           functional_currency=EXCLUDED.functional_currency,reporting_currency=EXCLUDED.reporting_currency,
+          logo_asset_ref=COALESCE(EXCLUDED.logo_asset_ref,master.legal_entity.logo_asset_ref),
           metadata=EXCLUDED.metadata,status='active',updated_by=EXCLUDED.created_by
         WHERE (master.legal_entity.name,master.legal_entity.display_name,master.legal_entity.legal_name,
                master.legal_entity.registration_country_code,master.legal_entity.functional_currency,
-               master.legal_entity.reporting_currency,master.legal_entity.metadata,master.legal_entity.status)
+               master.legal_entity.reporting_currency,master.legal_entity.logo_asset_ref,master.legal_entity.metadata,master.legal_entity.status)
           IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.display_name,EXCLUDED.legal_name,
                EXCLUDED.registration_country_code,EXCLUDED.functional_currency,
-               EXCLUDED.reporting_currency,EXCLUDED.metadata,EXCLUDED.status)
+               EXCLUDED.reporting_currency,COALESCE(EXCLUDED.logo_asset_ref,master.legal_entity.logo_asset_ref),EXCLUDED.metadata,EXCLUDED.status)
       `, [resourceId, tenant.id, resource.code, resource.name, resource.legalName,
         resource.registrationCountryCode, resource.functionalCurrency, resource.reportingCurrency,
+        resource.logoAssetRef ?? null,
         JSON.stringify(seedMetadata(inputs, plane, { externalScopeKey: resource.scopeKey })), parentId ?? null, actorId]);
       const actual = await one<{ id: string; parentId: string | null }>(client,
         `SELECT id::text AS id,parent_legal_entity_id::text AS "parentId"
@@ -480,18 +485,23 @@ async function applyPlaneResources(
       await client.query(`
         INSERT INTO mesh.network_account (
           id,tenant_id,account_code,display_name,legal_name,network_role,
-          default_currency,capabilities,status,metadata,created_by
-        ) VALUES ($1::uuid,$2::uuid,$3,$4,$4,$5,'USD','{}'::jsonb,'active',$6::jsonb,$7::uuid)
+          default_currency,logo_asset_ref,capabilities,status,metadata,created_by
+        ) VALUES ($1::uuid,$2::uuid,$3,$4,$4,$5,'USD',$6,'{}'::jsonb,'active',$7::jsonb,$8::uuid)
         ON CONFLICT (account_code) DO UPDATE SET
           display_name=EXCLUDED.display_name,legal_name=EXCLUDED.legal_name,
-          network_role=EXCLUDED.network_role,status='active',metadata=EXCLUDED.metadata,
+          network_role=EXCLUDED.network_role,
+          logo_asset_ref=COALESCE(EXCLUDED.logo_asset_ref,mesh.network_account.logo_asset_ref),
+          status='active',metadata=EXCLUDED.metadata,
           updated_by=EXCLUDED.created_by
         WHERE mesh.network_account.tenant_id=EXCLUDED.tenant_id
           AND (mesh.network_account.display_name,mesh.network_account.legal_name,
-               mesh.network_account.network_role,mesh.network_account.status,mesh.network_account.metadata)
+               mesh.network_account.network_role,mesh.network_account.logo_asset_ref,
+               mesh.network_account.status,mesh.network_account.metadata)
             IS DISTINCT FROM (EXCLUDED.display_name,EXCLUDED.legal_name,
-               EXCLUDED.network_role,EXCLUDED.status,EXCLUDED.metadata)
+               EXCLUDED.network_role,COALESCE(EXCLUDED.logo_asset_ref,mesh.network_account.logo_asset_ref),
+               EXCLUDED.status,EXCLUDED.metadata)
       `, [resourceId, tenant.id, resource.accountCode, resource.name, resource.networkRole,
+        resource.logoAssetRef ?? null,
         JSON.stringify(seedMetadata(inputs, plane, { externalScopeKey: resource.scopeKey })), actorId]);
       const actual = await one<{ id: string; tenantId: string }>(client,
         "SELECT id::text AS id,tenant_id::text AS \"tenantId\" FROM mesh.network_account WHERE account_code=$1",
@@ -500,6 +510,49 @@ async function applyPlaneResources(
       await upsertChildScope(client, inputs, plane, tenant.id, "network_account", resource.scopeKey, actual.id, resource.name, actorId);
     }
   }
+}
+
+async function applyTenantProfile(
+  client: QueryClient,
+  inputs: ProvisionInputs,
+  plane: ProvisionPlane,
+  tenantId: string,
+  tenantCode: string,
+  actorId: string,
+): Promise<void> {
+  const pack = inputs.scenarioPacks[tenantCode];
+  if (!pack) throw new Error(`missing tenant scenario pack: ${tenantCode}`);
+  await client.query(
+    "SELECT set_config('app.current_tenant_id',$1,true),set_config('app.current_principal_id',$2,true)",
+    [tenantId, actorId],
+  );
+  const profile = pack.tenantProfile;
+  await client.query(`
+    INSERT INTO master.tenant_profile (
+      id,tenant_id,country_code,locale_code,timezone_code,language_code,
+      date_format,number_format,week_start,weekend_days,logo_asset_ref,metadata,created_by
+    ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10::smallint[],$11,$12::jsonb,$13::uuid)
+    ON CONFLICT (tenant_id) DO UPDATE SET
+      country_code=EXCLUDED.country_code,locale_code=EXCLUDED.locale_code,
+      timezone_code=EXCLUDED.timezone_code,language_code=EXCLUDED.language_code,
+      date_format=EXCLUDED.date_format,number_format=EXCLUDED.number_format,
+      week_start=EXCLUDED.week_start,weekend_days=EXCLUDED.weekend_days,
+      logo_asset_ref=COALESCE(EXCLUDED.logo_asset_ref,master.tenant_profile.logo_asset_ref),
+      metadata=EXCLUDED.metadata,updated_by=EXCLUDED.created_by
+    WHERE (master.tenant_profile.country_code,master.tenant_profile.locale_code,
+      master.tenant_profile.timezone_code,master.tenant_profile.language_code,
+      master.tenant_profile.date_format,master.tenant_profile.number_format,
+      master.tenant_profile.week_start,master.tenant_profile.weekend_days,
+      master.tenant_profile.logo_asset_ref,master.tenant_profile.metadata) IS DISTINCT FROM
+      (EXCLUDED.country_code,EXCLUDED.locale_code,EXCLUDED.timezone_code,
+      EXCLUDED.language_code,EXCLUDED.date_format,EXCLUDED.number_format,
+      EXCLUDED.week_start,EXCLUDED.weekend_days,
+      COALESCE(EXCLUDED.logo_asset_ref,master.tenant_profile.logo_asset_ref),EXCLUDED.metadata)
+  `, [deterministicUuid(plane, tenantCode, "tenant-profile"), tenantId,
+    profile.countryCode, profile.localeCode, profile.timezoneCode, profile.languageCode,
+    profile.dateFormat, profile.numberFormat, profile.weekStart, profile.weekendDays,
+    profile.logoAssetRef ?? null,
+    JSON.stringify(seedMetadata(inputs, plane, { complexity: pack.complexity })), actorId]);
 }
 
 async function applyNeonScenarioFoundation(
@@ -515,31 +568,6 @@ async function applyNeonScenarioFoundation(
     "SELECT set_config('app.current_tenant_id',$1,true),set_config('app.current_principal_id',$2,true)",
     [tenantId, actorId],
   );
-  const profile = pack.tenantProfile;
-  await client.query(`
-    INSERT INTO master.tenant_profile (
-      id,tenant_id,country_code,locale_code,timezone_code,language_code,
-      date_format,number_format,week_start,weekend_days,metadata,created_by
-    ) VALUES ($1::uuid,$2::uuid,$3,$4,$5,$6,$7,$8,$9,$10::smallint[],$11::jsonb,$12::uuid)
-    ON CONFLICT (tenant_id) DO UPDATE SET
-      country_code=EXCLUDED.country_code,locale_code=EXCLUDED.locale_code,
-      timezone_code=EXCLUDED.timezone_code,language_code=EXCLUDED.language_code,
-      date_format=EXCLUDED.date_format,number_format=EXCLUDED.number_format,
-      week_start=EXCLUDED.week_start,weekend_days=EXCLUDED.weekend_days,
-      metadata=EXCLUDED.metadata,updated_by=EXCLUDED.created_by
-    WHERE (master.tenant_profile.country_code,master.tenant_profile.locale_code,
-      master.tenant_profile.timezone_code,master.tenant_profile.language_code,
-      master.tenant_profile.date_format,master.tenant_profile.number_format,
-      master.tenant_profile.week_start,master.tenant_profile.weekend_days,
-      master.tenant_profile.metadata) IS DISTINCT FROM
-      (EXCLUDED.country_code,EXCLUDED.locale_code,EXCLUDED.timezone_code,
-      EXCLUDED.language_code,EXCLUDED.date_format,EXCLUDED.number_format,
-      EXCLUDED.week_start,EXCLUDED.weekend_days,EXCLUDED.metadata)
-  `, [deterministicUuid("neon", tenantCode, "tenant-profile"), tenantId,
-    profile.countryCode, profile.localeCode, profile.timezoneCode, profile.languageCode,
-    profile.dateFormat, profile.numberFormat, profile.weekStart, profile.weekendDays,
-    JSON.stringify(seedMetadata(inputs, "neon", { complexity: pack.complexity })), actorId]);
-
   for (const company of pack.companyCodes) {
     const legalEntity = await one<{ id: string }>(client, `
       SELECT id::text AS id FROM master.legal_entity
@@ -569,6 +597,7 @@ async function applyNeonScenarioFoundation(
         legalEntityScopeKey: company.legalEntityScopeKey,
         companyPurpose: company.companyPurpose,
         readinessProfile: company.readinessProfile,
+        ...(company.logoAssetRef ? { logoAssetRef: company.logoAssetRef } : {}),
       })), actorId]);
   }
   await applyCompanyReadinessBaselines(client, inputs, tenantId, tenantCode, pack, actorId);

@@ -85,6 +85,12 @@ describe("canonical three-plane provisioning contract", () => {
       [athyperIndia.registrationCountryCode, athyperIndia.functionalCurrency],
       ["IN", "INR"],
     );
+    assert.equal(athyperIndia.logoAssetRef, "/brand/tenants/athyper/aitm.png");
+    assert.equal(resources.filter((resource) => resource.tenantCode === "athyper" && resource.logoAssetRef).length, 17);
+    const athyperAccounts = networkAccountResources(inputs)
+      .filter((account) => account.tenantCode === "athyper" && account.logoAssetRef);
+    assert.equal(athyperAccounts.length, 34);
+    assert.equal(athyperAccounts.every((account) => account.logoAssetRef?.startsWith("/brand/tenants/athyper/")), true);
   });
 
   it("derives tenant-local IDs instead of reusing Keycloak subjects", () => {

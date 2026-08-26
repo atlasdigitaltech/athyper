@@ -5,3 +5,6 @@ export type * from "./push.js";
 export type * from "./planning.js";
 export type * from "./recipients.js";
 export type * from "./webhook.js";
+export type * from "./ses-events.js";
+export type * from "./provider-tenancy.js";
+export type * from "./email-canary.js";

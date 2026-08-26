@@ -6576,6 +6576,10 @@ model tenant_profile {
   number_format String?
   week_start    Int?      @db.SmallInt
   weekend_days  Int[]     @db.SmallInt
+  enabled_locale_codes String[] @default(["en"])
+  default_locale_code String @default("en")
+  fallback_locale_code String @default("en")
+  locale_catalog_governance Json @default("{}")
   metadata      Json      @default("{}")
   created_at    DateTime  @default(now()) @db.Timestamptz(6)
   created_by    String    @db.Uuid

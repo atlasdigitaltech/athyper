@@ -9,6 +9,10 @@ import { createValidator } from "./schema.mjs";
 
 const PUBLISHED_IMAGE_IDS = ["iam", "mesh-web", "neon-web", "runtime-server", "studio-web"];
 const PARITY_PRESETS = new Set(["dev-full", "qa-standard", "stg-standard", "validation-full"]);
+const NOTIFICATION_PROVIDER_SECRETS = [
+  "vapid-subject", "vapid-public-key", "vapid-private-key",
+];
+const MIGRATION_RUNNERS = new Set(["db-migration", "db-forward-migration"]);
 
 function duplicates(values) {
   const seen = new Set();
@@ -134,11 +138,16 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
       if (/@sha256:0{64}$/u.test(image.reference)) blockers.push(`Release image digest is an all-zero placeholder: ${image.id}`);
     }
   }
-  if (!model.selected.some(({ id }) => id === "db-migration")) {
-    blockers.push("No executable db-migration service is selected; application startup cannot bypass the migration gate.");
+  if (!model.selected.some(({ id }) => MIGRATION_RUNNERS.has(id))) {
+    blockers.push("No executable database migration service is selected; application startup cannot bypass the migration gate.");
   }
 
-  const requiredSecrets = [...new Set(model.selected.flatMap((service) => service.secrets ?? []))].sort();
+  const externalNotificationProviders = instance.spec.providers.mail === "external"
+    || instance.spec.providers.push === "external";
+  const requiredSecrets = [...new Set([
+    ...model.selected.flatMap((service) => service.secrets ?? []),
+    ...(externalNotificationProviders ? NOTIFICATION_PROVIDER_SECRETS : []),
+  ])].sort();
   const secretProblems = requiredSecrets.map((secret) => ({
     secret,
     problem: (probes.secretProblem ?? secretProblem)(join(
@@ -175,7 +184,7 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
   const domains = ingressServices.map((service) => `${service}.${instance.spec.domainSuffix}`);
   const imageOverrides = new Map(model.imageSet.spec.images.map(({ id, reference }) => [id, reference]));
   const publishedImageId = (serviceId) => (
-    ["api", "worker", "scheduler", "db-migration"].includes(serviceId) ? "runtime-server" : serviceId
+    ["api", "worker", "scheduler", "db-migration", "db-forward-migration"].includes(serviceId) ? "runtime-server" : serviceId
   );
   return {
     apiVersion: "athyper.io/v1alpha1",
@@ -204,6 +213,9 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
         join(repoRoot, "deploy/compose/instance/compose.yaml"),
         ...(PARITY_PRESETS.has(instance.spec.preset)
           ? [join(repoRoot, "deploy/compose/instance/compose.parity.yaml")]
+          : []),
+        ...(externalNotificationProviders
+          ? [join(repoRoot, "deploy/compose/instance/compose.notification-providers.yaml")]
           : []),
       ],
       qualification: infrastructure.qualification.path,

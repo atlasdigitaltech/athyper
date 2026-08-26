@@ -2,6 +2,8 @@
 
 import { ApiTransportError, verificationFunctionalRunOperation, verificationSnapshotOperation, type PlatformVerificationRun, type VerificationCheckResult, type VerificationPlane } from "@athyper/platform-api-client";
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
+import { ContentHeader } from "@athyper/platform-shell";
+import { Button } from "@athyper/platform-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 export function SystemVerificationPage({ plane }: { readonly plane: VerificationPlane }) {
@@ -25,19 +27,16 @@ export function SystemVerificationPage({ plane }: { readonly plane: Verification
   const categories = useMemo(() => group(run?.checks ?? []), [run]);
   const copy = useCallback(async () => { if (!run) return; await navigator.clipboard.writeText(JSON.stringify(run, null, 2)); setCopied(true); window.setTimeout(() => setCopied(false), 2_000); }, [run]);
   return <section className="verification" aria-labelledby="verification-title">
-    <header className="verification__hero">
-      <div><p className="verification__eyebrow">{plane === "studio" ? "Platform operations" : `${title(plane)} system`}</p><h1 id="verification-title">System verification</h1><p>Authenticated checks exercise application adapters without exposing container endpoints or credentials.</p></div>
-      <div className="verification__actions"><button type="button" className="verification__button verification__button--secondary" onClick={() => void load()} disabled={state === "loading" || state === "running"}>Quick check</button><button type="button" className="verification__button" onClick={() => void functional()} disabled={state === "loading" || state === "running"}>{state === "running" ? "Running functional checks…" : "Run functional check"}</button></div>
-    </header>
+    <ContentHeader title="System verification" titleId="verification-title" description="Authenticated checks exercise application adapters without exposing container endpoints or credentials." actions={<><Button variant="secondary" onClick={() => void load()} disabled={state === "loading" || state === "running"}>Quick check</Button><Button onClick={() => void functional()} disabled={state === "loading" || state === "running"}>{state === "running" ? "Running functional checks…" : "Run functional check"}</Button></>}/>
     <div className="verification__context" aria-label="Verification context"><span>Plane <strong>{plane}</strong></span><span>Scope <strong>{plane === "studio" ? "all planes" : plane}</strong></span><span>Session <strong>{identity.state}</strong></span>{identity.scope ? <span>Auth epoch <strong>{identity.scope.authEpoch}</strong></span> : null}</div>
     {state === "loading" && !run ? <div className="verification__notice" role="status">Running the read-only verification snapshot…</div> : null}
-    {error ? <div className="verification__notice verification__notice--error" role="alert"><strong>Verification unavailable</strong><span>{error}</span><button type="button" onClick={() => void load()}>Try again</button></div> : null}
+    {error ? <div className="verification__notice verification__notice--error" role="alert"><strong>Verification unavailable</strong><span>{error}</span><Button variant="secondary" onClick={() => void load()}>Try again</Button></div> : null}
     {run ? <>
       <section className={`verification__summary verification__summary--${run.status}`} aria-label="Run summary">
         <div><span className="verification__status-dot" aria-hidden="true"/><strong>{run.status === "passed" ? "Verification passed" : "Verification needs attention"}</strong><small>{run.mode} run · {new Date(run.completedAt).toLocaleString()}</small></div>
         <dl><div><dt>Passed</dt><dd>{run.summary.passed}</dd></div><div><dt>Failed</dt><dd>{run.summary.failed}</dd></div><div><dt>Skipped</dt><dd>{run.summary.skipped}</dd></div></dl>
       </section>
-      <div className="verification__evidence"><div><span>Run ID</span><code>{run.runId}</code></div><div><span>Log query</span><code>{run.evidence.logQuery}</code></div><div className="verification__evidence-actions"><button type="button" onClick={() => void copy()}>{copied ? "Copied" : "Copy report"}</button>{run.evidence.grafanaExploreUrl ? <a href={run.evidence.grafanaExploreUrl} target="_blank" rel="noreferrer">Open Grafana Explore</a> : null}</div></div>
+      <div className="verification__evidence"><div><span>Run ID</span><code>{run.runId}</code></div><div><span>Log query</span><code>{run.evidence.logQuery}</code></div><div className="verification__evidence-actions"><Button variant="secondary" onClick={() => void copy()}>{copied ? "Copied" : "Copy report"}</Button>{run.evidence.grafanaExploreUrl ? <a className="a-button a-button--primary a-button--medium" href={run.evidence.grafanaExploreUrl} target="_blank" rel="noreferrer">Open Grafana Explore</a> : null}</div></div>
       <div className="verification__groups">{categories.map(([category, checks]) => <section className="verification__group" key={category}><h2>{categoryLabel(category)} <span>{checks.length}</span></h2><ul>{checks.map((check) => <Check key={check.id} value={check}/>)}</ul></section>)}</div>
     </> : null}
   </section>;

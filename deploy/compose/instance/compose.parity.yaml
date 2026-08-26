@@ -145,8 +145,8 @@ services:
     mem_limit: 384m
     cpus: 0.5
 
-  # The current runner is deliberately a clean-database foundation build. It
-  # refuses non-empty databases; forward migrations require a later contract.
+  # DEV-only clean-database foundation build. It intentionally refuses an
+  # existing schema; release instances use the forward-only runner below.
   db-migration:
     <<: *runtime-common
     profiles: [migration]
@@ -165,6 +165,26 @@ services:
       - ./scripts/run-foundation.sh:/athyper/bin/run-foundation.sh:ro
       - ./scripts/runtime-worker-grants-v1.sql:/athyper/reconciliation/runtime-worker-grants-v1.sql:ro
       - ../../../server/db/ddl:/athyper/ddl:ro
+    networks: [data]
+    read_only: true
+    tmpfs: [/tmp]
+    mem_limit: 512m
+    cpus: 1.0
+
+  db-forward-migration:
+    <<: *runtime-common
+    profiles: [migration]
+    restart: "no"
+    depends_on:
+      db-init: { condition: service_completed_successfully }
+    environment:
+      PGHOST: db
+      PGPORT: 5432
+      PGUSER: postgres
+      ATHYPER_MIGRATION_ROOT: /app/migrations
+    entrypoint: [/bin/sh, /app/bin/run-forward-migrations.sh]
+    secrets: [postgres-password]
+    volumes: []
     networks: [data]
     read_only: true
     tmpfs: [/tmp]

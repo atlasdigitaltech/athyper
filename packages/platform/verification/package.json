@@ -10,7 +10,9 @@
   "scripts": { "typecheck": "tsc --noEmit" },
   "dependencies": {
     "@athyper/platform-api-client": "workspace:*",
-    "@athyper/platform-shell-app-foundation": "workspace:*"
+    "@athyper/platform-shell": "workspace:*",
+    "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/platform-ui": "workspace:*"
   },
   "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": {

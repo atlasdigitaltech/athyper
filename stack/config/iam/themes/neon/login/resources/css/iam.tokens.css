@@ -21,6 +21,14 @@
   --a-input: #aab4c5;
   --a-primary: var(--a-brand);
   --a-primary-foreground: var(--a-brand-foreground);
+  --a-primary-hover: var(--a-brand-hover);
+  --a-selection-strong: var(--a-primary);
+  --a-selection-strong-foreground: var(--a-primary-foreground);
+  --a-selection-subtle: var(--a-brand-soft);
+  --a-selection-subtle-foreground: var(--a-primary);
+  --a-panel-background: var(--a-surface);
+  --a-panel-header-background: var(--a-surface);
+  --a-panel-toolbar-background: var(--a-muted);
   --a-danger: #b42318;
   --a-danger-foreground: #ffffff;
   --a-warning: #b54708;
@@ -46,6 +54,11 @@
   --a-story-wave-bright: color-mix(in srgb, var(--a-brand) 38%, white);
   --a-story-glow: color-mix(in srgb, var(--a-brand) 30%, transparent);
   --a-story-dot: color-mix(in srgb, var(--a-brand-foreground) 70%, transparent);
+  --a-story-border: color-mix(in srgb, var(--a-story-foreground) 14%, transparent);
+  --a-story-surface: color-mix(in srgb, var(--a-story-foreground) 6%, transparent);
+  --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
+  --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
+  --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
   --a-theme-family:atlas-modern;
   --a-font-sans:Geist, Inter, ui-sans-serif, system-ui, sans-serif;
   --a-font-mono:ui-monospace, SFMono-Regular, monospace;
@@ -167,6 +180,14 @@
   --a-input: #52627a;
   --a-primary: color-mix(in srgb, var(--a-brand) 32%, white);
   --a-primary-foreground: color-mix(in srgb, var(--a-brand) 24%, black);
+  --a-primary-hover: var(--a-brand-hover);
+  --a-selection-strong: var(--a-primary);
+  --a-selection-strong-foreground: var(--a-primary-foreground);
+  --a-selection-subtle: var(--a-brand-soft);
+  --a-selection-subtle-foreground: var(--a-primary);
+  --a-panel-background: var(--a-surface);
+  --a-panel-header-background: var(--a-surface-raised);
+  --a-panel-toolbar-background: var(--a-muted);
   --a-danger: #f97066;
   --a-danger-foreground: #230402;
   --a-warning: #fec84b;
@@ -181,7 +202,7 @@
   --a-warning-subtle-foreground: #f5f7fa;
   --a-brand: #234B84;
   --a-brand-foreground: #FFFFFF;
-  --a-brand-hover: color-mix(in srgb, var(--a-brand) 32%, white);
+  --a-brand-hover: color-mix(in srgb, var(--a-brand) 42%, white);
   --a-brand-soft: color-mix(in srgb, var(--a-brand) 52%, black);
   --a-story-start: color-mix(in srgb, var(--a-brand) 24%, black);
   --a-story-end: color-mix(in srgb, var(--a-brand) 64%, black);
@@ -192,6 +213,11 @@
   --a-story-wave-bright: color-mix(in srgb, var(--a-brand) 38%, white);
   --a-story-glow: color-mix(in srgb, var(--a-brand) 30%, transparent);
   --a-story-dot: color-mix(in srgb, var(--a-brand-foreground) 70%, transparent);
+  --a-story-border: color-mix(in srgb, var(--a-story-foreground) 14%, transparent);
+  --a-story-surface: color-mix(in srgb, var(--a-story-foreground) 6%, transparent);
+  --a-story-surface-hover: color-mix(in srgb, var(--a-story-foreground) 10%, transparent);
+  --a-story-surface-active: color-mix(in srgb, var(--a-story-wave) 22%, transparent);
+  --a-story-selection-border: color-mix(in srgb, var(--a-story-wave-bright) 38%, transparent);
   color-scheme: dark;
 }
 
@@ -206,6 +232,14 @@
   --a-input: #ffffff;
   --a-primary: #ffff00;
   --a-primary-foreground: #000000;
+  --a-primary-hover: #ffffff;
+  --a-selection-strong: #ffff00;
+  --a-selection-strong-foreground: #000000;
+  --a-selection-subtle: #000000;
+  --a-selection-subtle-foreground: #ffff00;
+  --a-panel-background: #000000;
+  --a-panel-header-background: #000000;
+  --a-panel-toolbar-background: #171717;
   --a-danger: #ff6b6b;
   --a-danger-foreground: #000000;
   --a-warning: #ffff00;
@@ -231,6 +265,11 @@
   --a-story-wave-bright: #ffffff;
   --a-story-glow: transparent;
   --a-story-dot: #ffffff;
+  --a-story-border: #ffffff;
+  --a-story-surface: #000000;
+  --a-story-surface-hover: #171717;
+  --a-story-surface-active: #000000;
+  --a-story-selection-border: #ffff00;
   color-scheme: dark;
 }
 

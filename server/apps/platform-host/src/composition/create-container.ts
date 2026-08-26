@@ -49,12 +49,18 @@ import type {
   NotificationDispatcher,
   PushTransport,
 } from "@athyper/server-contract-notifications";
+import type {
+  SesEventMessageHandler,
+  SesEventSqsAdapter,
+} from "@athyper/server-adapter-communications";
 
 export interface Container {
   readonly adapters: {
     keycloakAuth?: KeycloakAuthAdapter;
     redisCache?: RedisCacheAdapter;
     notificationEvents?: RedisNotificationEventBus;
+    sesEventSource?: SesEventSqsAdapter;
+    sesEventHandler?: SesEventMessageHandler;
     neonDatabase?: NeonDatabaseAdapter;
     athyperDatabase?: AthyperDatabaseAdapter;
     meshDatabase?: MeshDatabaseAdapter;

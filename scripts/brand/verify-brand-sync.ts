@@ -31,7 +31,7 @@ function sha256(value: Buffer): string {
 }
 
 async function verifyApplications(): Promise<void> {
-  const canonicalFavicon = sha256(await read("packages/platform/foundation/brand/assets/athyper-favicon.png"));
+  const canonicalFavicon = sha256(await read("packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg"));
   for (const plane of BRAND_PLANES) {
     const brand = getPlaneBrand(plane);
     const root = `apps/${plane}/public`;

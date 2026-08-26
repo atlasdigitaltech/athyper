@@ -47,7 +47,8 @@ export function createKyselyWorkflowRepository(): WorkflowRepository<WorkflowTra
       `.execute(transaction);
       const data = result.rows.map(mapRow);
       const last = data.at(-1);
-      return { data, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(last.createdAt, last.id) } : {}) };
+      const totalCount=Number((await sql<{count:string}>`SELECT count(*)::text count FROM document.work_item WHERE tenant_id=${query.context.tenantId}::uuid AND status IN (${sql.join(statuses)}) AND (assignee_principal_id=${query.context.principalId}::uuid OR claimant_principal_id=${query.context.principalId}::uuid)`.execute(transaction)).rows[0]?.count??0);
+      return { data,totalCount, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(last.createdAt, last.id) } : {}) };
     },
     async get(tenantId, workItemId, transaction) {
       const result = await sql<WorkItemRow>`SELECT * FROM document.work_item WHERE tenant_id=${tenantId}::uuid AND id=${workItemId}::uuid`.execute(transaction);

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
   <meta name="theme-color" content="#234B84">
-  <link rel="icon" type="image/png" sizes="64x64" href="/brand/athyper-favicon.png">
+  <link rel="icon" type="image/svg+xml" sizes="any" href="/brand/athyper-favicon.svg">
   <title>Service status</title>
   <style>
     :root {
@@ -88,7 +88,7 @@
           <span>You</span>
         </div>
         <div class="route"><span class="route-dot"></span></div>
-        <div class="node gateway"><img class="node-icon" src="/brand/neon-favicon.png" alt=""><span>Gateway</span></div>
+        <div class="node gateway"><img class="node-icon" src="/brand/neon-icon.png" alt=""><span>Gateway</span></div>
         <div class="route to-app"><span class="route-dot"></span></div>
         <div class="node application"><img id="app-icon" class="node-icon" alt=""><span id="app-node-name">Application</span></div>
       </div>
@@ -108,10 +108,11 @@
     </aside>
   </section>
   <script>
+    // Generated from packages/platform/foundation/brand/src/plane-presentation.json.
     const products = {
-      neon: { name: "Neon", wordmark: "/brand/neon-advertising.svg", icon: "/brand/neon-favicon.png", audience: "tenant" },
-      mesh: { name: "Mesh", wordmark: "/brand/mesh-advertising.svg", icon: "/brand/mesh-favicon.png", audience: "partner" },
-      studio: { name: "Studio", wordmark: "/brand/studio-advertising.svg", icon: "/brand/studio-favicon.png", audience: "platform" }
+      neon: { name: "Neon", wordmark: "/brand/neon-advertising.svg", icon: "/brand/neon-icon.png", audience: "tenant" },
+      mesh: { name: "Mesh", wordmark: "/brand/mesh-advertising.svg", icon: "/brand/mesh-icon.png", audience: "partner" },
+      studio: { name: "Studio", wordmark: "/brand/studio-advertising.svg", icon: "/brand/studio-icon.png", audience: "platform" }
     };
     const mode = document.body.dataset.mode === "maintenance" ? "maintenance" : "outage";
     const key = Object.keys(products).find(name => location.hostname.toLowerCase().startsWith(name + ".")) || "neon";
@@ -127,7 +128,7 @@
     byId("primary-action").addEventListener("click", () => location.reload());
 
     if (mode === "maintenance") {
-      document.title = "Maintenance — " + product.name;
+      document.title = product.name + " Maintenance";
       setText("page-title", "Planned maintenance in progress.");
       setText("message", product.name + " application is temporarily unavailable while planned maintenance is completed. " + product.audience[0].toUpperCase() + product.audience.slice(1) + " access will resume after final health checks.");
       setText("reference-label", "Maintenance reference"); setText("reference", "Scheduled maintenance");
@@ -146,7 +147,7 @@
         if (item.statusUrl) { byId("status-link").href = item.statusUrl; byId("status-link").hidden = false; }
       }).catch(() => {});
     } else {
-      document.title = "Service unavailable — " + product.name;
+      document.title = product.name + " Service unavailable";
       setText("page-title", "Service temporarily unavailable.");
       setText("message", product.name + " application is not responding yet. The gateway is online, and " + product.audience + " access will resume when the application is healthy.");
       setText("reference-label", "Incident"); setText("reference", incident); setText("time-label", "Started"); setText("time-value", dateTime.format(now));

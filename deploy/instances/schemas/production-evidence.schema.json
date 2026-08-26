@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/production-evidence-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "ProductionEvidence" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "minLength": 3 } } },
+    "spec": {
+      "type": "object", "additionalProperties": false,
+      "required": ["gate", "status", "environment", "sourceRevision", "recordedAt", "owner", "evidence"],
+      "properties": {
+        "gate": { "enum": ["staging-qualification", "backup-restore", "email-canary", "web-push-canary", "rollback-drill", "release-approval"] },
+        "status": { "const": "passed" },
+        "environment": { "const": "production" },
+        "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$", "not": { "pattern": "^0{40}$" } },
+        "recordedAt": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.+-]+Z$" },
+        "owner": { "type": "string", "minLength": 3 },
+        "evidence": { "type": "object", "minProperties": 1 }
+      }
+    }
+  }
+}

@@ -15,7 +15,20 @@ test("joins registry routes to ordered catalog modules and applies safe label pr
   assert.deepEqual(navigation.workspaces.map((item) => item.code), ["fin", "scm"]);
   assert.equal(navigation.routes[0]?.label, "General Ledger");
   assert.equal(navigation.routes[1]?.label, "Stock");
+  assert.equal(navigation.routes[2]?.label, "Internal");
   assert.equal(navigation.landingHref, "/");
+});
+
+test("retains distinct labels for multiple capabilities under one catalog module", () => {
+  const navigation = deriveShellNavigation(
+    definePlaneRoutes([
+      { id: "studio.operations", moduleCode: "ops", href: "/operations", label: "Operations", iconKey: "info", requiredPermissions: [], requiredFeatures: [], navigation: "primary" },
+      { id: "studio.localization", moduleCode: "ops", href: "/operations/localization", label: "Languages", iconKey: "info", requiredPermissions: ["catalog.manage"], requiredFeatures: [], navigation: "secondary" },
+    ] as const),
+    { permissions: ["catalog.manage"], features: {}, workspaces: [{ code: "platform", name: "Platform Operations Studio", sortOrder: 1, modules: [{ code: "ops", name: "Platform Operations", sortOrder: 1, primary: true }] }] },
+  );
+
+  assert.deepEqual(navigation.routes.map((route) => route.label), ["Platform Operations", "Languages"]);
 });
 
 test("fails closed for missing permissions and disabled or unknown features", () => {
@@ -50,9 +63,10 @@ test("rejects unsafe, duplicate, and traversing route declarations", () => {
 });
 
 test("shared shell keeps global actions and breadcrumbs in compact separate rows", async () => {
-  const [source, styles] = await Promise.all([
+  const [source, styles, messages] = await Promise.all([
     readFile(new URL("../../packages/platform/shell/shell/src/client.tsx", import.meta.url), "utf8"),
     readFile(new URL("../../packages/platform/shell/shell/src/styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../../packages/platform/shell/shell/src/messages.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(source, /<BusinessContext /);
@@ -61,10 +75,16 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(source, /className="athyper-shell__product-wordmark"/);
   assert.match(source, /className="athyper-shell__plane-badge"/);
   assert.match(source, /className="athyper-shell__rail-toggle"/);
-  assert.match(source, /aria-label=\{collapsed \? "Expand navigation" : "Collapse navigation"\}/);
+  assert.match(source, /aria-label=\{t\(collapsed \? "shell\.navigation\.expand" : "shell\.navigation\.collapse"\)\}/);
   assert.match(source, /className="athyper-shell__brand-tooltip"/);
   assert.match(source, /className="athyper-shell__navigation-peek"/);
-  assert.match(source, /className="athyper-shell__rail-status"/);
+  assert.match(source, /<SidebarProfile /);
+  assert.match(source, /className="athyper-shell__profile"/);
+  assert.match(messages, /"shell\.profile\.organization": "Organization"/);
+  assert.match(messages, /"shell\.profile\.email": "Email address"/);
+  assert.match(messages, /shellArabicMessages/);
+  assert.match(source, /athyper:work-context-request/);
+  assert.doesNotMatch(source, /<AccountMenu /);
   assert.match(source, /className="athyper-shell__nav-label"/);
   assert.match(source, /onPointerEnter=/);
   assert.match(source, /min-width: 761px\) and \(max-width: 1100px/);
@@ -85,7 +105,9 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(styles, /athyper-shell__rail-brand\{[^}]*height:var\(--shell-topbar\)/);
   assert.match(styles, /athyper-shell__rail-toggle\{[^}]*height:var\(--shell-crumbs\)/);
   assert.match(styles, /product-wordmark img\{position:static;[^}]*object-fit:contain;object-position:left center/);
+  assert.match(styles, /athyper-context-identity--logo-or-name .*max-width:9rem;height:2\.2rem/);
   assert.match(styles, /\.athyper-shell__action-panel/);
+  assert.match(styles, /\.athyper-shell__profile-panel/);
   assert.match(styles, /data-collapsed=true.*athyper-shell__rail-brand/);
   assert.match(styles, /athyper-shell__mobile-brand\{display:flex/);
   assert.match(styles, /athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:none/);
@@ -96,7 +118,8 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(styles, /data-collapsed=true.*athyper-shell__workspace\+\.athyper-shell__workspace/);
   assert.match(styles, /athyper-shell__navigation-peek\{/);
   assert.match(styles, /athyper-navigation-peek-in/);
-  assert.match(styles, /athyper-shell__rail-status\{/);
+  assert.match(styles, /athyper-shell__profile\{/);
+  assert.match(styles, /data-collapsed=true.*athyper-shell__profile-summary/);
   assert.match(styles, /max-width:760px.*athyper-shell__navigation-peek\{display:none/);
   assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__rail-toggle/);
   assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__brand-mark-frame/);
@@ -112,4 +135,27 @@ test("plane shells prefer named context and use outlined product lockups", async
     assert.match(source, /bootstrap\.tenant\?\.displayName \?\? bootstrap\.tenantId/);
     assert.match(source, /bootstrap\.identity\?\.displayName \?\? principalId/);
   }
+  assert.match(sources[0]!, /ShellContextSelector/);
+  assert.match(sources[0]!, /ShellContextPickerPanel/);
+  assert.doesNotMatch(sources[0]!, /ShellContextSelector className="neon-company-picker"/);
+  assert.match(sources[1]!, /ShellContextSelector/);
+  assert.match(sources[1]!, /ShellContextPickerPanel/);
+  assert.doesNotMatch(sources[1]!, /ShellContextSelector className="mesh-account-picker"/);
+  assert.match(sources[1]!, /logoAssetRef:selected\?\.logoAssetRef/);
+  assert.doesNotMatch(sources[1]!, /Derived from Neon access/);
+  assert.doesNotMatch(sources[1]!, /Verified Mesh account/);
+  assert.match(sources[1]!, /accountReference\(account\)/);
+  assert.doesNotMatch(sources[2]!, /Not applicable/);
+  assert.match(sources[2]!, /contexts=\{contexts\}/);
+});
+
+test("business-context switchability is based only on resolved authorized contexts", async()=>{
+  const [source,studioLayout]=await Promise.all([
+    readFile(new URL("../../packages/platform/shell/shell/src/client.tsx",import.meta.url),"utf8"),
+    readFile(new URL("../../apps/studio/app/(shell)/layout.tsx",import.meta.url),"utf8"),
+  ]);
+  assert.match(source,/interactive=\{status==="ready"&&contexts\.length>1\}/);
+  assert.doesNotMatch(source,/interactive=\{status!=="ready"/);
+  assert.match(studioLayout,/loadShellContexts\(\)/);
+  assert.match(studioLayout,/contexts=\{contexts\}/);
 });

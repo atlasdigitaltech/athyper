@@ -33,14 +33,14 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
     async listInbox(query, transaction): Promise<WorkItemListResult> {
       const statuses = new Set(query.statuses ?? ["open", "claimed", "in_progress", "blocked"]);
       const after = query.cursor ? decodeCursor(query.cursor) : undefined;
-      const data = [...transaction.items.values()]
-        .filter((item) => item.tenantId === query.context.tenantId && statuses.has(item.status)
-          && (item.assigneePrincipalId === query.context.principalId || item.claimantPrincipalId === query.context.principalId)
-          && (!after || `${item.createdAt}|${item.id}` < after))
+      const eligible=[...transaction.items.values()].filter((item) => item.tenantId === query.context.tenantId && statuses.has(item.status)
+          && (item.assigneePrincipalId === query.context.principalId || item.claimantPrincipalId === query.context.principalId));
+      const data = eligible
+        .filter((item) => !after || `${item.createdAt}|${item.id}` < after)
         .sort((left, right) => `${right.createdAt}|${right.id}`.localeCompare(`${left.createdAt}|${left.id}`))
         .slice(0, query.limit ?? 50);
       const last = data.at(-1);
-      return { data, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(`${last.createdAt}|${last.id}`) } : {}) };
+      return { data,totalCount:eligible.length, ...(last && data.length === (query.limit ?? 50) ? { nextCursor: encodeCursor(`${last.createdAt}|${last.id}`) } : {}) };
     },
     async get(tenantId, workItemId, transaction) {
       const item = transaction.items.get(workItemId);

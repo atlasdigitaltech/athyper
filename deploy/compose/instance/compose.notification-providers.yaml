@@ -1,0 +1,37 @@
+x-notification-provider-environment: &notification-provider-environment
+  EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
+  SES_REGION: ${SES_REGION:-}
+  SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}
+  SES_FROM: ${SES_FROM:-}
+  SES_REPLY_TO: ${SES_REPLY_TO:-}
+  SES_EVENT_QUEUE_URL: ${SES_EVENT_QUEUE_URL:-}
+  SES_EVENT_REGION: ${SES_EVENT_REGION:-}
+  SES_EVENT_WAIT_SECONDS: ${SES_EVENT_WAIT_SECONDS:-20}
+  SES_EVENT_VISIBILITY_TIMEOUT_SECONDS: ${SES_EVENT_VISIBILITY_TIMEOUT_SECONDS:-60}
+  SES_EVENT_MAX_MESSAGES: ${SES_EVENT_MAX_MESSAGES:-10}
+  SES_EVENT_FAILURE_BACKOFF_MS: ${SES_EVENT_FAILURE_BACKOFF_MS:-1000}
+  VAPID_SUBJECT_FILE: /run/secrets/vapid-subject
+  VAPID_PUBLIC_KEY_FILE: /run/secrets/vapid-public-key
+  VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid-private-key
+
+x-notification-provider-secrets: &notification-provider-secrets
+  - vapid-subject
+  - vapid-public-key
+  - vapid-private-key
+
+services:
+  api:
+    environment: *notification-provider-environment
+    secrets: *notification-provider-secrets
+
+  worker:
+    environment: *notification-provider-environment
+    secrets: *notification-provider-secrets
+
+secrets:
+  vapid-subject:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-subject
+  vapid-public-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-public-key
+  vapid-private-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:?set ATHYPER_INSTANCE}/secrets/vapid-private-key

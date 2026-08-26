@@ -88,5 +88,6 @@ export type WorkItemActionResult =
 
 export interface WorkItemListResult {
   readonly data: readonly WorkItem[];
+  readonly totalCount: number;
   readonly nextCursor?: string;
 }

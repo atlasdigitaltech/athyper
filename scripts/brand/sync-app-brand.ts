@@ -16,6 +16,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../..");
 const distRoot = path.join(repoRoot, "packages/platform/foundation/brand/dist");
+const canonicalFavicon = path.join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg");
 
 const APP_TARGETS = {
   neon:   "apps/neon/public/brand",
@@ -30,13 +31,13 @@ const PUBLIC_OUTPUT_FILES = {
   wordmarkOnWhite: "wordmark-on-white.png",
   icon: "icon.png",
   appIcon: "appicon.png",
-  favicon: "favicon.png",
+  favicon: "athyper-favicon.svg",
 } as const;
 
 const LEGACY_PUBLIC_FILES = {
-  neon:   ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  mesh:   ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  studio: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "favicon.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  neon:   ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  mesh:   ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
+  studio: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
 } as const satisfies Record<keyof typeof APP_TARGETS, readonly string[]>;
 
 type ProductCode = keyof typeof APP_TARGETS;
@@ -102,7 +103,7 @@ async function syncProduct(product: ProductCode): Promise<void> {
     }
 
     await fs.copyFile(
-      path.join(distRoot, product, sourceFile),
+      key === "favicon" ? canonicalFavicon : path.join(distRoot, product, sourceFile),
       path.join(targetDir, outputFile),
     );
     publicManifest.assets[key] = publicUrl(outputFile);

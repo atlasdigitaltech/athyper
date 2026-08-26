@@ -2,7 +2,7 @@ REVOKE ALL ON SCHEMA event FROM PUBLIC;
 REVOKE EXECUTE ON ALL FUNCTIONS IN SCHEMA event FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.fn_outbox_purge_completed(interval, integer) FROM PUBLIC;
 REVOKE ALL ON event.comment_flag, event.notification_message,
-    event.notification_delivery, event.notification_message_attachment, event.notification_inbox_state, event.notification_outbox_state,
+    event.notification_delivery, event.notification_provider_event, event.notification_email_suppression, event.notification_message_attachment, event.notification_inbox_state, event.notification_outbox_state,
     event.outbox, event.channel_consent_event, event.command_execution,
     event.integration_delivery, event.integration_inbound_receipt FROM PUBLIC;
 DO $$
@@ -12,6 +12,8 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE, DELETE ON event.comment_flag TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON event.notification_message,
             event.notification_delivery, event.notification_message_attachment, event.outbox TO athyperapp;
+        GRANT SELECT, INSERT ON event.notification_provider_event TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON event.notification_email_suppression TO athyperapp;
         GRANT DELETE ON event.outbox TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.fn_outbox_purge_completed(interval, integer) TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON event.notification_inbox_state TO athyperapp;
@@ -24,7 +26,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA event TO athyperadmin;
         GRANT ALL PRIVILEGES ON event.comment_flag, event.notification_message,
-            event.notification_delivery, event.notification_message_attachment, event.notification_inbox_state,
+            event.notification_delivery, event.notification_provider_event, event.notification_email_suppression, event.notification_message_attachment, event.notification_inbox_state,
             event.notification_outbox_state,
             event.outbox, event.channel_consent_event, event.command_execution,
             event.integration_delivery, event.integration_inbound_receipt TO athyperadmin;

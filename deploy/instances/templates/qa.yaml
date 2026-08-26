@@ -18,5 +18,6 @@ spec:
     secrets: file
     objectStorage: internal
     mail: internal
+    push: mock
     scanner: internal
     rendering: internal

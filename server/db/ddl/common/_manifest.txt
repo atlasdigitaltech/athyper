@@ -96,6 +96,7 @@ common/document/11_grants.sql
 common/ai/11_grants.sql
 common/ops/11_grants.sql
 common/shared/12_reference_seed.sql
+common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql
 common/control/12_collaboration_lookup_seed.sql
 common/control/12_operational_governance_reference_seed.sql

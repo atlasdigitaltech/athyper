@@ -138,7 +138,8 @@ VAPID_SUBJECT=mailto:ops@athyper.com
 **FCM (Android/iOS):**
 ```env
 PUSH_FCM_PROJECT_ID=
-PUSH_FCM_SERVICE_ACCOUNT_KEY=<base64-encoded JSON>
+PUSH_FCM_CLIENT_EMAIL=
+PUSH_FCM_PRIVATE_KEY=<PEM private key from the service account>
 ```
 
 **`event.push_subscription` key columns:**

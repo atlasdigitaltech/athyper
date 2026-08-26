@@ -30,27 +30,28 @@
 </#if>
 
 <#assign iamProductName = "Athyper">
-<#assign iamBrowserTitle = "Studio — Business Technology Platform">
+<#-- Generated from packages/platform/foundation/brand/src/plane-presentation.json. -->
+<#assign iamBrowserTitle = "Studio - Business Technology Platform">
 <#assign iamDescriptor = "Business Technology Platform">
 <#assign iamStoryHeading = "Build and manage Athyper.">
 <#assign iamStoryCopy = "Manage access, settings, data, and platform operations.">
 <#if iamPlane == "neon">
   <#assign iamProductName = "Neon">
-  <#assign iamBrowserTitle = "Neon — Business Operating Platform">
+  <#assign iamBrowserTitle = "Neon - Business Operating Platform">
   <#assign iamDescriptor = "Business Operating Platform">
   <#assign iamStoryHeading = "Run your business.">
   <#assign iamStoryCopy = "Manage finance, operations, and daily work in one place.">
 <#elseif iamPlane == "mesh">
   <#assign iamProductName = "Mesh">
-  <#assign iamBrowserTitle = "Mesh — Business Collaboration Network">
+  <#assign iamBrowserTitle = "Mesh - Business Collaboration Network">
   <#assign iamDescriptor = "Business Collaboration Network">
   <#assign iamStoryHeading = "Work better together.">
   <#assign iamStoryCopy = "Connect with buyers, suppliers, and partners.">
 <#elseif iamPlane == "studio">
   <#assign iamProductName = "Studio">
-  <#assign iamBrowserTitle = "Studio — Business Technology Platform">
+  <#assign iamBrowserTitle = "Studio - Business Technology Platform">
 </#if>
 
 <#function iamTitle pageTitle>
-  <#return pageTitle + " — " + iamProductName>
+  <#return "${pageTitle} ${iamProductName}">
 </#function>

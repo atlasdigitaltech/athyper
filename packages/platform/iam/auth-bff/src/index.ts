@@ -134,6 +134,7 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     await config.store.putOneTimeState(binding, oauthStateHash(transaction.state, transaction.browserBindingHash), JSON.stringify(transaction), stateTtl);
     const authorization = new URL(`${config.issuer.replace(/\/$/, "")}/protocol/openid-connect/auth`);
     authorization.search = new URLSearchParams({ response_type: "code", client_id: config.clientId, redirect_uri: config.redirectUri, scope: "openid organization:*", state: transaction.state, nonce: transaction.nonce, code_challenge: transaction.challenge, code_challenge_method: "S256" }).toString();
+    authorization.searchParams.set("ui_locales", requestUiLocale(request, url));
     if (url.searchParams.get("mode") === "switch") authorization.searchParams.set("prompt", "select_account");
     return new Response(null, { status: 302, headers: { location: authorization.toString(), "cache-control": "no-store", "set-cookie": transientCookie(oauthCookieName, browserBinding, stateTtl, config.production) } });
   });
@@ -267,6 +268,7 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     await config.store.putOneTimeState(binding, oauthStateHash(transaction.state, transaction.browserBindingHash), JSON.stringify(transaction), stateTtl);
     const authorization = new URL(`${config.issuer.replace(/\/$/, "")}/protocol/openid-connect/auth`);
     authorization.search = new URLSearchParams({ response_type: "code", client_id: config.clientId, redirect_uri: config.redirectUri, scope: "openid organization:*", state: transaction.state, nonce: transaction.nonce, code_challenge: transaction.challenge, code_challenge_method: "S256", prompt: "login", max_age: "0", acr_values: "urn:athyper:assurance:elevated" }).toString();
+    authorization.searchParams.set("ui_locales", requestUiLocale(request, url));
     return new Response(null, { status: 302, headers: { location: authorization.toString(), "cache-control": "no-store", "set-cookie": transientCookie(oauthCookieName, browserBinding, stateTtl, config.production) } });
   });
   const mfaVerify = run((request) => elevateFromTrustedDevice(request, true).then((response) => response!));
@@ -344,6 +346,7 @@ async function readLogoutCommand(request: Request): Promise<{ readonly scope: "a
   return { scope: rawScope, ...(bodyCsrf ? { csrfToken: bodyCsrf } : {}) };
 }
 function readCookie(header: string | null, name: string): string | undefined { return header?.split(";").map((part) => part.trim().split("=")).find(([key]) => key === name)?.slice(1).join("="); }
+function requestUiLocale(request: Request, url = new URL(request.url)): "en" | "ar" { const requested=url.searchParams.get("ui_locale")??readCookie(request.headers.get("cookie"),"athyper_locale")??request.headers.get("accept-language")?.split(",")[0]?.split(";")[0];try{return new Intl.Locale(requested??"en").language.toLowerCase()==="ar"?"ar":"en";}catch{return"en";} }
 export function readAuthCsrfCookie(cookieHeader: string | null, production = false): string | undefined { return readCookie(cookieHeader, production ? "__Host-athyper-csrf" : "athyper-csrf"); }
 function cookie(name: string, value: string, production = false): string { return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax${production ? "; Secure" : ""}`; }
 function transientCookie(name: string, value: string, ttlMs: number, production = false): string { return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.max(1, Math.floor(ttlMs / 1_000))}${production ? "; Secure" : ""}`; }

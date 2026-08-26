@@ -1,4 +1,4 @@
-import { createRelayHandler, EXPERIENCE_BOOTSTRAP_OPERATION, IAM_ME_OPERATION, PLATFORM_VERIFICATION_RUN_OPERATION, PLATFORM_VERIFICATION_SNAPSHOT_OPERATION, type RelayHandler } from "@athyper/platform-gateway-bff-relay";
+import { ACTIVITY_CENTER_RELAY_OPERATIONS, createRelayHandler, EXPERIENCE_BOOTSTRAP_OPERATION, IAM_ME_OPERATION, LOCALE_POLICY_READ_OPERATION, LOCALE_POLICY_UPDATE_OPERATION, PRINCIPAL_LOCALE_UPDATE_OPERATION, PLATFORM_VERIFICATION_RUN_OPERATION, PLATFORM_VERIFICATION_SNAPSHOT_OPERATION, type RelayHandler } from "@athyper/platform-gateway-bff-relay";
 import { authRuntime } from "@/lib/auth";
 
 let relay: RelayHandler | undefined;
@@ -7,7 +7,7 @@ export const platformRelay: RelayHandler = (request, context) => {
     plane: "studio",
     runtimeApiUrl: requiredEnvironment("RUNTIME_API_URL"),
     appOrigin: process.env.APP_ORIGIN ?? process.env.NEXT_PUBLIC_APP_ORIGIN ?? "http://localhost:3200",
-    operations: [IAM_ME_OPERATION, EXPERIENCE_BOOTSTRAP_OPERATION, PLATFORM_VERIFICATION_SNAPSHOT_OPERATION, PLATFORM_VERIFICATION_RUN_OPERATION],
+    operations: [IAM_ME_OPERATION, EXPERIENCE_BOOTSTRAP_OPERATION, PRINCIPAL_LOCALE_UPDATE_OPERATION, LOCALE_POLICY_READ_OPERATION, LOCALE_POLICY_UPDATE_OPERATION, PLATFORM_VERIFICATION_SNAPSHOT_OPERATION, PLATFORM_VERIFICATION_RUN_OPERATION, ...ACTIVITY_CENTER_RELAY_OPERATIONS],
     session: {
       resolve: (input) => authRuntime.resolveRelaySession(input),
       refresh: (input) => authRuntime.refreshRelaySession(input),

@@ -21,11 +21,35 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = { json: 15
 
 export const IAM_ME_OPERATION: RelayOperation = Object.freeze({ id: "iam.me", method: "GET", path: "/api/iam/me", requestClass: "json", requiresTenant: false });
 export const EXPERIENCE_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({ id: "platform.experience.bootstrap", method: "GET", path: "/api/platform/experience/bootstrap", requestClass: "json", requiresTenant: true });
+export const PRINCIPAL_LOCALE_UPDATE_OPERATION:RelayOperation=Object.freeze({id:"platform.profile.locale.update",method:"PATCH",path:"/api/platform/profile/locale",requestClass:"json",requiresTenant:true,maxBodyBytes:1024});
+export const LOCALE_POLICY_READ_OPERATION:RelayOperation=Object.freeze({id:"platform.localization.policy.read",method:"GET",path:"/api/platform/localization/policies/:planeKey",requestClass:"json",requiresTenant:true});
+export const LOCALE_POLICY_UPDATE_OPERATION:RelayOperation=Object.freeze({id:"platform.localization.policy.update",method:"PUT",path:"/api/platform/localization/policies/:planeKey",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
 export const NEON_WORK_CONTEXTS_OPERATION: RelayOperation = Object.freeze({ id: "neon.work-contexts", method: "GET", path: "/api/neon/work-contexts", requestClass: "json", requiresTenant: true });
 export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation = Object.freeze({ id: "neon.operating-organizations", method: "GET", path: "/api/neon/operating-organizations", requestClass: "json", requiresTenant: true });
 export const MESH_NETWORK_ACCOUNTS_OPERATION: RelayOperation = Object.freeze({ id: "mesh.network-accounts", method: "GET", path: "/api/mesh/network-accounts", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_SNAPSHOT_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.snapshot", method: "GET", path: "/api/platform/verification", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_RUN_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.run", method: "POST", path: "/api/platform/verification/runs", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 1024 });
+export const NOTIFICATION_INBOX_OPERATION: RelayOperation = Object.freeze({ id:"notifications.inbox",method:"GET",path:"/api/notifications/inbox",requiresTenant:true });
+export const NOTIFICATION_COUNTS_OPERATION: RelayOperation = Object.freeze({ id:"notifications.counts",method:"GET",path:"/api/notifications/counts",requiresTenant:true });
+export const NOTIFICATION_STREAM_OPERATION: RelayOperation = Object.freeze({ id:"notifications.stream",method:"GET",path:"/api/notifications/stream",requestClass:"stream",requiresTenant:true });
+export const NOTIFICATION_READ_OPERATION: RelayOperation = Object.freeze({ id:"notifications.read",method:"POST",path:"/api/notifications/:id/read",requiresTenant:true,idempotency:"required" });
+export const NOTIFICATION_READ_ALL_OPERATION: RelayOperation = Object.freeze({ id:"notifications.read-all",method:"POST",path:"/api/notifications/read-all",requiresTenant:true,idempotency:"required" });
+export const NOTIFICATION_DISMISS_OPERATION: RelayOperation = Object.freeze({ id:"notifications.dismiss",method:"POST",path:"/api/notifications/:id/dismiss",requiresTenant:true,idempotency:"required" });
+export const NOTIFICATION_PREFERENCES_READ_OPERATION: RelayOperation = Object.freeze({ id:"notifications.preferences.read",method:"GET",path:"/api/notifications/preferences",requiresTenant:true });
+export const NOTIFICATION_PREFERENCES_UPDATE_OPERATION: RelayOperation = Object.freeze({ id:"notifications.preferences.update",method:"PATCH",path:"/api/notifications/preferences",requiresTenant:true,maxBodyBytes:64*1024 });
+export const NOTIFICATION_PREFERENCES_PREVIEW_OPERATION: RelayOperation = Object.freeze({ id:"notifications.preferences.preview",method:"POST",path:"/api/notifications/preferences/preview",requiresTenant:true,maxBodyBytes:64*1024 });
+export const NOTIFICATION_PUSH_CONFIGURATION_OPERATION: RelayOperation = Object.freeze({ id:"notifications.push.configuration",method:"GET",path:"/api/notifications/push-configuration",requiresTenant:true });
+export const NOTIFICATION_PUSH_SUBSCRIBE_OPERATION: RelayOperation = Object.freeze({ id:"notifications.push.subscribe",method:"POST",path:"/api/notifications/push-subscriptions",requiresTenant:true,maxBodyBytes:16*1024 });
+export const NOTIFICATION_PUSH_UNSUBSCRIBE_OPERATION: RelayOperation = Object.freeze({ id:"notifications.push.unsubscribe",method:"DELETE",path:"/api/notifications/push-subscriptions/:id",requiresTenant:true });
+export const WORKFLOW_INBOX_OPERATION: RelayOperation = Object.freeze({ id:"workflow.inbox",method:"GET",path:"/api/workflow/inbox",requiresTenant:true });
+export const WORKFLOW_ITEM_ACTION_OPERATION: RelayOperation = Object.freeze({ id:"workflow.item.action",method:"POST",path:"/api/workflow/items/:id/actions/:action",requiresTenant:true,idempotency:"required",maxBodyBytes:64*1024 });
+export const ACTIVITY_CENTER_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  NOTIFICATION_INBOX_OPERATION,NOTIFICATION_COUNTS_OPERATION,NOTIFICATION_STREAM_OPERATION,
+  NOTIFICATION_READ_OPERATION,NOTIFICATION_READ_ALL_OPERATION,NOTIFICATION_DISMISS_OPERATION,
+  NOTIFICATION_PREFERENCES_READ_OPERATION,NOTIFICATION_PREFERENCES_UPDATE_OPERATION,
+  NOTIFICATION_PREFERENCES_PREVIEW_OPERATION,NOTIFICATION_PUSH_CONFIGURATION_OPERATION,NOTIFICATION_PUSH_SUBSCRIBE_OPERATION,
+  NOTIFICATION_PUSH_UNSUBSCRIBE_OPERATION,WORKFLOW_INBOX_OPERATION,WORKFLOW_ITEM_ACTION_OPERATION,
+]);
 
 export function createRelayHandler(options: RelayOptions): RelayHandler {
   const runtime = runtimeOrigin(options.runtimeApiUrl); const expectedOrigin = new URL(options.appOrigin).origin; const fetcher = options.fetch ?? globalThis.fetch;

@@ -60,7 +60,7 @@ const REQUIRED_OFFLINE_ASSETS = [
   "stack/config/gateway/fallback/status.html",
   "stack/config/gateway/fallback/default.conf",
   ...PLANES.flatMap((plane) => [
-    `apps/${plane}/public/brand/favicon.png`,
+    `apps/${plane}/public/brand/${plane}/athyper-favicon.svg`,
     `apps/${plane}/public/brand/brand-manifest.json`,
   ]),
 ] as const;

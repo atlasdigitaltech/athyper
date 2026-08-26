@@ -8,10 +8,10 @@ import type { ProvisionPlane } from "./safe-provision.js";
 
 const CONFIRMATION = "LOCAL-THREE-TENANT-DEMO-AUTH";
 const SOURCE_REF = "local-demo:three-tenant-authorization:v1";
-const PERMISSIONS = {
-  neon: "neon.context.catalog.read",
-  mesh: "mesh.catalog.network_account.read",
-  studio: "studio.platform.catalog.view",
+export const DEMO_PLANE_PERMISSIONS = {
+  neon: ["neon.context.catalog.read"],
+  mesh: ["mesh.catalog.network_account.read"],
+  studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage"],
 } as const;
 const PRIMARY_TENANT_ADMINS: Record<string, string> = {
   athyper: "athyper.admin",
@@ -116,12 +116,15 @@ async function applyPlane(urlValue: string, plane: ProvisionPlane, inputs: Provi
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`${SOURCE_REF}:${plane}`]);
-    const permissionId = (await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND status='published'", [PERMISSIONS[plane]])).id;
+    const permissions = await Promise.all(DEMO_PLANE_PERMISSIONS[plane].map(async (permissionCode) => ({
+      code: permissionCode,
+      id: (await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND status='published'", [permissionCode])).id,
+    })));
     for (const tenant of inputs.manifest.tenants) {
       const actorId = (await one<{ id: string }>(client, "SELECT id::text AS id FROM master.principal WHERE tenant_id=$1::uuid AND code='seed.three-plane-provisioner' AND status='active'", [tenant.id])).id;
       await client.query("SELECT set_config('app.database_plane',$1,true),set_config('app.current_tenant_id',$2,true),set_config('app.current_principal_id',$3,true)", [plane, tenant.id, actorId]);
       if (plane === "neon") await ensureNeonScopes(client, inputs, tenant.code, tenant.id, actorId);
-      const roleId = await ensureRole(client, plane, tenant.id, permissionId, actorId);
+      const roleId = await ensureRole(client, plane, tenant.id, permissions, actorId);
       for (const grant of grants.filter((item) => item.tenantCode === tenant.code)) await ensureGrant(client, plane, tenant.id, roleId, actorId, grant);
     }
     await client.query("COMMIT");
@@ -155,7 +158,7 @@ async function upsertScope(client: QueryClient, tenantId: string, kind: Scope["k
   [deterministicUuid("demo-auth", tenantId, kind, key), tenantId, kind, key, targetId, parentId, name, metadata(), actorId]);
 }
 
-async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: string, permissionId: string, actorId: string): Promise<string> {
+async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: string, permissions: readonly { readonly code: string; readonly id: string }[], actorId: string): Promise<string> {
   const code = `demo.${plane}.context-reader`;
   const id = deterministicUuid("demo-auth", plane, tenantId, "role", code);
   await client.query(`INSERT INTO authz.role(id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
@@ -164,8 +167,10 @@ async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: 
   const actual = await one<{ id: string; sourceRef: string; status: string }>(client, "SELECT id::text AS id,source_ref AS \"sourceRef\",status FROM authz.role WHERE tenant_id=$1::uuid AND code=$2", [tenantId, code]);
   if (actual.id !== id || actual.sourceRef !== SOURCE_REF) throw new Error(`conflicting demo role ${tenantId}/${code}`);
   if (actual.status === "active") await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid", [tenantId, id, actorId]);
-  await client.query("INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING",
-    [deterministicUuid("demo-auth", plane, tenantId, "role-permission", PERMISSIONS[plane]), tenantId, id, permissionId, actorId]);
+  for (const permission of permissions) {
+    await client.query("INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING",
+      [deterministicUuid("demo-auth", plane, tenantId, "role-permission", permission.code), tenantId, id, permission.id, actorId]);
+  }
   await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [tenantId, id, actorId]);
   return id;
 }

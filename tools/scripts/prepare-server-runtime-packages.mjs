@@ -18,13 +18,25 @@ function packageFiles(directory) {
 
 function productionTarget(value) {
   if (typeof value === "string") {
-    return value.startsWith("./src/") ? value.replace(/^\.\/src\//u, "./dist/").replace(/\.ts$/u, ".js") : value;
+    return value.startsWith("./src/") ? value.replace(/^\.\/src\//u, "./dist/").replace(/\.tsx?$/u, ".js") : value;
   }
   if (Array.isArray(value)) return value.map(productionTarget);
   if (value && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, productionTarget(child)]));
   }
   return value;
+}
+
+function deployedPackages(runtimeRoot, packageName) {
+  const packageSegments = packageName.split("/");
+  const candidates = [join(runtimeRoot, "node_modules", ...packageSegments)];
+  const virtualStore = join(runtimeRoot, "node_modules", ".pnpm");
+  if (existsSync(virtualStore)) {
+    for (const entry of readdirSync(virtualStore)) {
+      candidates.push(join(virtualStore, entry, "node_modules", ...packageSegments));
+    }
+  }
+  return candidates.filter((candidate) => existsSync(candidate));
 }
 
 let updated = 0;
@@ -40,8 +52,7 @@ for (const packageFile of packageFiles(packagesRoot)) {
   }
   if (runtimeRoot && manifest.name) {
     const sourceDist = join(packageFile, "..", "dist");
-    const deployedPackage = join(runtimeRoot, "node_modules", manifest.name);
-    if (existsSync(sourceDist) && existsSync(deployedPackage)) {
+    for (const deployedPackage of existsSync(sourceDist) ? deployedPackages(runtimeRoot, manifest.name) : []) {
       const deployedDist = join(deployedPackage, "dist");
       rmSync(deployedDist, { recursive: true, force: true });
       cpSync(sourceDist, deployedDist, { recursive: true });

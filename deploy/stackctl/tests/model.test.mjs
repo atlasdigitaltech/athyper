@@ -18,7 +18,7 @@ test("catalog accounts for all 39 resolved Stack v1 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
   assert.equal(model.services.filter((service) => service.ledger === "resolved-v1").length, 39);
   assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
-  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 6);
+  assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 7);
 });
 
 test("DEV render is project-scoped and uses the laptop-32 envelope", () => {
@@ -221,6 +221,25 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   );
 });
 
+test("production rehearsal is isolated, immutable, canary-first, and read-only",()=>{
+  const plan=createRehearsalPlan(defaultRepoRoot,"production","stg");
+  assert.equal(plan.kind,"ProductionRehearsalPlan");
+  assert.equal(plan.readOnly,true);
+  assert.equal(plan.executionAuthorized,false);
+  assert.equal(plan.status,"blocked");
+  assert.equal(plan.target.dataClassification,"production");
+  assert.equal(plan.credentialPolicy.stagingReuseAllowed,false);
+  assert.equal(plan.credentialPolicy.authority.namespace,"athyper/production");
+  assert.ok(plan.credentialPolicy.authority.prohibitedNamespaces.includes("athyper/stg"));
+  assert.equal(plan.promotion.rebuildAllowed,false);
+  assert.equal(plan.promotion.images.length,5);
+  assert.ok(plan.blockers.some((message)=>message.includes("Production promotion image")));
+  assert.ok(plan.blockers.some((message)=>message.includes("emailCanary")));
+  assert.equal(plan.rollout.automaticPauseOnFailure,true);
+  assert.deepEqual(plan.actions,["No action: this command only validates and emits the production activation contract."]);
+  assert.throws(()=>createRehearsalPlan(defaultRepoRoot,"production","qa"),/permits only stg -> production/u);
+});
+
 test("STG routes expose no DEV, QA, or mail-capture identity", () => {
   const routes = readFileSync(join(
     defaultRepoRoot,
@@ -229,6 +248,17 @@ test("STG routes expose no DEV, QA, or mail-capture identity", () => {
   assert.match(routes, /iam\.stg\.athyper\.test/u);
   assert.doesNotMatch(routes, /\.(dev|qa)\.athyper\.test/u);
   assert.doesNotMatch(routes, /mailtrap|mail\.stg/u);
+  const plan = createPlan(defaultRepoRoot, "stg", { runtimeRoot: "/nonexistent/athyper-test-runtime" });
+  assert.ok(plan.sources.compose.at(-1).endsWith("compose.notification-providers.yaml"));
+  assert.equal(plan.services.some(({ id }) => id === "mailtrap"), false);
+  assert.equal(plan.services.some(({ id }) => id === "db-forward-migration"), true);
+  for (const secret of ["vapid-private-key", "vapid-public-key"]) {
+    assert.ok(plan.requiredSecrets.includes(secret));
+    assert.ok(plan.blockers.some((message) => message.includes(secret)));
+  }
+  for (const rollbackSecret of ["smtp-password", "smtp-user"]) {
+    assert.equal(plan.requiredSecrets.includes(rollbackSecret), false);
+  }
 });
 
 test("optional capability plans are profile-scoped, bounded, and read-only", () => {

@@ -33,6 +33,10 @@ export function definePlaneRoutes<const Routes extends readonly PlaneRouteDefini
 
 export function deriveShellNavigation(registry: readonly PlaneRouteDefinition[], experience: ShellExperienceInput, onDiagnostic?: (event: NavigationDiagnostic) => void): DerivedShellNavigation {
   const registryModules = new Set(registry.map((route) => route.moduleCode));
+  const moduleLandingRoutes = new Map<string, string>();
+  for (const route of registry) {
+    if (!moduleLandingRoutes.has(route.moduleCode)) moduleLandingRoutes.set(route.moduleCode, route.id);
+  }
   const activeModules = [...new Set(experience.workspaces.flatMap((workspace) => workspace.modules.map((module) => module.code)))];
   const unknownActiveModules = activeModules.filter((code) => !registryModules.has(code)).sort();
   for (const moduleCode of unknownActiveModules) onDiagnostic?.(Object.freeze({ kind: "unknown-active-module", moduleCode }));
@@ -42,7 +46,11 @@ export function deriveShellNavigation(registry: readonly PlaneRouteDefinition[],
     const workspaceRoutes: DerivedShellRoute[] = [];
     for (const module of [...workspace.modules].sort(byOrder)) for (const route of registry) {
       if (route.moduleCode !== module.code || !decideRouteAccess(access, route).allowed) continue;
-      const derived = Object.freeze({ ...route, label: cleanLabel(module.name) ?? cleanLabel(route.label) ?? route.moduleCode, iconKey: module.iconKey ?? route.iconKey ?? "info", workspaceCode: workspace.code, workspaceName: cleanLabel(workspace.name) ?? workspace.code, moduleName: cleanLabel(module.name) ?? module.code, sortOrder: module.sortOrder });
+      const isModuleLandingRoute = moduleLandingRoutes.get(route.moduleCode) === route.id;
+      const label = isModuleLandingRoute
+        ? cleanLabel(module.name) ?? cleanLabel(route.label) ?? route.moduleCode
+        : cleanLabel(route.label) ?? cleanLabel(module.name) ?? route.moduleCode;
+      const derived = Object.freeze({ ...route, label, iconKey: module.iconKey ?? route.iconKey ?? "info", workspaceCode: workspace.code, workspaceName: cleanLabel(workspace.name) ?? workspace.code, moduleName: cleanLabel(module.name) ?? module.code, sortOrder: module.sortOrder });
       workspaceRoutes.push(derived); routes.push(derived);
     }
     if (workspaceRoutes.some((route) => route.navigation !== "hidden")) workspaces.push(Object.freeze({ code: workspace.code, name: cleanLabel(workspace.name) ?? workspace.code, iconKey: workspace.iconKey ?? "info", sortOrder: workspace.sortOrder, routes: Object.freeze(workspaceRoutes) }));

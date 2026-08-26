@@ -278,3 +278,25 @@ CREATE POLICY rounding_context_tenant_access
 CREATE POLICY rounding_context_seed_write
     ON control.rounding_context FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
+
+ALTER TABLE control.ui_locale_catalog ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.ui_locale_catalog FORCE ROW LEVEL SECURITY;
+CREATE POLICY ui_locale_catalog_read ON control.ui_locale_catalog
+    FOR SELECT USING (true);
+CREATE POLICY ui_locale_catalog_runtime_write ON control.ui_locale_catalog
+    FOR INSERT TO athyperapp WITH CHECK (true);
+CREATE POLICY ui_locale_catalog_runtime_update ON control.ui_locale_catalog
+    FOR UPDATE TO athyperapp USING (true) WITH CHECK (true);
+CREATE POLICY ui_locale_catalog_seed_write ON control.ui_locale_catalog
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE master.tenant_locale_activation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.tenant_locale_activation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_locale_activation_read ON master.tenant_locale_activation
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_locale_activation_write ON master.tenant_locale_activation
+    FOR ALL TO athyperapp
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_locale_activation_seed_write ON master.tenant_locale_activation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);

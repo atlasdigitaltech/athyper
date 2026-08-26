@@ -12,11 +12,17 @@ import {
 } from "@athyper/server-adapter-cache-redis";
 import {
   createEmailAdapter,
+  createSesEmailAdapter,
+  createSesEventSqsAdapter,
   createFcmPushAdapter,
   createMetaWhatsAppAdapter,
   createSmsAdapter,
   createWebPushAdapter,
   type EmailAdapterConfig,
+  type SesEmailAdapterConfig,
+  type SesEventMessageHandler,
+  type SesEventSqsAdapter,
+  type SesEventSqsAdapterConfig,
   type FcmPushAdapterConfig,
   type MetaWhatsAppAdapterConfig,
   type SmsAdapterConfig,
@@ -72,6 +78,7 @@ import { CachedPublicationKeyResolver, Ed25519PublicationSigner, Ed25519Publicat
 import { createInfisicalSecretStore, type InfisicalSecretStoreConfig } from "@athyper/server-adapter-secretstore-infisical";
 import type { SecretStore } from "@athyper/server-contract-secrets";
 import { ImmutablePublicationArtifactStore } from "@athyper/server-service-publication";
+import { deterministicEmailProviderTenantName } from "@athyper/server-platform-notifications";
 
 import type { HostConfig } from "../config/index.js";
 import type { Container } from "./create-container.js";
@@ -95,6 +102,8 @@ export interface AdapterRegistrationDependencies {
     config: OpenTelemetryAdapterConfig,
   ): OpenTelemetryAdapter;
   createEmail(config: EmailAdapterConfig): NotificationChannelHandler;
+  createSesEmail(config: SesEmailAdapterConfig): NotificationChannelHandler;
+  createSesEventSource(config: SesEventSqsAdapterConfig, handler: SesEventMessageHandler): SesEventSqsAdapter;
   createSms(config: SmsAdapterConfig): NotificationChannelHandler;
   createMetaWhatsApp(config: MetaWhatsAppAdapterConfig): NotificationChannelHandler;
   createFcmPush(config: FcmPushAdapterConfig): PushTransport;
@@ -117,6 +126,8 @@ const DEFAULT_DEPENDENCIES: AdapterRegistrationDependencies = {
   createSearchIndex:createMeilisearchIndex,
   createOpenTelemetry: createOpenTelemetryAdapter,
   createEmail: createEmailAdapter,
+  createSesEmail: createSesEmailAdapter,
+  createSesEventSource: createSesEventSqsAdapter,
   createSms: createSmsAdapter,
   createMetaWhatsApp: createMetaWhatsAppAdapter,
   createFcmPush: createFcmPushAdapter,
@@ -180,7 +191,7 @@ export function registerAdapters(
     lifecycle.onShutdown(() => notificationEvents.close());
   }
 
-  if (config.email.host && config.email.fromAddress) {
+  if (config.email.provider === "smtp" && config.email.host && config.email.fromAddress) {
     const email = dependencies.createEmail({
       host: config.email.host,
       port: config.email.port,
@@ -191,6 +202,51 @@ export function registerAdapters(
     });
     container.adapters.notificationChannels.set("email", email);
     lifecycle.onShutdown(() => email.close?.());
+  } else if (
+    config.email.provider === "ses" &&
+    config.email.sesRegion &&
+    config.email.sesConfigurationSetName &&
+    config.email.sesFromAddress
+  ) {
+    const email = dependencies.createSesEmail({
+      region: config.email.sesRegion,
+      configurationSetName: config.email.sesConfigurationSetName,
+      fromAddress: config.email.sesFromAddress,
+      environment: config.env,
+      ...(config.email.sesReplyToAddress
+        ? { replyToAddress: config.email.sesReplyToAddress }
+        : {}),
+      resolveTenantName(tenantId) {
+        return deterministicEmailProviderTenantName(tenantId);
+      },
+    });
+    container.adapters.notificationChannels.set("email", email);
+    lifecycle.onShutdown(() => email.close?.());
+  }
+
+  if (config.email.provider === "ses" && config.mode === "worker" && config.sesEvents.region && config.sesEvents.queueUrl) {
+    const sesEventSource = dependencies.createSesEventSource({
+      region: config.sesEvents.region,
+      queueUrl: config.sesEvents.queueUrl,
+      waitTimeSeconds: config.sesEvents.waitTimeSeconds,
+      visibilityTimeoutSeconds: config.sesEvents.visibilityTimeoutSeconds,
+      maxMessages: config.sesEvents.maxMessages,
+      failureBackoffMs: config.sesEvents.failureBackoffMs,
+    }, {
+      process(body) {
+        const handler = container.adapters.sesEventHandler;
+        if (!handler) throw new Error("SES event handler is not composed");
+        return handler.process(body);
+      },
+    });
+    container.adapters.sesEventSource = sesEventSource;
+    container.runtimes.health.register("notifications.ses-event-source", () => sesEventSource.health());
+    lifecycle.onReady(() => {
+      void sesEventSource.run().catch(() => {
+        console.error("[notifications] ses_event_source_stopped_unexpectedly");
+      });
+    });
+    lifecycle.onShutdown(() => sesEventSource.close());
   }
 
   if (config.sms.accountSid && config.sms.authToken) {

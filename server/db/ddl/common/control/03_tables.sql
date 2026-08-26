@@ -1417,3 +1417,74 @@ COMMENT ON TABLE control.rounding_context IS
     'Sparse dispatch: (tenant, company?, currency?, slot?) → rounding_rule. '
     'NULL dimensions act as wildcards. Most-specific match wins. '
     'Falls back to shared.currency.minor_units when no row matches.';
+
+-- Plane-owned UI catalog qualification. Locale identity and regional
+-- formatting remain authoritative in shared.language/shared.locale.
+CREATE TABLE control.ui_locale_catalog (
+    locale_code                text        NOT NULL,
+    format_locale_code         text        NOT NULL,
+    rollout_wave               smallint    NOT NULL,
+    status                     text        NOT NULL DEFAULT 'draft',
+    coverage_pct               smallint    NOT NULL DEFAULT 0,
+    linguistic_review_passed   boolean     NOT NULL DEFAULT false,
+    layout_review_passed       boolean     NOT NULL DEFAULT false,
+    automated_tests_passed     boolean     NOT NULL DEFAULT false,
+    qualified                  boolean GENERATED ALWAYS AS (
+        status = 'qualified'
+        AND coverage_pct = 100
+        AND linguistic_review_passed
+        AND layout_review_passed
+        AND automated_tests_passed
+    ) STORED,
+    review_evidence            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at                 timestamptz NOT NULL DEFAULT now(),
+    created_by                 uuid        NOT NULL,
+    updated_at                 timestamptz,
+    updated_by                 uuid,
+
+    CONSTRAINT ui_locale_catalog_pkey PRIMARY KEY (locale_code),
+    CONSTRAINT ui_locale_catalog_locale_fk
+        FOREIGN KEY (locale_code) REFERENCES shared.locale(code),
+    CONSTRAINT ui_locale_catalog_format_locale_fk
+        FOREIGN KEY (format_locale_code) REFERENCES shared.locale(code),
+    CONSTRAINT ui_locale_catalog_wave_chk CHECK (rollout_wave BETWEEN 0 AND 3),
+    CONSTRAINT ui_locale_catalog_status_chk
+        CHECK (status IN ('draft', 'translating', 'review', 'qualified', 'retired')),
+    CONSTRAINT ui_locale_catalog_coverage_chk CHECK (coverage_pct BETWEEN 0 AND 100),
+    CONSTRAINT ui_locale_catalog_evidence_chk CHECK (jsonb_typeof(review_evidence) = 'object'),
+    CONSTRAINT ui_locale_catalog_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+-- Tenant activation is kept in master because it is tenant policy, while its
+-- locale FK guarantees that only a catalog registered in this plane can be used.
+CREATE TABLE master.tenant_locale_activation (
+    tenant_id       uuid        NOT NULL,
+    locale_code     text        NOT NULL,
+    enabled         boolean     NOT NULL DEFAULT false,
+    is_default      boolean     NOT NULL DEFAULT false,
+    is_fallback     boolean     NOT NULL DEFAULT false,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT tenant_locale_activation_pkey PRIMARY KEY (tenant_id, locale_code),
+    CONSTRAINT tenant_locale_activation_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    CONSTRAINT tenant_locale_activation_catalog_fk
+        FOREIGN KEY (locale_code) REFERENCES control.ui_locale_catalog(locale_code),
+    CONSTRAINT tenant_locale_activation_default_enabled_chk
+        CHECK (NOT is_default OR enabled),
+    CONSTRAINT tenant_locale_activation_fallback_enabled_chk
+        CHECK (NOT is_fallback OR enabled),
+    CONSTRAINT tenant_locale_activation_english_fallback_chk
+        CHECK (NOT is_fallback OR locale_code = 'en'),
+    CONSTRAINT tenant_locale_activation_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE control.ui_locale_catalog IS
+    'Plane-local qualification and review evidence for each platform UI catalog; locale identity is owned by shared.locale.';
+COMMENT ON TABLE master.tenant_locale_activation IS
+    'Tenant activation, default, and emergency fallback selection for plane-qualified UI catalogs.';

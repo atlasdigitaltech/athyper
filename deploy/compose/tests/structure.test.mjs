@@ -78,7 +78,7 @@ test("unhealthy browser planes fail over to branded HTML while APIs retain probl
 
   const nginx = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/outage.conf"), "utf8");
   const page = readFileSync(join(repoRoot, "deploy/compose/instance/config/nginx/status.html"), "utf8");
-  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/athyper-favicon.png")).toString("base64");
+  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg")).toString("base64");
   assert.match(nginx, /listen 8080;[\s\S]*sub_filter '__STATUS_MODE__' 'outage'/u);
   assert.match(nginx, /listen 8081;[\s\S]*sub_filter '__STATUS_MODE__' 'maintenance'/u);
   assert.match(nginx, /listen 8082;[\s\S]*default_type application\/problem\+json/u);
@@ -109,11 +109,11 @@ test("unhealthy browser planes fail over to branded HTML while APIs retain probl
   assert.match(page, /end > start/u);
   assert.match(page, /timeZoneName: "short"/u);
   assert.match(page, /\[hidden\] \{ display: none !important; \}/u);
-  assert.ok(page.includes(`href="data:image/png;base64,${favicon}"`));
+  assert.ok(page.includes(`href="data:image/svg+xml;base64,${favicon}"`));
   assert.equal((page.match(/data-universal-favicon/gu) ?? []).length, 3);
   assert.match(page, /querySelectorAll\("\[data-universal-favicon\]"\)/u);
-  assert.match(page, /`Maintenance — \$\{label\}`/u);
-  assert.match(page, /`Service unavailable — \$\{label\}`/u);
+  assert.match(page, /`\$\{label\} - Maintenance`/u);
+  assert.match(page, /`\$\{label\} - Service unavailable`/u);
 });
 
 test("DEV exposes explicit Neon maintenance and outage previews without replacing the live plane", () => {
@@ -129,15 +129,17 @@ test("DEV exposes explicit Neon maintenance and outage previews without replacin
 
 test("platform outage page uses the same self-contained monochrome recovery design", () => {
   const page = readFileSync(join(repoRoot, "deploy/compose/platform/outage/status.html"), "utf8");
-  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/athyper-favicon.png")).toString("base64");
-  assert.match(page, /aria-label="Athyper"/u);
+  const favicon = readFileSync(join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg")).toString("base64");
+  assert.match(page, /aria-label="Athyper Neon"/u);
+  for (const plane of ["neon", "mesh", "studio"]) assert.match(page, new RegExp(`data-plane-brand="${plane}"`, "u"));
   assert.match(page, /--contrast:#151515/u);
   assert.match(page, /--brand:#234B84/u);
   assert.match(page, /Platform gateway online/u);
-  assert.match(page, /<title>Platform unavailable — Athyper<\/title>/u);
+  assert.match(page, /<title>Athyper Platform unavailable<\/title>/u);
+  assert.match(page, /document\.title = `\$\{label\} - Platform unavailable`/u);
   assert.match(page, /@media \(prefers-reduced-motion:reduce\)/u);
   assert.doesNotMatch(page, /https?:\/\//u);
-  assert.ok(page.includes(`href="data:image/png;base64,${favicon}"`));
+  assert.ok(page.includes(`href="data:image/svg+xml;base64,${favicon}"`));
 });
 
 test("database role membership is granted only after foundation roles exist", () => {
@@ -155,6 +157,31 @@ test("database role membership is granted only after foundation roles exist", ()
   assert.match(workerGrants, /authorization_invalidation_jobs_service_access/u);
   assert.match(workerGrants, /descriptor_invalidation_jobs_service_access/u);
   assert.doesNotMatch(workerGrants, /GRANT athyperapp TO athyper_worker/u);
+});
+
+test("release instances use an image-contained fail-closed forward migration runner", () => {
+  const parity = read("deploy/compose/instance/compose.parity.yaml");
+  const catalog = read("deploy/catalog/applications.yaml");
+  const dockerfile = readFileSync(join(repoRoot, "server/Dockerfile.prod"), "utf8");
+  const runner = readFileSync(join(repoRoot, "server/db/runtime/run-forward-migrations.sh"), "utf8");
+  const service = parity.services["db-forward-migration"];
+  assert.deepEqual(service.entrypoint, ["/bin/sh", "/app/bin/run-forward-migrations.sh"]);
+  assert.deepEqual(service.volumes, []);
+  assert.equal(service.read_only, true);
+  assert.deepEqual(service.secrets, ["postgres-password"]);
+  assert.deepEqual(
+    catalog.services.find(({ id }) => id === "db-forward-migration").presets.sort(),
+    ["qa-standard", "stg-standard", "validation-full"],
+  );
+  assert.match(dockerfile, /server\/db\/migrations \/app\/migrations/u);
+  assert.match(dockerfile, /run-forward-migrations\.sh \/app\/bin\/run-forward-migrations\.sh/u);
+  assert.match(runner, /athyper_schema_migration_v1/u);
+  assert.match(runner, /checksum differs from the migration ledger/u);
+  assert.match(runner, /operator resolution is required/u);
+  for (const plane of ["studio", "neon", "mesh"]) {
+    const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
+    assert.match(manifest, /20260825_notification_activity_center\.sql/u);
+  }
 });
 
 test("MinIO bootstrap has enough memory for concurrent full-stack startup", () => {
@@ -243,4 +270,35 @@ test("OIDC uses public HTTPS issuers with private backchannel endpoints", () => 
     assert.ok(client.webOrigins.includes(origin));
     assert.ok(client.attributes["post.logout.redirect.uris"].split("##").includes(`${origin}/api/auth/logout/callback`));
   }
+});
+
+test("runtime communication providers preserve overrides and support secret files", () => {
+  const runtime = readFileSync(join(repoRoot, "deploy/compose/instance/scripts/start-runtime.sh"), "utf8");
+  const providers = read("deploy/compose/instance/compose.notification-providers.yaml");
+  const smtpRollback = read("deploy/compose/instance/compose.notification-smtp-rollback.yaml");
+  assert.match(runtime, /SMTP_HOST="\$\{SMTP_HOST:-mailtrap\}"/u);
+  assert.match(runtime, /SMTP_FROM="\$\{SMTP_FROM:-noreply@\$\{ATHYPER_DOMAIN_SUFFIX:-dev\.athyper\.test\}\}"/u);
+  assert.doesNotMatch(runtime, /export SMTP_HOST=mailtrap/u);
+  for (const variable of [
+    "SMTP_USER", "SMTP_PASS",
+    "PUSH_FCM_PROJECT_ID", "PUSH_FCM_CLIENT_EMAIL", "PUSH_FCM_PRIVATE_KEY",
+    "VAPID_SUBJECT", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY",
+  ]) {
+    assert.match(runtime, new RegExp(`(?:^|\\s)${variable}(?:\\s|;|\\\\|$)`, "u"));
+  }
+  assert.match(runtime, /Secret file configured by \$\{variable\}_FILE is unavailable/u);
+  assert.match(runtime, /Secret file configured by \$\{variable\}_FILE is empty/u);
+  const expectedSecrets = [
+    "vapid-subject", "vapid-public-key", "vapid-private-key",
+  ];
+  assert.deepEqual(providers.services.api.secrets, expectedSecrets);
+  assert.deepEqual(providers.services.worker.secrets, expectedSecrets);
+  assert.equal(providers.services.scheduler, undefined);
+  assert.equal(providers.services.api.environment.EMAIL_PROVIDER, "${EMAIL_PROVIDER:-ses}");
+  assert.equal(smtpRollback.services.api.environment.EMAIL_PROVIDER, "smtp");
+  assert.equal(smtpRollback.services.api.environment.SMTP_PASS_FILE, "/run/secrets/smtp-password");
+  assert.deepEqual(smtpRollback.services.api.secrets, [
+    "smtp-host", "smtp-port", "smtp-secure", "smtp-from", "smtp-user", "smtp-password",
+  ]);
+  assert.equal(providers.services.worker.environment.VAPID_PRIVATE_KEY_FILE, "/run/secrets/vapid-private-key");
 });

@@ -31,6 +31,7 @@ export function loadModel(repoRoot, instanceId) {
     .flatMap((catalog) => catalog.services);
   const selected = services
     .filter((service) => service.presets.includes(instance.spec.preset))
+    .filter((service) => service.id !== "mailtrap" || ["internal", "mock"].includes(instance.spec.providers.mail))
     .sort((left, right) => left.id.localeCompare(right.id));
   return {
     repoRoot,

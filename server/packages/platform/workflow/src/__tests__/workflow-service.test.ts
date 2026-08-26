@@ -45,7 +45,7 @@ describe("descriptor-governed workflow work items", () => {
     const persistence = createInMemoryWorkflowPersistence({ createId: () => ids.item });
     const service = createWorkflowService({ metadata: metadata("mesh"), authorizer: { authorize: async () => ({ allowed: true }) }, repository: persistence.repository, transactions: persistence.transactions, outbox: { append: async () => { throw new Error("outbox unavailable"); } }, audit: { record: async (input) => auditEvent(input, 0) } });
     await expect(service.create({ context: context("mesh"), workTypeCode: "approval", title: "Rollback", sourceEntityCode: "business_partner", sourceEntityId: ids.source, assigneePrincipalId: ids.principal })).rejects.toThrow("outbox unavailable");
-    await expect(service.listInbox({ context: context("mesh") })).resolves.toEqual({ data: [] });
+    await expect(service.listInbox({ context: context("mesh") })).resolves.toEqual({ data: [], totalCount: 0 });
   });
 
   it("enforces a published entity policy binding in the workflow transaction", async () => {
@@ -59,7 +59,7 @@ describe("descriptor-governed workflow work items", () => {
       outbox: { append: async () => undefined }, audit: { record: async (input) => auditEvent(input, 0) },
     });
     await expect(service.create({ context: context("athyper"), workTypeCode: "approval", title: "Activate supplier", sourceEntityCode: "business_partner", sourceEntityId: ids.source, sourceActionCode: "activate" })).resolves.toEqual({ kind: "PolicyDenied", policyIds: [policyId], reason: "Supplier risk is blocked" });
-    await expect(service.listInbox({ context: context("athyper") })).resolves.toEqual({ data: [] });
+    await expect(service.listInbox({ context: context("athyper") })).resolves.toEqual({ data: [], totalCount: 0 });
   });
 
   it("fails closed when a published policy revision is unavailable", async () => {

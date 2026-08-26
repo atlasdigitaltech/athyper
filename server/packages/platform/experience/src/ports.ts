@@ -4,6 +4,8 @@ import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/tr
 export interface ExperienceIdentityRecord {
   readonly tenantCode: string;
   readonly tenantDisplayName: string;
+  readonly tenantCountryCode?: string;
+  readonly tenantLogoAssetRef?: string;
   readonly tenantStatus: string;
   readonly tenantRealmKey: string;
   readonly subscriptionPlanId?: string;
@@ -26,6 +28,7 @@ export interface ExperienceWorkContextRecord {
   readonly legalEntityId: string;
   readonly legalEntityCode: string;
   readonly legalEntityName: string;
+  readonly logoAssetRef?: string;
   readonly countryCode?: string;
   readonly functionalCurrency: string;
   readonly revision: string;
@@ -64,6 +67,7 @@ export interface ExperienceNetworkAccountRecord {
   readonly role: "buyer" | "supplier" | "both";
   readonly countryCode?: string;
   readonly defaultCurrency?: string;
+  readonly logoAssetRef?: string;
   readonly canonicalPartyId?: string;
   readonly source: "neon_projection" | "mesh";
   readonly revision: string;
@@ -74,6 +78,15 @@ export interface ExperienceProfileRecord {
   readonly principal?: Readonly<Record<string, unknown>>;
   readonly revision: string;
 }
+export interface ExperienceLocaleCatalogGovernanceRecord {
+  readonly localeCode: string;
+  readonly status: string;
+  readonly coveragePct: number;
+  readonly linguisticReviewPassed: boolean;
+  readonly layoutReviewPassed: boolean;
+  readonly automatedTestsPassed: boolean;
+}
+export interface ExperienceLocalePolicyRecord { readonly catalogs?: readonly ExperienceLocaleCatalogGovernanceRecord[]; readonly enabledLocales: readonly string[]; readonly defaultLocale: string; readonly fallbackLocale: string; readonly revision: string; }
 
 export interface ExperienceCatalogRecord {
   readonly planActive: boolean;
@@ -102,6 +115,9 @@ export interface ExperiencePlaneRepository {
   readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]>;
   readOperatingOrganizations(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceOperatingOrganizationRecord[]>;
   readNetworkAccounts(context: VerifiedRequestContext): Promise<readonly ExperienceNetworkAccountRecord[]>;
+  readLocalePolicy?(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord>;
+  updateLocalePolicy?(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord>;
+  updatePrincipalLocale?(context: VerifiedRequestContext, localeCode: string): Promise<void>;
 }
 
 export type ExperienceRepositoryProvider = ExactPlaneRepositoryProvider<ExperiencePlaneRepository>;

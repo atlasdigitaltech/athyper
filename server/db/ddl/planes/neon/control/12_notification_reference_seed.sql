@@ -226,3 +226,25 @@ DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description,
     priority = EXCLUDED.priority, recipient_rules = EXCLUDED.recipient_rules,
     dedup_window_ms = EXCLUDED.dedup_window_ms, is_enabled = EXCLUDED.is_enabled,
     sort_order = EXCLUDED.sort_order, updated_at = now(), updated_by = EXCLUDED.created_by;
+
+-- Keep catalog drafts inert until their owning modules publish the documented
+-- canonical event and recipient payload. This prevents false production
+-- confidence and accidental empty-recipient notification messages.
+UPDATE control.notification_routing_rule
+SET is_enabled = false,
+    updated_at = now(),
+    updated_by = '00000000-0000-0000-0000-000000000000'
+WHERE tenant_id IS NULL
+  AND code = ANY (ARRAY[
+    'document.purchase_invoice_lifecycle_changed',
+    'document.purchase_requisition_lifecycle_changed',
+    'document.purchase_order_confirmation_lifecycle_changed',
+    'document.delivery_note_lifecycle_changed',
+    'document.receipt_lifecycle_changed',
+    'document.service_sheet_lifecycle_changed',
+    'document.payment_entry_lifecycle_changed',
+    'workflow.sla_reminder',
+    'workflow.sla_breach',
+    'workflow.sla_auto_reject',
+    'workflow.sla_auto_cancel'
+  ]);

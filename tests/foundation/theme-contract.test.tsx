@@ -24,6 +24,8 @@ describe("foundation theme contract", () => {
     assert.equal(COLOR_TOKENS.light.brand, ATLAS_MODERN_BRAND.colors.primary);
     assert.equal(COLOR_TOKENS.light.primaryForeground, "var(--a-brand-foreground)");
     assert.equal(COLOR_TOKENS.light.brandForeground, ATLAS_MODERN_BRAND.colors.primaryForeground);
+    assert.equal(COLOR_TOKENS.dark.brandHover, "color-mix(in srgb, var(--a-brand) 42%, white)");
+    assert.notEqual(COLOR_TOKENS.dark.primary, COLOR_TOKENS.dark.brandHover);
     const iamTokens = readFileSync("stack/config/iam/themes/neon/login/resources/css/iam.tokens.css", "utf8");
     assert.match(iamTokens, /--a-theme-family:atlas-modern/);
     assert.match(iamTokens, /--a-primary: var\(--a-brand\)/);
@@ -63,7 +65,16 @@ describe("foundation theme contract", () => {
     assert.match(script, /dataset\.theme/);
     assert.match(script, /dataset\.themeFamily/);
     assert.match(script, /atlas-modern/);
+    assert.match(script, /m==="dark"\|\|m==="high-contrast"\?"dark":"light"/);
     assert.doesNotMatch(script, /<\/script/i);
+  });
+
+  it("lets operating-system preference determine the initial app theme", () => {
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const layout = readFileSync(`apps/${plane}/app/layout.tsx`, "utf8");
+      assert.match(layout, /<ThemeScript \/>/);
+      assert.doesNotMatch(layout, /<ThemeScript[^>]*platformDefault="light"/);
+    }
   });
 
   it("defines focus, reduced-motion, touch, and forced-color safeguards", () => {

@@ -16,7 +16,7 @@
     "spec": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["sourceInstance", "targetInstance", "promotion", "data", "integrations", "migration"],
+      "required": ["sourceInstance", "targetInstance", "promotion", "data", "integrations", "migration", "notifications"],
       "properties": {
         "sourceInstance": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "targetInstance": { "type": "string", "pattern": "^[a-z0-9-]+$" },
@@ -60,6 +60,17 @@
             "restoreReceipt": { "type": "string", "pattern": "^stg/[a-z0-9./-]+\\.json$" },
             "backupMustPrecedeMigration": { "const": true },
             "restoreDrillRequired": { "const": true }
+          }
+        },
+        "notifications": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["providerReadiness", "emailCanary", "webPushCanary", "failureExercise"],
+          "properties": {
+            "providerReadiness": { "type": "string", "pattern": "^stg/[a-z0-9./-]+\\.json$" },
+            "emailCanary": { "type": "string", "pattern": "^stg/[a-z0-9./-]+\\.json$" },
+            "webPushCanary": { "type": "string", "pattern": "^stg/[a-z0-9./-]+\\.json$" },
+            "failureExercise": { "type": "string", "pattern": "^stg/[a-z0-9./-]+\\.json$" }
           }
         }
       }

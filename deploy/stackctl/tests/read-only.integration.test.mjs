@@ -36,6 +36,7 @@ test("all controller assessments and plans do not mutate machine state", () => {
   const plan = createPlan(defaultRepoRoot, "dev");
   const qaLifecycle = createLifecyclePlan(defaultRepoRoot, "qa", "reset");
   const stgRehearsal = createRehearsalPlan(defaultRepoRoot, "stg", "qa");
+  const productionRehearsal = createRehearsalPlan(defaultRepoRoot, "production", "stg");
   const capability = createCapabilityPlan(defaultRepoRoot, "dev", "observability");
   const orchestrator = assessOrchestrator(defaultRepoRoot);
   const gates = inspectRemainingGates(defaultRepoRoot);
@@ -47,6 +48,8 @@ test("all controller assessments and plans do not mutate machine state", () => {
   assert.equal(qaLifecycle.executionAuthorized, false);
   assert.equal(stgRehearsal.readOnly, true);
   assert.equal(stgRehearsal.executionAuthorized, false);
+  assert.equal(productionRehearsal.readOnly, true);
+  assert.equal(productionRehearsal.executionAuthorized, false);
   assert.equal(capability.readOnly, true);
   assert.equal(capability.executionAuthorized, false);
   assert.equal(orchestrator.readOnly, true);

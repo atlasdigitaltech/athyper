@@ -15,6 +15,7 @@ CREATE TABLE master.legal_entity (
     parent_legal_entity_id uuid,
     registration_number   text,
     registration_country_code character(2),
+    logo_asset_ref        text,
     incorporation_date    date,
     functional_currency   character(3)                 NOT NULL,
     reporting_currency    character(3),
@@ -41,6 +42,15 @@ CREATE TABLE master.legal_entity (
     CONSTRAINT legal_entity_registration_chk CHECK (
         registration_number IS NULL OR btrim(registration_number) <> ''
     ),
+    CONSTRAINT legal_entity_logo_asset_ref_chk CHECK (
+        logo_asset_ref IS NULL
+        OR (
+            btrim(logo_asset_ref) = logo_asset_ref
+            AND length(logo_asset_ref) BETWEEN 2 AND 1024
+            AND logo_asset_ref ~ '^/[A-Za-z0-9][A-Za-z0-9_./-]*$'
+            AND logo_asset_ref !~ '(^|/)\.\.(/|$)'
+        )
+    ),
     CONSTRAINT legal_entity_parent_self_chk CHECK (parent_legal_entity_id IS DISTINCT FROM id),
     CONSTRAINT legal_entity_effective_range_chk CHECK (
         effective_until IS NULL OR effective_from IS NULL OR effective_until > effective_from
@@ -54,6 +64,9 @@ CREATE TABLE master.legal_entity (
 
 COMMENT ON TABLE master.legal_entity IS
   'Neon statutory organization representation linked by opaque canonical_party_id. A TrustIAM organization may project this legal entity as a scope ceiling but never owns the record.';
+
+COMMENT ON COLUMN master.legal_entity.logo_asset_ref IS
+  'Optional same-origin managed logo path for legal-entity context presentation.';
 
 CREATE TABLE master.company_code (
     id                    uuid                         NOT NULL DEFAULT shared.uuidv7(),

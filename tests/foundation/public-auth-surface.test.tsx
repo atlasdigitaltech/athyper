@@ -91,7 +91,7 @@ describe("production identity-gate experience", () => {
   it("uses concise page-specific IAM and application browser titles", () => {
     const context = readFileSync("stack/config/iam/themes/neon/login/_iam-context.ftl", "utf8");
     const resolver = readFileSync("stack/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
-    assert.match(context, /pageTitle \+ " — " \+ iamProductName/);
+    assert.match(context, /<\#return "\$\{pageTitle\} \$\{iamProductName\}">/);
     assert.doesNotMatch(context, /Athyper (?:Neon|Mesh|Studio) -/);
     assert.doesNotMatch(resolver, /document\.title/);
     for (const plane of ["neon", "mesh", "studio"] as const) {

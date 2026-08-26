@@ -25,6 +25,7 @@ const BACKUP_ID = /^[0-9]{8}T[0-9]{6}Z$/u;
 const PLATFORM_PROJECT = "athyper-platform";
 const PLATFORM_SECRETS = ["tls.crt", "tls.key"];
 const DATABASES = ["athyper_iam", "athyper_neon", "athyper_mesh", "athyper_studio"];
+const MIGRATION_RUNNERS = new Set(["db-migration", "db-forward-migration"]);
 
 function timestamp(date) {
   return date.toISOString().replace(/[-:]/gu, "").replace(/\.\d{3}Z$/u, "Z");
@@ -200,8 +201,8 @@ function admissionBlockers(repoRoot, instanceId, receiptState, dependencies) {
       receiptState === "running" && problem.includes("already listening")
     )),
   ];
-  if (!plan.services?.some(({ id }) => id === "db-migration")) {
-    blockers.push("No executable db-migration service is selected; application startup cannot bypass the migration gate.");
+  if (!plan.services?.some(({ id }) => MIGRATION_RUNNERS.has(id))) {
+    blockers.push("No executable database migration service is selected; application startup cannot bypass the migration gate.");
   }
   return { blockers: [...new Set(blockers)], plan };
 }
@@ -247,6 +248,7 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
   }).sources.compose;
   const env = instanceEnvironment(model, root);
   const ddlSha256 = treeSha256(join(repoRoot, "server", "db", "ddl"));
+  const forwardMigrationSha256 = treeSha256(join(repoRoot, "server", "db", "migrations"));
   env.ATHYPER_DDL_SHA256 = ddlSha256;
   const invoke = (program, args, commandOptions = {}) => {
     const result = run(program, args, { cwd: repoRoot, env, ...commandOptions });
@@ -284,7 +286,7 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
     validate(document, path);
     atomicJson(path, document);
   };
-  const writeMigrationReceipt = () => {
+  const writeMigrationReceipt = (mode, migrationSha256) => {
     const path = join(receiptDirectory, "migration.json");
     const document = {
       apiVersion: "athyper.io/v1alpha1",
@@ -294,8 +296,8 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
         project,
         completedAt: now().toISOString(),
         sourceRevision: revision,
-        ddlSha256,
-        mode: "fresh-database-foundation",
+        ddlSha256: migrationSha256,
+        mode,
       },
     };
     validate(document, path);
@@ -327,12 +329,21 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
       invoke("docker", [...platformArgs, "up", "--detach", "--wait"]);
       writePlatformActive(platformFile);
       try {
+        const migrationRunner = model.selected.some(({ id }) => id === "db-forward-migration")
+          ? "db-forward-migration"
+          : "db-migration";
+        const migrationMode = migrationRunner === "db-forward-migration"
+          ? "forward-migrations"
+          : "fresh-database-foundation";
+        const migrationSha256 = migrationRunner === "db-forward-migration"
+          ? forwardMigrationSha256
+          : ddlSha256;
         compose(["up", "--detach", "--wait", "db"]);
         compose(["run", "--rm", "db-init"]);
-        compose(["run", "--rm", "db-migration"]);
-        artifacts.migrationMode = "fresh-database-foundation";
-        artifacts.migrationSha256 = ddlSha256;
-        writeMigrationReceipt();
+        compose(["run", "--rm", migrationRunner]);
+        artifacts.migrationMode = migrationMode;
+        artifacts.migrationSha256 = migrationSha256;
+        writeMigrationReceipt(migrationMode, migrationSha256);
         compose(["up", "--detach", "--wait", "--remove-orphans"]);
       } catch (error) {
         rollback = { attempted: true, succeeded: false };

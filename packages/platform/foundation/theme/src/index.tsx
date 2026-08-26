@@ -22,7 +22,7 @@ export function createThemeBootstrapScript(input: Omit<ThemeScriptProps, "nonce"
     storageKey: input.storageKey ?? "athyper.theme",
     themeFamily: input.themeFamily ?? DEFAULT_THEME_FAMILY,
   }).replaceAll("<", "\\u003c");
-  return `(()=>{const c=${data},d=document.documentElement,v=["light","dark","high-contrast"],ok=x=>v.includes(x);let p=c.sessionMode;try{p=p||localStorage.getItem(c.storageKey)}catch{}const contrast=matchMedia("(forced-colors: active)").matches||matchMedia("(prefers-contrast: more)").matches;const dark=matchMedia("(prefers-color-scheme: dark)").matches;const m=ok(p)?p:ok(c.tenantDefault)?c.tenantDefault:ok(c.platformDefault)?c.platformDefault:contrast?"high-contrast":dark?"dark":"light";d.dataset.themeFamily=c.themeFamily;d.dataset.theme=m;d.dataset.density=c.density;d.style.colorScheme=m==="dark"?"dark":"light";})();`;
+  return `(()=>{const c=${data},d=document.documentElement,v=["light","dark","high-contrast"],ok=x=>v.includes(x);let p=c.sessionMode;try{p=p||localStorage.getItem(c.storageKey)}catch{}const contrast=matchMedia("(forced-colors: active)").matches||matchMedia("(prefers-contrast: more)").matches;const dark=matchMedia("(prefers-color-scheme: dark)").matches;const m=ok(p)?p:ok(c.tenantDefault)?c.tenantDefault:ok(c.platformDefault)?c.platformDefault:contrast?"high-contrast":dark?"dark":"light";d.dataset.themeFamily=c.themeFamily;d.dataset.theme=m;d.dataset.density=c.density;d.style.colorScheme=m==="dark"||m==="high-contrast"?"dark":"light";})();`;
 }
 
 export function ThemeScript(props: ThemeScriptProps): ReactElement {

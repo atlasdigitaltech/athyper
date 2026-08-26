@@ -14,6 +14,8 @@ export type ExternalNotificationChannel = Exclude<NotificationChannel, "in_app">
 
 /** Provider-neutral, already-rendered notification delivery request. */
 export interface NotificationDeliveryRequest {
+  /** Durable delivery coordinate used for provider correlation tags. */
+  readonly deliveryId?: string;
   readonly channel: NotificationChannel;
   readonly recipientAddress: string;
   readonly templateKey: string;
@@ -28,6 +30,8 @@ export interface NotificationDeliveryRequest {
 
 export interface NotificationDeliveryResult {
   readonly externalId?: string;
+  /** Omit for synchronous transports; SES must return provider_accepted. */
+  readonly confirmation?: "delivered" | "provider_accepted";
 }
 
 /** A single-channel transport port. Implementations must not resolve templates or recipients. */

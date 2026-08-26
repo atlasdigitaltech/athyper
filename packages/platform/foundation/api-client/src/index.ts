@@ -6,6 +6,7 @@ export * from "./work-context";
 export * from "./operating-organization";
 export * from "./network-account";
 export * from "./verification";
+export * from "./localization";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RequestClass = "interactive" | "background" | "upload" | "download" | "stream";

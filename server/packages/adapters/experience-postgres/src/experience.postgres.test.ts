@@ -39,6 +39,7 @@ describe.runIf(enabled)("experience projection against current all-plane DDL", (
           const catalog = await repository.readCatalog(context, identity.subscriptionPlanId);
           expect(catalog).toBeDefined();
           expect(catalog?.associations.map((entry) => [entry.workspaceSortOrder, entry.moduleSortOrder])).toEqual([...catalog!.associations].sort((a, b) => a.workspaceSortOrder - b.workspaceSortOrder || a.moduleSortOrder - b.moduleSortOrder).map((entry) => [entry.workspaceSortOrder, entry.moduleSortOrder]));
+          if (plane === "studio") expect(catalog?.permissions.map((permission) => permission.code)).toContain("studio.platform.catalog.manage");
         }
         const features = await repository.readFeatures(context, new Date());
         expect(new Set(features.map((feature) => feature.code)).size).toBe(features.length);

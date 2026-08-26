@@ -17,6 +17,7 @@ spec:
     search: internal
     secrets: file
     objectStorage: internal
-    mail: internal
+    mail: external
+    push: external
     scanner: internal
     rendering: internal

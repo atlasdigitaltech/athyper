@@ -1,4 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import { LOCALE_REGISTRY } from "@athyper/platform-i18n";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 import { validateRuntimeSchema } from "@athyper/server-runtime-http";
 import { describe, expect, it } from "vitest";
@@ -33,7 +34,9 @@ describe("experience effective-access projection", () => {
   it("inherits typed profile fields, orders catalog, filters unknown permissions, and resolves flags", async () => {
     const first = await service().bootstrap(context, { clientVersion: "1.5.0" });
     const second = await service().bootstrap(context, { clientVersion: "1.5.0" });
-    expect(first).toMatchObject({ state: "ready", profile: { localeCode: "fr-FR", timezoneCode: "Asia/Kuala_Lumpur", appearanceMode: "dark", densityCode: "compact" }, permissions: ["finance.invoice.read"] });
+    expect(first).toMatchObject({ state: "ready", profile: { localeCode: "en", timezoneCode: "Asia/Kuala_Lumpur", appearanceMode: "dark", densityCode: "compact" }, localePolicy:{enabledLocales:["en"],defaultLocale:"en",fallbackLocale:"en"},permissions: ["finance.invoice.read"] });
+    expect(first.localePolicy.catalogs).toHaveLength(8);
+    expect(first.localePolicy.catalogs.map(({localeCode,rolloutWave})=>[localeCode,rolloutWave])).toEqual([["en",0],["ar",1],["ms",1],["zh-Hans",1],["hi",2],["ta",2],["fr",3],["de",3]]);
     expect(first.workspaces[0]?.modules[0]).toMatchObject({ code: "invoicing", primary: true });
     expect(first.features["finance.invoice_v2"]).toMatchObject({ enabled: true, source: "tenant_override" });
     expect(first.features["finance.future"]).toMatchObject({ enabled: false, source: "version_constraint" });
@@ -70,6 +73,16 @@ describe("experience effective-access projection", () => {
     const result = await service(repository({ async readProfile() { throw new Error("profile unavailable"); } })).bootstrap(context);
     expect(result.profile).toMatchObject({ localeCode: "en-US", timezoneCode: "UTC", appearanceMode: "system", densityCode: "comfortable" });
   });
+
+  it("honors an enabled Arabic principal locale and derives RTL",async()=>{const result=await service(repository({async readLocalePolicy(){return{enabledLocales:["en","ar"],defaultLocale:"en",fallbackLocale:"en",revision:"policy:1"};},async readProfile(){return{principal:{localeCode:"ar-SA",languageCode:"ar"},revision:"profile:ar"};}})).bootstrap(context);expect(result).toMatchObject({profile:{localeCode:"ar-SA"},localization:{catalogLocale:"ar",direction:"rtl"},localePolicy:{enabledLocales:["en","ar"]}});});
+
+  it("rejects a user locale that the active plane has not enabled",async()=>{await expect(service(repository({async readLocalePolicy(){return{enabledLocales:["en"],defaultLocale:"en",fallbackLocale:"en",revision:"policy:1"};},async updatePrincipalLocale(){throw new Error("must not write");}})).updatePrincipalLocale(context,"ar")).rejects.toMatchObject({status:400,code:"EXPERIENCE_LOCALE_NOT_ENABLED"});});
+
+  it("accepts qualified Simplified Chinese and maps regional Chinese to the script catalog",async()=>{const result=await service(repository({async readLocalePolicy(){return{catalogs:[{localeCode:"zh-Hans",status:"qualified",coveragePct:100,linguisticReviewPassed:true,layoutReviewPassed:true,automatedTestsPassed:true}],enabledLocales:["en","zh-Hans"],defaultLocale:"en",fallbackLocale:"en",revision:"policy:zh"};},async readProfile(){return{principal:{localeCode:"zh-CN",languageCode:"zh"},revision:"profile:zh"};}})).bootstrap(context);expect(result).toMatchObject({profile:{localeCode:"zh-CN"},localization:{catalogLocale:"zh-Hans",direction:"ltr"},localePolicy:{enabledLocales:["en","zh-Hans"]}});});
+
+  it("does not expose a catalog until lifecycle, coverage, and every gate are qualified",async()=>{const result=await service(repository({async readLocalePolicy(){return{catalogs:[{localeCode:"ms",status:"review",coveragePct:100,linguisticReviewPassed:true,layoutReviewPassed:true,automatedTestsPassed:true}],enabledLocales:["en","ms"],defaultLocale:"ms",fallbackLocale:"en",revision:"policy:review"};},async readProfile(){return{principal:{localeCode:"ms-MY"},revision:"profile:ms"};}})).bootstrap(context);expect(result).toMatchObject({profile:{localeCode:"en"},localization:{catalogLocale:"en"},localePolicy:{enabledLocales:["en"],defaultLocale:"en"}});expect(result.localePolicy.catalogs.find((catalog)=>catalog.localeCode==="ms")?.qualified).toBe(false);});
+
+  it("rejects Studio activation until the target plane catalog is fully qualified",async()=>{const studioContext={...context,planeKey:"studio" as const,realmKey:"studio",permissions:{...context.permissions,planeKey:"studio" as const,allowed:["studio.platform.catalog.manage"]}};let writes=0;const target=repository({async updateLocalePolicy(_context,policy){writes++;return{...policy,revision:"saved:1"};}});const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({studio:repository(),neon:target})});const catalogs=LOCALE_REGISTRY.map((entry)=>({localeCode:entry.code,status:entry.code==="en"?"qualified":"draft",coveragePct:entry.code==="en"?100:0,linguisticReviewPassed:entry.code==="en",layoutReviewPassed:entry.code==="en",automatedTestsPassed:entry.code==="en"}));await expect(projection.updateLocalePolicy(studioContext,"neon",{catalogs,enabledLocales:["en","ms"],defaultLocale:"en",fallbackLocale:"en"})).rejects.toMatchObject({status:400,code:"EXPERIENCE_LOCALE_POLICY_INVALID"});expect(writes).toBe(0);});
 
   it("returns only Neon companies covered by effective company or legal-entity scope", async()=>{
     const companyA="50000000-0000-4000-8000-000000000001",companyB="50000000-0000-4000-8000-000000000002",legalA="60000000-0000-4000-8000-000000000001",legalB="60000000-0000-4000-8000-000000000002";

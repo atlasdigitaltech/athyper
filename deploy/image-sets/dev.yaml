@@ -7,12 +7,12 @@ spec:
   sourceRevision: working-tree
   images:
     - id: neon-web
-      reference: ghcr.io/atlasdigitaltech/athyper-neon-web:dev
+      reference: athyper/neon-web:normalized-locales-20260825
     - id: mesh-web
-      reference: ghcr.io/atlasdigitaltech/athyper-mesh-web:dev
+      reference: athyper/mesh-web:normalized-locales-20260825
     - id: studio-web
-      reference: ghcr.io/atlasdigitaltech/athyper-studio-web:dev
+      reference: athyper/studio-web:normalized-locales-20260825
     - id: runtime-server
-      reference: ghcr.io/atlasdigitaltech/athyper-runtime-server:dev
+      reference: athyper/runtime-server:normalized-locales-20260825
     - id: iam
-      reference: ghcr.io/atlasdigitaltech/athyper-keycloak:dev
+      reference: athyper/keycloak:canonical-svg-favicon

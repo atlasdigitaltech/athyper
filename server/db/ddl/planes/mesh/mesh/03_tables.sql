@@ -12,6 +12,7 @@ CREATE TABLE mesh.network_account (
     network_role      mesh.network_account_role_d   NOT NULL,
     country_code      character(2),
     default_currency  character(3),
+    logo_asset_ref    text,
     capabilities      jsonb                         NOT NULL DEFAULT '{}'::jsonb,
     metadata          jsonb                         NOT NULL DEFAULT '{}'::jsonb,
     status            mesh.network_account_status_d NOT NULL DEFAULT 'pending',
@@ -34,6 +35,15 @@ CREATE TABLE mesh.network_account (
         btrim(display_name) <> ''
         AND (legal_name IS NULL OR btrim(legal_name) <> '')
     ),
+    CONSTRAINT network_account_logo_asset_ref_chk CHECK (
+        logo_asset_ref IS NULL
+        OR (
+            btrim(logo_asset_ref) = logo_asset_ref
+            AND length(logo_asset_ref) BETWEEN 2 AND 1024
+            AND logo_asset_ref ~ '^/[A-Za-z0-9][A-Za-z0-9_./-]*$'
+            AND logo_asset_ref !~ '(^|/)\.\.(/|$)'
+        )
+    ),
     CONSTRAINT network_account_capabilities_object_chk
         CHECK (jsonb_typeof(capabilities) = 'object'),
     CONSTRAINT network_account_metadata_object_chk
@@ -46,6 +56,9 @@ CREATE TABLE mesh.network_account (
 
 COMMENT ON TABLE mesh.network_account IS
   'Mesh exchange boundary owned by one participant tenant and reconciled to a canonical party. network_role declares buyer, supplier, or both and never replaces tenant_id or grants user access.';
+
+COMMENT ON COLUMN mesh.network_account.logo_asset_ref IS
+  'Optional same-origin managed logo path for buyer or supplier account presentation.';
 
 CREATE TABLE mesh.network_account_identifier (
     id                 uuid        NOT NULL DEFAULT shared.uuidv7(),

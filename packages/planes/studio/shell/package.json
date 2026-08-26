@@ -8,7 +8,7 @@
   "sideEffects": ["./src/styles.css"],
   "exports": { ".": "./src/index.tsx", "./navigation": "./src/navigation.ts", "./styles.css": "./src/styles.css" },
   "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/platform-shell": "workspace:*" },
+  "dependencies": { "@athyper/platform-api-client": "workspace:*", "@athyper/platform-i18n": "workspace:*", "@athyper/platform-shell": "workspace:*", "@athyper/platform-shell-activity-center-data": "workspace:*", "@athyper/platform-shell-app-foundation": "workspace:*" },
   "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": {
     "@athyper/config": "workspace:*",

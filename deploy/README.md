@@ -200,6 +200,25 @@ applications never receive the root credential. Compose-mounted secrets and
 CPU/memory limits must exactly match the service catalog or policy validation
 fails.
 
+Communication providers keep safe local defaults but accept orchestrator-owned
+production configuration. Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, and
+`SMTP_FROM`; provide authenticated SMTP credentials through `SMTP_USER_FILE`
+and `SMTP_PASS_FILE`. Web Push accepts `VAPID_SUBJECT_FILE`,
+`VAPID_PUBLIC_KEY_FILE`, and `VAPID_PRIVATE_KEY_FILE`. Native push accepts
+`PUSH_FCM_PROJECT_ID_FILE`, `PUSH_FCM_CLIENT_EMAIL_FILE`, and
+`PUSH_FCM_PRIVATE_KEY_FILE`. Each file must be a non-empty, owner-controlled
+secret mount. Runtime startup fails closed when a configured file is missing or
+empty, and provider values are never written to controller receipts.
+
+Validate a staged credential mount without printing values:
+
+```sh
+pnpm verify:notification-providers --target staging --push web
+```
+
+The full custody, canary, failure, and production gates are defined in
+`docs/runbooks/notification-provider-activation.md`.
+
 Live DEV qualification is read-only and produces owner-only, schema-validated,
 checksummed evidence:
 

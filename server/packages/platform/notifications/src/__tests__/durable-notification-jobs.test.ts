@@ -72,10 +72,36 @@ describe("durable notification jobs", () => {
         output: { claimed: 2, delivered: 2, failed: 0 },
       });
     expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith(expect.objectContaining({ deliveryId: "delivery-email" }));
     expect(complete).toHaveBeenCalledTimes(2);
     expect(publish).toHaveBeenCalledOnce();
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ principalId: PRINCIPAL_ID, notificationId: "message-1" }),
+    );
+  });
+
+  it("preserves asynchronous provider acceptance for authoritative delivery events", async () => {
+    const complete = vi.fn();
+    const repository = {
+      claim: vi.fn().mockResolvedValue([delivery("email", "delivery-ses")]),
+      attachments: vi.fn().mockResolvedValue([]),
+      complete,
+    };
+    const handler = createDeliverySweepHandler({
+      repository,
+      handlers: new Map([["email", {
+        channel: "email",
+        send: vi.fn().mockResolvedValue({ externalId: "ses-message-1", confirmation: "provider_accepted" }),
+        health: vi.fn(),
+      }]]),
+      events: { publish: vi.fn() },
+    } as never);
+
+    await handler.handle(job(DELIVERY_SWEEP_JOB, request()), context());
+    expect(complete).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "delivery-ses" }),
+      expect.objectContaining({ delivered: true, externalId: "ses-message-1", confirmation: "provider_accepted" }),
+      PRINCIPAL_ID,
     );
   });
 

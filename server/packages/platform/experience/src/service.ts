@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
+import { LOCALE_REGISTRY, SUPPORTED_UI_LOCALES, isSupportedLocale, matchSupportedLocale, textDirection, type SupportedLocale } from "@athyper/platform-i18n";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { EffectiveFeature, ExperienceBootstrap, ExperienceModule, ExperienceProfile, ExperienceWorkspace, MeshNetworkAccountCatalog, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
-import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceRepositoryProvider } from "./ports.js";
+import type { EffectiveFeature, ExperienceBootstrap, ExperienceLocaleCatalog, ExperienceLocalePolicy, ExperienceLocalization, ExperienceModule, ExperienceProfile, ExperienceWorkspace, LocaleCatalogStatus, MeshNetworkAccountCatalog, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
+import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceLocaleCatalogGovernanceRecord, ExperienceRepositoryProvider } from "./ports.js";
 
 export class ExperienceAccessError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); this.name = "ExperienceAccessError"; }
@@ -36,16 +37,18 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       if (!identity.identityBindingActive) deny("EXPERIENCE_IDENTITY_BINDING_INVALID", "No active identity binding exists for the verified realm");
       if (!identity.membershipActive) deny("EXPERIENCE_MEMBERSHIP_INACTIVE", "The principal has no active membership in this plane");
 
-      const profile = await readProfileOrDefault(repository.readProfile.bind(repository), context);
+      const localePolicy=normalizeLocalePolicy(context.planeKey,await repository.readLocalePolicy?.(context));
+      const resolvedProfile = await readProfileOrDefault(repository.readProfile.bind(repository), context);
+      const {profile,localization}=applyLocalePolicy(resolvedProfile,localePolicy);
       const presentation = identityPresentation(context, identity);
       if (!identity.subscriptionPlanId) {
-        const result = contextNotReady(context, profile, presentation, revision({ identity, auth: authorizationRevision(context) }));
+        const result = contextNotReady(context, profile, localization, localePolicy, presentation, revision({ identity,localePolicy, auth: authorizationRevision(context) }));
         await cache(options.cache, cacheKey, result, tags(context));
         return result;
       }
       const catalog = await repository.readCatalog(context, identity.subscriptionPlanId);
       if (!catalog?.planActive) {
-        const result = contextNotReady(context, profile, presentation, revision({ identity, plan: catalog?.planRevision ?? "missing", auth: authorizationRevision(context) }));
+        const result = contextNotReady(context, profile, localization, localePolicy, presentation, revision({ identity,localePolicy, plan: catalog?.planRevision ?? "missing", auth: authorizationRevision(context) }));
         await cache(options.cache, cacheKey, result, tags(context));
         return result;
       }
@@ -61,12 +64,15 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       }))].sort();
       const result: ExperienceBootstrap = {
         schemaVersion: 1, state: "ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId,
-        revision: revision({ identity, profile, plan: catalog.planRevision, catalog: [...catalog.associations, ...catalog.permissions], features: featureRows, auth: authorizationRevision(context) }),
-        ...presentation, profile, workspaces, permissions, features, nextActions: [],
+        revision: revision({ identity, profile,localePolicy, plan: catalog.planRevision, catalog: [...catalog.associations, ...catalog.permissions], features: featureRows, auth: authorizationRevision(context) }),
+        ...presentation, profile, localization, localePolicy, workspaces, permissions, features, nextActions: [],
       };
       await cache(options.cache, cacheKey, result, tags(context));
       return result;
     },
+    async localePolicy(context:VerifiedRequestContext,targetPlane=context.planeKey):Promise<ExperienceLocalePolicy>{if(targetPlane!==context.planeKey&&(context.planeKey!=="studio"||!context.permissions.allowed.includes("studio.platform.catalog.manage")))deny("EXPERIENCE_LOCALE_POLICY_FORBIDDEN","Cross-plane locale policy requires Studio catalog authority");const repository=options.repositories.require(targetPlane),target={...context,planeKey:targetPlane};return normalizeLocalePolicy(targetPlane,await repository.readLocalePolicy?.(target));},
+    async updateLocalePolicy(context:VerifiedRequestContext,targetPlane:VerifiedRequestContext["planeKey"],input:{readonly catalogs:readonly ExperienceLocaleCatalogGovernanceRecord[];readonly enabledLocales:readonly string[];readonly defaultLocale:string;readonly fallbackLocale:string}):Promise<ExperienceLocalePolicy>{if(context.planeKey!=="studio"||!context.permissions.allowed.includes("studio.platform.catalog.manage"))deny("EXPERIENCE_LOCALE_POLICY_FORBIDDEN","Locale activation requires Studio catalog authority");const policy=validateLocalePolicyInput(targetPlane,input),repository=options.repositories.require(targetPlane);if(!repository.updateLocalePolicy)throw Object.assign(new Error("Locale policy writer is unavailable"),{code:"EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE"});const target={...context,planeKey:targetPlane},saved=await repository.updateLocalePolicy(target,{catalogs:policy.catalogs.map(({localeCode,status,coveragePct,linguisticReviewPassed,layoutReviewPassed,automatedTestsPassed})=>({localeCode,status,coveragePct,linguisticReviewPassed,layoutReviewPassed,automatedTestsPassed})),enabledLocales:policy.enabledLocales,defaultLocale:policy.defaultLocale,fallbackLocale:policy.fallbackLocale});await options.cache?.invalidate([`${targetPlane}:profile`,`${targetPlane}:tenant:${context.tenantId}`]);return normalizeLocalePolicy(targetPlane,saved);},
+    async updatePrincipalLocale(context:VerifiedRequestContext,localeCode:string):Promise<ExperienceBootstrap>{const repository=options.repositories.require(context.planeKey),policy=normalizeLocalePolicy(context.planeKey,await repository.readLocalePolicy?.(context)),canonical=canonicalLocale(localeCode,""),catalog=canonical?catalogCodeForLocale(canonical):undefined;if(!catalog||!policy.enabledLocales.includes(catalog))throw new ExperienceAccessError(400,"EXPERIENCE_LOCALE_NOT_ENABLED","The selected locale is not enabled and qualified for this plane");if(!repository.updatePrincipalLocale)throw Object.assign(new Error("Locale preference writer is unavailable"),{code:"EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE"});await repository.updatePrincipalLocale(context,catalog);await options.cache?.invalidate([`${context.planeKey}:profile`,`${context.planeKey}:principal:${context.principalId}`]);return this.bootstrap(context);},
     async neonWorkContexts(context: VerifiedRequestContext): Promise<NeonWorkContextBootstrap> {
       assertSnapshotBoundToContext(context);
       if (context.planeKey !== "neon") deny("EXPERIENCE_NEON_CONTEXT_REQUIRED", "Company work contexts are available only in Neon");
@@ -80,7 +86,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const companies = visible.map((row) => ({
         companyCodeId: row.companyCodeId, code: row.companyCode, displayName: row.companyDisplayName,
         legalEntityId: row.legalEntityId, legalEntityCode: row.legalEntityCode, legalEntityName: row.legalEntityName,
-        ...(row.countryCode ? { countryCode: row.countryCode } : {}), functionalCurrency: row.functionalCurrency,
+        ...(row.countryCode ? { countryCode: row.countryCode } : {}),...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}), functionalCurrency: row.functionalCurrency,
         capabilityGroups: capabilityGroups(scopes.filter((scope) => scope.tenantWide || scope.companyCodeIds.includes(row.companyCodeId) || scope.legalEntityIds.includes(row.legalEntityId)).map((scope) => scope.permissionCode)),
       }));
       return Object.freeze({ schemaVersion: 1, revision: revision({ tenantId: context.tenantId, auth: authorizationRevision(context), rows: visible }), tenantId: context.tenantId, supportsAllPermitted: companies.length > 1, companies: Object.freeze(companies) });
@@ -112,7 +118,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const visible=rows.filter((row)=>tenantWide||accountIds.has(row.id));
       const relatedCounts=new Map<string,number>();
       for(const row of visible){const key=row.canonicalPartyId??row.id;relatedCounts.set(key,(relatedCounts.get(key)??0)+1);}
-      const accounts=visible.map((row)=>Object.freeze({networkAccountId:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency}:{}),source:row.source,relatedAccountCount:relatedCounts.get(row.canonicalPartyId??row.id)??1}));
+      const accounts=visible.map((row)=>Object.freeze({networkAccountId:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency}:{}),...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}),source:row.source,relatedAccountCount:relatedCounts.get(row.canonicalPartyId??row.id)??1}));
       return Object.freeze({schemaVersion:1,revision:revision({tenantId:context.tenantId,auth:authorizationRevision(context),rows:visible}),tenantId:context.tenantId,accounts:Object.freeze(accounts)});
     },
   });
@@ -155,10 +161,10 @@ function tags(context: VerifiedRequestContext): string[] { return [`${context.pl
 async function cache(store: ExperienceCache | undefined, key: string, value: ExperienceBootstrap, entryTags: readonly string[]) { await store?.set(key, value, entryTags); }
 function isBootstrap(value: unknown): value is ExperienceBootstrap { return Boolean(value && typeof value === "object" && Reflect.get(value, "schemaVersion") === 1 && ["ready", "context_not_ready"].includes(String(Reflect.get(value, "state")))); }
 
-async function readProfileOrDefault(read: (context: VerifiedRequestContext) => Promise<{ tenant?: Readonly<Record<string, unknown>>; principal?: Readonly<Record<string, unknown>> }>, context: VerifiedRequestContext): Promise<ExperienceProfile> {
+async function readProfileOrDefault(read: (context: VerifiedRequestContext) => Promise<{ tenant?: Readonly<Record<string, unknown>>; principal?: Readonly<Record<string, unknown>> }>, context: VerifiedRequestContext): Promise<{ readonly profile: ExperienceProfile; readonly localization: ExperienceLocalization }> {
   try {
     const row = await read(context), tenant = row.tenant ?? {}, principal = row.principal ?? {};
-    return {
+    const profile: ExperienceProfile = {
       localeCode: text(principal.localeCode) ?? text(tenant.localeCode) ?? PLATFORM_PROFILE.localeCode,
       languageCode: text(principal.languageCode) ?? text(tenant.languageCode) ?? PLATFORM_PROFILE.languageCode,
       timezoneCode: text(principal.timezoneCode) ?? text(tenant.timezoneCode) ?? PLATFORM_PROFILE.timezoneCode,
@@ -169,11 +175,70 @@ async function readProfileOrDefault(read: (context: VerifiedRequestContext) => P
       appearanceMode: appearance(principal.appearanceMode) ?? PLATFORM_PROFILE.appearanceMode,
       densityCode: density(principal.densityCode) ?? PLATFORM_PROFILE.densityCode,
     };
-  } catch { return PLATFORM_PROFILE; }
+    return { profile, localization: effectiveLocalization(profile, sourceOf(principal, tenant, "localeCode")) };
+  } catch { return { profile: PLATFORM_PROFILE, localization: effectiveLocalization(PLATFORM_PROFILE, "platform") }; }
 }
 
-function contextNotReady(context: VerifiedRequestContext, profile: ExperienceProfile, presentation: Pick<ExperienceBootstrap,"identity"|"tenant">, fingerprint: string): ExperienceBootstrap { return { schemaVersion: 1, state: "context_not_ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, revision: fingerprint, ...presentation, profile, workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] }; }
-function identityPresentation(context:VerifiedRequestContext,identity:import("./ports.js").ExperienceIdentityRecord):Pick<ExperienceBootstrap,"identity"|"tenant"> { const displayName=cleanDisplay(identity.principalDisplayName)??cleanDisplay(identity.principalCode)??"Account"; return { identity:Object.freeze({displayName,...(cleanDisplay(identity.principalSecondaryLabel)?{secondaryLabel:cleanDisplay(identity.principalSecondaryLabel)}:{}),initials:initials(displayName)}),tenant:Object.freeze({id:context.tenantId,code:identity.tenantCode,displayName:cleanDisplay(identity.tenantDisplayName)??identity.tenantCode}) }; }
+function contextNotReady(context: VerifiedRequestContext, profile: ExperienceProfile, localization: ExperienceLocalization, localePolicy:ExperienceLocalePolicy,presentation: Pick<ExperienceBootstrap,"identity"|"tenant">, fingerprint: string): ExperienceBootstrap { return { schemaVersion: 1, state: "context_not_ready", planeKey: context.planeKey, tenantId: context.tenantId, principalId: context.principalId, revision: fingerprint, ...presentation, profile, localization,localePolicy, workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] }; }
+function sourceOf(principal: Readonly<Record<string, unknown>>, tenant: Readonly<Record<string, unknown>>, key: string): "principal" | "tenant" | "platform" { return text(principal[key]) ? "principal" : text(tenant[key]) ? "tenant" : "platform"; }
+function effectiveLocalization(profile: ExperienceProfile, source: "principal" | "tenant" | "platform"): ExperienceLocalization {
+  const uiLocale = canonicalLocale(profile.localeCode, canonicalLocale(profile.languageCode, "en-US"));
+  const locale = new Intl.Locale(uiLocale), language = locale.language.toLowerCase();
+  const catalogLocale = matchSupportedLocale(uiLocale, SUPPORTED_UI_LOCALES);
+  const direction = textDirection(catalogLocale);
+  const numberingSystem = validNumberingSystem(profile.numberFormat) ? profile.numberFormat.toLowerCase() : locale.numberingSystem || "latn";
+  return Object.freeze({ uiLocale, catalogLocale, formatLocale: uiLocale, direction, timeZone: validTimeZone(profile.timezoneCode) ? profile.timezoneCode : "UTC", calendar: locale.calendar || "gregory", numberingSystem, weekStart: profile.weekStart, weekendDays: Object.freeze([...profile.weekendDays]), fallbackLocales: Object.freeze([...new Set([uiLocale, language, "en"])]), catalogRevision: "platform-ui:1", source: Object.freeze({ uiLocale: source, formatLocale: source }) });
+}
+function canonicalLocale(value: string, fallback: string): string { try { return Intl.getCanonicalLocales(value)[0] ?? fallback; } catch { return fallback; } }
+function validTimeZone(value: string): boolean { try { new Intl.DateTimeFormat("en", { timeZone: value }); return true; } catch { return false; } }
+function validNumberingSystem(value: string): boolean { try { return new Intl.NumberFormat("en", { numberingSystem: value }).resolvedOptions().numberingSystem.toLowerCase() === value.toLowerCase(); } catch { return false; } }
+function normalizeLocalePolicy(planeKey:VerifiedRequestContext["planeKey"],row:{readonly catalogs?:readonly ExperienceLocaleCatalogGovernanceRecord[];readonly enabledLocales:readonly string[];readonly defaultLocale:string;readonly fallbackLocale:string;readonly revision:string}|undefined):ExperienceLocalePolicy{
+  const requestedEnabled=new Set((row?.enabledLocales??["en"]).filter(isSupportedLocale));
+  requestedEnabled.add("en");
+  const governance=new Map((row?.catalogs??[]).filter((item)=>isSupportedLocale(item.localeCode)).map((item)=>[item.localeCode as SupportedLocale,item]));
+  const catalogs=LOCALE_REGISTRY.map((definition):ExperienceLocaleCatalog=>{
+    const persisted=governance.get(definition.code);
+    const compatibilityQualified=!persisted&&requestedEnabled.has(definition.code);
+    const status=validCatalogStatus(persisted?.status)??(compatibilityQualified?"qualified":"draft");
+    const coveragePct=validCoverage(persisted?.coveragePct)??(compatibilityQualified?100:0);
+    const linguisticReviewPassed=persisted?.linguisticReviewPassed??compatibilityQualified;
+    const layoutReviewPassed=persisted?.layoutReviewPassed??compatibilityQualified;
+    const automatedTestsPassed=persisted?.automatedTestsPassed??compatibilityQualified;
+    const qualified=status==="qualified"&&coveragePct===100&&linguisticReviewPassed&&layoutReviewPassed&&automatedTestsPassed;
+    return Object.freeze({localeCode:definition.code,englishName:definition.englishName,nativeName:definition.nativeName,direction:definition.direction,rolloutWave:definition.rolloutWave,status,coveragePct,linguisticReviewPassed,layoutReviewPassed,automatedTestsPassed,qualified});
+  });
+  const qualified=new Set(catalogs.filter((catalog)=>catalog.qualified).map((catalog)=>catalog.localeCode));
+  qualified.add("en");
+  const enabled=LOCALE_REGISTRY.map((item)=>item.code).filter((code)=>requestedEnabled.has(code)&&qualified.has(code));
+  if(!enabled.includes("en"))enabled.unshift("en");
+  const defaultLocale=isSupportedLocale(row?.defaultLocale)&&enabled.includes(row.defaultLocale)?row.defaultLocale:"en";
+  return Object.freeze({planeKey,catalogs:Object.freeze(catalogs),enabledLocales:Object.freeze(enabled),defaultLocale,fallbackLocale:"en",revision:row?.revision??"locale-policy:default"});
+}
+function validateLocalePolicyInput(planeKey:VerifiedRequestContext["planeKey"],input:{readonly catalogs:readonly ExperienceLocaleCatalogGovernanceRecord[];readonly enabledLocales:readonly string[];readonly defaultLocale:string;readonly fallbackLocale:string}):ExperienceLocalePolicy{
+  const rows=new Map<SupportedLocale,ExperienceLocaleCatalogGovernanceRecord>();
+  for(const row of input.catalogs){if(!isSupportedLocale(row.localeCode)||rows.has(row.localeCode))throw invalidLocalePolicy("Catalog governance must contain each registered locale exactly once");rows.set(row.localeCode,row);}
+  if(rows.size!==SUPPORTED_UI_LOCALES.length)throw invalidLocalePolicy("Catalog governance must contain every registered locale");
+  const catalogs=LOCALE_REGISTRY.map((definition):ExperienceLocaleCatalog=>{
+    const row=rows.get(definition.code)!;
+    const status=validCatalogStatus(row.status),coveragePct=validCoverage(row.coveragePct);
+    if(!status||coveragePct===undefined)throw invalidLocalePolicy(`Catalog governance is invalid for ${definition.code}`);
+    const qualified=status==="qualified"&&coveragePct===100&&row.linguisticReviewPassed&&row.layoutReviewPassed&&row.automatedTestsPassed;
+    if(status==="qualified"&&!qualified)throw invalidLocalePolicy(`${definition.englishName} cannot be qualified until coverage and every review gate pass`);
+    return Object.freeze({localeCode:definition.code,englishName:definition.englishName,nativeName:definition.nativeName,direction:definition.direction,rolloutWave:definition.rolloutWave,status,coveragePct,linguisticReviewPassed:row.linguisticReviewPassed,layoutReviewPassed:row.layoutReviewPassed,automatedTestsPassed:row.automatedTestsPassed,qualified});
+  });
+  const enabled=[...new Set(input.enabledLocales)];
+  if(input.fallbackLocale!=="en"||!enabled.includes("en")||enabled.some((code)=>!isSupportedLocale(code)))throw invalidLocalePolicy("English must remain enabled as the fallback");
+  const qualified=new Set(catalogs.filter((catalog)=>catalog.qualified).map((catalog)=>catalog.localeCode));
+  if(enabled.some((code)=>!qualified.has(code as SupportedLocale)))throw invalidLocalePolicy("Only fully qualified catalogs can be activated");
+  if(!isSupportedLocale(input.defaultLocale)||!enabled.includes(input.defaultLocale))throw invalidLocalePolicy("The default locale must be enabled");
+  return Object.freeze({planeKey,catalogs:Object.freeze(catalogs),enabledLocales:Object.freeze(enabled as SupportedLocale[]),defaultLocale:input.defaultLocale,fallbackLocale:"en",revision:"pending"});
+}
+function applyLocalePolicy(resolved:{readonly profile:ExperienceProfile;readonly localization:ExperienceLocalization},policy:ExperienceLocalePolicy):{readonly profile:ExperienceProfile;readonly localization:ExperienceLocalization}{const catalog=catalogCodeForLocale(resolved.profile.localeCode);if(catalog&&policy.enabledLocales.includes(catalog))return resolved;const profile=Object.freeze({...resolved.profile,localeCode:policy.defaultLocale,languageCode:new Intl.Locale(policy.defaultLocale).language});return{profile,localization:effectiveLocalization(profile,"tenant")};}
+function catalogCodeForLocale(value:string):SupportedLocale|undefined{const canonical=canonicalLocale(value,"");if(!canonical)return undefined;const match=matchSupportedLocale(canonical,SUPPORTED_UI_LOCALES);const requested=new Intl.Locale(canonical),matched=new Intl.Locale(match);return requested.language===matched.language?match as SupportedLocale:undefined;}
+function validCatalogStatus(value:unknown):LocaleCatalogStatus|undefined{return["draft","translating","review","qualified","retired"].includes(String(value))?value as LocaleCatalogStatus:undefined;}
+function validCoverage(value:unknown):number|undefined{return Number.isInteger(value)&&Number(value)>=0&&Number(value)<=100?Number(value):undefined;}
+function invalidLocalePolicy(message:string):ExperienceAccessError{return new ExperienceAccessError(400,"EXPERIENCE_LOCALE_POLICY_INVALID",message);}
+function identityPresentation(context:VerifiedRequestContext,identity:import("./ports.js").ExperienceIdentityRecord):Pick<ExperienceBootstrap,"identity"|"tenant"> { const displayName=cleanDisplay(identity.principalDisplayName)??cleanDisplay(identity.principalCode)??"Account"; return { identity:Object.freeze({displayName,...(cleanDisplay(identity.principalSecondaryLabel)?{secondaryLabel:cleanDisplay(identity.principalSecondaryLabel)}:{}),initials:initials(displayName)}),tenant:Object.freeze({id:context.tenantId,code:identity.tenantCode,displayName:cleanDisplay(identity.tenantDisplayName)??identity.tenantCode,...(identity.tenantCountryCode?{countryCode:identity.tenantCountryCode}:{}),...(identity.tenantLogoAssetRef?{logoAssetRef:identity.tenantLogoAssetRef}:{})}) }; }
 function cleanDisplay(value:string|undefined):string|undefined { const clean=value?.trim().replace(/\s+/g," "); return clean?clean.slice(0,256):undefined; }
 function initials(value:string):string { const parts=value.trim().split(/\s+/u).filter(Boolean); const chosen=parts.length>1?[parts[0]!,parts.at(-1)!]:parts; return chosen.map((part)=>Array.from(part)[0]??"").join("").toLocaleUpperCase().slice(0,8)||"A"; }
 function capabilityGroups(codes:readonly string[]):readonly NeonCapabilityGroup[] { const groups=new Set<NeonCapabilityGroup>(); for(const code of codes){ const lower=code.toLowerCase(); if(/finance|account|ledger|journal|invoice|payment|tax/.test(lower))groups.add("finance"); if(/procure|purchase|supplier|sourcing|contract/.test(lower))groups.add("procurement"); if(/inventory|warehouse|stock/.test(lower))groups.add("inventory"); if(/sales|customer|order|crm/.test(lower))groups.add("sales"); if(/people|employee|payroll|workforce|hr\./.test(lower))groups.add("people"); if(/project|task|wbs/.test(lower))groups.add("projects"); } return Object.freeze([...groups].sort()); }

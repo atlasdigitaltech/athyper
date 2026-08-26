@@ -16,6 +16,14 @@ ALTER TABLE event.notification_delivery
     ADD CONSTRAINT notification_delivery_provider_fk FOREIGN KEY (provider_id) REFERENCES control.notification_provider(id),
     ADD CONSTRAINT notification_delivery_outbox_fk FOREIGN KEY (tenant_id, outbox_id) REFERENCES event.outbox(tenant_id, id);
 
+ALTER TABLE event.notification_provider_event
+    ADD CONSTRAINT notification_provider_event_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
+    ADD CONSTRAINT notification_provider_event_delivery_fk FOREIGN KEY (tenant_id,delivery_id) REFERENCES event.notification_delivery(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE event.notification_email_suppression
+    ADD CONSTRAINT notification_email_suppression_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT notification_email_suppression_source_fk FOREIGN KEY (tenant_id,source_provider_event_id) REFERENCES event.notification_provider_event(tenant_id,id) ON DELETE RESTRICT;
+
 ALTER TABLE event.notification_message_attachment
     ADD CONSTRAINT notification_message_attachment_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id),
     ADD CONSTRAINT notification_message_attachment_message_fk FOREIGN KEY (tenant_id,message_id) REFERENCES event.notification_message(tenant_id,id) ON DELETE CASCADE,

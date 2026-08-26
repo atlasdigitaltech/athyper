@@ -84,12 +84,25 @@ export interface HostConfig {
     enableAutoInstrumentations: boolean;
   };
   email: {
+    provider: "smtp" | "ses" | "disabled";
     host: string | undefined;
     port: number;
     secure: boolean;
     user: string | undefined;
     password: string | undefined;
     fromAddress: string | undefined;
+    sesRegion: string | undefined;
+    sesConfigurationSetName: string | undefined;
+    sesFromAddress: string | undefined;
+    sesReplyToAddress: string | undefined;
+  };
+  sesEvents: {
+    region: string | undefined;
+    queueUrl: string | undefined;
+    waitTimeSeconds: number;
+    visibilityTimeoutSeconds: number;
+    maxMessages: number;
+    failureBackoffMs: number;
   };
   sms: {
     accountSid: string | undefined;
@@ -324,8 +337,18 @@ export function loadConfig(): HostConfig {
   const smtpFromAddress = process.env["SMTP_FROM"]?.trim();
   const smtpPort = readPositiveInteger("SMTP_PORT", 587);
   const smtpSecure = readBoolean("SMTP_SECURE", false);
+  const sesRegion = process.env["SES_REGION"]?.trim();
+  const sesConfigurationSetName = process.env["SES_CONFIGURATION_SET"]?.trim();
+  const sesFromAddress = process.env["SES_FROM"]?.trim();
+  const sesReplyToAddress = process.env["SES_REPLY_TO"]?.trim();
+  const hasSesConfig = Boolean(sesRegion || sesConfigurationSetName || sesFromAddress || sesReplyToAddress);
   const hasSmtpConfig = Boolean(
     smtpHost || smtpUser || smtpPassword || smtpFromAddress,
+  );
+  const emailProvider = readChoice(
+    "EMAIL_PROVIDER",
+    hasSesConfig ? "ses" : hasSmtpConfig ? "smtp" : "disabled",
+    ["smtp", "ses", "disabled"] as const,
   );
   if (
     hasSmtpConfig &&
@@ -334,6 +357,31 @@ export function loadConfig(): HostConfig {
     throw new Error(
       "SMTP configuration requires SMTP_HOST, SMTP_FROM, and both or neither of SMTP_USER and SMTP_PASS",
     );
+  }
+  if (emailProvider === "smtp" && (!smtpHost || !smtpFromAddress)) {
+    throw new Error("EMAIL_PROVIDER=smtp requires SMTP_HOST and SMTP_FROM");
+  }
+  if (emailProvider === "ses" && (!sesRegion || !sesConfigurationSetName || !sesFromAddress)) {
+    throw new Error("EMAIL_PROVIDER=ses requires SES_REGION, SES_CONFIGURATION_SET, and SES_FROM");
+  }
+  const sesEventQueueUrl = process.env["SES_EVENT_QUEUE_URL"]?.trim();
+  const sesEventRegion = process.env["SES_EVENT_REGION"]?.trim() || sesRegion;
+  const sesEventWaitTimeSeconds = readNonNegativeInteger("SES_EVENT_WAIT_SECONDS", 20);
+  const sesEventVisibilityTimeoutSeconds = readPositiveInteger("SES_EVENT_VISIBILITY_TIMEOUT_SECONDS", 60);
+  const sesEventMaxMessages = readPositiveInteger("SES_EVENT_MAX_MESSAGES", 10);
+  const sesEventFailureBackoffMs = readPositiveInteger("SES_EVENT_FAILURE_BACKOFF_MS", 1_000);
+  if (sesEventWaitTimeSeconds > 20) throw new Error("SES_EVENT_WAIT_SECONDS must not exceed 20");
+  if (sesEventVisibilityTimeoutSeconds > 43_200) throw new Error("SES_EVENT_VISIBILITY_TIMEOUT_SECONDS must not exceed 43200");
+  if (sesEventMaxMessages > 10) throw new Error("SES_EVENT_MAX_MESSAGES must not exceed 10");
+  if (sesEventFailureBackoffMs > 60_000) throw new Error("SES_EVENT_FAILURE_BACKOFF_MS must not exceed 60000");
+  if (sesEventQueueUrl) {
+    let queueUrl: URL;
+    try { queueUrl = new URL(sesEventQueueUrl); } catch { throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL"); }
+    if (queueUrl.protocol !== "https:") throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL");
+    if (!sesEventRegion) throw new Error("SES_EVENT_REGION or SES_REGION is required with SES_EVENT_QUEUE_URL");
+  }
+  if (emailProvider === "ses" && env !== "local" && (!sesEventQueueUrl || !sesEventRegion)) {
+    throw new Error("Native SES requires SES_EVENT_QUEUE_URL and an SES event region outside local environments");
   }
   const metaWhatsAppApiVersion = process.env["META_WHATSAPP_API_VERSION"]?.trim();
   const metaWhatsAppPhoneNumberId =
@@ -525,12 +573,25 @@ export function loadConfig(): HostConfig {
       enableAutoInstrumentations: otelAutoInstrumentations,
     },
     email: {
+      provider: emailProvider,
       host: smtpHost || undefined,
       port: smtpPort,
       secure: smtpSecure,
       user: smtpUser || undefined,
       password: smtpPassword || undefined,
       fromAddress: smtpFromAddress || undefined,
+      sesRegion: sesRegion || undefined,
+      sesConfigurationSetName: sesConfigurationSetName || undefined,
+      sesFromAddress: sesFromAddress || undefined,
+      sesReplyToAddress: sesReplyToAddress || undefined,
+    },
+    sesEvents: {
+      region: sesEventRegion || undefined,
+      queueUrl: sesEventQueueUrl || undefined,
+      waitTimeSeconds: sesEventWaitTimeSeconds,
+      visibilityTimeoutSeconds: sesEventVisibilityTimeoutSeconds,
+      maxMessages: sesEventMaxMessages,
+      failureBackoffMs: sesEventFailureBackoffMs,
     },
     sms: {
       accountSid: twilioAccountSid || undefined,

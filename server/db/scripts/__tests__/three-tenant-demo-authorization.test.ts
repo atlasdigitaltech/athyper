@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { buildThreeTenantDemoAuthorization } from "../provision-three-tenant-demo-authorization.js";
+import { buildThreeTenantDemoAuthorization, DEMO_PLANE_PERMISSIONS } from "../provision-three-tenant-demo-authorization.js";
 
 test("builds explicit cross-plane demo scopes without member-company propagation", async () => {
   const model = await buildThreeTenantDemoAuthorization();
@@ -9,6 +9,7 @@ test("builds explicit cross-plane demo scopes without member-company propagation
   assert.deepEqual(model.studio.map((grant) => grant.username).sort(), ["athq.admin", "athyper.admin", "catl.admin", "tksa.admin"]);
   assert.equal(model.studio.every((grant) => grant.scopes.length === 1 && grant.scopes[0]?.kind === "tenant"), true);
   assert.equal(model.studio.find((grant) => grant.username === "athq.admin")?.tenantCode, "athyper");
+  assert.deepEqual(DEMO_PLANE_PERMISSIONS.studio, ["studio.platform.catalog.view", "studio.platform.catalog.manage"]);
 
   const catlFinance = model.neon.find((grant) => grant.username === "catl.finance")!;
   assert.deepEqual(new Set(catlFinance.scopes.map((scope) => scope.kind)), new Set(["legal_entity", "company_code"]));

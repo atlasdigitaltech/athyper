@@ -4,6 +4,11 @@ CREATE INDEX notification_message_entity_idx ON event.notification_message (tena
 CREATE INDEX notification_delivery_dispatch_idx ON event.notification_delivery (tenant_id, status, next_retry_at) WHERE status IN ('pending','queued','failed');
 CREATE INDEX notification_delivery_provider_idx ON event.notification_delivery (provider_id, external_id) WHERE external_id IS NOT NULL;
 CREATE UNIQUE INDEX notification_delivery_idempotency_uq ON event.notification_delivery (tenant_id, idempotency_key) WHERE idempotency_key IS NOT NULL;
+CREATE INDEX notification_provider_event_delivery_idx ON event.notification_provider_event (tenant_id,delivery_id,occurred_at DESC,id DESC);
+CREATE INDEX notification_provider_event_message_idx ON event.notification_provider_event (provider_code,provider_message_id);
+CREATE UNIQUE INDEX notification_email_suppression_tenant_active_uq ON event.notification_email_suppression (tenant_id,address_hash) WHERE scope='tenant' AND released_at IS NULL;
+CREATE UNIQUE INDEX notification_email_suppression_global_active_uq ON event.notification_email_suppression (address_hash) WHERE scope='global' AND released_at IS NULL;
+CREATE INDEX notification_email_suppression_expiry_idx ON event.notification_email_suppression (expires_at) WHERE released_at IS NULL AND expires_at IS NOT NULL;
 CREATE INDEX notification_inbox_state_unread_idx ON event.notification_inbox_state (tenant_id, principal_id, channel_code, created_at DESC) WHERE read_at IS NULL AND dismissed_at IS NULL;
 CREATE INDEX notification_inbox_state_active_idx ON event.notification_inbox_state (tenant_id, principal_id, created_at DESC) WHERE dismissed_at IS NULL;
 CREATE INDEX notification_inbox_state_message_idx ON event.notification_inbox_state (tenant_id, message_id);

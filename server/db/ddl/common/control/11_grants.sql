@@ -229,3 +229,16 @@ GRANT ALL PRIVILEGES ON TABLE control.policy_definition TO athyperadmin;
 REVOKE ALL ON control.policy_rule, control.policy_test_case FROM PUBLIC;
 GRANT SELECT ON control.policy_rule, control.policy_test_case TO athyperapp;
 GRANT ALL PRIVILEGES ON control.policy_rule, control.policy_test_case TO athyperadmin;
+
+REVOKE ALL ON control.ui_locale_catalog, master.tenant_locale_activation FROM PUBLIC;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE ON control.ui_locale_catalog TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON master.tenant_locale_activation TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON control.ui_locale_catalog, master.tenant_locale_activation TO athyperadmin;
+    END IF;
+END;
+$$;

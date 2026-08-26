@@ -42,7 +42,7 @@ describe("notification platform", () => {
       createdAt: "2026-08-09T00:00:00.000Z",
     });
     const handler = createInAppNotificationHandler({
-      repository: { create, list: vi.fn(), markRead: vi.fn() },
+      repository: { create, list: vi.fn(), countUnread: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn(), dismiss: vi.fn() },
       publisher: bus,
     });
 

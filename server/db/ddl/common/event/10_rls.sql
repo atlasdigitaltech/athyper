@@ -3,7 +3,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'comment_flag','notification_message','notification_delivery','notification_message_attachment','outbox','channel_consent_event',
+        'comment_flag','notification_message','notification_delivery','notification_provider_event','notification_message_attachment','outbox','channel_consent_event',
         'command_execution','integration_delivery','integration_inbound_receipt'
     ]
     LOOP
@@ -21,6 +21,15 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+ALTER TABLE event.notification_email_suppression ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event.notification_email_suppression FORCE ROW LEVEL SECURITY;
+CREATE POLICY notification_email_suppression_tenant_read ON event.notification_email_suppression FOR SELECT TO athyperapp
+  USING (tenant_id IS NULL OR tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY notification_email_suppression_tenant_write ON event.notification_email_suppression FOR ALL TO athyperapp
+  USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (scope='tenant' AND tenant_id=shared.current_tenant_id());
+CREATE POLICY notification_email_suppression_admin_access ON event.notification_email_suppression FOR ALL TO athyperadmin
+  USING (true) WITH CHECK (true);
 
 ALTER TABLE event.notification_inbox_state ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event.notification_inbox_state FORCE ROW LEVEL SECURITY;

@@ -157,12 +157,17 @@ describe("registerAdapters", () => {
     const createSms = vi.fn().mockReturnValue(sms);
     const hostConfig = config();
     hostConfig.email = {
+      provider: "smtp",
       host: "smtp.example.test",
       port: 465,
       secure: true,
       user: "mailer",
       password: "secret",
       fromAddress: "no-reply@example.test",
+      sesRegion: undefined,
+      sesConfigurationSetName: undefined,
+      sesFromAddress: undefined,
+      sesReplyToAddress: undefined,
     };
     hostConfig.sms = {
       accountSid: "AC123",
@@ -193,6 +198,88 @@ describe("registerAdapters", () => {
       authToken: "token",
       messagingServiceSid: "MG123",
     });
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("registers SES v2 as the selected email provider with deterministic tenant mapping", async () => {
+    const close = vi.fn();
+    const email = { channel: "email", close };
+    const createSesEmail = vi.fn().mockReturnValue(email);
+    const hostConfig = config();
+    hostConfig.env = "staging";
+    hostConfig.email = {
+      provider: "ses",
+      host: undefined,
+      port: 587,
+      secure: false,
+      user: undefined,
+      password: undefined,
+      fromAddress: undefined,
+      sesRegion: "ap-southeast-1",
+      sesConfigurationSetName: "athyper-stg-transactional",
+      sesFromAddress: "notifications@notify.stg.athyper.com",
+      sesReplyToAddress: "support@athyper.com",
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+
+    registerAdapters(container, hostConfig, lifecycle, {
+      createSesEmail: createSesEmail as never,
+    });
+
+    expect(container.adapters.notificationChannels.get("email")).toBe(email);
+    const sesConfig = createSesEmail.mock.calls[0]?.[0];
+    expect(sesConfig).toMatchObject({
+      region: "ap-southeast-1",
+      configurationSetName: "athyper-stg-transactional",
+      fromAddress: "notifications@notify.stg.athyper.com",
+      replyToAddress: "support@athyper.com",
+      environment: "staging",
+    });
+    expect(sesConfig.resolveTenantName("11111111-1111-4111-8111-111111111111"))
+      .toMatch(/^t-[a-f0-9]{40}$/);
+    await lifecycle.shutdown("test");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("composes the worker SES event source with lifecycle and deferred platform handler", async () => {
+    const run = vi.fn().mockResolvedValue(undefined);
+    const close = vi.fn();
+    const health = vi.fn().mockResolvedValue({ status: "healthy", latencyMs: 1 });
+    const source = { run, close, health, pollOnce: vi.fn() };
+    const createSesEventSource = vi.fn().mockReturnValue(source);
+    const hostConfig = config();
+    hostConfig.mode = "worker";
+    hostConfig.email.provider = "ses";
+    hostConfig.jobs = {
+      scheduleReconcileMs: 60_000,
+      cronwatchBaseUrl: undefined,
+      cronwatchPingKey: undefined,
+      workerDatabaseUrls: { studio: undefined, neon: undefined, mesh: undefined },
+      invalidationListenerDatabaseUrls: { studio: undefined, neon: undefined, mesh: undefined },
+    };
+    hostConfig.sesEvents = {
+      region: "ap-southeast-1",
+      queueUrl: "https://sqs.ap-southeast-1.amazonaws.com/123456789012/athyper-stg-ses-events",
+      waitTimeSeconds: 20,
+      visibilityTimeoutSeconds: 60,
+      maxMessages: 10,
+      failureBackoffMs: 1_000,
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+
+    registerAdapters(container, hostConfig, lifecycle, { createSesEventSource: createSesEventSource as never });
+    expect(container.adapters.sesEventSource).toBe(source);
+    expect(container.runtimes.health.list()).toContain("notifications.ses-event-source");
+    const forwarded = vi.fn().mockResolvedValue({ outcome: "acknowledge" });
+    container.adapters.sesEventHandler = { process: forwarded };
+    const handler = createSesEventSource.mock.calls[0]?.[1];
+    await handler.process("{}");
+    expect(forwarded).toHaveBeenCalledWith("{}");
+    await lifecycle.signalReady();
+    expect(run).toHaveBeenCalledOnce();
     await lifecycle.shutdown("test");
     expect(close).toHaveBeenCalledOnce();
   });
@@ -413,12 +500,25 @@ function config(connectionString?: string): HostConfig {
       enableAutoInstrumentations: false,
     },
     email: {
+      provider: "disabled",
       host: undefined,
       port: 587,
       secure: false,
       user: undefined,
       password: undefined,
       fromAddress: undefined,
+      sesRegion: undefined,
+      sesConfigurationSetName: undefined,
+      sesFromAddress: undefined,
+      sesReplyToAddress: undefined,
+    },
+    sesEvents: {
+      region: undefined,
+      queueUrl: undefined,
+      waitTimeSeconds: 20,
+      visibilityTimeoutSeconds: 60,
+      maxMessages: 10,
+      failureBackoffMs: 1_000,
     },
     sms: {
       accountSid: undefined,

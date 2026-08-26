@@ -56,6 +56,7 @@ CREATE TABLE master.tenant_profile (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid        NOT NULL,
     country_code    character(2),
+    logo_asset_ref  text,
     locale_code     text,
     timezone_code   text,
     language_code   text,
@@ -63,6 +64,10 @@ CREATE TABLE master.tenant_profile (
     number_format   text,
     week_start      smallint,
     weekend_days    smallint[],
+    enabled_locale_codes text[] NOT NULL DEFAULT ARRAY['en']::text[],
+    default_locale_code text NOT NULL DEFAULT 'en',
+    fallback_locale_code text NOT NULL DEFAULT 'en',
+    locale_catalog_governance jsonb NOT NULL DEFAULT '{}'::jsonb,
     metadata        jsonb       NOT NULL DEFAULT '{}'::jsonb,
     created_at      timestamptz NOT NULL DEFAULT now(),
     created_by      uuid        NOT NULL,
@@ -71,6 +76,15 @@ CREATE TABLE master.tenant_profile (
 
     CONSTRAINT tenant_profile_pkey PRIMARY KEY (id),
     CONSTRAINT tenant_profile_tenant_uq UNIQUE (tenant_id),
+    CONSTRAINT tenant_profile_locale_policy_chk CHECK (
+        cardinality(enabled_locale_codes) BETWEEN 1 AND 8
+        AND enabled_locale_codes <@ ARRAY['en','ar','ms','zh-Hans','hi','ta','fr','de']::text[]
+        AND 'en' = ANY(enabled_locale_codes)
+        AND default_locale_code = ANY(enabled_locale_codes)
+        AND fallback_locale_code = 'en'
+    ),
+    CONSTRAINT tenant_profile_locale_catalog_governance_chk
+        CHECK (jsonb_typeof(locale_catalog_governance) = 'object'),
     CONSTRAINT tenant_profile_date_format_nonempty
         CHECK (
             date_format IS NULL
@@ -80,6 +94,16 @@ CREATE TABLE master.tenant_profile (
         CHECK (
             number_format IS NULL
             OR (btrim(number_format) <> '' AND length(number_format) <= 64)
+        ),
+    CONSTRAINT tenant_profile_logo_asset_ref_chk
+        CHECK (
+            logo_asset_ref IS NULL
+            OR (
+                btrim(logo_asset_ref) = logo_asset_ref
+                AND length(logo_asset_ref) BETWEEN 2 AND 1024
+                AND logo_asset_ref ~ '^/[A-Za-z0-9][A-Za-z0-9_./-]*$'
+                AND logo_asset_ref !~ '(^|/)\.\.(/|$)'
+            )
         ),
     CONSTRAINT tenant_profile_week_start_chk
         CHECK (week_start IS NULL OR week_start BETWEEN 0 AND 6),
@@ -102,6 +126,9 @@ COMMENT ON TABLE master.tenant_profile IS
 
 COMMENT ON COLUMN master.tenant_profile.country_code IS
   'Default operating and presentation country; not legal-entity or tax authority.';
+
+COMMENT ON COLUMN master.tenant_profile.logo_asset_ref IS
+  'Optional same-origin managed logo path for tenant presentation. External URLs and traversal are prohibited.';
 
 COMMENT ON COLUMN master.tenant_profile.weekend_days IS
   'Tenant calendar default only. Formal working calendars remain capability-owned.';

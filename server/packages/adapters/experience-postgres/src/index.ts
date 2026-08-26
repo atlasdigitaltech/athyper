@@ -1,5 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceWorkContextRecord } from "@athyper/server-platform-experience/ports";
+import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceLocalePolicyRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceWorkContextRecord } from "@athyper/server-platform-experience/ports";
 import { sql, type Kysely } from "kysely";
 
 type Database = Kysely<Record<string, never>>;
@@ -19,15 +19,16 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
   async readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined> {
     return this.withContext(context, async (database) => {
     const result = await sql<{
-      tenantCode: string; tenantDisplayName: string;
+      tenantCode: string; tenantDisplayName: string; tenantCountryCode:string|null;tenantLogoAssetRef:string|null;
       tenantStatus: string; tenantRealmKey: string; subscriptionPlanId: string | null; tenantRevision: string;
       principalCode: string; principalDisplayName: string; principalSecondaryLabel: string | null;
       principalStatus: string; principalAuthEpoch: number; principalRevision: string; identityBindingActive: boolean;
       membershipActive: boolean; membershipRevision: string | null;
     }>`
       SELECT t.code AS "tenantCode", COALESCE(NULLIF(btrim(t.display_name),''), t.name, t.code) AS "tenantDisplayName",
+             tp.country_code::text AS "tenantCountryCode",tp.logo_asset_ref AS "tenantLogoAssetRef",
              t.status::text AS "tenantStatus", t.realm_key AS "tenantRealmKey",
-             t.subscription_plan_id::text AS "subscriptionPlanId", COALESCE(t.updated_at, t.created_at)::text AS "tenantRevision",
+             t.subscription_plan_id::text AS "subscriptionPlanId", concat_ws(':',COALESCE(t.updated_at,t.created_at)::text,COALESCE(tp.updated_at,tp.created_at)::text) AS "tenantRevision",
              p.code AS "principalCode", COALESCE(NULLIF(btrim(pp.display_name),''), NULLIF(btrim(pp.preferred_name),''), p.name, p.code) AS "principalDisplayName",
              (SELECT NULLIF(btrim(b.username),'') FROM master.principal_identity_binding b WHERE b.tenant_id=t.id AND b.principal_id=p.id AND b.realm_key=${context.realmKey} AND b.status='active' ORDER BY b.is_primary DESC, b.created_at LIMIT 1) AS "principalSecondaryLabel",
              p.status::text AS "principalStatus", p.auth_epoch AS "principalAuthEpoch",
@@ -46,6 +47,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
                  AND pm.effective_from <= ${at} AND (pm.effective_until IS NULL OR pm.effective_until > ${at})
                ORDER BY COALESCE(pm.updated_at, pm.created_at) DESC LIMIT 1) AS "membershipRevision"
       FROM master.tenant t
+      LEFT JOIN master.tenant_profile tp ON tp.tenant_id=t.id
       JOIN master.principal p ON p.tenant_id = t.id AND p.id = ${context.principalId}::uuid
       LEFT JOIN master.principal_profile pp ON pp.tenant_id=p.tenant_id AND pp.principal_id=p.id
       WHERE t.id = ${context.tenantId}::uuid
@@ -53,7 +55,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     `.execute(database);
     const row = result.rows[0];
     if (!row) return undefined;
-    return { tenantCode: row.tenantCode, tenantDisplayName: row.tenantDisplayName, tenantStatus: row.tenantStatus, tenantRealmKey: row.tenantRealmKey, ...(row.subscriptionPlanId ? { subscriptionPlanId: row.subscriptionPlanId } : {}), tenantRevision: row.tenantRevision, principalCode: row.principalCode, principalDisplayName: row.principalDisplayName, ...(row.principalSecondaryLabel ? { principalSecondaryLabel: row.principalSecondaryLabel } : {}), principalStatus: row.principalStatus, principalAuthEpoch: row.principalAuthEpoch, principalRevision: row.principalRevision, identityBindingActive: row.identityBindingActive, membershipActive: row.membershipActive, ...(row.membershipRevision ? { membershipRevision: row.membershipRevision } : {}) };
+    return { tenantCode: row.tenantCode, tenantDisplayName: row.tenantDisplayName, ...(row.tenantCountryCode?{tenantCountryCode:row.tenantCountryCode.trim().toUpperCase()}:{}),...(row.tenantLogoAssetRef?{tenantLogoAssetRef:row.tenantLogoAssetRef}:{}),tenantStatus: row.tenantStatus, tenantRealmKey: row.tenantRealmKey, ...(row.subscriptionPlanId ? { subscriptionPlanId: row.subscriptionPlanId } : {}), tenantRevision: row.tenantRevision, principalCode: row.principalCode, principalDisplayName: row.principalDisplayName, ...(row.principalSecondaryLabel ? { principalSecondaryLabel: row.principalSecondaryLabel } : {}), principalStatus: row.principalStatus, principalAuthEpoch: row.principalAuthEpoch, principalRevision: row.principalRevision, identityBindingActive: row.identityBindingActive, membershipActive: row.membershipActive, ...(row.membershipRevision ? { membershipRevision: row.membershipRevision } : {}) };
     });
   }
 
@@ -97,7 +99,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       `.execute(database),
       sql<{ code: string; moduleId: string; revision: string }>`
         SELECT p.canonical_code AS code, p.module_id::text AS "moduleId", COALESCE(p.updated_at, p.created_at)::text AS revision
-        FROM authz.permission p WHERE p.status = 'active' ORDER BY p.canonical_code
+        FROM authz.permission p WHERE p.status = 'published' ORDER BY p.canonical_code
       `.execute(database),
     ]);
     const plan = planResult.rows[0];
@@ -132,15 +134,15 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
   async readWorkContexts(context: VerifiedRequestContext): Promise<readonly ExperienceWorkContextRecord[]> {
     if (context.planeKey !== "neon") return [];
     return this.withContext(context, async (database) => {
-    const result = await sql<{ companyCodeId:string; companyCode:string; companyDisplayName:string; legalEntityId:string; legalEntityCode:string; legalEntityName:string; countryCode:string|null; functionalCurrency:string; revision:string }>`
+    const result = await sql<{ companyCodeId:string; companyCode:string; companyDisplayName:string; legalEntityId:string; legalEntityCode:string; legalEntityName:string; logoAssetRef:string|null;countryCode:string|null; functionalCurrency:string; revision:string }>`
       SELECT c.id::text AS "companyCodeId", c.code AS "companyCode", COALESCE(NULLIF(btrim(c.display_name),''),c.name,c.code) AS "companyDisplayName",
-             le.id::text AS "legalEntityId", le.code AS "legalEntityCode", COALESCE(NULLIF(btrim(le.display_name),''),le.name,le.code) AS "legalEntityName",
-             c.country_code::text AS "countryCode", c.functional_currency::text AS "functionalCurrency",
+             le.id::text AS "legalEntityId", le.code AS "legalEntityCode", COALESCE(NULLIF(btrim(le.display_name),''),le.name,le.code) AS "legalEntityName",le.logo_asset_ref AS "logoAssetRef",
+             COALESCE(c.country_code,le.registration_country_code)::text AS "countryCode", c.functional_currency::text AS "functionalCurrency",
              concat_ws(':',COALESCE(c.updated_at,c.created_at)::text,COALESCE(le.updated_at,le.created_at)::text) AS revision
       FROM master.company_code c JOIN master.legal_entity le ON le.tenant_id=c.tenant_id AND le.id=c.legal_entity_id AND le.status='active'
       WHERE c.tenant_id=${context.tenantId}::uuid AND c.status='active' ORDER BY c.code,c.id
     `.execute(database);
-    return result.rows.map((row)=>({ companyCodeId:row.companyCodeId,companyCode:row.companyCode,companyDisplayName:row.companyDisplayName,legalEntityId:row.legalEntityId,legalEntityCode:row.legalEntityCode,legalEntityName:row.legalEntityName,...(row.countryCode?{countryCode:row.countryCode}:{}),functionalCurrency:row.functionalCurrency.trim(),revision:row.revision }));
+    return result.rows.map((row)=>({ companyCodeId:row.companyCodeId,companyCode:row.companyCode,companyDisplayName:row.companyDisplayName,legalEntityId:row.legalEntityId,legalEntityCode:row.legalEntityCode,legalEntityName:row.legalEntityName,...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}),...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),functionalCurrency:row.functionalCurrency.trim(),revision:row.revision }));
     });
   }
 
@@ -204,12 +206,12 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     return this.withContext(context, async (database) => {
       const result = await sql<{
         id:string;code:string;displayName:string;legalName:string|null;role:"buyer"|"supplier"|"both";
-        countryCode:string|null;defaultCurrency:string|null;canonicalPartyId:string|null;fromNeon:boolean;revision:string;
+        countryCode:string|null;defaultCurrency:string|null;logoAssetRef:string|null;canonicalPartyId:string|null;fromNeon:boolean;revision:string;
       }>`
         SELECT account.id::text AS id, account.account_code AS code,
                account.display_name AS "displayName", account.legal_name AS "legalName",
                account.network_role::text AS role, account.country_code::text AS "countryCode",
-               account.default_currency::text AS "defaultCurrency",
+               account.default_currency::text AS "defaultCurrency",account.logo_asset_ref AS "logoAssetRef",
                account.canonical_party_id::text AS "canonicalPartyId",
                (account.network_role='buyer' OR EXISTS (
                  SELECT 1 FROM mesh.network_account_reference reference
@@ -223,7 +225,103 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
          WHERE account.tenant_id=${context.tenantId}::uuid AND account.status='active'
          ORDER BY account.network_role,account.display_name,account.account_code
       `.execute(database);
-      return Object.freeze(result.rows.map((row)=>Object.freeze({id:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim().toUpperCase()}:{}),...(row.canonicalPartyId?{canonicalPartyId:row.canonicalPartyId}:{}),source:row.fromNeon?"neon_projection" as const:"mesh" as const,revision:row.revision})));
+      return Object.freeze(result.rows.map((row)=>Object.freeze({id:row.id,code:row.code,displayName:row.displayName,...(row.legalName?{legalName:row.legalName}:{}),role:row.role,...(row.countryCode?{countryCode:row.countryCode.trim().toUpperCase()}:{}),...(row.defaultCurrency?{defaultCurrency:row.defaultCurrency.trim().toUpperCase()}:{}),...(row.logoAssetRef?{logoAssetRef:row.logoAssetRef}:{}),...(row.canonicalPartyId?{canonicalPartyId:row.canonicalPartyId}:{}),source:row.fromNeon?"neon_projection" as const:"mesh" as const,revision:row.revision})));
     });
+  }
+
+  async readLocalePolicy(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
+    return this.withContext(context, async (database) => {
+      const [catalogResult,activationResult]=await Promise.all([
+        sql<{localeCode:string;status:string;coveragePct:number;linguisticReviewPassed:boolean;layoutReviewPassed:boolean;automatedTestsPassed:boolean;revision:string}>`
+          SELECT locale_code AS "localeCode",status,coverage_pct AS "coveragePct",
+                 linguistic_review_passed AS "linguisticReviewPassed",
+                 layout_review_passed AS "layoutReviewPassed",
+                 automated_tests_passed AS "automatedTestsPassed",
+                 COALESCE(updated_at,created_at)::text AS revision
+            FROM control.ui_locale_catalog
+           ORDER BY rollout_wave,locale_code`.execute(database),
+        sql<{localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean;revision:string}>`
+          SELECT locale_code AS "localeCode",enabled,is_default AS "isDefault",is_fallback AS "isFallback",
+                 COALESCE(updated_at,created_at)::text AS revision
+            FROM master.tenant_locale_activation
+           WHERE tenant_id=${context.tenantId}::uuid
+           ORDER BY locale_code`.execute(database),
+      ]);
+      const activations=activationResult.rows;
+      const revision=[...catalogResult.rows.map((row)=>row.revision),...activations.map((row)=>row.revision)].sort().at(-1)??"locale-policy:default";
+      return{
+        catalogs:catalogResult.rows.map(({revision:_revision,...row})=>row),
+        enabledLocales:activations.filter((row)=>row.enabled).map((row)=>row.localeCode),
+        defaultLocale:activations.find((row)=>row.isDefault)?.localeCode??"en",
+        fallbackLocale:activations.find((row)=>row.isFallback)?.localeCode??"en",
+        revision,
+      };
+    });
+  }
+
+  async updateLocalePolicy(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord> {
+    return this.withContext(context, async (database) => {
+      const governance=Object.fromEntries((policy.catalogs??[]).map((catalog)=>[catalog.localeCode,{status:catalog.status,coveragePct:catalog.coveragePct,linguisticReviewPassed:catalog.linguisticReviewPassed,layoutReviewPassed:catalog.layoutReviewPassed,automatedTestsPassed:catalog.automatedTestsPassed}]));
+      await sql`
+        WITH requested AS MATERIALIZED (
+          SELECT key AS locale_code,value
+          FROM jsonb_each(${JSON.stringify(governance)}::jsonb)
+        ), catalog_update AS (
+          UPDATE control.ui_locale_catalog catalog
+             SET status=requested.value->>'status',
+                 coverage_pct=(requested.value->>'coveragePct')::smallint,
+                 linguistic_review_passed=(requested.value->>'linguisticReviewPassed')::boolean,
+                 layout_review_passed=(requested.value->>'layoutReviewPassed')::boolean,
+                 automated_tests_passed=(requested.value->>'automatedTestsPassed')::boolean,
+                 updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
+            FROM requested WHERE catalog.locale_code=requested.locale_code
+          RETURNING catalog.locale_code
+        ), reset_choice AS (
+          UPDATE master.tenant_locale_activation
+             SET is_default=false,is_fallback=false,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
+           WHERE tenant_id=${context.tenantId}::uuid AND (is_default OR is_fallback)
+          RETURNING locale_code
+        ), activation_upsert AS (
+          INSERT INTO master.tenant_locale_activation(tenant_id,locale_code,enabled,is_default,is_fallback,created_by)
+          SELECT ${context.tenantId}::uuid,catalog.locale_code,
+                 catalog.locale_code=ANY(${policy.enabledLocales}::text[]),
+                 catalog.locale_code=${policy.defaultLocale},catalog.locale_code=${policy.fallbackLocale},
+                 ${context.principalId}::uuid
+            FROM control.ui_locale_catalog catalog
+           WHERE (SELECT count(*) FROM reset_choice)>=0
+          ON CONFLICT (tenant_id,locale_code) DO UPDATE
+          SET enabled=EXCLUDED.enabled,is_default=EXCLUDED.is_default,is_fallback=EXCLUDED.is_fallback,
+              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
+          RETURNING locale_code
+        )
+        INSERT INTO master.tenant_profile(tenant_id,enabled_locale_codes,default_locale_code,fallback_locale_code,locale_catalog_governance,created_by)
+        SELECT ${context.tenantId}::uuid,${policy.enabledLocales}::text[],${policy.defaultLocale},${policy.fallbackLocale},${JSON.stringify(governance)}::jsonb,${context.principalId}::uuid
+         WHERE (SELECT count(*) FROM catalog_update)>=0 AND (SELECT count(*) FROM activation_upsert)>=0
+        ON CONFLICT ON CONSTRAINT tenant_profile_tenant_uq DO UPDATE
+        SET enabled_locale_codes=EXCLUDED.enabled_locale_codes,default_locale_code=EXCLUDED.default_locale_code,
+            fallback_locale_code=EXCLUDED.fallback_locale_code,locale_catalog_governance=EXCLUDED.locale_catalog_governance,
+            updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database);
+      const [catalogResult,activationResult]=await Promise.all([
+        sql<{localeCode:string;status:string;coveragePct:number;linguisticReviewPassed:boolean;layoutReviewPassed:boolean;automatedTestsPassed:boolean;revision:string}>`
+          SELECT locale_code AS "localeCode",status,coverage_pct AS "coveragePct",
+                 linguistic_review_passed AS "linguisticReviewPassed",layout_review_passed AS "layoutReviewPassed",
+                 automated_tests_passed AS "automatedTestsPassed",COALESCE(updated_at,created_at)::text AS revision
+            FROM control.ui_locale_catalog ORDER BY rollout_wave,locale_code`.execute(database),
+        sql<{localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean;revision:string}>`
+          SELECT locale_code AS "localeCode",enabled,is_default AS "isDefault",is_fallback AS "isFallback",
+                 COALESCE(updated_at,created_at)::text AS revision
+            FROM master.tenant_locale_activation WHERE tenant_id=${context.tenantId}::uuid ORDER BY locale_code`.execute(database),
+      ]);
+      const activations=activationResult.rows;
+      const revision=[...catalogResult.rows.map((row)=>row.revision),...activations.map((row)=>row.revision)].sort().at(-1)??"locale-policy:default";
+      return{catalogs:catalogResult.rows.map(({revision:_revision,...row})=>row),enabledLocales:activations.filter((row)=>row.enabled).map((row)=>row.localeCode),defaultLocale:activations.find((row)=>row.isDefault)?.localeCode??"en",fallbackLocale:activations.find((row)=>row.isFallback)?.localeCode??"en",revision};
+    });
+  }
+
+  async updatePrincipalLocale(context: VerifiedRequestContext, localeCode: string): Promise<void> {
+    await this.withContext(context, async (database) => { await sql`
+      INSERT INTO master.principal_ui_profile(tenant_id,principal_id,locale_code,language_code,created_by)
+      VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${localeCode},${new Intl.Locale(localeCode).language},${context.principalId}::uuid)
+      ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database); });
   }
 }

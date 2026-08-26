@@ -1,6 +1,6 @@
 {
   "contractVersion": "athyper.tenant-scenario.v1",
-  "packVersion": "2.0.0",
+  "packVersion": "2.1.0",
   "plane": "neon",
   "tenantCode": "athyper",
   "complexity": "complex",
@@ -15,7 +15,8 @@
     "weekendDays": [
       0,
       6
-    ]
+    ],
+    "logoAssetRef": "/brand/tenants/athyper/athq.png"
   },
   "legalEntities": [
     {
@@ -26,7 +27,8 @@
       "registrationCountryCode": "AE",
       "functionalCurrency": "AED",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/athq.png"
     },
     {
       "scopeKey": "ORG-1000000002",
@@ -37,7 +39,8 @@
       "registrationCountryCode": "MY",
       "functionalCurrency": "MYR",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/amre.png"
     },
     {
       "scopeKey": "ORG-1000000003",
@@ -48,7 +51,8 @@
       "registrationCountryCode": "QA",
       "functionalCurrency": "QAR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/aqtu.png"
     },
     {
       "scopeKey": "ORG-1000000004",
@@ -59,7 +63,8 @@
       "registrationCountryCode": "SA",
       "functionalCurrency": "SAR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/asac.png"
     },
     {
       "scopeKey": "ORG-1000000005",
@@ -70,7 +75,8 @@
       "registrationCountryCode": "QA",
       "functionalCurrency": "QAR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/aqts.png"
     },
     {
       "scopeKey": "ORG-1000000006",
@@ -81,7 +87,8 @@
       "registrationCountryCode": "AE",
       "functionalCurrency": "AED",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/auet.png"
     },
     {
       "scopeKey": "ORG-1000000007",
@@ -92,7 +99,8 @@
       "registrationCountryCode": "SA",
       "functionalCurrency": "SAR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/asah.png"
     },
     {
       "scopeKey": "ORG-1000000008",
@@ -103,7 +111,8 @@
       "registrationCountryCode": "US",
       "functionalCurrency": "USD",
       "reportingCurrency": "USD",
-      "regionCode": "americas"
+      "regionCode": "americas",
+      "logoAssetRef": "/brand/tenants/athyper/auic.png"
     },
     {
       "scopeKey": "ORG-1000000009",
@@ -114,7 +123,8 @@
       "registrationCountryCode": "SG",
       "functionalCurrency": "SGD",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/asgf.png"
     },
     {
       "scopeKey": "ORG-1000000010",
@@ -125,7 +135,8 @@
       "registrationCountryCode": "IN",
       "functionalCurrency": "INR",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/aitm.png"
     },
     {
       "scopeKey": "ORG-1000000011",
@@ -136,7 +147,8 @@
       "registrationCountryCode": "CA",
       "functionalCurrency": "CAD",
       "reportingCurrency": "USD",
-      "regionCode": "americas"
+      "regionCode": "americas",
+      "logoAssetRef": "/brand/tenants/athyper/acfb.png"
     },
     {
       "scopeKey": "ORG-1000000012",
@@ -147,7 +159,8 @@
       "registrationCountryCode": "DE",
       "functionalCurrency": "EUR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/adpm.png"
     },
     {
       "scopeKey": "ORG-1000000013",
@@ -158,7 +171,8 @@
       "registrationCountryCode": "TW",
       "functionalCurrency": "TWD",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/atem.png"
     },
     {
       "scopeKey": "ORG-1000000014",
@@ -169,7 +183,8 @@
       "registrationCountryCode": "ZA",
       "functionalCurrency": "ZAR",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/aspe.png"
     },
     {
       "scopeKey": "ORG-1000000015",
@@ -180,7 +195,8 @@
       "registrationCountryCode": "GB",
       "functionalCurrency": "GBP",
       "reportingCurrency": "USD",
-      "regionCode": "emea"
+      "regionCode": "emea",
+      "logoAssetRef": "/brand/tenants/athyper/auka.png"
     },
     {
       "scopeKey": "ORG-1000000016",
@@ -191,7 +207,8 @@
       "registrationCountryCode": "JP",
       "functionalCurrency": "JPY",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/ajed.png"
     },
     {
       "scopeKey": "ORG-1000000017",
@@ -202,7 +219,8 @@
       "registrationCountryCode": "PH",
       "functionalCurrency": "PHP",
       "reportingCurrency": "USD",
-      "regionCode": "apac"
+      "regionCode": "apac",
+      "logoAssetRef": "/brand/tenants/athyper/aphs.png"
     }
   ],
   "companyCodes": [
@@ -216,7 +234,8 @@
       "timezoneCode": "Asia/Dubai",
       "localeCode": "en-AE",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/athq.png"
     },
     {
       "code": "amre",
@@ -228,7 +247,8 @@
       "timezoneCode": "Asia/Kuala_Lumpur",
       "localeCode": "en-MY",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/amre.png"
     },
     {
       "code": "aqtu",
@@ -240,7 +260,8 @@
       "timezoneCode": "Asia/Qatar",
       "localeCode": "en-QA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aqtu.png"
     },
     {
       "code": "asac",
@@ -252,7 +273,8 @@
       "timezoneCode": "Asia/Riyadh",
       "localeCode": "en-SA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asac.png"
     },
     {
       "code": "aqts",
@@ -264,7 +286,8 @@
       "timezoneCode": "Asia/Qatar",
       "localeCode": "en-QA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aqts.png"
     },
     {
       "code": "auet",
@@ -276,7 +299,8 @@
       "timezoneCode": "Asia/Dubai",
       "localeCode": "en-AE",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auet.png"
     },
     {
       "code": "asah",
@@ -288,7 +312,8 @@
       "timezoneCode": "Asia/Riyadh",
       "localeCode": "en-SA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asah.png"
     },
     {
       "code": "auic",
@@ -300,7 +325,8 @@
       "timezoneCode": "America/New_York",
       "localeCode": "en-US",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auic.png"
     },
     {
       "code": "asgf",
@@ -312,7 +338,8 @@
       "timezoneCode": "Asia/Singapore",
       "localeCode": "en-SG",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asgf.png"
     },
     {
       "code": "aitm",
@@ -324,7 +351,8 @@
       "timezoneCode": "Asia/Kolkata",
       "localeCode": "en-IN",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aitm.png"
     },
     {
       "code": "acfb",
@@ -336,7 +364,8 @@
       "timezoneCode": "America/Toronto",
       "localeCode": "en-CA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/acfb.png"
     },
     {
       "code": "adpm",
@@ -348,7 +377,8 @@
       "timezoneCode": "Europe/Berlin",
       "localeCode": "de-DE",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/adpm.png"
     },
     {
       "code": "atem",
@@ -360,7 +390,8 @@
       "timezoneCode": "Asia/Taipei",
       "localeCode": "zh-TW",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/atem.png"
     },
     {
       "code": "aspe",
@@ -372,7 +403,8 @@
       "timezoneCode": "Africa/Johannesburg",
       "localeCode": "en-ZA",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aspe.png"
     },
     {
       "code": "auka",
@@ -384,7 +416,8 @@
       "timezoneCode": "Europe/London",
       "localeCode": "en-GB",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auka.png"
     },
     {
       "code": "ajed",
@@ -396,7 +429,8 @@
       "timezoneCode": "Asia/Tokyo",
       "localeCode": "ja-JP",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/ajed.png"
     },
     {
       "code": "aphs",
@@ -408,7 +442,8 @@
       "timezoneCode": "Asia/Manila",
       "localeCode": "en-PH",
       "companyPurpose": "statutory",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aphs.png"
     },
     {
       "code": "athq.ops",
@@ -420,7 +455,8 @@
       "timezoneCode": "Asia/Dubai",
       "localeCode": "en-AE",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/athq.png"
     },
     {
       "code": "amre.ops",
@@ -432,7 +468,8 @@
       "timezoneCode": "Asia/Kuala_Lumpur",
       "localeCode": "en-MY",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/amre.png"
     },
     {
       "code": "aqtu.ops",
@@ -444,7 +481,8 @@
       "timezoneCode": "Asia/Qatar",
       "localeCode": "en-QA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aqtu.png"
     },
     {
       "code": "asac.ops",
@@ -456,7 +494,8 @@
       "timezoneCode": "Asia/Riyadh",
       "localeCode": "en-SA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asac.png"
     },
     {
       "code": "aqts.ops",
@@ -468,7 +507,8 @@
       "timezoneCode": "Asia/Qatar",
       "localeCode": "en-QA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aqts.png"
     },
     {
       "code": "auet.ops",
@@ -480,7 +520,8 @@
       "timezoneCode": "Asia/Dubai",
       "localeCode": "en-AE",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auet.png"
     },
     {
       "code": "asah.ops",
@@ -492,7 +533,8 @@
       "timezoneCode": "Asia/Riyadh",
       "localeCode": "en-SA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asah.png"
     },
     {
       "code": "auic.ops",
@@ -504,7 +546,8 @@
       "timezoneCode": "America/New_York",
       "localeCode": "en-US",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auic.png"
     },
     {
       "code": "asgf.ops",
@@ -516,7 +559,8 @@
       "timezoneCode": "Asia/Singapore",
       "localeCode": "en-SG",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/asgf.png"
     },
     {
       "code": "aitm.ops",
@@ -528,7 +572,8 @@
       "timezoneCode": "Asia/Kolkata",
       "localeCode": "en-IN",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aitm.png"
     },
     {
       "code": "acfb.ops",
@@ -540,7 +585,8 @@
       "timezoneCode": "America/Toronto",
       "localeCode": "en-CA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/acfb.png"
     },
     {
       "code": "adpm.ops",
@@ -552,7 +598,8 @@
       "timezoneCode": "Europe/Berlin",
       "localeCode": "de-DE",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/adpm.png"
     },
     {
       "code": "atem.ops",
@@ -564,7 +611,8 @@
       "timezoneCode": "Asia/Taipei",
       "localeCode": "zh-TW",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/atem.png"
     },
     {
       "code": "aspe.ops",
@@ -576,7 +624,8 @@
       "timezoneCode": "Africa/Johannesburg",
       "localeCode": "en-ZA",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aspe.png"
     },
     {
       "code": "auka.ops",
@@ -588,7 +637,8 @@
       "timezoneCode": "Europe/London",
       "localeCode": "en-GB",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/auka.png"
     },
     {
       "code": "ajed.ops",
@@ -600,7 +650,8 @@
       "timezoneCode": "Asia/Tokyo",
       "localeCode": "ja-JP",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/ajed.png"
     },
     {
       "code": "aphs.ops",
@@ -612,7 +663,8 @@
       "timezoneCode": "Asia/Manila",
       "localeCode": "en-PH",
       "companyPurpose": "operations",
-      "readinessProfile": "finance_baseline_v1"
+      "readinessProfile": "finance_baseline_v1",
+      "logoAssetRef": "/brand/tenants/athyper/aphs.png"
     }
   ],
   "operatingOrganizations": [

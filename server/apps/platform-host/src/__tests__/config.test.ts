@@ -6,6 +6,17 @@ describe("loadConfig", () => {
   const keys = ["PORT", "ATHYPER_ENV", "ENVIRONMENT", "NODE_ENV", "LOG_LEVEL", "SHUTDOWN_TIMEOUT_MS", "MODE", "DATABASE_URL", "DATABASE_POOL_MAX", "ATHYPER_PLATFORM_DATABASE_URL", "ATHYPER_PLATFORM_DATABASE_POOL_MAX", "MESH_DATABASE_URL", "MESH_DATABASE_POOL_MAX", "KEYCLOAK_ISSUER_URL", "KEYCLOAK_BASE_URL", "KEYCLOAK_REALM", "KEYCLOAK_CLIENT_ID", "KEYCLOAK_JWKS_CACHE_TTL_MS", "IAM_ISSUER_URL", "IAM_CLIENT_ID", "REDIS_URL", "REDIS_KEY_PREFIX", "REDIS_CONNECT_TIMEOUT_MS", "REDIS_MAX_RETRIES_PER_REQUEST", "S3_ENDPOINT", "S3_REGION", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY", "APP_S3_ACCESS_KEY", "APP_S3_SECRET_KEY", "S3_MULTIPART_PART_SIZE_MB", "S3_MULTIPART_QUEUE_SIZE", "S3_MAX_UPLOAD_MB", "S3_PRESIGNED_TTL_SECONDS", "CLAMD_HOST", "CLAMD_PORT", "CLAMD_TIMEOUT_MS", "CLAMD_MAX_BYTES", "CLAMD_ON_UNAVAILABLE", "OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_SERVICE_NAME", "SERVICE_NAME", "SERVICE_VERSION", "OTEL_AUTO_INSTRUMENTATIONS_ENABLED", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "TWILIO_MESSAGING_SERVICE_SID", "META_WHATSAPP_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN", "META_WHATSAPP_GRAPH_BASE_URL", "PUSH_FCM_PROJECT_ID", "PUSH_FCM_CLIENT_EMAIL", "PUSH_FCM_PRIVATE_KEY", "VAPID_SUBJECT", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "DOCRENDER_BASE_URL", "DOCRENDER_TIMEOUT_MS", "DOCRENDER_MAX_HTML_BYTES", "DOCRENDER_MAX_PDF_BYTES"];
 
   keys.push(
+    "EMAIL_PROVIDER",
+    "SES_REGION",
+    "SES_CONFIGURATION_SET",
+    "SES_FROM",
+    "SES_REPLY_TO",
+    "SES_EVENT_REGION",
+    "SES_EVENT_QUEUE_URL",
+    "SES_EVENT_WAIT_SECONDS",
+    "SES_EVENT_VISIBILITY_TIMEOUT_SECONDS",
+    "SES_EVENT_MAX_MESSAGES",
+    "SES_EVENT_FAILURE_BACKOFF_MS",
     "REDIS_BULLMQ_URL",
     "ALLOW_SHARED_BULLMQ_REDIS",
     "JOB_WORKER_CONCURRENCY",
@@ -92,12 +103,25 @@ describe("loadConfig", () => {
       enableAutoInstrumentations: false,
     });
     expect(config.email).toEqual({
+      provider: "disabled",
       host: undefined,
       port: 587,
       secure: false,
       user: undefined,
       password: undefined,
       fromAddress: undefined,
+      sesRegion: undefined,
+      sesConfigurationSetName: undefined,
+      sesFromAddress: undefined,
+      sesReplyToAddress: undefined,
+    });
+    expect(config.sesEvents).toEqual({
+      region: undefined,
+      queueUrl: undefined,
+      waitTimeSeconds: 20,
+      visibilityTimeoutSeconds: 60,
+      maxMessages: 10,
+      failureBackoffMs: 1_000,
     });
     expect(config.sms).toEqual({
       accountSid: undefined,
@@ -309,6 +333,7 @@ describe("loadConfig", () => {
 
     const config = loadConfig();
     expect(config.email).toMatchObject({
+      provider: "smtp",
       host: "smtp.example.test",
       port: 465,
       secure: true,
@@ -319,6 +344,40 @@ describe("loadConfig", () => {
       authToken: "token",
       fromNumber: undefined,
       messagingServiceSid: "MG123",
+    });
+  });
+
+  it("reads and validates native SES provider settings", () => {
+    process.env["EMAIL_PROVIDER"] = "ses";
+    process.env["SES_REGION"] = "ap-southeast-1";
+    process.env["SES_CONFIGURATION_SET"] = "athyper-stg-transactional";
+    process.env["SES_FROM"] = "notifications@notify.stg.athyper.com";
+    process.env["SES_REPLY_TO"] = "support@athyper.com";
+
+    expect(loadConfig().email).toMatchObject({
+      provider: "ses",
+      sesRegion: "ap-southeast-1",
+      sesConfigurationSetName: "athyper-stg-transactional",
+      sesFromAddress: "notifications@notify.stg.athyper.com",
+      sesReplyToAddress: "support@athyper.com",
+    });
+
+    delete process.env["SES_FROM"];
+    expect(() => loadConfig()).toThrow("EMAIL_PROVIDER=ses requires");
+  });
+
+  it("requires the SES event queue outside local environments", () => {
+    process.env["ATHYPER_ENV"] = "staging";
+    process.env["EMAIL_PROVIDER"] = "ses";
+    process.env["SES_REGION"] = "ap-southeast-1";
+    process.env["SES_CONFIGURATION_SET"] = "athyper-transactional-stg";
+    process.env["SES_FROM"] = "notifications@notify.stg.athyper.com";
+    expect(() => loadConfig()).toThrow("SES_EVENT_QUEUE_URL");
+
+    process.env["SES_EVENT_QUEUE_URL"] = "https://sqs.ap-southeast-1.amazonaws.com/111111111111/athyper-stg-events";
+    expect(loadConfig().sesEvents).toMatchObject({
+      region: "ap-southeast-1",
+      maxMessages: 10,
     });
   });
 

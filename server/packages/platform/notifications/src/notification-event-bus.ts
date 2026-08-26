@@ -44,7 +44,7 @@ export function createNotificationEventBus(): NotificationEventBus {
 }
 
 export function serializeNotificationSseEvent(event: NotificationStreamEvent): string {
-  return `event: ${event.type}\nid: ${event.notificationId}\ndata: ${JSON.stringify(event)}\n\n`;
+  return `event: ${event.type}\nid: ${event.notificationId ?? event.occurredAt}\ndata: ${JSON.stringify(event)}\n\n`;
 }
 
 /** Streams an already-authorized tenant/principal scope to an HTTP-compatible writer. */

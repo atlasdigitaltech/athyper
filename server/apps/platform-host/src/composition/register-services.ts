@@ -55,6 +55,11 @@ import {
   createPreferenceInvalidationPublisher,
   createNotificationRecipientResolver,
   createPushNotificationHandler,
+  createSesActivityEventApplier,
+  createSesDeliveryEventProcessor,
+  createSesEventMessageHandler,
+  createSuppressionAwareEmailHandler,
+  KyselySesDeliveryEventRepository,
   createWebhookSweepHandler,
   registerNotificationRoutes,
   DELIVERY_SWEEP_JOB,
@@ -419,9 +424,22 @@ export function registerServices(
   const savedViews=createSavedViewService(createKyselySavedViewRepository(transactions));
   container.platform.httpRegistrars.push(application=>registerSavedViewRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,savedViews}));
   const notificationEvents=container.adapters.notificationEvents??createNotificationEventBus();
+  const sesDeliveryRepository = config?.email.provider === "ses"
+    ? new KyselySesDeliveryEventRepository(transactions)
+    : undefined;
+  if (config?.email.provider === "ses" && config.mode === "worker" && container.adapters.sesEventSource) {
+    const sesEvents = createSesDeliveryEventProcessor(sesDeliveryRepository!);
+    container.adapters.sesEventHandler = createSesEventMessageHandler(
+      createSesActivityEventApplier(sesEvents, notificationEvents),
+    );
+  }
   const notificationPreferences=createNotificationPreferenceService({store:createKyselyNotificationPreferenceStore(transactions),capabilities:createKyselyPreferenceCapabilities(transactions),events:createPreferenceInvalidationPublisher(transactions)});
   const notificationOperations=createNotificationOperations({repository:createKyselyNotificationOperationsRepository(transactions),authorizer});
   const notificationHandlers=new Map(container.adapters.notificationChannels);
+  const emailHandler = notificationHandlers.get("email");
+  if (emailHandler && sesDeliveryRepository) {
+    notificationHandlers.set("email", createSuppressionAwareEmailHandler(emailHandler, sesDeliveryRepository));
+  }
   notificationHandlers.set("in_app",createInAppNotificationHandler({repository:notificationRepositories,publisher:notificationEvents}));
   if(container.adapters.pushTransports.length>0)notificationHandlers.set("push",createPushNotificationHandler({subscriptions:notificationRepositories,transports:container.adapters.pushTransports}));
   const notifications=createNotificationOrchestrator({recipients:createNotificationRecipientResolver({directory:notificationRepositories,whatsAppConsent:notificationRepositories}),ledger:notificationRepositories,handlers:notificationHandlers});
@@ -485,7 +503,7 @@ export function registerServices(
     });
     container.runtimes.scheduleReconcile = () => reconciler.reconcile();
   }
-  container.platform.httpRegistrars.push(application=>registerNotificationRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,inbox:notificationRepositories,push:notificationRepositories,events:notificationEvents,preferences:notificationPreferences,operations:notificationOperations}));
+  container.platform.httpRegistrars.push(application=>registerNotificationRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,inbox:notificationRepositories,push:notificationRepositories,webPushPublicKey:config?.webPush.publicKey,events:notificationEvents,preferences:notificationPreferences,operations:notificationOperations}));
   const policyRepository = dependencies.policyRepository
     ?? (Object.keys(metadataDatabases).length > 0 ? createCachedPolicyRepository({ repository: createKyselyPolicyRepository() }) : undefined);
   const policy = policyRepository ? createPolicyService({ repository: policyRepository, transactions, audit }) : undefined;
