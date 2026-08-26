@@ -32,7 +32,7 @@ sets:
     activation: platform-policy
     implementation: partial
     hostProfiles: [laptop-64, workstation-128]
-    services: [metrics, logging, logging-bucket-init, tracing, tracing-bucket-init, telemetry, logshipper, alertmanager]
+    services: [metrics, logging, tracing, telemetry, logshipper, alertmanager]
     rationale: A single host observability plane avoids per-instance duplication and requires mandatory instance labels and retention boundaries.
 
   - id: shared-monitoring
@@ -42,11 +42,3 @@ sets:
     hostProfiles: [laptop-64, workstation-128]
     services: [statuswatch, cronwatch, errorcollect]
     rationale: Availability, dead-man, and error tracking are host operations authorities rather than application-instance dependencies.
-
-  - id: retired-legacy-discovery
-    placement: retired
-    activation: prohibited
-    implementation: retired
-    hostProfiles: []
-    services: [socket-proxy-gateway, socket-proxy-logshipper]
-    rationale: Generated ingress configuration and push-based telemetry remove the need to expose the Docker API to workload containers.

@@ -54,10 +54,9 @@ test("requires enrollable OTP in the Studio second-factor flow", () => {
   );
 });
 
-test("local plane launchers translate the confidential Studio client secret", () => {
-  for (const script of ["stack/scripts/app/web-up.sh", "stack/scripts/app/planes-up.sh"]) {
-    const source = readFileSync(script, "utf8");
-    assert.match(source, /STUDIO_KEYCLOAK_CLIENT_SECRET=.*STUDIO_WEB_CLIENT_SECRET/);
-    assert.match(source, /KEYCLOAK_CLIENT_SECRET="\$STUDIO_KEYCLOAK_CLIENT_SECRET"/);
-  }
+test("Stack v2 injects the confidential Studio client secret from an owner-only file", () => {
+  const compose = readFileSync("deploy/compose/instance/compose.parity.yaml", "utf8");
+  const bootstrap = readFileSync("deploy/compose/instance/scripts/start-keycloak.sh", "utf8");
+  assert.match(compose, /ATHYPER_IAM_SECRET_FILE: \/run\/secrets\/studio-iam-client-secret/);
+  assert.match(bootstrap, /STUDIO_IAM_CLIENT_SECRET=.*\/run\/secrets\/studio-iam-client-secret/);
 });

@@ -173,6 +173,18 @@ function readPlatformActive(validate, root, requiredState) {
   return { path, receipt };
 }
 
+function readMigrationReceipt(validate, root, instanceId, project) {
+  const path = join(root, "instances", instanceId, "receipts", "migration.json");
+  if (!existsSync(path)) {
+    throw new Error(`Preserved-database startup requires an existing migration receipt: ${path}`);
+  }
+  const receipt = validate(readJson(path), path);
+  if (receipt.metadata.instance !== instanceId || receipt.spec.project !== project) {
+    throw new Error(`Migration receipt does not match ${instanceId}/${project}.`);
+  }
+  return { path, receipt };
+}
+
 function assertConfirmation(instanceId, options) {
   if (options.confirm !== instanceId) {
     throw new Error(`Refusing mutation: pass --confirm ${instanceId}.`);
@@ -309,6 +321,12 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
 
   try {
     if (operation === "up") {
+      if (options.preserveDatabase && instanceId !== "dev") {
+        throw new Error("--preserve-database is restricted to the DEV instance.");
+      }
+      const preservedMigration = options.preserveDatabase
+        ? readMigrationReceipt(validate, root, instanceId, project)
+        : null;
       const admission = admissionBlockers(repoRoot, instanceId, existingActive?.spec.state, dependencies);
       if (admission.blockers.length) {
         throw new Error(`Execution gates are blocked:\n- ${admission.blockers.join("\n- ")}`);
@@ -340,10 +358,16 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
           : ddlSha256;
         compose(["up", "--detach", "--wait", "db"]);
         compose(["run", "--rm", "db-init"]);
-        compose(["run", "--rm", migrationRunner]);
-        artifacts.migrationMode = migrationMode;
-        artifacts.migrationSha256 = migrationSha256;
-        writeMigrationReceipt(migrationMode, migrationSha256);
+        if (preservedMigration) {
+          artifacts.migrationMode = "preserved-existing-database";
+          artifacts.migrationReceipt = preservedMigration.path;
+          artifacts.migrationSha256 = preservedMigration.receipt.spec.ddlSha256;
+        } else {
+          compose(["run", "--rm", migrationRunner]);
+          artifacts.migrationMode = migrationMode;
+          artifacts.migrationSha256 = migrationSha256;
+          writeMigrationReceipt(migrationMode, migrationSha256);
+        }
         compose(["up", "--detach", "--wait", "--remove-orphans"]);
       } catch (error) {
         rollback = { attempted: true, succeeded: false };

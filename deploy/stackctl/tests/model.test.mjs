@@ -14,9 +14,9 @@ import { inspectRemainingGates } from "../src/gates.mjs";
 import { checkPolicy } from "../src/policy.mjs";
 import { createValidator } from "../src/schema.mjs";
 
-test("catalog accounts for all 39 resolved Stack v1 services", () => {
+test("catalog accounts for all Stack v2 services", () => {
   const model = loadModel(defaultRepoRoot, "dev");
-  assert.equal(model.services.filter((service) => service.ledger === "resolved-v1").length, 39);
+  assert.equal(model.services.filter((service) => service.ledger === "v2-native").length, 35);
   assert.equal(model.services.filter((service) => service.ledger === "test-fixture").length, 1);
   assert.equal(model.services.filter((service) => service.ledger === "v2-addition").length, 7);
 });

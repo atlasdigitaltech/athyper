@@ -1,7 +1,8 @@
 # ATHYPER Stack v2 foundation
 
-Stack v2 is additive. The existing `stack/` directory remains Stack v1 until the
-restore, DEV parity, QA isolation, and STG rehearsal gates pass.
+Stack v2 is the only supported runtime architecture. The remaining
+`stack/config` and `stack/env` files are shared build, realm, and validation
+assets; they do not define or launch a legacy Compose runtime.
 
 ## Filesystem contract
 
@@ -34,6 +35,7 @@ repeated:
 
 ```sh
 athyper up dev --confirm dev
+athyper up dev --confirm dev --preserve-database
 athyper restart dev --confirm dev
 athyper restart dev api --confirm dev
 athyper backup dev --confirm dev
@@ -71,13 +73,18 @@ do not select this source-mounted clean-slate runner. Forward-migration
 compatibility policy and a candidate-image-contained migration role are still
 required before imported, schema-changing, QA, or STG rollout is operational.
 
+For an already initialized DEV database, `--preserve-database` validates the
+existing controller migration receipt, runs only idempotent database bootstrap,
+skips the clean-slate migration runner, and starts the selected services. The
+flag is deliberately unavailable for QA and STG.
+
 Current DEV domains use `*.dev.athyper.test` because nested `.localhost` names did
 not resolve reliably on the qualified Windows host. The future ingress bootstrap
 must install the exact mappings printed by `plan`; planning never edits `hosts`.
 
 ## Current acceptance boundary
 
-The schemas, 39-service ledger, provider contracts, resource profiles, guarded
+The schemas, service ledger, provider contracts, resource profiles, guarded
 controller execution, and receipt contracts are implemented. Current machine,
 cold-start, clean-slate disposition, and DEV secret gates pass, and `plan dev` is
 ready. Global release readiness remains blocked by the placeholder/incomplete QA

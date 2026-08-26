@@ -1,14 +1,13 @@
 # Stack v2 workload placement
 
-**Status:** Operations-lite composed; heavy monitoring adapters remain pending
-**Reviewed:** 2026-08-21
+**Status:** Stack v1 retired; operations-lite composed; heavy monitoring adapters remain pending
+**Reviewed:** 2026-08-27
 
 ## Inventory result
 
-The legacy `stack/compose/` tree contains 39 distinct Compose service IDs when
-all profiles and overlays are combined. The number 40 in the machine inventory
-referred to Docker images, not 40 application services. All 39 legacy services
-exist in the Stack v2 service catalog and every one now has exactly one workload
+The former Stack v1 service inventory has been reconciled into the Stack v2
+catalog. The two Docker socket proxies and two local telemetry bucket-init jobs
+were retired. Every retained Stack v2-native service has exactly one workload
 set in `deploy/catalog/workload-sets.yaml`.
 
 Stack v2 also owns five additions: shared platform ingress, database
@@ -18,16 +17,15 @@ an ephemeral test fixture and is not an application workload.
 
 ## Placement decision
 
-| Workload set | Legacy services | Placement | Activation | Current state |
+| Workload set | Services | Placement | Activation | Current state |
 |---|---:|---|---|---|
 | `instance-runtime` | 20 | One copy per DEV/QA/STG instance | Instance preset | Composed |
 | `instance-operator-tools` | 5 | Instance-scoped, loopback-only | Explicit profile | Composed |
 | `instance-telemetry-exporter` | 1 | Beside the instance Redis provider | Explicit profile | Composed |
-| `shared-observability` | 8 | One host operations project | Platform policy | Partial |
+| `shared-observability` | 6 | One host operations project | Platform policy | Partial |
 | `shared-monitoring` | 3 | One host operations project | Platform policy | Design required |
-| `retired-legacy-discovery` | 2 | Prohibited | Never | Retired |
 
-Starting all 39 legacy services inside every instance is rejected. It duplicates
+Starting every optional service inside every instance is rejected. It duplicates
 stateful operations data, exposes unnecessary administration surfaces, and does
 not fit the `laptop-32` envelope. The 20-service runtime is the correct DEV
 baseline. Optional tools are activated only for a bounded task and are stopped
@@ -42,12 +40,11 @@ in a controller-owned `athyper-operations` project. Every metric, log, and trace
 must carry `instance`, `environment`, `service`, and `source_revision` labels.
 DEV/QA/STG data must have separate retention and query boundaries.
 
-The local Loki and Tempo configurations use filesystem storage, so their legacy
-S3 bucket initialization jobs must not run locally. They remain catalogued for
-remote object-storage mode and must produce one-shot completion receipts there.
+The local Loki and Tempo configurations use filesystem storage, so the former
+S3 bucket initialization jobs were removed. Remote object-storage provisioning
+must be owned by an external, receipt-producing operations lifecycle.
 Alloy receives Loki-compatible push traffic and forwards structured logs without Docker API access.
-The two legacy socket proxies remain prohibited; direct `docker.sock` mounting
-is also prohibited.
+The two legacy socket proxies were removed; direct `docker.sock` mounting remains prohibited.
 
 The `athyper-operations` project now provides the bounded
 `laptop-32-ops-lite` model. Prometheus, Loki, Grafana, Alloy, and Alertmanager

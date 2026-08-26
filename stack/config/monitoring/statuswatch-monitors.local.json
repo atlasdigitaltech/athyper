@@ -179,9 +179,9 @@
       "timeout": 10
     },
     {
-      "name": "dbpool-auth (PgBouncer) — TCP 6433",
+      "name": "dbpool-session (PgBouncer) — TCP 6433",
       "type": "port",
-      "hostname": "dbpool-auth",
+      "hostname": "dbpool-session",
       "port": 6433,
       "interval": 60,
       "retryInterval": 60,

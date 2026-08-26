@@ -9,7 +9,7 @@
     Production:         render/environments/docparser-config.production.xml
 
   Consumed at container startup via the config flag pointing to this file.
-  Mount is defined in stack/compose/render/athyper-docparser.yml.
+  Runtime mounts are owned by the Stack v2 instance Compose definition.
 
   Contract:
     - Exclude ExecutableParser — binary-executable extraction is a

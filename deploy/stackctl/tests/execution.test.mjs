@@ -92,6 +92,46 @@ test("up failure rolls the instance back without stopping the platform", () => {
   assert.deepEqual(receipt.spec.rollback, { attempted: true, succeeded: true });
 });
 
+test("DEV preserved-database up validates the existing migration receipt and skips clean-slate migration", () => {
+  const context = fixture();
+  const receiptDirectory = join(context.root, "instances/dev/receipts");
+  mkdirSync(receiptDirectory, { recursive: true, mode: 0o700 });
+  writeFileSync(join(receiptDirectory, "migration.json"), `${JSON.stringify({
+    apiVersion: "athyper.io/v1alpha1",
+    kind: "FoundationMigrationReceipt",
+    metadata: { instance: "dev" },
+    spec: {
+      project: "athyper-dev",
+      completedAt: fixedDate.toISOString(),
+      sourceRevision: "1".repeat(40),
+      ddlSha256: "2".repeat(64),
+      mode: "fresh-database-foundation",
+    },
+  })}\n`, { mode: 0o600 });
+
+  const receipt = executeStackOperation(defaultRepoRoot, "up", "dev", {
+    confirm: "dev",
+    preserveDatabase: true,
+  }, context.dependencies);
+  const invocations = context.calls.map(({ args }) => args.join(" "));
+  assert.equal(receipt.spec.status, "succeeded");
+  assert.equal(receipt.spec.artifacts.migrationMode, "preserved-existing-database");
+  assert.ok(invocations.some((line) => line.endsWith("run --rm db-init")));
+  assert.ok(!invocations.some((line) => line.endsWith("run --rm db-migration")));
+});
+
+test("preserved-database up refuses an absent migration receipt", () => {
+  const context = fixture();
+  assert.throws(
+    () => executeStackOperation(defaultRepoRoot, "up", "dev", {
+      confirm: "dev",
+      preserveDatabase: true,
+    }, context.dependencies),
+    /requires an existing migration receipt/u,
+  );
+  assert.deepEqual(context.calls, []);
+});
+
 test("down is receipt-owned and retains Docker volumes", () => {
   const context = fixture();
   executeStackOperation(defaultRepoRoot, "up", "dev", { confirm: "dev" }, context.dependencies);

@@ -188,7 +188,7 @@ realm.users = [
     totp: false,
     createdTimestamp: 1743861600000,
     // Passwords are NOT seeded here — committed JSON must never contain plaintext credentials.
-    // Credentials are set post-import by stack/scripts/db/seed-iam-credentials.sh (kcadm.sh set-password)
+    // Credentials are reconciled from Stack v2 owner-only secret files during IAM bootstrap.
     // from IAM_DEMO_USER_PASSWORD. UPDATE_PASSWORD guards any accidentally-imported JSON from
     // leaving an unauthenticated account usable.
     credentials: [],

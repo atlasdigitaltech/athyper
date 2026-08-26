@@ -23,7 +23,7 @@
           "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
           "class": { "enum": ["application", "capability", "platform", "fixture"] },
           "lifecycle": { "enum": ["long-running", "stateful", "one-shot", "on-demand", "ephemeral"] },
-          "ledger": { "enum": ["resolved-v1", "v2-addition", "test-fixture"] },
+          "ledger": { "enum": ["v2-native", "v2-addition", "test-fixture"] },
           "image": { "type": "string", "minLength": 3 },
           "stateful": { "type": "boolean" },
           "profiles": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },

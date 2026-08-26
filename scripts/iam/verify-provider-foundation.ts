@@ -12,7 +12,7 @@ function requireText(label: string, contents: string, text: string): void {
 }
 
 async function main(): Promise<void> {
-  const [catalog, contract, registryService, ddl, route, realm, env, importScript] = await Promise.all([
+  const [catalog, contract, registryService, ddl, route, realm, env] = await Promise.all([
     source("server/packages/services/iam/providers/tenant-identity-provider.ts"),
     source("server/packages/services/iam/providers/keycloak-provider.contract.ts"),
     source("server/packages/services/iam/providers/tenant-identity-provider.service.ts"),
@@ -20,7 +20,6 @@ async function main(): Promise<void> {
     source("server/packages/services/iam/routes/identity-provider.routes.ts"),
     source("stack/config/iam/realm-athyper.json"),
     source("stack/env/.env.example"),
-    source("stack/scripts/db/session/iam/import-iam.sh"),
   ]);
 
   for (const providerType of ["generic", "entra-id", "google-workspace", "linkedin", "windows-kerberos"]) {
@@ -37,9 +36,9 @@ async function main(): Promise<void> {
   requireText("registry DDL", ddl, "tenant_identity_provider_policy_chk");
   requireText("environment", env, "LINKEDIN_CLIENT_ID=");
   requireText("environment", env, "ATHYPER_ENTERPRISE_WINDOWS_AUTH_ENABLED=false");
-  requireText("import script", importScript, "LINKEDIN_CLIENT_SECRET");
-  for (const publicUrl of ["NEON_PUBLIC_WEB_URL", "MESH_PUBLIC_WEB_URL", "ADMIN_PUBLIC_WEB_URL"]) {
-    requireText("import script", importScript, publicUrl);
+  requireText("realm", realm, "${LINKEDIN_CLIENT_SECRET}");
+  for (const publicUrl of ["NEON_PUBLIC_WEB_URL", "MESH_PUBLIC_WEB_URL"]) {
+    requireText("realm", realm, publicUrl);
   }
 
   const parsedRealm = JSON.parse(realm) as {

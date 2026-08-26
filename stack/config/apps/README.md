@@ -76,7 +76,7 @@ from the process environment. This env var must be present in `secrets/.env` on 
 **To add a new secret reference:**
 1. Add `clientSecretRef: "MY_NEW_SECRET"` to the realm `iam` block in this file
 2. Set `ATHYPER_SUPER__IAM_SECRET__MY_NEW_SECRET=<value>` in `secrets/.env`
-3. Run `stack/scripts/setup/validate-env.sh` — it will fail if the env var is missing
+3. Run `pnpm athyper plan <instance>` — it will fail if required configuration is missing
 
 ---
 
@@ -118,8 +118,7 @@ running `up.sh`.
 
 ```bash
 # Runs automatically via up.sh — or standalone:
-stack/scripts/setup/validate-env.sh
-stack/scripts/setup/validate-env.bat   # Windows
+pnpm athyper plan dev
 
 # Checks performed:
 #  [2/6] ATHYPER_KERNEL_CONFIG_PATH is set

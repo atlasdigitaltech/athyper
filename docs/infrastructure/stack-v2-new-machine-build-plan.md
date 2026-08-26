@@ -1,6 +1,6 @@
 # ATHYPER Stack v2 — Detailed New-Machine Container Build Plan
 
-**Status:** Implementation in progress; DEV runtime qualification is evidence-backed and blocked
+**Status:** Historical migration plan; Stack v1 runtime retired 2026-08-27
 **Prepared:** 2026-08-20  
 **Scope:** New Windows 11 development workstation, repeatable DEV/QA/STG-rehearsal instances, GitHub image lifecycle, and a controlled path to multi-server K3s/Kubernetes  
 **Source baseline:** Current ATHYPER repository, current Compose model, current GitHub workflows, and the live Docker inventory on the existing workstation
@@ -51,7 +51,8 @@ Continue in this order:
 
 ## 1. Executive decision
 
-Build **Stack v2 alongside the current Stack v1**. Do not migrate the existing Docker Desktop virtual disk or refactor the working installation in place.
+Stack v2 was built alongside Stack v1 and is now the sole supported runtime. The
+remaining migration narrative below is retained as historical decision context.
 
 The recommended model is:
 
@@ -654,13 +655,12 @@ on-demand modes. Healthchecks and GlitchTip remain blocked until their isolated
 state and file-secret adapters are qualified. No full-observability or combined
 monitoring mode is defined for this host.
 
-This ledger accounts for every one of the 39 services currently returned by Compose with all profiles enabled:
+This historical ledger now lists the 35 retained Stack v2-native services:
 
 | Service | Class | Lifecycle | v2 scope/disposition |
 |---|---|---|---|
 | `gateway` | Ingress | Long-running | Per instance inner gateway |
 | `gateway-outage` | Ingress fallback | Long-running | Per instance, capped at 64 MiB |
-| `socket-proxy-gateway` | Docker discovery | Long-running | Transitional; retire with file-provider routing |
 | `db` | PostgreSQL | Stateful | Per instance or external provider |
 | `dbpool-apps` | PgBouncer transaction pool | Long-running | Per instance, app/data networks |
 | `dbpool-session` | PgBouncer session pool | Long-running | Per instance, IAM/data networks |
@@ -684,12 +684,9 @@ This ledger accounts for every one of the 39 services currently returned by Comp
 | `mailtrap` | Mailpit | Long-running DEV only | Per DEV instance or external sandbox SMTP |
 | `metrics` | Prometheus | Stateful by retention | Per QA/STG initially; shared ops later |
 | `logging` | Loki | Stateful by retention | Per QA/STG initially; shared ops later |
-| `logging-bucket-init` | Loki bucket bootstrap | One-shot | Idempotent with receipt |
 | `tracing` | Tempo | Stateful by retention | Per QA/STG initially; shared ops later |
-| `tracing-bucket-init` | Tempo bucket bootstrap | One-shot | Idempotent with receipt |
 | `telemetry` | Grafana | Stateful/configured | Provision from Git; shared ops later |
 | `logshipper` | Grafana Alloy | Long-running | Per instance/host collector |
-| `socket-proxy-logshipper` | Docker log discovery | Long-running | Transitional; minimize or retire |
 | `alertmanager` | Alert routing | Stateful configuration | Per instance initially; shared ops later |
 | `statuswatch` | Uptime Kuma | Stateful optional | Shared platform candidate |
 | `cronwatch` | Healthchecks | Stateful optional | Shared platform candidate |
@@ -757,7 +754,8 @@ deploy/
 └── reusable-deploy.yml
 ```
 
-Migration rule: `stack/compose` remains Stack v1 until v2 parity. Only after acceptance should v2 become the default and v1 move to a clearly archived compatibility folder.
+Migration outcome: Stack v2 passed its controller and Compose suite, became the
+default, and the Stack v1 Compose and lifecycle-script trees were removed.
 
 ---
 

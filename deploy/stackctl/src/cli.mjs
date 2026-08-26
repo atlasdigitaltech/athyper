@@ -17,7 +17,7 @@ import { createOperationsPlan } from "./operations.mjs";
 import { executeOperationsOperation } from "./operations-execution.mjs";
 
 function usage() {
-  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper catalog inspect [--json]\n  athyper operations plan <lite|tracing|statuswatch|cronwatch|errorcollect> [--json]\n  athyper operations up <lite|tracing|statuswatch> --confirm <mode> [--json]\n  athyper operations down --confirm operations [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
+  return `ATHYPER Stack v2 controller\n\nUsage:\n  athyper doctor [--json]\n  athyper config render <instance> [--json]\n  athyper plan <instance> [--json]\n  athyper gates inspect [--json]\n  athyper catalog inspect [--json]\n  athyper operations plan <lite|tracing|statuswatch|cronwatch|errorcollect> [--json]\n  athyper operations up <lite|tracing|statuswatch> --confirm <mode> [--json]\n  athyper operations down --confirm operations [--json]\n  athyper qualify dev [--json]\n  athyper up <instance> --confirm <instance> [--preserve-database] [--json]\n  athyper down <instance> --confirm <instance> [--json]\n  athyper restart <instance> [service] --confirm <instance> [--json]\n  athyper backup <instance> --confirm <instance> [--json]\n  athyper restore <instance> <backup-id> --confirm <instance> --confirm-restore <backup-id> [--json]\n  athyper lifecycle plan <instance> <reset|seed|test|destroy> [--json]\n  athyper rehearsal plan <target> --from <source> [--json]\n  athyper capability plan <instance> <observability|secretstore|analytics|admin-db|admin-queue> [--json]\n  athyper orchestrator assess [--json]\n  athyper policy check [--json]\n`;
 }
 
 function print(document, json) {
@@ -39,6 +39,8 @@ function parseExecution(args) {
       if (!next || next.startsWith("--")) throw new Error(`${value} requires a value.`);
       options[value === "--confirm" ? "confirm" : "confirmRestore"] = next;
       index += 1;
+    } else if (value === "--preserve-database") {
+      options.preserveDatabase = true;
     } else if (value.startsWith("--")) {
       throw new Error(`Unknown execution option: ${value}`);
     } else {

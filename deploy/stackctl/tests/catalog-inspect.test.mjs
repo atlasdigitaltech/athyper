@@ -3,13 +3,13 @@ import test from "node:test";
 import { inspectCatalog } from "../src/catalog-inspect.mjs";
 import { defaultRepoRoot } from "../src/io.mjs";
 
-test("every legacy Compose service has exactly one Stack v2 workload disposition", () => {
+test("every Stack v2 native service has exactly one workload disposition", () => {
   const report = inspectCatalog(defaultRepoRoot);
   assert.deepEqual(report.counts, {
-    legacyServices: 39, resolvedCatalogServices: 39, presetSelectedDevServices: 20, remainingLegacyServices: 19,
+    v2NativeServices: 35, presetSelectedDevServices: 20, optionalV2NativeServices: 15,
   });
   assert.deepEqual(report.inventory, {
-    missingFromCatalog: [], absentFromLegacy: [], missingDisposition: [], duplicateDisposition: [], unknownDisposition: [],
+    missingDisposition: [], duplicateDisposition: [], unknownDisposition: [],
   });
   assert.deepEqual(report.blockers, [
     "Workload set shared-observability is partial.", "Workload set shared-monitoring is design-required.",
