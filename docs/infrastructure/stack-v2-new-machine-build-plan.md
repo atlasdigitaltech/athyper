@@ -586,6 +586,15 @@ api.stg.athyper.test
 
 Nested `.localhost` names did not resolve reliably on this Windows host, so Stack v2 uses `.athyper.test`. The controller prints the exact loopback mappings; only an explicit bootstrap/apply command may edit the hosts file. HTTPS still requires a locally trusted development certificate.
 
+Review the Windows mappings from any PowerShell session, then apply them from an
+elevated Windows PowerShell. The apply operation is idempotent, takes a timestamped
+backup, manages only missing Athyper names, and flushes the Windows DNS cache:
+
+```powershell
+.\deploy\bootstrap\Configure-AthyperHosts.ps1
+.\deploy\bootstrap\Configure-AthyperHosts.ps1 -Apply
+```
+
 ---
 
 ## 9. Current service classification and v2 disposition

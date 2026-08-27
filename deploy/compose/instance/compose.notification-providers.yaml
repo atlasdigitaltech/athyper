@@ -1,4 +1,5 @@
 x-notification-provider-environment: &notification-provider-environment
+  ATHYPER_ENV: staging
   EMAIL_PROVIDER: ${EMAIL_PROVIDER:-ses}
   SES_REGION: ${SES_REGION:-}
   SES_CONFIGURATION_SET: ${SES_CONFIGURATION_SET:-}

@@ -81,6 +81,21 @@ terraform -chdir=deploy/providers/aws-ses plan \
   -out="$HOME/.athyper/instances/stg/aws-ses.tfplan"
 ```
 
+After the authorized owner applies that reviewed plan, export its non-secret
+outputs and install the controller configuration without placing values in shell
+history:
+
+```sh
+terraform -chdir=deploy/providers/aws-ses output -json > /secure/terraform/stg-ses-output.json
+pnpm stg:install-provider-config --from-terraform-output /secure/terraform/stg-ses-output.json
+pnpm athyper plan stg --json
+```
+
+The installer accepts only the allowlisted SES/SQS fields, writes
+`~/.athyper/instances/stg/provider.env` with mode `0600`, and never prints its
+contents. The controller loads that file only for STG. Process environment
+variables may override it for an explicitly managed one-off run.
+
 Only an authorized owner may apply the reviewed saved plan. Application rollout
 must remain blocked until SES identity verification, account production access,
 event-queue health, immutable images, migrations, and authenticated canaries all
@@ -149,6 +164,43 @@ must no longer report missing `vapid-*` files before deployment proceeds.
    Activity Center entry across the appropriate plane.
 8. Exercise one transient failure and one permanent failure; verify retry and
    dead-letter behavior before enabling normal traffic.
+
+The controller backup and retained-volume restore runners are executable. After
+STG provider readiness allows the instance to remain healthy, record their
+schema-valid rehearsal evidence as follows (replace the receipt IDs with those
+returned by the controller):
+
+```sh
+pnpm athyper backup stg --confirm stg --json
+pnpm stg:record-database-evidence backup --manifest \
+  "$HOME/.athyper/backups/stg/<backup-id>/backup.json" --output \
+  /mnt/d/ATHYPER/qualification/stg/pre-migration-backup.json
+pnpm athyper restore stg <backup-id> --confirm stg --confirm-restore <backup-id> --json
+pnpm stg:record-database-evidence restore --manifest \
+  "$HOME/.athyper/backups/stg/<backup-id>/backup.json" --backup-evidence \
+  /mnt/d/ATHYPER/qualification/stg/pre-migration-backup.json --receipt \
+  "$HOME/.athyper/instances/stg/receipts/<restore-receipt>.json" --output \
+  /mnt/d/ATHYPER/qualification/stg/restore-drill.json
+```
+
+The adapter re-hashes every globals/database artifact, links the aggregate
+checksum across backup and restore evidence, verifies all four database
+restores and the post-restore query, and requires the isolated restore project
+to be stopped while its volume remains retained.
+
+Before importing any QA-derived dataset, serialize the approved export as an
+owner-only JSON object with `sourceInstance: "qa"` and a `records` array, then
+run the built-in credential and personal-data scan:
+
+```sh
+pnpm stg:record-sanitized-data --dataset /secure/stg/qa-sanitized-export.json \
+  --output /mnt/d/ATHYPER/qualification/stg/sanitized-data-manifest.json
+```
+
+The scan refuses secret-bearing fields, private keys, AWS keys, bearer/JWT
+tokens, phone-like values, and email domains outside reserved synthetic test
+domains. Its evidence binds the exact input bytes and record count without
+copying dataset content into the qualification record.
 
 ### SES tenant and canary application contracts
 

@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 
 import { readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { loadStagingProviderEnvironment } from "../../deploy/stackctl/src/provider-config.mjs";
 
 const PUSH_MODES = new Set(["web", "native", "both", "none"]);
 
@@ -154,6 +157,7 @@ function parseArguments(arguments_) {
   return {
     target: read("--target", ""),
     push: read("--push", "web"),
+    runtimeRoot: read("--runtime-root", ""),
     json: arguments_.includes("--json"),
   };
 }
@@ -161,7 +165,20 @@ function parseArguments(arguments_) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const options = parseArguments(process.argv.slice(2));
-    const result = verifyNotificationProviderReadiness(process.env, options);
+    const runtimeRoot = resolve(options.runtimeRoot || process.env.ATHYPER_RUNTIME_ROOT || join(homedir(), ".athyper"));
+    const provider = options.target === "staging"
+      ? loadStagingProviderEnvironment(runtimeRoot, process.env).environment
+      : {};
+    const secretRoot = join(runtimeRoot, "instances", "stg", "secrets");
+    const environment = options.target === "staging" ? {
+      ...process.env,
+      ...provider,
+      EMAIL_PROVIDER: provider.EMAIL_PROVIDER || process.env.EMAIL_PROVIDER || "ses",
+      VAPID_SUBJECT_FILE: process.env.VAPID_SUBJECT_FILE || join(secretRoot, "vapid-subject"),
+      VAPID_PUBLIC_KEY_FILE: process.env.VAPID_PUBLIC_KEY_FILE || join(secretRoot, "vapid-public-key"),
+      VAPID_PRIVATE_KEY_FILE: process.env.VAPID_PRIVATE_KEY_FILE || join(secretRoot, "vapid-private-key"),
+    } : process.env;
+    const result = verifyNotificationProviderReadiness(environment, options);
     if (options.json) process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
     else {
       for (const item of result.checks) process.stdout.write(`${item.status.toUpperCase()} ${item.name}${item.problem ? `: ${item.problem}` : ""}\n`);

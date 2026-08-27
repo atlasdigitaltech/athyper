@@ -19,6 +19,7 @@ import { loadModel } from "./model.mjs";
 import { createPlan } from "./plan.mjs";
 import { checkPolicy } from "./policy.mjs";
 import { createValidator } from "./schema.mjs";
+import { loadStagingProviderEnvironment } from "./provider-config.mjs";
 
 const OPERATIONS = new Set(["up", "down", "restart", "backup", "restore"]);
 const BACKUP_ID = /^[0-9]{8}T[0-9]{6}Z$/u;
@@ -94,8 +95,12 @@ function imageEnvironment(model) {
 
 function instanceEnvironment(model, root) {
   const postgres = model.instance.spec.debugPorts?.postgres;
+  const providerEnvironment = model.instance.spec.mode === "staging"
+    ? loadStagingProviderEnvironment(root).environment
+    : {};
   return {
     ...process.env,
+    ...providerEnvironment,
     ATHYPER_RUNTIME_ROOT: root,
     ATHYPER_RUNTIME_UID: String(process.getuid?.() ?? 1000),
     ATHYPER_RUNTIME_GID: String(process.getgid?.() ?? 1000),
@@ -104,6 +109,13 @@ function instanceEnvironment(model, root) {
     ...(postgres ? { ATHYPER_POSTGRES_BIND: postgres } : {}),
     ...imageEnvironment(model),
   };
+}
+
+function deploymentRevision(repoRoot, model) {
+  const imageRevision = model.imageSet.spec.sourceRevision;
+  return /^[a-f0-9]{40}$/u.test(imageRevision) && !/^0{40}$/u.test(imageRevision)
+    ? imageRevision
+    : sourceRevision(repoRoot);
 }
 
 function composePrefix(project, files) {
@@ -238,7 +250,7 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
   const operationLocation = uniqueOperationPath(receiptDirectory, `${timestamp(started)}-${operation}`);
   const operationId = operationLocation.id;
   const operationPath = operationLocation.path;
-  const revision = dependencies.sourceRevision ?? sourceRevision(repoRoot);
+  const revision = dependencies.sourceRevision ?? deploymentRevision(repoRoot, model);
   const run = dependencies.run ?? defaultRun;
   const commands = [];
   const artifacts = { operator: dependencies.operator ?? userInfo().username };

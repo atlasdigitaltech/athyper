@@ -6,6 +6,7 @@ import { loadInstanceTemplates, loadModel } from "./model.mjs";
 import { runReadOnly, runtimeRoot } from "./io.mjs";
 import { checkPolicy } from "./policy.mjs";
 import { createValidator } from "./schema.mjs";
+import { loadStagingProviderEnvironment } from "./provider-config.mjs";
 
 const PUBLISHED_IMAGE_IDS = ["iam", "mesh-web", "neon-web", "runtime-server", "studio-web"];
 const PARITY_PRESETS = new Set(["dev-full", "qa-standard", "stg-standard", "validation-full"]);
@@ -162,6 +163,15 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
     )),
   })).filter(({ problem }) => problem);
   for (const { secret, problem } of secretProblems) blockers.push(`Required secret file ${problem}: ${secret}`);
+  const providerConfiguration = instance.spec.mode === "staging"
+    ? (probes.providerConfiguration ?? loadStagingProviderEnvironment(
+      probes.runtimeRoot ?? runtimeRoot(),
+      probes.providerEnvironment ?? process.env,
+    ))
+    : null;
+  for (const problem of providerConfiguration?.problems ?? []) {
+    blockers.push(`STAGING notification provider configuration: ${problem}`);
+  }
   const occupiedPorts = probes.listeningPorts?.() ?? listeningPorts();
   for (const [name, binding] of Object.entries(instance.spec.debugPorts ?? {})) {
     const port = Number(binding.slice(binding.lastIndexOf(":") + 1));
@@ -210,6 +220,7 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
       instance: model.instancePath,
       resourceProfile: model.resourcePath,
       imageSet: model.imageSetPath,
+      ...(providerConfiguration ? { providerConfiguration: providerConfiguration.path } : {}),
       providers: model.providerPath,
       catalogs: model.catalogFiles,
       compose: [

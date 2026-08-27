@@ -218,7 +218,10 @@ test("STG rehearsal is digest-preserving, sanitized, backup-first, and read-only
   const stageIds = plan.stages.map(({ id }) => id);
   assert.ok(stageIds.indexOf("capture-pre-migration-backup") < stageIds.indexOf("run-stg-migration"));
   assert.ok(stageIds.indexOf("run-stg-migration") < stageIds.indexOf("restore-backup-into-disposable-target"));
-  assert.deepEqual(plan.actions, ["No action: this command only validates and emits the STG rehearsal contract."]);
+  assert.equal(plan.actions.length, 3);
+  assert.ok(plan.actions.every((action) => action.includes("athyper") || action.includes("pnpm")));
+  assert.equal(plan.stages.find(({ id }) => id === "capture-pre-migration-backup").execution, "controller-backup-requires-explicit-confirmation");
+  assert.equal(plan.stages.find(({ id }) => id === "restore-backup-into-disposable-target").execution, "controller-restore-requires-double-confirmation");
   assert.throws(
     () => createRehearsalPlan(defaultRepoRoot, "stg", "dev"),
     /permits only qa -> stg/u,
@@ -263,6 +266,7 @@ test("STG routes expose no DEV, QA, or mail-capture identity", () => {
   for (const rollbackSecret of ["smtp-password", "smtp-user"]) {
     assert.equal(plan.requiredSecrets.includes(rollbackSecret), false);
   }
+  assert.ok(plan.blockers.some((message) => message.includes("STAGING notification provider configuration")));
 });
 
 test("optional capability plans are profile-scoped, bounded, and read-only", () => {

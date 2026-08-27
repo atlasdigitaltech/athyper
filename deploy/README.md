@@ -282,8 +282,11 @@ match QA, with rebuilding prohibited. It also requires schema-valid sanitized
 data, pre-migration backup, and disposable restore-drill evidence under
 `D:\ATHYPER\qualification\stg`. Non-zero checksums, instance identities,
 backup/restore checksum linkage, and backup-before-restore timestamps are
-validated. The emitted plan cannot execute any stage and carries
-`executionAuthorized: false`.
+validated. The emitted plan is read-only and carries `executionAuthorized:
+false`. The controller supplies explicitly confirmed backup and retained-volume
+restore operations; `pnpm stg:record-database-evidence` converts their verified
+receipts into the rehearsal schemas. Sanitized-data and external-provider
+canary evidence remain separate approval gates.
 
 ## Phase 11 optional capability profiles
 

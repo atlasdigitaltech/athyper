@@ -306,10 +306,12 @@ test("runtime communication providers preserve overrides and support secret file
   assert.deepEqual(providers.services.worker.secrets, expectedSecrets);
   assert.equal(providers.services.scheduler, undefined);
   assert.equal(providers.services.api.environment.EMAIL_PROVIDER, "${EMAIL_PROVIDER:-ses}");
+  assert.equal(providers.services.api.environment.ATHYPER_ENV, "staging");
   assert.equal(smtpRollback.services.api.environment.EMAIL_PROVIDER, "smtp");
   assert.equal(smtpRollback.services.api.environment.SMTP_PASS_FILE, "/run/secrets/smtp-password");
   assert.deepEqual(smtpRollback.services.api.secrets, [
     "smtp-host", "smtp-port", "smtp-secure", "smtp-from", "smtp-user", "smtp-password",
   ]);
   assert.equal(providers.services.worker.environment.VAPID_PRIVATE_KEY_FILE, "/run/secrets/vapid-private-key");
+  assert.match(runtime, /ATHYPER_ENV="\$\{ATHYPER_ENV:-local\}"/u);
 });

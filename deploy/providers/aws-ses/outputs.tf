@@ -2,6 +2,7 @@ output "ses" {
   description = "Non-secret application and operator references."
   value = {
     region                 = var.aws_region
+    from_address           = var.from_address
     identity_arn           = local.identity_arn
     configuration_set_name = aws_sesv2_configuration_set.transactional.configuration_set_name
     event_bus_arn           = local.default_event_bus_arn

@@ -150,19 +150,23 @@ export function createRehearsalPlan(repoRoot, targetInstance, sourceInstance) {
       { id: "verify-exact-qa-digests", effect: "read-only" },
       { id: "verify-sanitized-data-manifest", effect: "read-only" },
       { id: "verify-default-deny-integrations", effect: "read-only" },
-      { id: "capture-pre-migration-backup", effect: "mutating-stg-backup-only", execution: "deferred-until-backup-runner-exists" },
+      { id: "capture-pre-migration-backup", effect: "mutating-stg-backup-only", execution: "controller-backup-requires-explicit-confirmation" },
       { id: "verify-backup-receipt", effect: "read-only" },
-      { id: "run-stg-migration", effect: "mutating-stg-only", execution: "deferred-until-migration-runner-exists" },
+      { id: "run-stg-migration", effect: "mutating-stg-only", execution: "controller-up-runs-forward-migrations" },
       { id: "run-stg-smoke-suite", effect: "mutating-stg-only", execution: "deferred-until-test-runner-exists" },
       { id: "verify-notification-providers", effect: "read-only" },
       { id: "run-email-canary", effect: "mutating-stg-canary-only", execution: "requires-explicit-authorization" },
       { id: "run-web-push-canary", effect: "mutating-stg-canary-only", execution: "requires-explicit-authorization" },
       { id: "exercise-provider-failure", effect: "mutating-stg-canary-only", execution: "requires-explicit-authorization" },
-      { id: "restore-backup-into-disposable-target", effect: "mutating-disposable-restore-only", execution: "deferred-until-restore-runner-exists" },
+      { id: "restore-backup-into-disposable-target", effect: "mutating-disposable-restore-only", execution: "controller-restore-requires-double-confirmation" },
       { id: "verify-restore-receipt", effect: "read-only" },
       { id: "verify-dev-and-qa-fingerprints-unchanged", effect: "read-only" },
     ],
-    actions: ["No action: this command only validates and emits the STG rehearsal contract."],
+    actions: [
+      "This plan is read-only; use `athyper backup stg --confirm stg` only while the controller owns a running STG instance.",
+      "Use `athyper restore stg <backup-id> --confirm stg --confirm-restore <backup-id>` for the retained isolated restore drill.",
+      "Convert successful controller receipts with `pnpm stg:record-database-evidence` before re-running this plan.",
+    ],
   };
 }
 

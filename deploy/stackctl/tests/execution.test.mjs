@@ -5,6 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { defaultRepoRoot } from "../src/io.mjs";
 import { executeStackOperation } from "../src/execution.mjs";
+import { loadModel } from "../src/model.mjs";
 
 const fixedDate = new Date("2026-08-21T12:34:56.000Z");
 
@@ -153,6 +154,16 @@ test("QA initialization foundations, baselines, then verifies forward migrations
     }, context.dependencies),
     /already has a migration receipt/u,
   );
+});
+
+test("release operations record the immutable image-set revision instead of controller HEAD", () => {
+  const context = fixture();
+  delete context.dependencies.sourceRevision;
+  const receipt = executeStackOperation(defaultRepoRoot, "up", "qa", {
+    confirm: "qa",
+    initializeDatabase: true,
+  }, context.dependencies);
+  assert.equal(receipt.spec.sourceRevision, loadModel(defaultRepoRoot, "qa").imageSet.spec.sourceRevision);
 });
 
 test("database initialization is restricted to QA and STG", () => {
