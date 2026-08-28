@@ -1,6 +1,6 @@
 "use client";
 
-import { CloseIcon } from "@athyper/platform-icons";
+import { BellIcon, CheckIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, CloseIcon, InboxIcon, InfoIcon, WarningIcon } from "@athyper/platform-icons";
 import * as React from "react";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
@@ -145,7 +145,7 @@ export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClos
         {!dataSource?.loading && !dataSource?.error && !groups.length ? <ActivityEmpty tab={activeTab} filtered={activeTab === "notifications" ? notificationScope === "unread" : inboxScope === "priority"}/> : null}
       </div>
 
-      {fullPageHref ? <footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronGlyph/></a></footer> : null}
+      {fullPageHref ? <footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronRightIcon/></a></footer> : null}
     </aside>
   </>, document.body);
 }
@@ -170,11 +170,11 @@ function NotificationRow({ item, onMarkRead }: { readonly item: ShellNotificatio
   const content = <>
     <span className="athyper-activity-center__item-icon" data-tone={item.tone ?? "info"} aria-hidden="true"><NotificationToneGlyph tone={item.tone ?? "info"}/></span>
     <span className="athyper-activity-center__item-copy"><span><strong>{item.title}</strong>{item.unread ? <i role="img" aria-label="Unread"/> : null}</span>{item.detail ? <p>{item.detail}</p> : null}<small>{item.sourceLabel ? `${item.sourceLabel} · ` : null}<time dateTime={item.timestamp}>{item.timestampLabel}</time></small></span>
-    <ChevronGlyph/>
+    <ChevronRightIcon/>
   </>;
   return <article className="athyper-activity-center__item" data-unread={Boolean(item.unread)}>
     {item.href ? <a href={item.href} onClick={() => { if (item.unread) void onMarkRead?.(item); }}>{content}</a> : <div>{content}</div>}
-    {item.unread && onMarkRead ? <button className="athyper-activity-center__item-action" type="button" aria-label={`Mark “${item.title}” as read`} title="Mark as read" onClick={() => void onMarkRead(item)}><CheckGlyph/></button> : null}
+    {item.unread && onMarkRead ? <button className="athyper-activity-center__item-action" type="button" aria-label={`Mark “${item.title}” as read`} title="Mark as read" onClick={() => void onMarkRead(item)}><CheckIcon/></button> : null}
   </article>;
 }
 
@@ -182,11 +182,11 @@ function InboxRow({ item, onComplete }: { readonly item: ShellInboxItem; readonl
   const content = <>
     <span className="athyper-activity-center__item-icon" data-priority={item.priority ?? "normal"} aria-hidden="true"><InboxItemGlyph/></span>
     <span className="athyper-activity-center__item-copy"><span><strong>{item.title}</strong>{item.priority && item.priority !== "normal" ? <em data-priority={item.priority}>{item.priority}</em> : null}</span>{item.detail ? <p>{item.detail}</p> : null}{item.sourceLabel || item.assigneeLabel || item.dueLabel ? <small>{[item.sourceLabel, item.assigneeLabel, item.dueLabel].filter(Boolean).join(" · ")}</small> : null}</span>
-    <ChevronGlyph/>
+    <ChevronRightIcon/>
   </>;
   return <article className="athyper-activity-center__item">
     {item.href ? <a href={item.href}>{content}</a> : <div>{content}</div>}
-    {onComplete ? <button className="athyper-activity-center__item-action" type="button" aria-label={`Complete “${item.title}”`} title="Mark complete" onClick={() => void onComplete(item)}><CheckGlyph/></button> : null}
+    {onComplete ? <button className="athyper-activity-center__item-action" type="button" aria-label={`Complete “${item.title}”`} title="Mark complete" onClick={() => void onComplete(item)}><CheckIcon/></button> : null}
   </article>;
 }
 
@@ -194,7 +194,7 @@ function ActivityEmpty({ tab, filtered }: { readonly tab: ShellActivityTab; read
   const notification = tab === "notifications";
   const title = filtered ? (notification ? "No unread notifications" : "No priority work") : (notification ? "You're all caught up" : "Nothing needs your attention");
   const detail = filtered ? "Switch to All to see the rest of your activity." : notification ? "Approvals, mentions, and important system changes will appear here." : "Assigned tasks, approvals, and conversations will appear here when action is needed.";
-  return <div className="athyper-activity-center__empty"><span aria-hidden="true"><ActivityGlyph kind={tab}/><CheckGlyph/></span><strong>{title}</strong><p>{detail}</p></div>;
+  return <div className="athyper-activity-center__empty"><span aria-hidden="true"><ActivityGlyph kind={tab}/><CircleCheckIcon/></span><strong>{title}</strong><p>{detail}</p></div>;
 }
 
 function ActivityLoading() { return <div className="athyper-activity-center__loading" role="status"><span className="athyper-visually-hidden">Loading activity</span>{[0, 1, 2, 3].map((item) => <i key={item}/>)}</div>; }
@@ -206,8 +206,6 @@ function groupItems<T extends { readonly groupLabel?: string }>(items: readonly 
   return Array.from(groups, ([label, groupedItems]) => ({ label, items: groupedItems }));
 }
 function formatCount(count: number) { return count > 99 ? "99+" : String(count); }
-function ActivityGlyph({ kind }: { readonly kind: ShellActivityTab }) { return kind === "notifications" ? <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z"/><path d="M10 21h4"/></svg> : <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16v14H4z"/><path d="m4 13 4-3 3 3h2l3-3 4 3"/></svg>; }
-function NotificationToneGlyph({ tone }: { readonly tone: ShellNotificationTone }) { return tone === "critical" ? <svg viewBox="0 0 24 24"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 9v5M12 17h.01"/></svg> : tone === "success" ? <CheckGlyph/> : tone === "warning" ? <svg viewBox="0 0 24 24"><path d="M12 4 3 20h18L12 4Z"/><path d="M12 9v5M12 17h.01"/></svg> : <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>; }
-function InboxItemGlyph() { return <svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="16" rx="2"/><path d="M9 9h6M9 13h4"/></svg>; }
-function CheckGlyph() { return <svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>; }
-function ChevronGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>; }
+function ActivityGlyph({ kind }: { readonly kind: ShellActivityTab }) { return kind === "notifications" ? <BellIcon/> : <InboxIcon/>; }
+function NotificationToneGlyph({ tone }: { readonly tone: ShellNotificationTone }) { return tone === "critical" || tone === "warning" ? <WarningIcon/> : tone === "success" ? <CircleCheckIcon/> : <InfoIcon/>; }
+function InboxItemGlyph() { return <ClipboardCheckIcon/>; }

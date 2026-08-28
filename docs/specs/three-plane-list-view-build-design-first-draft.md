@@ -646,6 +646,8 @@ cursor and page size
 
 **Exit:** A server integration test can retrieve one correctly scoped descriptor and row page for each plane, and all negative-scope tests pass.
 
+Implementation checkpoint (2026-08-27): Neon `business_partner` sends an explicit company/legal-entity/operating-organization coordinate, and Mesh `network_relationship` sends an explicit actor network-account coordinate. Each plane resolver revalidates its coordinate against the current principal's server-side experience catalog and emits a closed repository constraint. Studio `metadata_entity` uses a Studio-owned, code-registered read adapter with a global-or-current-tenant catalog constraint; it deliberately does not publish fake generic CRUD metadata because Studio's existing permission is a governed `system_action`, not an `entity_operation`. Row and count predicates, cursors, and response fingerprints bind the resolved scope, with missing, invalid, incompatible, and cross-scope cases negatively tested. The remaining Phase 0 naming issue is migration from the currently published Mesh permission `mesh.catalog.network_relationship.read` to the reviewed canonical name `mesh.network.network_relationship.read` after that permission is released.
+
 ### Phase 1 — Read-only table vertical slice
 
 - Shared frame, table, compact mobile cards, semantic formatting, skeleton/empty/error states.
@@ -653,6 +655,8 @@ cursor and page size
 - Neon `business_partner`, Mesh `network_relationship`, and a Studio catalog slice.
 
 **Exit:** All three routes use the same shared runtime with no plane branch inside it; accessibility and cold/warm first-row targets pass.
+
+Implementation checkpoint (2026-08-27): the shared Phase 1 runtime is now wired to Neon `business_partner`, Mesh `network_relationship`, and Studio `metadata_entity` at `/app/:entity`, `/workspace/:entity`, and `/admin/catalogs/:catalog`, respectively. It provides debounced server search, descriptor-limited filters, tri-state single sort, column visibility and keyboard ordering, density, table/compact modes, cursor history, page-size selection, semantic rendering, responsive cards, URL restoration, and distinct initial/subsequent loading and failure states. Development evidence includes 71 business partners with scoped counts of 30 CATL, 20 Athyper APAC, and 20 Athyper EMEA; 49 cross-tenant Mesh relationships with actor-account counts of 17, 17, and 15; and 30 global Studio metadata entities. The Mesh runtime publication is active at release 1, while Studio intentionally uses its administrative read adapter. Contract, component, server, database, and production-E2E definitions cover URL restoration, context replacement, stale-request cancellation, cursor/scope binding, invalid scope denial, WCAG scanning, and LCP/INP budgets. The Phase 1 implementation is deployed locally; final closure still requires a fresh credentialed browser session to execute the live accessibility/performance journeys.
 
 ### Phase 2 — Organize, actions, and saved views
 
@@ -708,12 +712,11 @@ The three-plane List View is done when:
 
 ## 17. Open questions
 
-- Which exact route namespace should each plane expose? The prior canonical design used Neon `/app/:entity`; Mesh previously proposed `/workspace/:entity`; Studio needs an approved administrative namespace.
-- Which Studio catalog is the first real slice: metadata entities, change sets, releases, identity, or operations jobs?
-- Should work-context selection be persisted in the server session, or sent as an explicit validated coordinate on every list request? The latter is more composable; the former improves server rendering. Either must invalidate principal query state consistently.
+- Route namespaces are now fixed for Phase 1 as Neon `/app/:entity`, Mesh `/workspace/:entity`, and Studio `/admin/catalogs/:catalog`.
+- The first Studio slice is fixed as the metadata entity catalog through a Studio-owned read adapter.
+- Phase 1 uses an explicit server-validated coordinate on every scoped list request; local state may remember the selection but is never authority.
 - Is shared saved-view authoring available to ordinary users, designated curators, or Studio administrators only?
 - Which count modes can meet target-scale budgets for each representative entity class?
 - Is client-side loaded-row search still a required user feature, or can the new runtime standardize on server search?
 - Which operations require all-matching selection in the first bulk release?
 - Does spreadsheet inline editing have a committed business use case? If yes, it needs a separate lock/concurrency/validation design before implementation.
-

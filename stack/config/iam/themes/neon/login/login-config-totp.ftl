@@ -15,7 +15,7 @@
   <#include "_theme-resolver.ftl">
   <link rel="stylesheet" href="${url.resourcesPath}/css/login.css" />
 </head>
-<body>
+<body class="kc-page-totp">
 <div class="iam-shell kc-page" data-plane="${iamPlane}">
   <#include "_iam-header.ftl">
 

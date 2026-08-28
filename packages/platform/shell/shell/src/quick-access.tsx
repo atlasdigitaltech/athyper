@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, SearchIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { DerivedShellNavigation } from "./core";
 
@@ -53,6 +54,7 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
   const [undoRecent, setUndoRecent] = useState<readonly ShellQuickAccessItem[]>();
   const search = useRef<HTMLInputElement>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const durableRecords = useDurableRecordFavourites(navigation, dataSource?.favourites !== undefined);
 
   useEffect(() => {
     const stored = readStore(storageKey);
@@ -76,7 +78,7 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
 
   useEffect(() => () => { if (undoTimer.current) clearTimeout(undoTimer.current); }, []);
 
-  const favourites = dataSource?.favourites ?? localStore.favourites;
+  const favourites = dataSource?.favourites ?? mergeFavourites(durableRecords.items, localStore.favourites);
   const recent = dataSource?.recent ?? localStore.recent;
   const favouriteHrefs = useMemo(() => new Set(favourites.map((item) => item.href)), [favourites]);
   const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -98,6 +100,10 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
     const favourite = !favouriteHrefs.has(item.href);
     if (favouritesControlled) {
       dataSource?.onToggleFavourite?.(item, favourite);
+      return;
+    }
+    if (item.id.startsWith("record-bookmark:")) {
+      if (!favourite) void durableRecords.remove(item.id);
       return;
     }
     const next = favourite
@@ -146,12 +152,12 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
   const summary = `${visibleCount}${normalizedQuery ? " matching" : ""} ${visibleNoun}${visibleCount === 1 ? "" : "s"}`;
   return <aside id="athyper-quick-access" className="athyper-quick-access" role="dialog" aria-modal="false" aria-labelledby="athyper-quick-access-title">
     <header className="athyper-quick-access__header">
-      <span className="athyper-quick-access__hero-icon" aria-hidden="true"><StarGlyph filled /></span>
+      <span className="athyper-quick-access__hero-icon" aria-hidden="true"><StarIcon data-filled="true" /></span>
       <span>
         <strong id="athyper-quick-access-title">Quick access</strong>
         <small>Your saved and recently opened work</small>
       </span>
-      <button type="button" className="athyper-quick-access__close" aria-label="Close quick access" onClick={onClose}><CloseGlyph /></button>
+      <button type="button" className="athyper-quick-access__close" aria-label="Close quick access" onClick={onClose}><CloseIcon /></button>
     </header>
 
     <div className="athyper-quick-access__tabs" role="tablist" aria-label="Quick access views">
@@ -160,10 +166,10 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
     </div>
 
     <label className="athyper-quick-access__search">
-      <SearchGlyph />
+      <SearchIcon />
       <span className="athyper-visually-hidden">Filter quick access items</span>
       <input ref={search} type="search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={activeTab === "favourites" ? "Search favourites" : "Search recent work"} maxLength={80} autoComplete="off" />
-      {query ? <button type="button" aria-label="Clear filter" onClick={() => setQuery("")}><CloseGlyph /></button> : <kbd>/</kbd>}
+      {query ? <button type="button" aria-label="Clear filter" onClick={() => setQuery("")}><CloseIcon /></button> : <kbd>/</kbd>}
     </label>
 
     {activeTab === "recent" ? <div className="athyper-quick-access__scope" aria-label="Recent item type">
@@ -188,6 +194,44 @@ export function ShellQuickAccess({ activeTab, tenantId, accountScope, path, navi
   </aside>;
 }
 
+interface DurableBookmarkRow { readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
+function useDurableRecordFavourites(navigation: DerivedShellNavigation, disabled: boolean): { readonly items: readonly ShellQuickAccessItem[]; remove(id: string): Promise<void> } {
+  const [rows, setRows] = useState<readonly DurableBookmarkRow[]>([]);
+  const load = React.useCallback(async () => {
+    if (disabled) return;
+    try {
+      const response = await fetch("/api/relay/record-bookmarks", { credentials: "same-origin", headers: { accept: "application/json" }, cache: "no-store" });
+      if (!response.ok) return;
+      const value = await response.json() as { readonly items?: readonly Readonly<Record<string, unknown>>[] };
+      setRows((value.items ?? []).flatMap((item) => typeof item.entityCode === "string" && typeof item.recordId === "string" && typeof item.createdAt === "string" ? [{ entityCode: item.entityCode, recordId: item.recordId, createdAt: item.createdAt, ...(typeof item.label === "string" ? { label: item.label } : {}) }] : []));
+    } catch { /* Quick Access keeps local page favourites available offline. */ }
+  }, [disabled]);
+  useEffect(() => { void load(); const changed = () => void load(); window.addEventListener("athyper:record-bookmarks-changed", changed); return () => window.removeEventListener("athyper:record-bookmarks-changed", changed); }, [load]);
+  const items = useMemo(() => rows.map((row): ShellQuickAccessItem => {
+    const route = navigation.routes.find((candidate) => candidate.href.endsWith(`/${row.entityCode}`) || candidate.id === row.entityCode);
+    const label = row.label ?? row.recordId;
+    const href = route ? `${route.href}?q=${encodeURIComponent(label)}` : navigation.landingHref ?? "/";
+    return { id: `record-bookmark:${row.entityCode}:${row.recordId}`, href, label, description: route?.label ?? humanize(row.entityCode), group: route?.label ?? humanize(row.entityCode), kind: "record", visitedAt: row.createdAt };
+  }), [rows, navigation]);
+  const remove = React.useCallback(async (id: string) => {
+    const match = /^record-bookmark:([a-z][a-z0-9_.-]{0,126}):([0-9a-f-]{36})$/iu.exec(id);
+    if (!match) return;
+    const [entityCode, recordId] = [match[1]!, match[2]!];
+    const csrf = readCookie("__Host-athyper-csrf") ?? readCookie("athyper-csrf");
+    if (!csrf) return;
+    const previous = rows; setRows((current) => current.filter((row) => !(row.entityCode === entityCode && row.recordId === recordId)));
+    try {
+      const response = await fetch(`/api/relay/record-bookmarks/${encodeURIComponent(entityCode)}`, { method: "DELETE", credentials: "same-origin", headers: { accept: "application/json", "content-type": "application/json", "x-csrf-token": csrf, "idempotency-key": `quick-access:remove:${crypto.randomUUID()}` }, body: JSON.stringify({ records: [{ id: recordId }] }) });
+      if (!response.ok) throw new Error("remove failed");
+      window.dispatchEvent(new CustomEvent("athyper:record-bookmarks-changed", { detail: { entityCode, operation: "remove", recordIds: [recordId] } }));
+    } catch { setRows(previous); }
+  }, [rows]);
+  return { items, remove };
+}
+
+function mergeFavourites(durable: readonly ShellQuickAccessItem[], local: readonly ShellQuickAccessItem[]): readonly ShellQuickAccessItem[] { const hrefs = new Set(durable.map((item) => item.href)); return [...durable, ...local.filter((item) => !hrefs.has(item.href))]; }
+function readCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
+
 function TabButton({ tab, activeTab, count, onSelect }: { readonly tab: ShellQuickAccessTab; readonly activeTab: ShellQuickAccessTab; readonly count: number; readonly onSelect: (tab: ShellQuickAccessTab) => void }) {
   const label = tab === "favourites" ? "Favourites" : "Recent";
   const selectPeer = () => {
@@ -195,7 +239,7 @@ function TabButton({ tab, activeTab, count, onSelect }: { readonly tab: ShellQui
     onSelect(next);
     requestAnimationFrame(() => document.querySelector<HTMLButtonElement>(`#quick-access-tab-${next}`)?.focus());
   };
-  return <button id={`quick-access-tab-${tab}`} type="button" role="tab" aria-selected={activeTab === tab} aria-controls={`quick-access-${tab}`} tabIndex={activeTab === tab ? 0 : -1} onClick={() => onSelect(tab)} onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); selectPeer(); } }}><span>{tab === "favourites" ? <StarGlyph /> : <ClockGlyph />}{label}</span><b>{count}</b></button>;
+  return <button id={`quick-access-tab-${tab}`} type="button" role="tab" aria-selected={activeTab === tab} aria-controls={`quick-access-${tab}`} tabIndex={activeTab === tab ? 0 : -1} onClick={() => onSelect(tab)} onKeyDown={(event) => { if (event.key === "ArrowLeft" || event.key === "ArrowRight") { event.preventDefault(); selectPeer(); } }}><span>{tab === "favourites" ? <StarIcon /> : <HistoryIcon />}{label}</span><b>{count}</b></button>;
 }
 
 function ScopeButton({ kind, label, count, active, onSelect }: { readonly kind: ShellQuickAccessKind; readonly label: string; readonly count: number; readonly active: boolean; readonly onSelect: (kind: ShellQuickAccessKind) => void }) {
@@ -208,17 +252,17 @@ function QuickAccessGroup({ label, items, favouriteHrefs, onToggleFavourite, onD
     <ul>{items.map((item) => {
       const favourite = favouriteHrefs.has(item.href);
       return <li key={item.id} className="athyper-quick-access__item">
-        <span className="athyper-quick-access__item-icon" data-kind={item.kind ?? "page"} aria-hidden="true">{item.kind === "record" ? <RecordGlyph /> : <PageGlyph />}</span>
+        <span className="athyper-quick-access__item-icon" data-kind={item.kind ?? "page"} aria-hidden="true"><QuickAccessItemIcon item={item}/></span>
         <a href={item.href}>
           <strong>{item.label}</strong>
           <span>{item.description ?? item.group ?? (item.kind === "record" ? "Business record" : "Workspace page")}</span>
-          {showTime && item.visitedAt ? <small><ClockGlyph />{relativeTime(item.visitedAt)}</small> : null}
+          {showTime && item.visitedAt ? <small><ClockIcon />{relativeTime(item.visitedAt)}</small> : null}
         </a>
         {onToggleFavourite || onDismiss ? <span className="athyper-quick-access__item-actions">
-          {onToggleFavourite ? <button type="button" aria-label={favourite ? `Remove ${item.label} from favourites` : `Add ${item.label} to favourites`} aria-pressed={favourite} title={favourite ? "Remove from favourites" : "Add to favourites"} onClick={() => onToggleFavourite(item)}><StarGlyph filled={favourite} /></button> : null}
-          {onDismiss ? <button type="button" aria-label={`Remove ${item.label} from recent history`} title="Remove from recent" onClick={() => onDismiss(item)}><CloseGlyph /></button> : null}
+          {onToggleFavourite ? <button type="button" aria-label={favourite ? `Remove ${item.label} from favourites` : `Add ${item.label} to favourites`} aria-pressed={favourite} title={favourite ? "Remove from favourites" : "Add to favourites"} onClick={() => onToggleFavourite(item)}><StarIcon data-filled={favourite ? "true" : undefined} /></button> : null}
+          {onDismiss ? <button type="button" aria-label={`Remove ${item.label} from recent history`} title="Remove from recent" onClick={() => onDismiss(item)}><CloseIcon /></button> : null}
         </span> : null}
-        <ChevronGlyph />
+        <ChevronRightIcon />
       </li>;
     })}</ul>
   </section>;
@@ -229,12 +273,12 @@ function QuickAccessEmpty({ variant, filtered, recentKind, onShowRecent, onShowP
   const title = filtered ? "No matching items" : favourites ? "Build your working set" : `No recent ${recentKind === "record" ? "records" : "pages"}`;
   const detail = filtered ? "Try another name, code, or workspace." : favourites ? "Star something from Recent to keep important work one click away." : `Open ${recentKind === "record" ? "a business record" : "another workspace page"} and it will appear here automatically.`;
   return <div className="athyper-quick-access__empty">
-    <span aria-hidden="true">{favourites ? <StarGlyph /> : <ClockGlyph />}</span>
+    <span aria-hidden="true">{favourites ? <StarIcon /> : <HistoryIcon />}</span>
     <strong>{title}</strong>
     <p>{detail}</p>
-    {filtered && onClearFilter ? <button type="button" onClick={onClearFilter}>Clear search <ChevronGlyph /></button> : null}
-    {!filtered && favourites && onShowRecent ? <button type="button" onClick={onShowRecent}>Browse recent work <ChevronGlyph /></button> : null}
-    {!filtered && !favourites && onShowPeer ? <button type="button" onClick={onShowPeer}>Show recent {recentKind === "record" ? "pages" : "records"} <ChevronGlyph /></button> : null}
+    {filtered && onClearFilter ? <button type="button" onClick={onClearFilter}>Clear search <ChevronRightIcon /></button> : null}
+    {!filtered && favourites && onShowRecent ? <button type="button" onClick={onShowRecent}>Browse recent work <ChevronRightIcon /></button> : null}
+    {!filtered && !favourites && onShowPeer ? <button type="button" onClick={onShowPeer}>Show recent {recentKind === "record" ? "pages" : "records"} <ChevronRightIcon /></button> : null}
   </div>;
 }
 
@@ -365,10 +409,4 @@ function hashScope(value: string): string {
 }
 
 function slug(value: string): string { return value.toLocaleLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 48) || "items"; }
-function StarGlyph({ filled = false }: { readonly filled?: boolean }) { return <svg aria-hidden="true" viewBox="0 0 24 24" data-filled={filled || undefined}><path d="m12 3 2.75 5.57 6.15.9-4.45 4.33 1.05 6.12L12 17.03l-5.5 2.89 1.05-6.12L3.1 9.47l6.15-.9L12 3Z" /></svg>; }
-function ClockGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" /><path d="M12 7v5l3.5 2" /></svg>; }
-function SearchGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.5 15.5 4 4" /></svg>; }
-function CloseGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17" /></svg>; }
-function ChevronGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" /></svg>; }
-function RecordGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 3.5h8l4 4V20H6z" /><path d="M14 3.5v4h4M9 12h6M9 15.5h4" /></svg>; }
-function PageGlyph() { return <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M3.5 9h17M8 9v10" /></svg>; }
+function QuickAccessItemIcon({item}:{readonly item:ShellQuickAccessItem}) { if(item.kind!=="record")return <PanelsTopLeftIcon/>;return /business partner/i.test(`${item.label} ${item.description??""} ${item.group??""}`)?<ContactRoundIcon/>:<FileTextIcon/>; }

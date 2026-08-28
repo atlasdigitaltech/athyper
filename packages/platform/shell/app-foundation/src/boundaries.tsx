@@ -15,6 +15,10 @@ export interface AppErrorBoundaryProps {
   readonly onClearPrincipal?: () => void | Promise<void>;
   readonly onTelemetry?: (event: RedactedBoundaryEvent) => void;
   readonly onCompare?: () => void;
+  /** Use `content` when the boundary is rendered inside an authenticated application shell. */
+  readonly surface?: "page" | "content";
+  readonly homeHref?: string;
+  readonly homeLabel?: string;
 }
 
 export function AppErrorBoundary(props: AppErrorBoundaryProps) {
@@ -33,17 +37,17 @@ export function AppErrorBoundary(props: AppErrorBoundaryProps) {
     });
     return () => { cancelled = true; };
   }, [model.kind, props.autoNavigate, props.onClearPrincipal]);
-  return <ErrorSurface model={model} reset={props.reset} applicationName={props.applicationName} onCompare={props.onCompare} />;
+  return <ErrorSurface model={model} reset={props.reset} applicationName={props.applicationName} onCompare={props.onCompare} surface={props.surface} homeHref={props.homeHref} homeLabel={props.homeLabel} />;
 }
 
 export function GlobalAppErrorBoundary(props: AppErrorBoundaryProps) {
   return <html lang="en"><body><AppErrorBoundary {...props} /></body></html>;
 }
 
-export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void }) {
+export function ErrorSurface({ model, reset, applicationName = "Athyper", onCompare, surface = "page", homeHref, homeLabel = "Return to workspace" }: { readonly model: AppErrorModel; readonly reset?: () => void; readonly applicationName?: string; readonly onCompare?: () => void; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string }) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [model.kind]);
-  return <main className="a-error-surface" data-error-kind={model.kind}>
+  const content = <>
     <PresentationCard className="a-error-surface__card" aria-labelledby="app-error-title" aria-describedby="app-error-description">
       <div role="alert" aria-live="assertive" aria-atomic="true" className="a-visually-hidden">An error needs your attention.</div>
       <div aria-hidden="true" className="a-error-surface__mark">!</div>
@@ -52,9 +56,12 @@ export function ErrorSurface({ model, reset, applicationName = "Athyper", onComp
       <p id="app-error-description" className="a-error-surface__description">{model.description}</p>
       {model.kind === "required-action" ? <IdentityActionList actions={model.requiredActions} /> : null}
       {model.requestId ? <p className="a-error-surface__request">Request ID: <code>{model.requestId}</code></p> : null}
-      <div className="a-error-surface__actions">{actions(model, reset, onCompare)}</div>
+      <div className="a-error-surface__actions">{actions(model, reset, onCompare)}{homeHref ? <ActionLink variant={model.action === "none" ? "primary" : "secondary"} href={homeHref}>{homeLabel}</ActionLink> : null}</div>
     </PresentationCard>
-  </main>;
+  </>;
+  return surface === "content"
+    ? <section className="a-error-surface a-error-surface--content" data-error-kind={model.kind}>{content}</section>
+    : <main className="a-error-surface" data-error-kind={model.kind}>{content}</main>;
 }
 
 function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => void): ReactNode {
@@ -68,7 +75,7 @@ function actions(model: AppErrorModel, reset?: () => void, onCompare?: () => voi
 function IdentityActionList({ actions }: { readonly actions: readonly string[] }) { return actions.length ? <div className="a-error-surface__notice"><p><strong>Required actions</strong></p><ul>{actions.map((action) => <li key={action}>{humanize(action)}</li>)}</ul></div> : null; }
 function humanize(value: string): string { return value.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 
-export function NotFoundBoundary({ applicationName = "Athyper" }: { readonly applicationName?: string }) { return <ErrorSurface applicationName={applicationName} model={Object.freeze({ kind: "unexpected", title: "Page not found", description: "The page may have moved or you may not have access to it.", action: "none", canRetry: false, preserveInput: false, requiredActions: [] })} />; }
+export function NotFoundBoundary({ applicationName = "Athyper", surface = "page", homeHref, homeLabel }: { readonly applicationName?: string; readonly surface?: "page" | "content"; readonly homeHref?: string; readonly homeLabel?: string }) { return <ErrorSurface applicationName={applicationName} surface={surface} homeHref={homeHref} homeLabel={homeLabel} model={Object.freeze({ kind: "unexpected", title: "Page not found", description: "We could not find this page in your current workspace. Check the address, or return to a page available from the navigation.", action: "none", canRetry: false, preserveInput: false, requiredActions: [] })} />; }
 
 export function EmptyStateBoundary({ title = "Nothing here yet", description = "There is no content to show.", action }: { readonly title?: string; readonly description?: string; readonly action?: ReactNode }) { return <section className="a-empty-state" aria-labelledby="empty-state-title"><h2 id="empty-state-title">{title}</h2><p>{description}</p>{action}</section>; }
 

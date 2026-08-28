@@ -7,12 +7,12 @@ spec:
   sourceRevision: working-tree
   images:
     - id: neon-web
-      reference: athyper/neon-web:normalized-locales-20260825
+      reference: athyper/neon-web:governed-import-20260828
     - id: mesh-web
-      reference: athyper/mesh-web:normalized-locales-20260825
+      reference: athyper/mesh-web:governed-import-20260828
     - id: studio-web
-      reference: athyper/studio-web:normalized-locales-20260825
+      reference: athyper/studio-web:governed-import-20260828
     - id: runtime-server
-      reference: athyper/runtime-server:normalized-locales-20260825
+      reference: athyper/runtime-server:governed-import-20260828
     - id: iam
       reference: athyper/keycloak:canonical-svg-favicon

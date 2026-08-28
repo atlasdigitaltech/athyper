@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { JSDOM } from "jsdom";
-import { Checkbox, Dialog, DialogContent, DialogTrigger, Menu, MenuContent, MenuItem, MenuTrigger, Tabs, TabsContent, TabsList, TabsTrigger } from "../../packages/platform/foundation/ui/src/index";
+import { Checkbox, Dialog, DialogContent, DialogTrigger, DrawerContent, Menu, MenuContent, MenuItem, MenuTrigger, Tabs, TabsContent, TabsList, TabsTrigger } from "../../packages/platform/foundation/ui/src/index";
 
 let dom: JSDOM;
 let root: Root;
@@ -23,6 +23,7 @@ beforeEach(() => {
 afterEach(async () => { await act(async () => root.unmount()); dom.window.close(); });
 
 const click = async (element: Element) => act(async () => element.dispatchEvent(new MouseEvent("click", { bubbles: true })));
+const pointerDown = async (element: Element) => act(async () => element.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true })));
 
 describe("primitive interactions", () => {
   it("supports uncontrolled tabs and keyboard arrow selection", async () => {
@@ -49,6 +50,27 @@ describe("primitive interactions", () => {
     await click(host.querySelector('[aria-haspopup="menu"]')!); assert.equal(requested, true); assert.equal(host.querySelector('[role="menu"]'), null);
   });
 
+  it("dismisses an open menu when the user interacts outside it", async () => {
+    await act(async () => root.render(<div><Menu><MenuTrigger>Actions</MenuTrigger><MenuContent><MenuItem>Archive</MenuItem></MenuContent></Menu><button type="button" id="outside">Outside</button></div>));
+    await click(host.querySelector('[aria-haspopup="menu"]')!);
+    assert.ok(host.querySelector('[role="menu"]'));
+    await pointerDown(host.querySelector("#outside")!);
+    assert.equal(host.querySelector('[role="menu"]'), null);
+  });
+
+  it("keeps only one toolbar menu open and preserves composed trigger handlers", async () => {
+    let triggerClicks = 0;
+    await act(async () => root.render(<div><Menu><MenuTrigger onClick={() => { triggerClicks += 1; }}>Row 1</MenuTrigger><MenuContent>View options</MenuContent></Menu><Menu><MenuTrigger>More</MenuTrigger><MenuContent>More options</MenuContent></Menu></div>));
+    const triggers = host.querySelectorAll<HTMLButtonElement>('[aria-haspopup="menu"]');
+    await click(triggers[0]!);
+    assert.equal(triggerClicks, 1);
+    assert.equal(host.querySelector('[role="menu"]')?.textContent, "View options");
+    await click(triggers[1]!);
+    assert.equal(host.querySelectorAll('[role="menu"]').length, 1);
+    assert.equal(host.querySelector('[role="menu"]')?.textContent, "More options");
+    assert.equal(triggers[0]?.getAttribute("aria-expanded"), "false");
+  });
+
   it("uses native checkbox state and closes dialogs with Escape while restoring focus", async () => {
     await act(async () => root.render(<><Checkbox aria-label="Remember" /><Dialog><DialogTrigger>Open</DialogTrigger><DialogContent title="Review"><button type="button">Inside</button></DialogContent></Dialog></>));
     const checkbox = host.querySelector<HTMLInputElement>('input[type="checkbox"]')!; await click(checkbox); assert.equal(checkbox.checked, true);
@@ -56,5 +78,24 @@ describe("primitive interactions", () => {
     assert.equal(document.activeElement?.textContent, "Inside");
     await act(async () => document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
     assert.equal(host.querySelector('[role="dialog"]'), null); assert.equal(document.activeElement, trigger);
+  });
+
+  it("preserves the active dialog control when controlled content rerenders", async () => {
+    const renderDialog = (description: string) => <Dialog open onOpenChange={() => undefined}><DialogContent title="Filters" description={description}><button id="field" type="button">Field</button><button id="value" type="button">Value</button></DialogContent></Dialog>;
+    await act(async () => root.render(renderDialog("Initial")));
+    const value = host.querySelector<HTMLButtonElement>("#value")!;
+    value.focus();
+    await act(async () => root.render(renderDialog("Updated")));
+    assert.equal(document.activeElement, value);
+  });
+
+  it("renders an accessible drawer and dismisses it from the scrim", async () => {
+    await act(async () => root.render(<Dialog defaultOpen><DrawerContent title="Filters" description="Refine records"><button type="button">Apply</button></DrawerContent></Dialog>));
+    const drawer = document.body.querySelector<HTMLElement>(".a-drawer")!;
+    assert.equal(drawer.getAttribute("role"), "dialog");
+    assert.equal(drawer.getAttribute("aria-modal"), "true");
+    assert.match(drawer.textContent ?? "", /Filters.*Refine records.*Apply/);
+    await click(document.body.querySelector<HTMLButtonElement>(".a-dialog-scrim")!);
+    assert.equal(document.body.querySelector(".a-drawer"), null);
   });
 });

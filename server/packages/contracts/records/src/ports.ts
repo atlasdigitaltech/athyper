@@ -7,10 +7,65 @@ import type {
   TransitionRecordCommand,
 } from "./mutation.js";
 import type { GetRecordQuery, ListRecordsQuery, RecordDetailResult, RecordListResult } from "./query.js";
-import type { BulkCommand, BulkExecutionResult, BulkPreflightResult, LockAcquisitionResult, RecordEditLock, RecordSnapshot, RecordSnapshotCaptureInput, RegisteredActionCommand, RegisteredActionResult, SnapshotCaptureKind, SnapshotCaptureReceipt, SnapshotComparison, SnapshotReadScope, SnapshotRetentionClass } from "./advanced.js";
+import type { BulkCommand, BulkExecutionResult, BulkPreflightResult, ImportValidationRow, LockAcquisitionResult, RecordEditLock, RecordImportOperation, RecordImportSession, RecordSnapshot, RecordSnapshotCaptureInput, RegisteredActionCommand, RegisteredActionResult, SnapshotCaptureKind, SnapshotCaptureReceipt, SnapshotComparison, SnapshotReadScope, SnapshotRetentionClass } from "./advanced.js";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
+
+export type RecordCollectionScopeConstraint = Readonly<{
+  readonly kind: "neon.business_partner.operating_organization.v1";
+  readonly operatingOrganizationId: string;
+}> | Readonly<{
+  readonly kind: "mesh.network_relationship.actor_account.v1";
+  readonly networkAccountId: string;
+}> | Readonly<{
+  readonly kind: "studio.metadata_entity.catalog.v1";
+  readonly tenantId: string;
+}>;
+
+export type RecordCollectionScopeResolution =
+  | Readonly<{ readonly status: "context_required"; readonly labels: readonly { readonly key: string; readonly label: string; readonly value: string }[] }>
+  | Readonly<{ readonly status: "forbidden"; readonly code: string; readonly message: string; readonly labels: readonly { readonly key: string; readonly label: string; readonly value: string }[] }>
+  | Readonly<{
+      readonly status: "ready";
+      readonly authorizationResource: Readonly<Record<string, string>>;
+      readonly constraints: readonly RecordCollectionScopeConstraint[];
+      readonly labels: readonly { readonly key: string; readonly label: string; readonly value: string }[];
+      /** Canonical server-resolved material included in descriptor and cursor authority hashes. */
+      readonly fingerprintMaterial: Readonly<Record<string, string>>;
+    }>;
+
+export interface RecordCollectionScopeResolver {
+  resolve(input: Readonly<{
+    readonly context: VerifiedRequestContext;
+    readonly descriptor: EntityRuntimeDescriptor;
+    readonly operationCode: "read" | "import";
+    readonly coordinate?: ListRecordsQuery["scopeCoordinate"];
+  }>): Promise<RecordCollectionScopeResolution>;
+}
+
+export interface GovernedImportAdapter<Transaction = unknown> {
+  readonly key: string;
+  supports(descriptor: EntityRuntimeDescriptor): boolean;
+  operations(descriptor: EntityRuntimeDescriptor): readonly RecordImportOperation[];
+  validate(input: {
+    readonly context: VerifiedRequestContext;
+    readonly descriptor: EntityRuntimeDescriptor;
+    readonly session: RecordImportSession;
+    readonly scope: Extract<RecordCollectionScopeResolution, { readonly status: "ready" }>;
+    readonly row: Readonly<Record<string, unknown>>;
+    readonly rowNumber: number;
+  }): Promise<ImportValidationRow>;
+  apply(input: {
+    readonly context: VerifiedRequestContext;
+    readonly descriptor: EntityRuntimeDescriptor;
+    readonly session: RecordImportSession;
+    readonly scope: Extract<RecordCollectionScopeResolution, { readonly status: "ready" }>;
+    readonly row: Readonly<Record<string, unknown>>;
+    readonly rowNumber: number;
+    readonly transaction: Transaction;
+  }): Promise<{ readonly outcome: "created" | "updated" | "deleted" | "requested" | "drafted" | "skipped"; readonly recordId?: string }>;
+}
 
 export interface RecordMutationService {
   create(command: CreateRecordCommand): Promise<RecordMutationResult>;
@@ -32,9 +87,16 @@ export interface RecordRepositoryListInput {
   readonly cursor?: string;
   readonly filters: ListRecordsQuery["filters"];
   readonly sort: ListRecordsQuery["sort"];
+  readonly group?: string;
   readonly search?: string;
   readonly countMode: ListRecordsQuery["countMode"];
   readonly projection: readonly string[];
+  /** Trusted identities used by server-side authorization revalidation. */
+  readonly recordIds?: readonly string[];
+  /** Binds opaque cursors to the authenticated principal and effective authorization generation. */
+  readonly cursorScope: string;
+  /** Trusted constraints emitted only by a registered server-side scope resolver. */
+  readonly collectionScope: readonly RecordCollectionScopeConstraint[];
 }
 
 export interface RecordRepository<Transaction = unknown> {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { createRelayHandler, IAM_ME_OPERATION, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 const session = (plane = "neon", tenantId = "tenant-1", token = "server-token"): RelaySessionContext => ({ accessToken: token, plane, realmKey: "athyper", tenantId, principalId: "principal-1", authEpoch: 7, csrfToken: "csrf-proof" });
@@ -8,6 +9,49 @@ function authority(current = session()): RelaySessionAuthority & { invalidated: 
 function relay(input: { plane?: string; operation?: RelayOperation; authority?: RelaySessionAuthority; fetch?: typeof fetch; diagnostics?: RelayDiagnostic[]; timeout?: number } = {}) { return createRelayHandler({ plane: input.plane ?? "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [input.operation ?? IAM_ME_OPERATION], session: input.authority ?? authority(), fetch: input.fetch ?? (async () => new Response("{}", { headers: { "content-type": "application/json" } })), timeouts: input.timeout ? { json: input.timeout, stream: input.timeout, upload: input.timeout, download: input.timeout } : undefined, onDiagnostic: (value) => input.diagnostics?.push(value) }); }
 
 describe("Phase 4 hardened BFF relay", () => {
+  it("registers descriptor and list reads in every plane that hosts the shared List View", () => {
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
+      assert.match(source, /ENTITY_LIST_DESCRIPTOR_OPERATION/);
+      assert.match(source, /ENTITY_LIST_QUERY_OPERATION/);
+      assert.match(source, /operations:\s*\[[^\]]*ENTITY_LIST_DESCRIPTOR_OPERATION[^\]]*ENTITY_LIST_QUERY_OPERATION/s);
+    }
+  });
+
+  it("registers the bounded transfer workspace and governed import relay operations in every plane", async () => {
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
+      assert.match(source, /RECORD_TRANSFER_RELAY_OPERATIONS/);
+      assert.match(source, /operations:\s*\[[^\]]*\.\.\.RECORD_TRANSFER_RELAY_OPERATIONS/s);
+    }
+    let upstream = "";
+    const handler = createRelayHandler({
+      plane: "neon",
+      runtimeApiUrl: "http://platform-host:4000/api",
+      appOrigin: "https://neon.example",
+      operations: RECORD_TRANSFER_RELAY_OPERATIONS,
+      session: authority(),
+      fetch: async (url) => { upstream = String(url); return new Response('{"items":[]}', { headers: { "content-type": "application/json" } }); },
+    });
+    const list = await handler(new Request("https://neon.example/api/relay/records/transfers?limit=50"), context("records", "transfers"));
+    assert.equal(list.status, 200);
+    assert.equal(upstream, "http://platform-host:4000/api/records/transfers?limit=50");
+    const unsafeWithoutCsrf = await handler(new Request("https://neon.example/api/relay/records/business_partner/imports", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "import-1" },
+      body: "{}",
+    }), context("records", "business_partner", "imports"));
+    assert.equal(unsafeWithoutCsrf.status, 403);
+  });
+
+  it("allowlists only the declared entity-list read paths and preserves bounded query parameters", async () => {
+    let upstream = "";
+    const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION], session: authority(), fetch: async (url) => { upstream = String(url); return new Response("{}", { headers: { "content-type": "application/json" } }); } });
+    assert.equal((await handler(new Request("https://neon.example/api/relay/entity-runtime/invoice/list?limit=25"), context("entity-runtime", "invoice", "list"))).status, 200);
+    assert.equal(upstream, "http://platform-host:4000/api/entity-runtime/invoice/list?limit=25");
+    assert.equal((await handler(new Request("https://neon.example/api/relay/records/invoice"), context("records", "invoice"))).status, 404);
+  });
+
   it("injects verified identity for /api/iam/me in every plane without exposing it to the browser", async () => {
     for (const plane of ["neon", "mesh", "studio"]) { let upstreamHeaders = new Headers(); let upstreamUrl = ""; const handler = relay({ plane, authority: authority(session(plane)), fetch: async (url, init) => { upstreamUrl = String(url); upstreamHeaders = new Headers(init?.headers); return new Response(JSON.stringify({ principal: "safe" }), { headers: { "content-type": "application/json", "x-request-id": "request-1", "set-cookie": "fixation=bad", "x-plane": plane, authorization: "Bearer leak" } }); } });
       const response = await handler(new Request(`https://${plane}.example/api/relay/iam/me`, { headers: { authorization: "Bearer attacker", "x-plane": "mesh", "x-tenant-id": "attacker", "x-principal-id": "attacker", "x-realm": "evil", "x-org": "evil", forwarded: "for=evil", "x-real-ip": "127.0.0.1" } }), context("iam", "me"));

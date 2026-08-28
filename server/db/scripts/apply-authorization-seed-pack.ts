@@ -11,7 +11,7 @@ import {
   seedReceipt,
   type ProvisionPlane,
 } from "./safe-provision.js";
-import { applyPlaneSeed } from "./provisioning/authorization-pack-applicator.js";
+import { applyPlaneCatalog, applyPlaneSeed } from "./provisioning/authorization-pack-applicator.js";
 import {
   legalEntityResources,
   loadProvisionInputs,
@@ -26,6 +26,7 @@ export interface ApplyAuthorizationOptions {
   readonly manifestPath?: string;
   readonly databaseUrl?: string;
   readonly dryRun?: boolean;
+  readonly catalogOnly?: boolean;
 }
 
 export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOptions): Promise<unknown> {
@@ -46,7 +47,7 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     networkAccountResources: options.plane === "mesh" ? networkAccountResources(inputs).length : 0,
     authorityRoles: pack.authority.roles.filter((role) => role.plane === options.plane).length,
     authorityGroups: pack.authority.groups.filter((group) => group.plane === options.plane).length,
-    mode: options.dryRun ? "plan" : "apply",
+    mode: options.dryRun ? "plan" : options.catalogOnly ? "catalog-only" : "apply",
   };
   if (options.dryRun) return plan;
 
@@ -58,11 +59,15 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
       `athyper:three-plane:v1:${options.plane}`,
     ]);
-    const result = await applyPlaneSeed(client, inputs, options.plane);
+    const result = options.catalogOnly
+      ? await applyPlaneCatalog(client, inputs, options.plane)
+      : await applyPlaneSeed(client, inputs, options.plane);
     const packSource = await readFile(inputs.authorizationPackPaths[options.plane], "utf8");
     const receipt = seedReceipt({
       plane: options.plane,
-      packKey: `authorization-clean-slate-v1/${options.plane}/three-tenant`,
+      packKey: options.catalogOnly
+        ? `authorization-catalog-v2/${options.plane}`
+        : `authorization-clean-slate-v1/${options.plane}/three-tenant`,
       sourcePath: relativePath(inputs.authorizationPackPaths[options.plane]),
       source: `-- seed-pack-version: ${inputs.manifest.manifestVersion}\n${packSource}`,
       manifestSha256: inputs.manifestSha256,
@@ -70,7 +75,7 @@ export async function applyAuthorizationSeedPack(options: ApplyAuthorizationOpti
     await registerSeedPack(client, receipt);
     await recordSeedExecution(client, receipt, "upgrade");
     await client.query("COMMIT");
-    return { ...plan, mode: "applied", result, receipt };
+    return { ...plan, mode: options.catalogOnly ? "catalog-applied" : "applied", result, receipt };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -113,6 +118,7 @@ async function main(): Promise<void> {
     manifestPath: option(args, "--manifest"),
     databaseUrl: option(args, "--database-url"),
     dryRun: args.includes("--dry-run") || args.includes("--plan"),
+    catalogOnly: args.includes("--catalog-only"),
   });
   process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
 }

@@ -11,7 +11,7 @@ import {
 
 test.beforeEach(async ({ page }, testInfo) => {
   const context = productionContext(testInfo);
-  test.skip(!context.enabled, "set PLAYWRIGHT_PRODUCTION_MATRIX=1 and plane credentials");
+  test.skip(!context.enabled, "set PLAYWRIGHT_PRODUCTION_MATRIX=1 and provide plane credentials or a stored session");
   await observeWebVitals(page);
 });
 

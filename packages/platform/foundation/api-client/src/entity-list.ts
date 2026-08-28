@@ -1,0 +1,83 @@
+import { parseEntityListDescriptor, parseEntityListResult, type EntityListDescriptorV1, type EntityListResultV1, type EntityListScopeCoordinateV1, type ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
+import type { Operation, RequestOptions } from "./index";
+
+type EntityListParams = Readonly<Record<string, string | number>>;
+
+export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list-descriptor`, parse: parseEntityListDescriptor, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+export const entityListOperation: Operation<EntityListResultV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list`, parse: parseEntityListResult, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+
+export interface RecordBookmarkItemV1 { readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
+export interface RecordBookmarkMutationV1 { readonly records: readonly { readonly id: string; readonly label?: string }[]; readonly companyCodeId?: string; readonly legalEntityId?: string; readonly operatingOrganizationId?: string; readonly networkAccountId?: string; }
+export const recordBookmarksOperation: Operation<readonly RecordBookmarkItemV1[]> = Object.freeze({ method: "GET", path: "/api/record-bookmarks", parse: parseBookmarks, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+export const recordBookmarkMembershipOperation: Operation<ReadonlySet<string>> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/record-bookmarks/${entityCode(params)}/membership`, parse: parseBookmarkMembership, requestClass: "interactive", idempotency: "forbidden", response: "json" });
+export const addRecordBookmarksOperation: Operation<readonly string[], RecordBookmarkMutationV1> = Object.freeze({ method: "PUT", path: (params: EntityListParams) => `/api/record-bookmarks/${entityCode(params)}`, parse: parseBookmarkMutation, requestClass: "interactive", idempotency: "required", response: "json" });
+export const removeRecordBookmarksOperation: Operation<readonly string[], RecordBookmarkMutationV1> = Object.freeze({ method: "DELETE", path: (params: EntityListParams) => `/api/record-bookmarks/${entityCode(params)}`, parse: parseBookmarkMutation, requestClass: "interactive", idempotency: "required", response: "json" });
+
+export interface RecordExportRequest {
+  readonly requestId: string;
+  readonly filter: Readonly<Record<string, unknown>>;
+}
+export interface RecordExportReceipt { readonly exportRequestId: string; readonly jobId: string; readonly status: "queued"; }
+export const requestRecordExportOperation: Operation<RecordExportReceipt, RecordExportRequest> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/${entityCode(params)}/exports`, parse: parseExportReceipt, requestClass: "background", idempotency: "required", response: "json" });
+
+export type RecordImportMode = "create" | "update" | "upsert" | "delete" | "replace";
+export interface BeginRecordImportRequest { readonly sessionId: string; readonly operation: RecordImportMode; readonly scopeCoordinate?: EntityListScopeCoordinateV1; readonly conflictPolicy?: "reject" | "skip"; readonly atomicity?: "all_or_nothing" | "valid_rows"; }
+export interface RecordImportSessionReceipt { readonly id: string; readonly entityCode: string; readonly operation: RecordImportMode; readonly status: string; readonly stagedRowCount: number; readonly validRowCount: number; readonly invalidRowCount: number; }
+export const beginRecordImportOperation: Operation<RecordImportSessionReceipt, BeginRecordImportRequest> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/${entityCode(params)}/imports`, parse: parseImportSession, requestClass: "upload", idempotency: "required", response: "json" });
+export const appendRecordImportChunkOperation: Operation<Readonly<Record<string, unknown>>, { readonly rows: readonly Readonly<Record<string, unknown>>[] }> = Object.freeze({ method: "PUT", path: (params: EntityListParams) => `/api/records/imports/${uuidParam(params, "sessionId")}/chunks/${integerParam(params, "chunkIndex")}`, parse: parseObject, requestClass: "upload", idempotency: "required", response: "json" });
+export const completeRecordImportUploadOperation: Operation<RecordImportSessionReceipt, { readonly expectedChunkCount: number }> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/imports/${uuidParam(params, "sessionId")}/complete`, parse: parseImportSession, requestClass: "upload", idempotency: "required", response: "json" });
+export const validateRecordImportOperation: Operation<RecordImportPreviewReceipt> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/imports/${uuidParam(params, "sessionId")}/validate`, parse: parseImportPreview, requestClass: "background", idempotency: "required", response: "json" });
+export const previewRecordImportOperation: Operation<RecordImportPreviewReceipt> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/imports/${uuidParam(params, "sessionId")}/preview`, parse: parseImportPreview, requestClass: "background", idempotency: "required", response: "json" });
+export const commitRecordImportOperation: Operation<{ readonly sessionId: string; readonly jobId: string; readonly status: "queued" }> = Object.freeze({ method: "POST", path: (params: EntityListParams) => `/api/records/imports/${uuidParam(params, "sessionId")}/commit`, parse: parseQueuedImport, requestClass: "background", idempotency: "required", response: "json" });
+export interface RecordTransferItemV1 { readonly id:string;readonly kind:"import"|"export";readonly entityCode:string;readonly operation?:RecordImportMode;readonly status:string;readonly rowCount:number;readonly errorCount:number;readonly createdAt:string;readonly completedAt?:string;readonly downloadable:boolean; }
+export const recordTransfersOperation:Operation<readonly RecordTransferItemV1[]>=Object.freeze({method:"GET",path:"/api/records/transfers",parse:parseTransfers,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+export const downloadRecordImportErrorsOperation:Operation<{readonly url:string}>=Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/records/imports/${uuidParam(params,"sessionId")}/error-report`,parse:parseDownload,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+export const downloadRecordExportOperation:Operation<{readonly url:string}>=Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/records/exports/${uuidParam(params,"exportRequestId")}/download`,parse:parseDownload,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+
+export interface RecordImportPreviewReceipt { readonly sessionId: string; readonly validCount: number; readonly invalidCount: number; readonly rows: readonly { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[] }[]; }
+
+export function entityListQuery(state: Pick<ListLocationStateV1, "query" | "filters" | "sort" | "group" | "columns" | "cursor" | "pageSize">, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
+  const query = state.query?.trim();
+  return Object.freeze({
+    limit: state.pageSize ?? descriptor.limits.defaultPageSize,
+    ...(state.cursor ? { cursor: state.cursor } : {}),
+    ...(query && query.length >= descriptor.surface.search.minimumQueryLength ? { search: query } : {}),
+    ...(state.columns.length ? { fields: Object.freeze([...state.columns]) } : {}),
+    ...(state.group ? { group: state.group } : {}),
+    ...(state.filters.length ? { filter: Object.freeze(state.filters.map((filter) => JSON.stringify(filter))) } : {}),
+    ...(state.sort.length ? { sort: Object.freeze(state.sort.map((sort) => [sort.field, sort.direction, sort.nulls].filter(Boolean).join(":"))) } : {}),
+    countMode: descriptor.limits.countMode,
+    ...entityListScopeQuery(scope),
+  });
+}
+
+export function entityListScopeQuery(scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
+  return Object.freeze({
+    ...(scope?.companyCodeId ? { companyCodeId: scope.companyCodeId } : {}),
+    ...(scope?.legalEntityId ? { legalEntityId: scope.legalEntityId } : {}),
+    ...(scope?.operatingOrganizationId ? { operatingOrganizationId: scope.operatingOrganizationId } : {}),
+    ...(scope?.networkAccountId ? { networkAccountId: scope.networkAccountId } : {}),
+  });
+}
+
+function entityCode(params: EntityListParams): string {
+  const value = String(params.entityCode ?? "");
+  if (!/^[a-z][a-z0-9_.-]{0,126}$/.test(value)) throw new TypeError("entityCode must be a catalog code");
+  return encodeURIComponent(value);
+}
+
+function parseObject(value: unknown): Readonly<Record<string, unknown>> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("record transfer response must be an object"); return Object.freeze({ ...(value as Record<string, unknown>) }); }
+function parseBookmarks(value: unknown): readonly RecordBookmarkItemV1[] { const source = parseObject(value).items; if (!Array.isArray(source)) throw new TypeError("bookmark items are required"); return Object.freeze(source.map((candidate) => { const item = parseObject(candidate); const createdAt = requiredText(item, "createdAt"); if (Number.isNaN(Date.parse(createdAt))) throw new TypeError("bookmark createdAt is invalid"); return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), recordId: requiredText(item, "recordId"), ...(typeof item.label === "string" && item.label.trim() ? { label: item.label.trim() } : {}), createdAt }); })); }
+function parseBookmarkMembership(value: unknown): ReadonlySet<string> { return new Set(bookmarkIds(parseObject(value), "bookmarkedRecordIds")); }
+function parseBookmarkMutation(value: unknown): readonly string[] { return Object.freeze(bookmarkIds(parseObject(value), "recordIds")); }
+function bookmarkIds(item: Readonly<Record<string, unknown>>, key: string): readonly string[] { const source = item[key]; if (!Array.isArray(source) || source.some((id) => typeof id !== "string")) throw new TypeError(`bookmark ${key} is invalid`); return source as readonly string[]; }
+function requiredText(record: Readonly<Record<string, unknown>>, key: string): string { const value = record[key]; if (typeof value !== "string" || !value) throw new TypeError(`record transfer response.${key} is required`); return value; }
+function requiredCount(record: Readonly<Record<string, unknown>>, key: string): number { const value = record[key]; if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new TypeError(`record transfer response.${key} must be a count`); return value; }
+function parseExportReceipt(value: unknown): RecordExportReceipt { const item = parseObject(value), status = requiredText(item, "status"); if (status !== "queued") throw new TypeError("export status must be queued"); return Object.freeze({ exportRequestId: requiredText(item, "exportRequestId"), jobId: requiredText(item, "jobId"), status }); }
+function parseImportSession(value: unknown): RecordImportSessionReceipt { const item = parseObject(value),operation=requiredText(item,"operation");if(operation!=="create"&&operation!=="update"&&operation!=="upsert"&&operation!=="delete"&&operation!=="replace")throw new TypeError("import operation is invalid");return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), operation, status: requiredText(item, "status"), stagedRowCount: requiredCount(item, "stagedRowCount"), validRowCount: requiredCount(item, "validRowCount"), invalidRowCount: requiredCount(item, "invalidRowCount") }); }
+function parseImportPreview(value: unknown): RecordImportPreviewReceipt { const item = parseObject(value), source = item.rows; if (!Array.isArray(source)) throw new TypeError("import preview rows are required"); const rows = source.map((value) => { const row = parseObject(value); if (!Array.isArray(row.errors) || row.errors.some((error) => typeof error !== "string")) throw new TypeError("import preview errors are invalid"); return Object.freeze({ rowNumber: requiredCount(row, "rowNumber"), valid: row.valid === true, errors: Object.freeze([...row.errors]) as readonly string[] }); }); return Object.freeze({ sessionId: requiredText(item, "sessionId"), validCount: requiredCount(item, "validCount"), invalidCount: requiredCount(item, "invalidCount"), rows: Object.freeze(rows) }); }
+function parseQueuedImport(value: unknown) { const item = parseObject(value), status = requiredText(item, "status"); if (status !== "queued") throw new TypeError("import status must be queued"); return Object.freeze({ sessionId: requiredText(item, "sessionId"), jobId: requiredText(item, "jobId"), status }); }
+function parseTransfers(value:unknown):readonly RecordTransferItemV1[]{const source=parseObject(value)["items"];if(!Array.isArray(source))throw new TypeError("transfer items are required");return Object.freeze(source.map(candidate=>{const item=parseObject(candidate),kind=requiredText(item,"kind"),operation=typeof item["operation"]==="string"?item["operation"]:undefined;if(kind!=="import"&&kind!=="export")throw new TypeError("transfer kind is invalid");if(operation!==undefined&&!(["create","update","upsert","delete","replace"]as string[]).includes(operation))throw new TypeError("transfer operation is invalid");return Object.freeze({id:requiredText(item,"id"),kind,entityCode:requiredText(item,"entityCode"),...(operation?{operation:operation as RecordImportMode}:{}),status:requiredText(item,"status"),rowCount:requiredCount(item,"rowCount"),errorCount:requiredCount(item,"errorCount"),createdAt:requiredText(item,"createdAt"),...(typeof item["completedAt"]==="string"?{completedAt:item["completedAt"]}:{}),downloadable:item["downloadable"]===true});}));}
+function parseDownload(value:unknown){return Object.freeze({url:requiredText(parseObject(value),"url")});}
+function uuidParam(params: EntityListParams, key: string): string { const value = String(params[key] ?? ""); if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new TypeError(`${key} must be a UUID`); return encodeURIComponent(value); }
+function integerParam(params: EntityListParams, key: string): string { const value = Number(params[key]); if (!Number.isSafeInteger(value) || value < 0) throw new TypeError(`${key} must be a non-negative integer`); return String(value); }

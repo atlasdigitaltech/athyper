@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",

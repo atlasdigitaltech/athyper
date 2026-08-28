@@ -10,11 +10,48 @@ export interface BulkRecordResult { readonly recordId: string; readonly result: 
 export interface BulkExecutionResult { readonly batchId: string; readonly status: "completed" | "queued"; readonly jobId?: string; readonly items: readonly BulkRecordResult[]; }
 
 export type ImportStageStatus = "uploading" | "staged" | "validated" | "previewed" | "commit_queued" | "running" | "committed" | "cancelled" | "failed";
-export interface RecordImportSession { readonly id: string; readonly tenantId: string; readonly entityCode: string; readonly status: ImportStageStatus; readonly stagedRowCount: number; readonly validRowCount: number; readonly invalidRowCount: number; readonly checksum: string; readonly createdAt: string; readonly createdBy?:string; readonly nextChunkIndex?: number; readonly errorReportKey?: string; readonly cancelledAt?: string; }
+export type RecordImportOperation = "create" | "update" | "upsert" | "delete" | "replace";
+export type RecordImportConflictPolicy = "reject" | "skip";
+export type RecordImportAtomicity = "all_or_nothing" | "valid_rows";
+export interface RecordImportSession {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly entityCode: string;
+  readonly operation: RecordImportOperation;
+  /** Immutable plane-owned implementation selected when the upload begins. */
+  readonly adapterKey: string;
+  /** Prevents validation or execution against a different released contract. */
+  readonly descriptorHash: string;
+  readonly scopeCoordinate?: Readonly<Record<string, string>>;
+  readonly conflictPolicy: RecordImportConflictPolicy;
+  readonly atomicity: RecordImportAtomicity;
+  readonly status: ImportStageStatus;
+  readonly stagedRowCount: number;
+  readonly validRowCount: number;
+  readonly invalidRowCount: number;
+  readonly checksum: string;
+  readonly createdAt: string;
+  readonly createdBy?: string;
+  readonly nextChunkIndex?: number;
+  readonly errorReportKey?: string;
+  readonly cancelledAt?: string;
+}
 export interface ImportValidationRow { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[]; }
 export interface ImportValidationSummary { readonly totalCount:number; readonly validCount:number; readonly invalidCount:number; readonly errorsByCode:Readonly<Record<string,number>>; readonly sample:readonly ImportValidationRow[]; readonly truncated:boolean; }
 export interface RecordImportPreview { readonly sessionId: string; readonly rows: readonly ImportValidationRow[]; readonly validCount: number; readonly invalidCount: number; readonly summary?:ImportValidationSummary; }
 export interface RecordTransferFilter { readonly filters?: readonly RecordFilter[]; }
+export interface RecordTransferListItem {
+  readonly id: string;
+  readonly kind: "import" | "export";
+  readonly entityCode: string;
+  readonly operation?: RecordImportOperation;
+  readonly status: string;
+  readonly rowCount: number;
+  readonly errorCount: number;
+  readonly createdAt: string;
+  readonly completedAt?: string;
+  readonly downloadable: boolean;
+}
 
 export type SnapshotCaptureKind = "create" | "version" | "publish" | "release" | "submit" | "approval" | "commitment" | "fulfillment" | "financial_post" | "amendment" | "reversal" | "withdrawal" | "reconcile" | "migration" | "manual";
 export type SnapshotRetentionClass = "permanent" | "legal" | "financial" | "operational" | "standard" | "temporary";

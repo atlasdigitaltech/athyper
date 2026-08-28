@@ -5,3 +5,5 @@
 20260825_plane_locale_policy.sql
 20260825_normalized_locale_catalog.sql
 20260825_ses_delivery_persistence.sql
+20260828_record_import_operation.sql
+20260828_governed_import_adapters.sql

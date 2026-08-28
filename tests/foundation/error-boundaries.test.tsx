@@ -5,7 +5,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ApiTransportError } from "@athyper/platform-api-client";
-import { AppErrorBoundary, AppLoadingBoundary, classifyAppError, createRedactedBoundaryEvent, resolveProfileColorMode, safeLocalReturnTo } from "@athyper/platform-shell-app-foundation";
+import { AppErrorBoundary, AppLoadingBoundary, NotFoundBoundary, classifyAppError, createRedactedBoundaryEvent, resolveProfileColorMode, safeLocalReturnTo } from "@athyper/platform-shell-app-foundation";
 
 const cases = [
   ["authentication", new ApiTransportError("authentication", "secret bearer token", 401)],
@@ -57,6 +57,17 @@ test("loading markup distinguishes stable bootstrap and local refresh states", (
   assert.match(refresh, /Updating content/);
   assert.match(refresh, /a-app-loader__grid/);
   assert.match(refresh, /aria-live="polite"/);
+});
+
+test("authenticated error and not-found states render as shell content with recovery navigation", () => {
+  const error = renderToStaticMarkup(<AppErrorBoundary error={{ status: 503 }} autoNavigate={false} surface="content" homeHref="/" />);
+  const missing = renderToStaticMarkup(<NotFoundBoundary applicationName="Athyper Neon" surface="content" homeHref="/" homeLabel="Return to Neon home" />);
+  assert.match(error, /<section class="a-error-surface a-error-surface--content"/);
+  assert.doesNotMatch(error, /<main/);
+  assert.match(error, /Try again/);
+  assert.match(error, /Return to workspace/);
+  assert.match(missing, /Return to Neon home/);
+  assert.match(missing, /current workspace/);
 });
 
 test("profile appearance resolves explicit and operating-system themes deterministically", () => {

@@ -10,7 +10,7 @@ import type { MalwareScanner } from "@athyper/server-contract-malware-scanning";
 import type { ContentExtractor,DocumentExtractionScheduler } from "@athyper/server-contract-content-extraction";
 import type { SearchIndex } from "@athyper/server-contract-search";
 import type { PolicyRepository } from "@athyper/server-contract-policy";
-import type { RecordMutationResult, RecordRepository } from "@athyper/server-contract-records";
+import type { RecordCollectionScopeResolver, RecordMutationResult, RecordRepository } from "@athyper/server-contract-records";
 import type { WorkflowRepository } from "@athyper/server-contract-workflow";
 import type { AtlasConfirmationVerifier, AtlasCredentialCipher, AtlasCredentialInvalidation, AtlasDomainCommandBus, AtlasDriftAlertPublisher, AtlasKnowledgeIndex, AtlasModelBinding, AtlasModelPolicyResolver, AtlasModelProvider, AtlasPlaneAdmissionResolver, AtlasPolicyInvalidation, AtlasProviderCredentialResolver, AtlasRegisteredTool, AtlasRunRepository, AtlasTenantQuotaManager, AtlasThreadAuthorizer, AtlasThreadRepository, AtlasRetentionPolicyResolver, AtlasUsageLedger } from "@athyper/server-contract-ai";
 import { createExactPlaneRepositoryProvider, createExactPlaneTransactionCoordinator, type ExactPlaneRepositoryProvider, type PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
@@ -20,7 +20,7 @@ import type { BankValidationRepository, CacheInvalidator, ConnectorHealthJobs, C
 import { createIamAuthenticationMiddleware, readVerifiedRequestContext } from "@athyper/server-platform-iam";
 import { createExperienceInvalidationHooks, createExperienceService, createMemoryExperienceCache, registerExperienceRoutes } from "@athyper/server-platform-experience";
 import { KyselyExperiencePlaneRepository } from "@athyper/server-adapter-experience-postgres";
-import { createMetadataService, createRuntimeDescriptorRepository } from "@athyper/server-platform-metadata";
+import { createDistributedDescriptorCache, createMetadataService, createRuntimeDescriptorRepository } from "@athyper/server-platform-metadata";
 import { createCachedPolicyRepository, createKyselyPolicyRepository, createPolicyService, registerPolicyRoutes } from "@athyper/server-platform-policy";
 import {createKyselySlaAutomationRepository,createKyselyWorkflowDelegationResolver,createKyselyWorkflowRepository,createKyselyWorkflowSlaTenantCatalog,createWorkflowService,createWorkflowSlaAutomation,createWorkflowSlaDiscoveryHandler,createWorkflowSlaSweepHandler,DISCOVER_WORKFLOW_SLA_JOB,registerWorkflowRoutes,SWEEP_WORKFLOW_SLA_JOB,WORKFLOW_MAINTENANCE_QUEUE} from "@athyper/server-platform-workflow";
 import { createRenderingService } from "@athyper/server-platform-rendering";
@@ -30,8 +30,9 @@ import {createCollaborationService,createKyselyCollaborationRepository,createKys
 import {REPORT_PACK_JOB,REPORT_PACK_QUEUE,REPORT_PACK_RECOVERY_JOB,createChannelConsentService,createCycleCertificationService,createCycleDeviationService,createCycleRunService,createCycleTaskService,createLegalHoldService,createModerationService,createReportPackJobHandler,createReportPackRecoveryHandler,createReportPackService,KyselyChannelConsentRepository,KyselyCommentModerationRepository,KyselyCycleExecutionRepository,KyselyLegalHoldRepository,KyselyReportPackRepository,registerGovernanceComplianceRoutes,registerGovernanceRoutes}from"@athyper/server-platform-governance";
 import {assertControlServiceRoutePlaneSafety,controlAdminFoundation,createAuthorizationManagementService,createBankValidationService,createConnectorControlService,createCycleConfigService,createEntitlementControlService,createExactPlaneAuthorizationRepositoryProvider,createFeatureFlagService,createLookupService,createParameterService,createRoundingService,createRuntimeCommandService,createSafeAuthorizationManagementRolloutSelector,KyselyCycleTemplateRepository,KyselyRuntimeCommandStore,registerAuthorizationManagementRoutes,registerControlServiceRoutes,registerCycleConfigRoutes,registerRuntimeCommandRoutes,type ControlServiceRouteFlags,type RuntimeCommandExecutor}from"@athyper/server-platform-control-admin";
 import {ATLAS_KNOWLEDGE_QUEUE,ATLAS_MONITORING_QUEUE,INGEST_ATLAS_KNOWLEDGE_JOB,RUN_ATLAS_DRIFT_JOB,AtlasAgentRuntime,AtlasBindingRegistry,AtlasProviderRegistry,AtlasRegisteredToolCoordinator,AtlasThreadService,AtlasToolRegistry,AtlasToolService,KyselyAtlasTenantQuotaManager,createAtlasA2Services,createAtlasDriftHandler,createAtlasKnowledgeIngestionHandler,KyselyAtlasToolProposalStore,registerAtlasAdminRoutes,registerAtlasRoutes,type AtlasKnowledgeJobAuthority,type AtlasPromptResolver}from"@athyper/server-platform-ai";
-import {createCommandEnvelopeFactory,createGuestAccessExpiryHandler,createOnboardingSaga,EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,KyselyMetaEntityAuthoringRepository,KyselyOnboardingSagaRepository,MetaEntityAuthoringService,OnboardingCaseLifecycleService,OnboardingMaintenanceService,ONBOARDING_MAINTENANCE_QUEUE,PublicationServiceMetaEntityAdapter,registerMetaEntityAuthoringRoutes,registerOnboardingRoutes} from "@athyper/server-plane-studio";
-import {financeJobDefinitions,financeSliceOrder,registerFinance as registerNeonFinance,registerFinanceHttpRoutes,registerFinanceJobHandlers,type FinanceRegistrationPorts} from "@athyper/server-plane-neon";
+import {createCommandEnvelopeFactory,createGuestAccessExpiryHandler,createOnboardingSaga,createStudioCatalogMetadataReader,createStudioMetadataDraftImportAdapter,createStudioRecordCollectionScopeResolver,EXPIRE_ONBOARDING_GUEST_ACCESS_JOB,KyselyMetaEntityAuthoringRepository,KyselyOnboardingSagaRepository,MetaEntityAuthoringService,OnboardingCaseLifecycleService,OnboardingMaintenanceService,ONBOARDING_MAINTENANCE_QUEUE,PublicationServiceMetaEntityAdapter,registerMetaEntityAuthoringRoutes,registerOnboardingRoutes} from "@athyper/server-plane-studio";
+import { createMeshRecordCollectionScopeResolver, createMeshRelationshipRequestImportAdapter } from "@athyper/server-plane-mesh";
+import {createNeonBusinessPartnerImportAdapter,createNeonRecordCollectionScopeResolver,financeJobDefinitions,financeSliceOrder,registerFinance as registerNeonFinance,registerFinanceHttpRoutes,registerFinanceJobHandlers,type FinanceRegistrationPorts} from "@athyper/server-plane-neon";
 import {
   createDeliverySweepHandler,
   createDurableNotificationDeliveryRepository,
@@ -89,17 +90,23 @@ import {
   createKyselyRecordRepository,
   createKyselyCommandExecutionStore,
   createRecordMutationService,
+  createRecordListExecutor,
   createRecordQueryService,
+  createEntityListService,
+  createRecordBookmarkService,
   createRecordSnapshotService,
   KyselyRecordSnapshotRepository,
   registerRecordSnapshotRoutes,
   registerRecordsRoutes,
+  registerEntityListRoutes,
+  registerRecordBookmarkRoutes,
   KyselyRecordTransferStore,
   createMetadataImportRowValidator,
   createObjectStorageRecordTransferArtifactStore,
   createRecordTransferJobDispatcher,
   createRecordTransferService,
   createRecordImportHandler,
+  GovernedImportAdapterRegistry,
   createRecordExportHandler,
   registerRecordTransferRoutes,
   RECORD_TRANSFER_QUEUE,
@@ -407,6 +414,7 @@ export function registerServices(
       withTenantTransaction: (planeKey, actor, work) =>
         transactions.run(planeKey, actor, work),
     }),
+    ...(container.adapters.redisCache ? { cache: createDistributedDescriptorCache(container.adapters.redisCache) } : {}),
   });
   container.platform.metadata = metadata;
   registerStudioAuthoring(container,config,metadataDatabases.studio,iam,authorizer);
@@ -516,16 +524,29 @@ export function registerServices(
     const outbox = dependencies.outbox ?? createDatabaseOutboxWriter("records");
     const commandExecutions = dependencies.commandExecutions ?? createKyselyCommandExecutionStore();
     const common = { metadata, authorizer, audit, outbox, commandExecutions, repository, transactions };
-    const queries = createRecordQueryService(common);
+    const listMetadata = createStudioCatalogMetadataReader(metadata);
+    const collectionScopes = container.platform.experience ? combineRecordCollectionScopeResolvers(
+      createNeonRecordCollectionScopeResolver(container.platform.experience.service),
+      createMeshRecordCollectionScopeResolver(container.platform.experience.service),
+      createStudioRecordCollectionScopeResolver(),
+    ) : undefined;
+    const listExecutionOptions = { ...common, metadata: listMetadata, ...(collectionScopes ? { collectionScopes } : {}) };
+    const listExecutor = createRecordListExecutor(listExecutionOptions);
+    const queries = createRecordQueryService(listExecutionOptions, listExecutor);
+    const lists = createEntityListService({ metadata: listMetadata, authorizer, listExecutor, ...(collectionScopes ? { collectionScopes } : {}) });
+    const bookmarks = createRecordBookmarkService({ transactions, listExecutor, ...(container.adapters.redisCache ? { cache: container.adapters.redisCache } : {}) });
     const mutations = createRecordMutationService(common);
     const snapshots=config?.wave0.recordSnapshotRoutesEnabled?createRecordSnapshotService({metadata,queries,mutations,repository:new KyselyRecordSnapshotRepository(transactions)}):undefined;
     const transferStore=container.runtimes.jobs&&objectStorage?new KyselyRecordTransferStore():undefined;
     const transferArtifacts=transferStore&&objectStorage?createObjectStorageRecordTransferArtifactStore(objectStorage):undefined;
-    const transfers=transferStore&&transferArtifacts&&container.runtimes.jobs?createRecordTransferService({staging:transferStore,validator:createMetadataImportRowValidator(metadata,authorizer),jobs:createRecordTransferJobDispatcher(container.runtimes.jobs),metadata,authorizer,audit,outbox,transactions,errorReports:transferArtifacts}):undefined;
+    const importAdapters=new GovernedImportAdapterRegistry([createNeonBusinessPartnerImportAdapter(),createMeshRelationshipRequestImportAdapter(),createStudioMetadataDraftImportAdapter()]);
+    const transfers=transferStore&&transferArtifacts&&container.runtimes.jobs?createRecordTransferService({staging:transferStore,validator:createMetadataImportRowValidator(listMetadata,authorizer),jobs:createRecordTransferJobDispatcher(container.runtimes.jobs),metadata:listMetadata,authorizer,audit,outbox,transactions,adapters:importAdapters,...(collectionScopes?{collectionScopes}:{}),errorReports:transferArtifacts}):undefined;
     container.services.records = { queries, mutations, ...(snapshots?{snapshots}:{}),...(transfers?{transfers}:{}) };
     container.platform.httpRegistrars.push((application) => registerRecordsRoutes(application, { authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, queries, mutations }));
+    container.platform.httpRegistrars.push((application) => registerEntityListRoutes(application, { authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, lists }));
+    container.platform.httpRegistrars.push((application) => registerRecordBookmarkRoutes(application, { authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, bookmarks }));
     if(snapshots)container.platform.httpRegistrars.push((application)=>registerRecordSnapshotRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,authorizer,snapshots}));
-    if(transfers&&transferStore&&transferArtifacts&&container.runtimes.jobs){container.platform.httpRegistrars.push(application=>registerRecordTransferRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,transfers}));container.runtimes.jobs.register(RECORD_TRANSFER_QUEUE,EXECUTE_RECORD_IMPORT_JOB,createRecordImportHandler({store:transferStore,metadata,repository,transactions,audit,outbox}));container.runtimes.jobs.register(RECORD_TRANSFER_QUEUE,EXECUTE_RECORD_EXPORT_JOB,createRecordExportHandler({store:transferStore,queries,transactions,artifacts:transferArtifacts,audit,outbox}));container.runtimes.jobDefinitions.push({code:EXECUTE_RECORD_IMPORT_JOB,owner:"@athyper/server-service-records",queue:RECORD_TRANSFER_QUEUE,name:EXECUTE_RECORD_IMPORT_JOB,scope:"tenant",payloadSchema:{name:EXECUTE_RECORD_IMPORT_JOB,version:1},timeoutMs:300_000,maxAttempts:5,executionRetentionDays:90},{code:EXECUTE_RECORD_EXPORT_JOB,owner:"@athyper/server-service-records",queue:RECORD_TRANSFER_QUEUE,name:EXECUTE_RECORD_EXPORT_JOB,scope:"tenant",payloadSchema:{name:EXECUTE_RECORD_EXPORT_JOB,version:1},timeoutMs:300_000,maxAttempts:5,executionRetentionDays:30});}
+    if(transfers&&transferStore&&transferArtifacts&&container.runtimes.jobs){container.platform.httpRegistrars.push(application=>registerRecordTransferRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,transfers}));container.runtimes.jobs.register(RECORD_TRANSFER_QUEUE,EXECUTE_RECORD_IMPORT_JOB,createRecordImportHandler({store:transferStore,metadata:listMetadata,authorizer,adapters:importAdapters,...(collectionScopes?{collectionScopes}:{}),transactions,audit,outbox}));container.runtimes.jobs.register(RECORD_TRANSFER_QUEUE,EXECUTE_RECORD_EXPORT_JOB,createRecordExportHandler({store:transferStore,metadata:listMetadata,authorizer,queries,transactions,artifacts:transferArtifacts,audit,outbox}));container.runtimes.jobDefinitions.push({code:EXECUTE_RECORD_IMPORT_JOB,owner:"@athyper/server-service-records",queue:RECORD_TRANSFER_QUEUE,name:EXECUTE_RECORD_IMPORT_JOB,scope:"tenant",payloadSchema:{name:EXECUTE_RECORD_IMPORT_JOB,version:1},timeoutMs:300_000,maxAttempts:5,executionRetentionDays:90},{code:EXECUTE_RECORD_EXPORT_JOB,owner:"@athyper/server-service-records",queue:RECORD_TRANSFER_QUEUE,name:EXECUTE_RECORD_EXPORT_JOB,scope:"tenant",payloadSchema:{name:EXECUTE_RECORD_EXPORT_JOB,version:1},timeoutMs:300_000,maxAttempts:5,executionRetentionDays:30});}
   }
 
   if (dependencies.workflowRepository || Object.keys(metadataDatabases).length > 0) {
@@ -690,6 +711,11 @@ function createPlaneTransactionCoordinator(container: Container): PlaneTransacti
       throw new Error(`Tenant runtime database is not configured for ${planeKey}`);
     },
   };
+}
+
+function combineRecordCollectionScopeResolvers(neon: RecordCollectionScopeResolver, mesh: RecordCollectionScopeResolver, studio: RecordCollectionScopeResolver): RecordCollectionScopeResolver {
+  const resolvers = { neon, mesh, studio } as const;
+  return Object.freeze({ resolve(input: Parameters<RecordCollectionScopeResolver["resolve"]>[0]) { return resolvers[input.context.planeKey].resolve(input); } });
 }
 
 function createDatabaseOutboxWriter(source: "records" | "workflow" | "documents"|"collaboration"|"integration"|"governance"|"finance"|"attachments"): OutboxWriter<RecordTransaction> {

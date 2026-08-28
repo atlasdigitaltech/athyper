@@ -1,0 +1,83 @@
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { ListRecordsQuery, RecordTransactionCoordinator } from "@athyper/server-contract-records";
+import type { Transaction } from "kysely";
+import { sql } from "kysely";
+import { RecordServiceError } from "../errors.js";
+import type { RecordListExecutor } from "../query-service.js";
+
+type Database = Record<string, never>;
+type Tx = Transaction<Database>;
+type Row = Record<string, unknown>;
+
+export interface RecordBookmarkInput { readonly id: string; readonly label?: string; }
+export interface RecordBookmarkItem { readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
+export interface RecordBookmarkCache {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, options?: { readonly ttlSeconds?: number }): Promise<unknown>;
+  delete(key: string): Promise<unknown>;
+}
+export interface RecordBookmarkService {
+  list(context: VerifiedRequestContext): Promise<readonly RecordBookmarkItem[]>;
+  membership(context: VerifiedRequestContext, entityCode: string, recordIds: readonly string[]): Promise<ReadonlySet<string>>;
+  add(context: VerifiedRequestContext, entityCode: string, records: readonly RecordBookmarkInput[], scopeCoordinate?: ListRecordsQuery["scopeCoordinate"]): Promise<ReadonlySet<string>>;
+  remove(context: VerifiedRequestContext, entityCode: string, recordIds: readonly string[]): Promise<ReadonlySet<string>>;
+}
+
+export function createRecordBookmarkService(options: { readonly transactions: RecordTransactionCoordinator<Tx>; readonly listExecutor: RecordListExecutor; readonly cache?: RecordBookmarkCache; readonly cacheTtlSeconds?: number }): RecordBookmarkService {
+  const ttl = options.cacheTtlSeconds ?? 45;
+  const key = (context: VerifiedRequestContext, entityCode: string) => `record-bookmarks:v1:${context.planeKey}:${context.tenantId}:${context.principalId}:${entityCode}`;
+  const readEntity = async (context: VerifiedRequestContext, entityCode: string): Promise<ReadonlySet<string>> => {
+    const cacheKey = key(context, entityCode);
+    if (options.cache) {
+      try { const cached = await options.cache.get(cacheKey); if (cached) return parseCachedIds(cached); } catch { /* Database remains authoritative during cache outages. */ }
+    }
+    const ids = await options.transactions.run(context.planeKey, actor(context), async (transaction) => {
+      const result = await sql<{ record_id: string }>`SELECT record_id FROM master.record_bookmark WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND entity_code=${entityCode}`.execute(transaction);
+      return new Set(result.rows.map((row) => String(row.record_id)));
+    });
+    if (options.cache) { try { await options.cache.set(cacheKey, JSON.stringify([...ids]), { ttlSeconds: ttl }); } catch { /* Cache population is best effort. */ } }
+    return ids;
+  };
+  const invalidate = async (context: VerifiedRequestContext, entityCode: string) => { if (options.cache) { try { await options.cache.delete(key(context, entityCode)); } catch { /* Mutation already committed; short TTL heals the cache. */ } } };
+  const service: RecordBookmarkService = {
+    async list(context: VerifiedRequestContext) {
+      return options.transactions.run(context.planeKey, actor(context), async (transaction) => {
+        const result = await sql<Row>`SELECT id, entity_code, record_id, label_snapshot, created_at FROM master.record_bookmark WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid ORDER BY created_at DESC LIMIT 200`.execute(transaction);
+        return Object.freeze(result.rows.map(bookmarkItem));
+      });
+    },
+    async membership(context: VerifiedRequestContext, entityCode: string, recordIds: readonly string[]) {
+      const requested = validateIds(recordIds);
+      const all = await readEntity(context, entityCode);
+      return new Set(requested.filter((id) => all.has(id)));
+    },
+    async add(context: VerifiedRequestContext, entityCode: string, records: readonly RecordBookmarkInput[], scopeCoordinate?: ListRecordsQuery["scopeCoordinate"]) {
+      const normalized = normalizeRecords(records);
+      if (!normalized.length) return new Set<string>();
+      const execution = await options.listExecutor.execute({ context, entityCode, recordIds: normalized.map((record) => record.id), limit: normalized.length, countMode: "none", ...(scopeCoordinate ? { scopeCoordinate } : {}) });
+      const authorized = new Set(execution.result.data.map((row) => String(row[execution.descriptor.storage.idField])));
+      const denied = normalized.filter((record) => !authorized.has(record.id));
+      if (denied.length) throw new RecordServiceError(403, "BOOKMARK_RECORD_FORBIDDEN", "One or more selected records are no longer readable in the active authorization scope");
+      await options.transactions.run(context.planeKey, actor(context), async (transaction) => {
+        await sql`INSERT INTO master.record_bookmark(tenant_id,principal_id,entity_code,record_id,label_snapshot) VALUES ${sql.join(normalized.map((record) => sql`(${context.tenantId}::uuid,${context.principalId}::uuid,${entityCode},${record.id}::uuid,${record.label ?? null})`))} ON CONFLICT (tenant_id,principal_id,entity_code,record_id) DO NOTHING`.execute(transaction);
+      });
+      await invalidate(context, entityCode);
+      return new Set<string>(normalized.map((record) => record.id));
+    },
+    async remove(context: VerifiedRequestContext, entityCode: string, recordIds: readonly string[]) {
+      const normalized = validateIds(recordIds);
+      if (!normalized.length) return new Set<string>();
+      await options.transactions.run(context.planeKey, actor(context), (transaction) => sql`DELETE FROM master.record_bookmark WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND entity_code=${entityCode} AND record_id IN (${sql.join(normalized.map((id) => sql`${id}::uuid`))})`.execute(transaction).then(() => undefined));
+      await invalidate(context, entityCode);
+      return new Set<string>(normalized);
+    },
+  };
+  return Object.freeze(service);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+function actor(context: VerifiedRequestContext) { return { tenantId: context.tenantId, principalId: context.principalId }; }
+function validateIds(values: readonly string[]): readonly string[] { const ids = [...new Set(values.map((value) => value.toLowerCase()))]; if (ids.length > 100 || ids.some((id) => !UUID.test(id))) throw new RecordServiceError(400, "INVALID_BOOKMARK_RECORDS", "Bookmarks require at most one hundred UUID record identities"); return Object.freeze(ids); }
+function normalizeRecords(records: readonly RecordBookmarkInput[]): readonly RecordBookmarkInput[] { const ids = validateIds(records.map((record) => record.id)); const byId = new Map(records.map((record) => [record.id.toLowerCase(), record])); return Object.freeze(ids.map((id) => { const label = byId.get(id)?.label?.trim(); if (label && label.length > 240) throw new RecordServiceError(400, "INVALID_BOOKMARK_LABEL", "Bookmark labels must not exceed 240 characters"); return Object.freeze({ id, ...(label ? { label } : {}) }); })); }
+function parseCachedIds(value: string): ReadonlySet<string> { try { const parsed: unknown = JSON.parse(value); if (!Array.isArray(parsed) || parsed.some((id) => typeof id !== "string" || !UUID.test(id))) throw new Error("invalid cache value"); return new Set(parsed); } catch { return new Set(); } }
+function bookmarkItem(row: Row): RecordBookmarkItem { return Object.freeze({ id: String(row["id"]), entityCode: String(row["entity_code"]), recordId: String(row["record_id"]), ...(typeof row["label_snapshot"] === "string" ? { label: row["label_snapshot"] } : {}), createdAt: new Date(String(row["created_at"])).toISOString() }); }

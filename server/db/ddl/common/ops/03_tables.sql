@@ -394,6 +394,12 @@ CREATE TABLE ops.record_edit_lock (
 COMMENT ON TABLE ops.record_edit_lock IS 'Database-time edit leases. Rows are retained so fencing tokens remain monotonic across release and reacquisition.';
 CREATE TABLE ops.record_import_session (
     id uuid NOT NULL, tenant_id uuid NOT NULL, entity_code text NOT NULL,
+    import_operation text NOT NULL DEFAULT 'create',
+    adapter_key text NOT NULL,
+    descriptor_hash text NOT NULL,
+    scope_coordinate jsonb NOT NULL DEFAULT '{}'::jsonb,
+    conflict_policy text NOT NULL DEFAULT 'reject',
+    atomicity text NOT NULL DEFAULT 'all_or_nothing',
     status text NOT NULL, staged_row_count integer NOT NULL DEFAULT 0,
     valid_row_count integer NOT NULL DEFAULT 0, invalid_row_count integer NOT NULL DEFAULT 0,
     checksum text NOT NULL, next_chunk_index integer NOT NULL DEFAULT 0,
@@ -402,11 +408,22 @@ CREATE TABLE ops.record_import_session (
     cancelled_at timestamptz, completed_at timestamptz, updated_at timestamptz,
     CONSTRAINT record_import_session_pkey PRIMARY KEY (tenant_id,id),
     CONSTRAINT record_import_session_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT record_import_session_operation_chk CHECK(import_operation IN('create','update','upsert','delete','replace')),
+    CONSTRAINT record_import_session_adapter_chk CHECK(adapter_key~'^[a-z][a-z0-9_.-]{2,126}$'),
+    CONSTRAINT record_import_session_descriptor_hash_chk CHECK(descriptor_hash~'^[a-f0-9]{64}$'),
+    CONSTRAINT record_import_session_scope_chk CHECK(jsonb_typeof(scope_coordinate)='object'),
+    CONSTRAINT record_import_session_policy_chk CHECK(conflict_policy IN('reject','skip') AND atomicity IN('all_or_nothing','valid_rows')),
     CONSTRAINT record_import_session_status_chk CHECK(status IN('uploading','staged','validated','previewed','commit_queued','running','committed','cancelled','failed')),
     CONSTRAINT record_import_session_count_chk CHECK(staged_row_count>=0 AND valid_row_count>=0 AND invalid_row_count>=0 AND next_chunk_index>=0),
     CONSTRAINT record_import_session_checksum_chk CHECK(checksum~'^[a-f0-9]{64}$'),
     CONSTRAINT record_import_session_validation_chk CHECK((validation_rows IS NULL OR jsonb_typeof(validation_rows)='array') AND (validation_summary IS NULL OR jsonb_typeof(validation_summary)='object'))
 );
+
+ALTER TABLE ops.record_import_session ADD COLUMN IF NOT EXISTS import_operation text NOT NULL DEFAULT 'create';
+DO $$ BEGIN
+  ALTER TABLE ops.record_import_session ADD CONSTRAINT record_import_session_operation_chk CHECK(import_operation IN('create','update','upsert','delete','replace'));
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 CREATE TABLE ops.record_import_chunk (
     tenant_id uuid NOT NULL, session_id uuid NOT NULL, chunk_index integer NOT NULL,

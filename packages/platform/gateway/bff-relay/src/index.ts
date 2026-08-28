@@ -29,6 +29,35 @@ export const NEON_OPERATING_ORGANIZATIONS_OPERATION: RelayOperation = Object.fre
 export const MESH_NETWORK_ACCOUNTS_OPERATION: RelayOperation = Object.freeze({ id: "mesh.network-accounts", method: "GET", path: "/api/mesh/network-accounts", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_SNAPSHOT_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.snapshot", method: "GET", path: "/api/platform/verification", requestClass: "json", requiresTenant: true });
 export const PLATFORM_VERIFICATION_RUN_OPERATION: RelayOperation = Object.freeze({ id: "platform.verification.run", method: "POST", path: "/api/platform/verification/runs", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 1024 });
+export const ENTITY_LIST_DESCRIPTOR_OPERATION: RelayOperation = Object.freeze({ id: "entity-list.descriptor", method: "GET", path: "/api/entity-runtime/:entityCode/list-descriptor", requestClass: "json", requiresTenant: true });
+export const ENTITY_LIST_QUERY_OPERATION: RelayOperation = Object.freeze({ id: "entity-list.query", method: "GET", path: "/api/entity-runtime/:entityCode/list", requestClass: "json", requiresTenant: true });
+export const RECORD_BOOKMARK_LIST_OPERATION: RelayOperation = Object.freeze({ id: "record-bookmarks.list", method: "GET", path: "/api/record-bookmarks", requestClass: "json", requiresTenant: true });
+export const RECORD_BOOKMARK_MEMBERSHIP_OPERATION: RelayOperation = Object.freeze({ id: "record-bookmarks.membership", method: "GET", path: "/api/record-bookmarks/:entityCode/membership", requestClass: "json", requiresTenant: true });
+export const RECORD_BOOKMARK_ADD_OPERATION: RelayOperation = Object.freeze({ id: "record-bookmarks.add", method: "PUT", path: "/api/record-bookmarks/:entityCode", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 64 * 1024 });
+export const RECORD_BOOKMARK_REMOVE_OPERATION: RelayOperation = Object.freeze({ id: "record-bookmarks.remove", method: "DELETE", path: "/api/record-bookmarks/:entityCode", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 64 * 1024 });
+export const RECORD_BOOKMARK_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([RECORD_BOOKMARK_LIST_OPERATION, RECORD_BOOKMARK_MEMBERSHIP_OPERATION, RECORD_BOOKMARK_ADD_OPERATION, RECORD_BOOKMARK_REMOVE_OPERATION]);
+export const RECORD_TRANSFERS_LIST_OPERATION: RelayOperation = Object.freeze({ id: "records.transfers.list", method: "GET", path: "/api/records/transfers", requestClass: "json", requiresTenant: true });
+export const RECORD_EXPORT_REQUEST_OPERATION: RelayOperation = Object.freeze({ id: "records.exports.request", method: "POST", path: "/api/records/:entityCode/exports", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 256 * 1024 });
+export const RECORD_IMPORT_BEGIN_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.begin", method: "POST", path: "/api/records/:entityCode/imports", requestClass: "upload", requiresTenant: true, idempotency: "required", maxBodyBytes: 256 * 1024 });
+export const RECORD_IMPORT_CHUNK_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.chunk", method: "PUT", path: "/api/records/imports/:sessionId/chunks/:chunkIndex", requestClass: "upload", requiresTenant: true, idempotency: "required", maxBodyBytes: 8 * 1024 * 1024 });
+export const RECORD_IMPORT_COMPLETE_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.complete", method: "POST", path: "/api/records/imports/:sessionId/complete", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 16 * 1024 });
+export const RECORD_IMPORT_VALIDATE_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.validate", method: "POST", path: "/api/records/imports/:sessionId/validate", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 16 * 1024 });
+export const RECORD_IMPORT_PREVIEW_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.preview", method: "POST", path: "/api/records/imports/:sessionId/preview", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 16 * 1024 });
+export const RECORD_IMPORT_COMMIT_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.commit", method: "POST", path: "/api/records/imports/:sessionId/commit", requestClass: "json", requiresTenant: true, idempotency: "required", maxBodyBytes: 16 * 1024 });
+export const RECORD_IMPORT_ERROR_REPORT_OPERATION: RelayOperation = Object.freeze({ id: "records.imports.error-report", method: "GET", path: "/api/records/imports/:sessionId/error-report", requestClass: "download", requiresTenant: true });
+export const RECORD_EXPORT_DOWNLOAD_OPERATION: RelayOperation = Object.freeze({ id: "records.exports.download", method: "GET", path: "/api/records/exports/:exportRequestId/download", requestClass: "download", requiresTenant: true });
+export const RECORD_TRANSFER_RELAY_OPERATIONS: readonly RelayOperation[] = Object.freeze([
+  RECORD_TRANSFERS_LIST_OPERATION,
+  RECORD_EXPORT_REQUEST_OPERATION,
+  RECORD_IMPORT_BEGIN_OPERATION,
+  RECORD_IMPORT_CHUNK_OPERATION,
+  RECORD_IMPORT_COMPLETE_OPERATION,
+  RECORD_IMPORT_VALIDATE_OPERATION,
+  RECORD_IMPORT_PREVIEW_OPERATION,
+  RECORD_IMPORT_COMMIT_OPERATION,
+  RECORD_IMPORT_ERROR_REPORT_OPERATION,
+  RECORD_EXPORT_DOWNLOAD_OPERATION,
+]);
 export const NOTIFICATION_INBOX_OPERATION: RelayOperation = Object.freeze({ id:"notifications.inbox",method:"GET",path:"/api/notifications/inbox",requiresTenant:true });
 export const NOTIFICATION_COUNTS_OPERATION: RelayOperation = Object.freeze({ id:"notifications.counts",method:"GET",path:"/api/notifications/counts",requiresTenant:true });
 export const NOTIFICATION_STREAM_OPERATION: RelayOperation = Object.freeze({ id:"notifications.stream",method:"GET",path:"/api/notifications/stream",requestClass:"stream",requiresTenant:true });

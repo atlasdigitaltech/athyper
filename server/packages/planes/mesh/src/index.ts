@@ -6,3 +6,6 @@ export const meshPlaneComposition = Object.freeze({
   owns: ["network-accounts", "relationships", "exchange-envelopes", "plane-authorization", "plane-audit", "plane-outbox"] as const,
   consumes: ["signed-control-projections", "idempotent-provisioning-commands"] as const,
 });
+
+export * from "./record-collection-scope.js";
+export * from "./network-relationship-import.js";

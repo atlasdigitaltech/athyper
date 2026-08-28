@@ -1,0 +1,13 @@
+"use client";
+import { downloadRecordExportOperation,downloadRecordImportErrorsOperation,recordTransfersOperation,type HttpClient,type RecordTransferItemV1 } from "@athyper/platform-api-client";
+import { Button } from "@athyper/platform-ui";
+import { useCallback,useEffect,useState } from "react";
+
+export function RecordTransferWorkspace({client}:{readonly client:HttpClient}){
+  const[items,setItems]=useState<readonly RecordTransferItemV1[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState("");
+  const load=useCallback(()=>{setLoading(true);setError("");client.request(recordTransfersOperation,{query:{limit:100}}).then(setItems).catch(cause=>setError(cause instanceof Error?cause.message:"Transfers could not be loaded.")).finally(()=>setLoading(false));},[client]);
+  useEffect(()=>{load();},[load]);
+  const download=async(item:RecordTransferItemV1)=>{try{const result=item.kind==="import"?await client.request(downloadRecordImportErrorsOperation,{params:{sessionId:item.id}}):await client.request(downloadRecordExportOperation,{params:{exportRequestId:item.id}});window.location.assign(result.url);}catch(cause){setError(cause instanceof Error?cause.message:"Download is unavailable.");}};
+  return <main className="a-transfer-workspace"><header><div><p className="a-transfer-workspace__eyebrow">Data operations</p><h1>Imports and exports</h1><p>Only transfers started by you in the current tenant are shown.</p></div><Button variant="secondary" size="small" loading={loading} onClick={load}>Refresh</Button></header>{error?<p role="alert" className="a-entity-list__transfer-error">{error}</p>:null}<section aria-busy={loading}><table><thead><tr><th>Type</th><th>Entity</th><th>Operation</th><th>Status</th><th>Rows</th><th>Errors</th><th>Started</th><th>Result</th></tr></thead><tbody>{items.map(item=><tr key={`${item.kind}:${item.id}`}><td>{title(item.kind)}</td><td>{title(item.entityCode)}</td><td>{item.operation?title(item.operation):"—"}</td><td><span className={`a-transfer-workspace__status a-transfer-workspace__status--${item.status}`}>{title(item.status)}</span></td><td>{item.rowCount.toLocaleString()}</td><td>{item.errorCount.toLocaleString()}</td><td>{new Date(item.createdAt).toLocaleString()}</td><td>{item.downloadable?<Button variant="secondary" size="small" onClick={()=>void download(item)}>{item.kind==="import"?"Error report":"Download"}</Button>:"—"}</td></tr>)}</tbody></table>{!loading&&!items.length?<p className="a-transfer-workspace__empty">No imports or exports have been started yet.</p>:null}</section></main>;
+}
+function title(value:string){return value.replace(/[._-]+/g," ").replace(/\b\w/g,character=>character.toUpperCase());}

@@ -27,6 +27,7 @@ const REQUIRED_PAGES = [
   "login-magic-link.ftl",
   "login-oauth-grant.ftl",
   "login-otp.ftl",
+  "login-page-expired.ftl",
   "login-password.ftl",
   "login-reset-password.ftl",
   "login-update-password.ftl",
@@ -122,6 +123,7 @@ async function main(): Promise<void> {
   const tokenCss = await readFile(path.join(cssRoot, "iam.tokens.css"), "utf8");
   const generatedCss = await readFile(path.join(cssRoot, "iam.generated.css"), "utf8");
   const realm = await readFile(path.join(repoRoot, "stack/config/iam/realm-athyper.json"), "utf8");
+  const realmConfig = JSON.parse(realm) as { supportedLocales?: unknown };
   const presentationForm = await readFile(
     path.join(presentationProviderRoot, "IamPresentationUsernamePasswordForm.java"),
     "utf8",
@@ -138,7 +140,7 @@ async function main(): Promise<void> {
 
   try {
     assert(loginCss.startsWith('@import url("./iam.tokens.css");\n@import url("./iam.generated.css");'), "login CSS does not load its token and utility dependencies first");
-    assert(loginCss.includes("height: var(--a-logo-md, 1.75rem)"), "IAM wordmark has no safe intrinsic-size fallback");
+    assert(/\.kc-plane-wordmark\s*\{[^}]*height:\s*(?:3\.25rem|var\(--a-logo-md,\s*1\.75rem\))/s.test(loginCss), "IAM wordmark has no safe intrinsic size");
     assert(tokenCss.includes("--a-control-height:") && tokenCss.includes("--a-touch-target:"), "IAM token bridge omits control sizing tokens used by login CSS");
     assert(context.includes("client.clientId"), "plane context does not inspect client.clientId");
     assert(context.includes("iamLegacyPlane"), "plane context has no constrained legacy fallback");
@@ -165,6 +167,7 @@ async function main(): Promise<void> {
     assert(redisAclTemplate.includes("~iam:presentation:v1:*"), "Redis app ACL does not scope the IAM presentation namespace");
     assert(redisAclTemplate.includes("+getdel"), "Redis app ACL does not allow atomic presentation-context consumption");
     assert((realm.match(/athyper-iam-username-password-form/g) ?? []).length === 2, "user and Admin browser flows must use the Athyper presentation authenticator");
+    assert(JSON.stringify(realmConfig.supportedLocales) === '["en"]', "IAM realm supportedLocales contains non-locale theme names");
     assert(iamDockerfile.includes("iam-presentation-context-0.1.0.jar"), "Keycloak image does not package the presentation provider");
     assert(loginCss.includes(".iam-shell"), "unified shell CSS is missing");
     assert(!/\.kc-panel-left|\.kc-carousel|\.kc-slide|\.kc-dots/.test(loginCss), "IAM CSS still contains retired promotional selectors");

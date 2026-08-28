@@ -7,6 +7,7 @@ export * from "./operating-organization";
 export * from "./network-account";
 export * from "./verification";
 export * from "./localization";
+export * from "./entity-list";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RequestClass = "interactive" | "background" | "upload" | "download" | "stream";
@@ -72,9 +73,10 @@ export interface HttpClientOptions {
   readonly onDiagnostic?: (diagnostic: TransportDiagnostic) => void;
 }
 
+export type QueryScalar = string | number | boolean;
 export interface RequestOptions<TBody = unknown> {
   readonly params?: Readonly<Record<string, string | number>>;
-  readonly query?: Readonly<Record<string, string | number | boolean | null | undefined>>;
+  readonly query?: Readonly<Record<string, QueryScalar | readonly QueryScalar[] | null | undefined>>;
   readonly body?: TBody | BodyInit;
   readonly headers?: HeadersInit;
   readonly signal?: AbortSignal;
@@ -179,7 +181,11 @@ function relayUrl(prefix: string, path: string, query?: RequestOptions["query"])
   if (!relative) throw new TypeError("API client operation path cannot be empty");
   const url = `${prefix.replace(/\/$/, "")}/${relative}`;
   assertRelayPath(url); const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query ?? {})) if (value !== undefined && value !== null) params.append(key, String(value));
+  for (const [key, value] of Object.entries(query ?? {})) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) for (const item of value) params.append(key, String(item));
+    else params.append(key, String(value));
+  }
   return params.size ? `${url}?${params}` : url;
 }
 function assertRelayPath(path: string): void { if (!(path === "/api/relay" || path.startsWith("/api/relay/")) || path.includes("\\") || path.split("/").includes("..")) throw new TypeError("Browser transport must use a same-origin /api/relay path"); }

@@ -1918,7 +1918,7 @@
   },
   "identityContract": {
     "realm": "athyper",
-    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "sourceSha256": "005b25bc20239f73b0e814a1ddb63263fe93c78db2c7f2ed09070b3d9ee4402a",
     "enabledSubjectCount": 161,
     "mappedSubjectCount": 161,
     "unmanagedKeycloakUsers": "deny",

@@ -3,10 +3,11 @@ import type { VerifiedRequestContext, Authorizer } from "@athyper/server-contrac
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { OutboxWriter } from "@athyper/server-contract-events";
 import type { MetadataReader } from "@athyper/server-contract-metadata";
-import type { GovernedRecordJobDispatcher, ImportValidationRow, ImportValidationSummary, RecordImportPreview, RecordImportSession } from "@athyper/server-contract-records";
+import type { GovernedRecordJobDispatcher, ImportValidationRow, ImportValidationSummary, RecordCollectionScopeResolution, RecordCollectionScopeResolver, RecordImportAtomicity, RecordImportConflictPolicy, RecordImportOperation, RecordImportPreview, RecordImportSession, RecordTransferListItem } from "@athyper/server-contract-records";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import { RecordServiceError } from "../errors.js";
 import { descriptorFor } from "../query-service.js";
+import type { GovernedImportAdapterRegistry } from "./import-adapter-registry.js";
 
 type Row = Readonly<Record<string, unknown>>;
 export interface StoredImport { readonly session: RecordImportSession; readonly rows: readonly Row[]; readonly validation?: readonly ImportValidationRow[]; readonly summary?: ImportValidationSummary; }
@@ -23,8 +24,9 @@ export interface ImportStagingStore<Transaction = unknown> {
   saveExportRequest(input: { readonly id: string; readonly tenantId: string; readonly entityCode: string; readonly exactFilter: Readonly<Record<string, unknown>>; readonly actorPrincipalId: string; readonly status: "queued" }, transaction: Transaction): Promise<"created" | "replayed">;
   cancelExport?(tenantId: string, exportRequestId: string, cancelledAt: string, transaction: Transaction): Promise<"cancelled" | "already_terminal" | "not_found">;
   getExport?(tenantId:string,exportRequestId:string,transaction:Transaction):Promise<{entityCode:string;actorPrincipalId:string;status:"queued"|"running"|"completed"|"cancelled"|"failed";artifactKey?:string;rowCount?:number}|null>;
+  listOwned?(tenantId:string,principalId:string,limit:number,transaction:Transaction):Promise<readonly RecordTransferListItem[]>;
 }
-export interface ImportRowValidator { validate(context: VerifiedRequestContext, entityCode: string, row: Row, rowNumber: number): Promise<ImportValidationRow>; }
+export interface ImportRowValidator { validate(context: VerifiedRequestContext, entityCode: string, row: Row, rowNumber: number, operation?: RecordImportOperation): Promise<ImportValidationRow>; }
 export interface ImportErrorReportStore { write(input: { tenantId: string; sessionId: string; content: AsyncIterable<Uint8Array>; contentType: "application/x-ndjson" }): Promise<string>; createDownloadUrl(key: string, expirySeconds: number): Promise<string>; }
 export interface CancellableRecordJobDispatcher extends GovernedRecordJobDispatcher { cancel?(jobId: string): Promise<boolean>; }
 export type RecordTransferService = ReturnType<typeof createRecordTransferService<unknown>>;
@@ -38,6 +40,8 @@ export function createRecordTransferService<Transaction>(options: {
   readonly audit: AuditRecorder<Transaction>;
   readonly outbox: OutboxWriter<Transaction>;
   readonly transactions: PlaneTransactionCoordinator<Transaction>;
+  readonly adapters: GovernedImportAdapterRegistry<Transaction>;
+  readonly collectionScopes?: RecordCollectionScopeResolver;
   readonly errorReports?: ImportErrorReportStore;
   readonly validationSampleSize?: number;
   readonly now?: () => Date;
@@ -46,10 +50,14 @@ export function createRecordTransferService<Transaction>(options: {
   const now = options.now ?? (() => new Date());
   const createId = options.createId ?? randomUUID;
   return {
-    async beginImport(context: VerifiedRequestContext, entityCode: string, sessionId = createId()) {
-      await authorizeOperation(options, context, entityCode, "import");
+    async beginImport(context: VerifiedRequestContext, entityCode: string, sessionId = createId(), operation: RecordImportOperation = "create", configuration: { readonly scopeCoordinate?: Readonly<Record<string, string>>; readonly conflictPolicy?: RecordImportConflictPolicy; readonly atomicity?: RecordImportAtomicity } = {}) {
+      const descriptor = await descriptorFor(options.metadata, context, entityCode);
+      const scope = await resolveImportScope(options.collectionScopes, context, descriptor, configuration.scopeCoordinate);
+      const adapter = options.adapters.select(descriptor, operation);
+      await authorizeDescriptorOperation(options.authorizer, context, descriptor, "import", scope.authorizationResource);
+      await authorizeImportMode(options.authorizer,context,descriptor,operation,scope.authorizationResource);
       requireChunkStore(options.staging);
-      const session: RecordImportSession = Object.freeze({ id: sessionId, tenantId: context.tenantId, entityCode, status: "uploading", stagedRowCount: 0, validRowCount: 0, invalidRowCount: 0, checksum: emptyChecksum(), nextChunkIndex: 0, createdAt: now().toISOString(),createdBy:context.principalId });
+      const session: RecordImportSession = Object.freeze({ id: sessionId, tenantId: context.tenantId, entityCode, operation, adapterKey: adapter.key, descriptorHash: descriptor.compiledHash, ...(configuration.scopeCoordinate ? { scopeCoordinate: Object.freeze({ ...configuration.scopeCoordinate }) } : {}), conflictPolicy: configuration.conflictPolicy ?? "reject", atomicity: configuration.atomicity ?? "all_or_nothing", status: "uploading", stagedRowCount: 0, validRowCount: 0, invalidRowCount: 0, checksum: emptyChecksum(), nextChunkIndex: 0, createdAt: now().toISOString(),createdBy:context.principalId });
       await options.transactions.run(context.planeKey, context, async (tx) => {
         await options.staging.create(session, [], tx);
         await appendEvent(options.outbox, context, "records.import.upload_started", `records:import:${sessionId}:upload`, entityCode, sessionId, { sessionId }, tx);
@@ -89,11 +97,15 @@ export function createRecordTransferService<Transaction>(options: {
       });
     },
 
-    async stage(context: VerifiedRequestContext, entityCode: string, rows: readonly Row[]) {
-      await authorizeOperation(options, context, entityCode, "import");
+    async stage(context: VerifiedRequestContext, entityCode: string, rows: readonly Row[], operation: RecordImportOperation = "create", configuration: { readonly scopeCoordinate?: Readonly<Record<string, string>>; readonly conflictPolicy?: RecordImportConflictPolicy; readonly atomicity?: RecordImportAtomicity } = {}) {
+      const descriptor = await descriptorFor(options.metadata, context, entityCode);
+      const scope = await resolveImportScope(options.collectionScopes, context, descriptor, configuration.scopeCoordinate);
+      const adapter = options.adapters.select(descriptor, operation);
+      await authorizeDescriptorOperation(options.authorizer, context, descriptor, "import", scope.authorizationResource);
+      await authorizeImportMode(options.authorizer,context,descriptor,operation,scope.authorizationResource);
       if (!rows.length) throw new TypeError("Import contains no rows");
       const checksum = digest(stable(rows));
-      const session: RecordImportSession = Object.freeze({ id: createId(), tenantId: context.tenantId, entityCode, status: "staged", stagedRowCount: rows.length, validRowCount: 0, invalidRowCount: 0, checksum, nextChunkIndex: 1, createdAt: now().toISOString(),createdBy:context.principalId });
+      const session: RecordImportSession = Object.freeze({ id: createId(), tenantId: context.tenantId, entityCode, operation, adapterKey: adapter.key, descriptorHash: descriptor.compiledHash, ...(configuration.scopeCoordinate ? { scopeCoordinate: Object.freeze({ ...configuration.scopeCoordinate }) } : {}), conflictPolicy: configuration.conflictPolicy ?? "reject", atomicity: configuration.atomicity ?? "all_or_nothing", status: "staged", stagedRowCount: rows.length, validRowCount: 0, invalidRowCount: 0, checksum, nextChunkIndex: 1, createdAt: now().toISOString(),createdBy:context.principalId });
       await options.transactions.run(context.planeKey, context, async (tx) => {
         await options.staging.create(session, structuredClone(rows), tx);
         await appendEvent(options.outbox, context, "records.import.staged", `records:import:${session.id}:staged`, entityCode, session.id, { sessionId: session.id, rowCount: rows.length, checksum }, tx);
@@ -104,8 +116,18 @@ export function createRecordTransferService<Transaction>(options: {
     async validate(context: VerifiedRequestContext, sessionId: string): Promise<RecordImportPreview> {
       const staged = await options.transactions.run(context.planeKey, context, (tx) => options.staging.get(context.tenantId, sessionId, tx));
       if (!staged || ["commit_queued", "running", "committed", "cancelled"].includes(staged.session.status)) throw new Error("Import session is unavailable");requireOwner(staged.session,context);
+      const descriptor = await descriptorFor(options.metadata, context, staged.session.entityCode);
+      requireDescriptorHash(staged.session, descriptor.compiledHash);
+      const scope = await resolveImportScope(options.collectionScopes, context, descriptor, staged.session.scopeCoordinate);
+      const adapter = options.adapters.resolve(staged.session.adapterKey, descriptor, staged.session.operation);
+      await authorizeDescriptorOperation(options.authorizer, context, descriptor, "import", scope.authorizationResource);
+      await authorizeImportMode(options.authorizer,context,descriptor,staged.session.operation,scope.authorizationResource);
       const validation: ImportValidationRow[] = [];
-      for (let index = 0; index < staged.rows.length; index += 1) validation.push(await options.validator.validate(context, staged.session.entityCode, staged.rows[index]!, index + 1));
+      for (let index = 0; index < staged.rows.length; index += 1) {
+        const generic = await options.validator.validate(context, staged.session.entityCode, staged.rows[index]!, index + 1, staged.session.operation);
+        const governed = await adapter.validate({ context, descriptor, session: staged.session, scope, row: staged.rows[index]!, rowNumber: index + 1 });
+        validation.push({ rowNumber: index + 1, valid: generic.valid && governed.valid, errors: Object.freeze([...generic.errors, ...governed.errors]) });
+      }
       const summary = summarize(validation, options.validationSampleSize ?? 100);
       const errorReportKey = summary.invalidCount && options.errorReports ? await options.errorReports.write({ tenantId: context.tenantId, sessionId, content: errorLines(validation), contentType: "application/x-ndjson" }) : undefined;
       await options.transactions.run(context.planeKey, context, async (tx) => {
@@ -136,7 +158,8 @@ export function createRecordTransferService<Transaction>(options: {
         if (["commit_queued", "committed"].includes(value.session.status)) return value;
         if (!value.validation || value.session.status === "staged") throw new Error("Import must be validated before commit");
         if (value.session.status !== "previewed") throw new Error("Import must be previewed before commit");
-        if (value.validation.some((row) => !row.valid)) throw new Error("Import contains invalid rows");
+        if (value.session.atomicity === "all_or_nothing" && value.validation.some((row) => !row.valid)) throw new Error("Import contains invalid rows");
+        if (!value.validation.some((row) => row.valid)) throw new Error("Import contains no valid rows");
         await options.staging.setStatus(sessionId, "commit_queued", tx);
         await recordTransferAudit(options.audit, context, "records.import.commit_queued", "import", value.session.entityCode, { sessionId, jobId, checksum: value.session.checksum }, tx);
         await appendEvent(options.outbox, context, "records.import.dispatch_requested", jobId, value.session.entityCode, sessionId, { tenantId: context.tenantId, sessionId, checksum: value.session.checksum, actorPrincipalId: context.principalId, jobId }, tx);
@@ -193,6 +216,7 @@ export function createRecordTransferService<Transaction>(options: {
     },
     async getImport(context:VerifiedRequestContext,sessionId:string){const staged=await options.transactions.run(context.planeKey,context,tx=>options.staging.get(context.tenantId,sessionId,tx));if(!staged)throw new Error("Import session is unavailable");requireOwner(staged.session,context);return staged.session;},
     async downloadExport(context:VerifiedRequestContext,exportRequestId:string,expirySeconds=300){if(!options.errorReports||!options.staging.getExport)throw new Error("Export downloads are not configured");const request=await options.transactions.run(context.planeKey,context,tx=>options.staging.getExport!(context.tenantId,exportRequestId,tx));if(!request||request.actorPrincipalId!==context.principalId||request.status!=="completed"||!request.artifactKey)throw new Error("Export artifact is unavailable");const ttl=Math.min(Math.max(expirySeconds,30),3600);return{exportRequestId,rowCount:request.rowCount??0,url:await options.errorReports.createDownloadUrl(request.artifactKey,ttl),expiresInSeconds:ttl};},
+    async listTransfers(context:VerifiedRequestContext,limit=50){if(!options.staging.listOwned)throw new Error("Transfer workspace is not configured");const safe=Math.min(Math.max(limit,1),100);return{items:await options.transactions.run(context.planeKey,context,tx=>options.staging.listOwned!(context.tenantId,context.principalId,safe,tx))};},
   };
 }
 
@@ -204,6 +228,15 @@ function stable(value: unknown): string { if (value === null || typeof value !==
 function summarize(rows: readonly ImportValidationRow[], sampleSize: number): ImportValidationSummary { const invalid = rows.filter((row) => !row.valid); const errorsByCode: Record<string, number> = {}; for (const row of invalid) for (const error of row.errors) { const code = error.split(":", 1)[0]!.trim() || "VALIDATION_ERROR"; errorsByCode[code] = (errorsByCode[code] ?? 0) + 1; } return { totalCount: rows.length, validCount: rows.length - invalid.length, invalidCount: invalid.length, errorsByCode, sample: invalid.slice(0, Math.max(0, sampleSize)), truncated: invalid.length > sampleSize }; }
 function preview(sessionId: string, rows: readonly ImportValidationRow[], summary: ImportValidationSummary): RecordImportPreview { return { sessionId, rows, validCount: summary.validCount, invalidCount: summary.invalidCount, summary }; }
 async function* errorLines(rows: readonly ImportValidationRow[]) { const encoder = new TextEncoder(); for (const row of rows) if (!row.valid) yield encoder.encode(`${JSON.stringify(row)}\n`); }
-async function authorizeOperation(options: { readonly metadata: MetadataReader; readonly authorizer: Authorizer }, context: VerifiedRequestContext, entityCode: string, operation: "import" | "export") { const descriptor = await descriptorFor(options.metadata, context, entityCode); const permissionCode = descriptor.operations[operation]?.permissionCode; if (!permissionCode || !(await options.authorizer.authorize({ context, permissionCode, resource: { entityCode } })).allowed) throw new RecordServiceError(403, "FORBIDDEN", `Record ${operation} is not permitted`); }
+async function authorizeOperation(options: { readonly metadata: MetadataReader; readonly authorizer: Authorizer }, context: VerifiedRequestContext, entityCode: string, operation: "import" | "export") { const descriptor = await descriptorFor(options.metadata, context, entityCode); return authorizeDescriptorOperation(options.authorizer, context, descriptor, operation, {}); }
+async function authorizeDescriptorOperation(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: Awaited<ReturnType<typeof descriptorFor>>, operation: "import" | "export", resource: Readonly<Record<string, string>>) { const permissionCode = descriptor.operations[operation]?.permissionCode; if (!permissionCode || !(await authorizer.authorize({ context, permissionCode, resource: { entityCode: descriptor.entityCode, ...resource } })).allowed) throw new RecordServiceError(403, "FORBIDDEN", `Record ${operation} is not permitted`); }
+async function authorizeImportMode(authorizer:Authorizer,context:VerifiedRequestContext,descriptor:Awaited<ReturnType<typeof descriptorFor>>,operation:RecordImportOperation,resource:Readonly<Record<string,string>>){const permissions=descriptor.listPresentation?.dataOperations?.importOperationPermissions?.[operation]??[];if(!permissions.length)throw new RecordServiceError(403,"IMPORT_MODE_NOT_PUBLISHED",`Import ${operation} is not published for this entity`);for(const permissionCode of permissions)if(!(await authorizer.authorize({context,permissionCode,resource:{entityCode:descriptor.entityCode,...resource}})).allowed)throw new RecordServiceError(403,"FORBIDDEN",`Import ${operation} is not permitted`);}
+async function resolveImportScope(resolver: RecordCollectionScopeResolver | undefined, context: VerifiedRequestContext, descriptor: Awaited<ReturnType<typeof descriptorFor>>, coordinate?: Readonly<Record<string, string>>): Promise<Extract<RecordCollectionScopeResolution, { readonly status: "ready" }>> {
+  const resolution = resolver ? await resolver.resolve({ context, descriptor, operationCode: "import", ...(coordinate ? { coordinate } : {}) }) : { status: "ready" as const, authorizationResource: Object.freeze({}), constraints: Object.freeze([]), labels: Object.freeze([]), fingerprintMaterial: Object.freeze({ mode: "tenant" }) };
+  if (resolution.status === "context_required") throw new RecordServiceError(409, "IMPORT_SCOPE_REQUIRED", "A governed import scope must be selected");
+  if (resolution.status === "forbidden") throw new RecordServiceError(403, resolution.code, resolution.message);
+  return resolution;
+}
+function requireDescriptorHash(session: RecordImportSession, compiledHash: string) { if (session.descriptorHash !== compiledHash) throw new RecordServiceError(409, "IMPORT_DESCRIPTOR_CHANGED", "The entity contract changed after this import began; start a new import"); }
 async function appendEvent<T>(outbox: OutboxWriter<T>, context: VerifiedRequestContext, eventType: string, eventKey: string, entityType: string, entityId: string, payload: Readonly<Record<string, unknown>>, tx: T) { await outbox.append({ tenantId: context.tenantId, topic: "records.transfer", eventType, eventKey, entityType, entityId, aggregateType: eventType.startsWith("records.export") ? "records.export_request" : "records.import_session", aggregateId: entityId, actorId: context.principalId, correlationId: context.correlationId, payload }, tx); }
 async function recordTransferAudit<T>(audit: AuditRecorder<T>, context: VerifiedRequestContext, eventCode: string, action: string, entityType: string, metadata: Readonly<Record<string, unknown>>, transaction: T) { await audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata }, transaction); }

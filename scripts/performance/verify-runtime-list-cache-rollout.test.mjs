@@ -62,38 +62,34 @@ test("rejects slow warm visits, skeleton replacement, and incompatible cache reu
   assert.equal(failures.length, 4);
 });
 
-test("provides the Journal Entry dashboard client-navigation test target", () => {
-  const route = readFileSync(new URL("../../apps/neon/app/(shell)/app/[entity]/page.tsx", import.meta.url), "utf8");
-  const dashboard = readFileSync(new URL("../../apps/neon/app/(shell)/dashboard/page.tsx", import.meta.url), "utf8");
-  assert.doesNotMatch(route, /pilot_entities|canary_entities/i);
-  assert.match(dashboard, /ATHYPER_DASHBOARD_PREFETCH_ENTITIES/);
-  assert.match(dashboard, /journal_entry/);
-  assert.match(dashboard, /RuntimeListIntentPrefetchLinks/);
+test("provides one bounded shared-runtime route adapter for every plane", () => {
+  const routes = [
+    ["../../apps/neon/app/(shell)/app/[entityCode]/page.tsx", /NeonEntityList/],
+    ["../../apps/mesh/app/(shell)/workspace/[entityCode]/page.tsx", /MeshEntityList/],
+    ["../../apps/studio/app/(shell)/admin/catalogs/[catalogCode]/page.tsx", /StudioCatalogList/],
+  ];
+  for (const [path, adapter] of routes) {
+    const route = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.match(route, adapter);
+    assert.match(route, /notFound\(\)/);
+    assert.doesNotMatch(route, /pilot_entities|canary_entities|legacy/i);
+  }
 });
 
 test("keeps authenticated record and descriptor upstream requests no-store", () => {
-  const records = readFileSync(new URL("../../apps/neon/lib/server/meta-entity-records.ts", import.meta.url), "utf8");
-  const descriptor = readFileSync(new URL("../../apps/neon/lib/server/meta-entity-runtime.ts", import.meta.url), "utf8");
-  assert.match(records, /cache:\s*["']no-store["']/);
-  assert.match(descriptor, /cache:\s*["']no-store["']/);
+  const relay = readFileSync(new URL("../../packages/platform/gateway/bff-relay/src/index.ts", import.meta.url), "utf8");
+  const routes = readFileSync(new URL("../../server/packages/services/records/src/entity-list-routes.ts", import.meta.url), "utf8");
+  assert.match(relay, /cache:\s*["']no-store["']/);
+  assert.match(relay, /private, no-store/);
+  assert.match(routes, /Cache-Control["'],\s*["']private, no-store/);
 });
 
-test("keeps dashboard and shell app links on the Next client router", () => {
-  const dashboardLinks = readFileSync(new URL(
-    "../../packages/shared/runtime-domain/runtime-list/src/islands/runtime-list-intent-prefetch.tsx",
+test("keeps list query changes on history state without document navigation", () => {
+  const runtime = readFileSync(new URL(
+    "../../packages/platform/entity/runtime/list-view/src/index.tsx",
     import.meta.url,
   ), "utf8");
-  const appShell = readFileSync(new URL(
-    "../../apps/neon/app/(shell)/AppShellClient.tsx",
-    import.meta.url,
-  ), "utf8");
-  const favorites = readFileSync(new URL(
-    "../../packages/planes/neon/app/src/collaboration/FavoritesPanelContainer.tsx",
-    import.meta.url,
-  ), "utf8");
-
-  assert.match(dashboardLinks, /import Link from ["']next\/link["']/);
-  assert.match(appShell, /router\.push\(/);
-  assert.doesNotMatch(appShell, /location\.assign|location\.replace/);
-  assert.doesNotMatch(favorites, /window\.location|location\.assign/);
+  assert.match(runtime, /window\.history\.pushState/);
+  assert.match(runtime, /window\.history\.replaceState/);
+  assert.match(runtime, /popstate/);
 });

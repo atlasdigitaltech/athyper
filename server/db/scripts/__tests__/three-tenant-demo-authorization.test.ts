@@ -9,7 +9,12 @@ test("builds explicit cross-plane demo scopes without member-company propagation
   assert.deepEqual(model.studio.map((grant) => grant.username).sort(), ["athq.admin", "athyper.admin", "catl.admin", "tksa.admin"]);
   assert.equal(model.studio.every((grant) => grant.scopes.length === 1 && grant.scopes[0]?.kind === "tenant"), true);
   assert.equal(model.studio.find((grant) => grant.username === "athq.admin")?.tenantCode, "athyper");
-  assert.deepEqual(DEMO_PLANE_PERMISSIONS.studio, ["studio.platform.catalog.view", "studio.platform.catalog.manage"]);
+  assert.deepEqual(DEMO_PLANE_PERMISSIONS.studio, [
+    "studio.platform.catalog.view",
+    "studio.platform.catalog.manage",
+    "studio.metadata.contract.view",
+    "studio.metadata.contract.import",
+  ]);
 
   const catlFinance = model.neon.find((grant) => grant.username === "catl.finance")!;
   assert.deepEqual(new Set(catlFinance.scopes.map((scope) => scope.kind)), new Set(["legal_entity", "company_code"]));
@@ -22,6 +27,11 @@ test("builds explicit cross-plane demo scopes without member-company propagation
 
   const catlAdminMesh = model.mesh.find((grant) => grant.username === "catl.admin")!;
   assert.deepEqual(catlAdminMesh.scopes.map((scope) => scope.key).sort(), ["bna-1000000022", "sna-1000000022"]);
+  assert.deepEqual(DEMO_PLANE_PERMISSIONS.mesh, [
+    "mesh.catalog.network_account.read",
+    "mesh.catalog.network_relationship.read",
+    "mesh.catalog.network_relationship.request",
+  ]);
   assert.equal(Object.values(model).flatMap((grants) => grants).flatMap((grant) => grant.scopes)
     .some((scope) => scope.propagation === ("member_companies" as string)), false);
 });

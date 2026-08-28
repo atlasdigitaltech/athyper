@@ -12,7 +12,7 @@ if (!Number.isFinite(budget) || budget <= 0) {
 }
 
 const result = await build({
-  entryPoints: ["packages/shared/ui-platform/shell/src/index.ts"],
+  entryPoints: ["packages/platform/shell/shell/src/index.tsx"],
   bundle: true,
   format: "esm",
   platform: "browser",
@@ -22,7 +22,7 @@ const result = await build({
   treeShaking: true,
   write: false,
   logLevel: "silent",
-  external: ["react", "react/*", "lucide-react", "@athyper/*"],
+  external: ["react", "react/*", "react-dom", "react-dom/*", "lucide-react", "@athyper/*"],
 });
 const gzipBytes = gzipSync(result.outputFiles[0].contents, { level: 9 }).byteLength;
 if (gzipBytes > budget) {

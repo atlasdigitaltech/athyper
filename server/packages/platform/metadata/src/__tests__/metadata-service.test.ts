@@ -18,6 +18,28 @@ describe("metadata service", () => {
     expect(parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: descriptor })).toEqual(descriptor);
   });
 
+  it("parses and validates canonical list defaults against field capabilities", () => {
+    const compiled = {
+      ...descriptor,
+      fields: [{ ...descriptor.fields[0]!, filterable: true, sortable: true, list: { groupable: true, filterOperators: ["contains"], aggregations: ["count"] } }],
+      listPresentation: { schemaVersion: 1, identityField: "name", defaultState: { filters: [{ field: "name", operator: "contains", value: "acme" }], sort: [{ field: "name", direction: "asc" }], group: "name", columns: ["name"], density: "compact", mode: "table" }, supportedModes: ["table"], search: { minimumQueryLength: 2 }, limits: { defaultPageSize: 25, allowedPageSizes: [25, 50], maxSortLevels: 2, countMode: "cached" } },
+    };
+    const parsed = parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: compiled });
+    expect(parsed.listPresentation?.defaultState?.columns).toEqual(["name"]);
+    expect(parsed.listPresentation?.search?.minimumQueryLength).toBe(2);
+    expect(parsed.listPresentation?.limits?.maxSortLevels).toBe(2);
+  });
+
+  it("rejects list defaults that contradict canonical field metadata", () => {
+    const compiled = { ...descriptor, listPresentation: { schemaVersion: 1, identityField: "name", defaultState: { filters: [{ field: "name", operator: "gt", value: "x" }], sort: [], columns: ["name"], density: "comfortable", mode: "table" }, supportedModes: ["table"], search: { minimumQueryLength: 1 }, limits: { defaultPageSize: 25, allowedPageSizes: [25], maxSortLevels: 1, countMode: "none" } } };
+    expect(() => parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: compiled })).toThrow(/not filterable/);
+  });
+
+  it("rejects field operator metadata that widens the canonical type policy", () => {
+    const compiled = { ...descriptor, fields: [{ ...descriptor.fields[0]!, filterable: true, list: { filterOperators: ["gt"] } }] };
+    expect(() => parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: compiled })).toThrow(/not valid for field type string/);
+  });
+
   it("parses revision-pinned policy bindings from Entity Meta", () => {
     const policyBinding = { key: "supplier_activation", policyDefinitionId: "33333333-3333-4333-8333-333333333333", policyVersionNo: 3, stage: "precondition", enforcement: "enforce", priority: 20, operationCode: "activate", inputMapping: { risk: "payload.risk" } } as const;
     const compiled = { ...descriptor, policyBindings: [policyBinding] };

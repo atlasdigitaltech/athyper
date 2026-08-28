@@ -463,6 +463,22 @@
         "moduleCode": "fnd"
       },
       {
+        "permissionId": "82831768-bf1e-5d5d-94dd-f366030e26e9",
+        "canonicalPermissionCode": "mesh.catalog.network_relationship.request",
+        "plane": "mesh",
+        "entityCode": "network_relationship",
+        "operationCode": "request",
+        "operationKind": "mutation",
+        "riskTier": "medium",
+        "requiresMfa": false,
+        "requiresSod": false,
+        "shareable": false,
+        "delegable": false,
+        "definitionSha256": "05c88f707b7947b5fa5cca96c6f9920c7695610606580682b31624ec07472e35",
+        "permissionKind": "entity_operation",
+        "moduleCode": "fnd"
+      },
+      {
         "permissionId": "bdc4714c-f66e-5a99-aa6c-898f3e8b855e",
         "canonicalPermissionCode": "mesh.catalog.network_relationship.suspend",
         "plane": "mesh",
@@ -1002,6 +1018,23 @@
         ]
       },
       {
+        "permissionCode": "mesh.catalog.network_relationship.request",
+        "scopes": [
+          {
+            "kind": "tenant",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_account",
+            "propagation": "exact"
+          },
+          {
+            "kind": "network_relationship",
+            "propagation": "exact"
+          }
+        ]
+      },
+      {
         "permissionCode": "mesh.catalog.network_relationship.suspend",
         "scopes": [
           {
@@ -1087,7 +1120,7 @@
         ]
       }
     ],
-    "sha256": "6d25ef074944c14117b44819de953d21e705daa94916349b9120cce00b94871c"
+    "sha256": "f1a9f14320eb6ac1aca2ce5d961368bd7d507f57f12d4ef455c864f2622576c4"
   },
   "authority": {
     "version": "authorization.clean-slate.v1",
@@ -3236,7 +3269,7 @@
   },
   "identityContract": {
     "realm": "athyper",
-    "sourceSha256": "6a7f06733d4ac0ac0440faa40494f4b7e658f416e0cd802a89811eccae056b8a",
+    "sourceSha256": "005b25bc20239f73b0e814a1ddb63263fe93c78db2c7f2ed09070b3d9ee4402a",
     "enabledSubjectCount": 161,
     "mappedSubjectCount": 161,
     "unmanagedKeycloakUsers": "deny",

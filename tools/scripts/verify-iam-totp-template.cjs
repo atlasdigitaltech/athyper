@@ -16,15 +16,37 @@ const templatePath = path.resolve(
   "login-config-totp.ftl",
 );
 const source = fs.readFileSync(templatePath, "utf8");
+const cssPath = path.resolve(
+  __dirname,
+  "..",
+  "..",
+  "stack",
+  "config",
+  "iam",
+  "themes",
+  "neon",
+  "login",
+  "resources",
+  "css",
+  "login.css",
+);
+const css = fs.readFileSync(cssPath, "utf8");
 const errors = [];
 
-const leftPanelStart = source.indexOf('class="kc-panel-left"');
+const sharedHeaderStart = source.indexOf('<#include "_iam-header.ftl">');
 const rightPanelStart = source.indexOf('class="kc-panel-right"');
-if (leftPanelStart < 0 || rightPanelStart < 0 || leftPanelStart > rightPanelStart) {
-  errors.push("left and right IAM panels are missing or out of order");
+if (sharedHeaderStart < 0 || rightPanelStart < 0 || sharedHeaderStart > rightPanelStart) {
+  errors.push("shared IAM header and right panel are missing or out of order");
 }
 if (/<\/div>\s*<\/div>\s*<\/div>\s*<!-- -- Right form panel -- -->/i.test(source)) {
   errors.push("unexpected extra closing divs before the right IAM panel");
+}
+
+if (!source.includes('<body class="kc-page-totp">')) {
+  errors.push("TOTP page must opt into the long-form split-panel layout");
+}
+if (!/\.kc-page-totp \.kc-story-panel\s*\{[^}]*position:\s*sticky;[^}]*height:\s*100dvh;/s.test(css)) {
+  errors.push("TOTP story panel must remain viewport-aligned while the form scrolls");
 }
 
 if (!source.includes('onclick="toggleSecret(this)"')) {

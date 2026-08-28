@@ -8653,6 +8653,12 @@ model record_import_session {
   id                  String                @db.Uuid
   tenant_id           String                @db.Uuid
   entity_code         String
+  import_operation    String                @default("create")
+  adapter_key         String                @default("legacy.generic.v1")
+  descriptor_hash     String                @default("0000000000000000000000000000000000000000000000000000000000000000")
+  scope_coordinate    Json                  @default("{}")
+  conflict_policy     String                @default("reject")
+  atomicity           String                @default("all_or_nothing")
   status              String
   staged_row_count    Int                   @default(0)
   valid_row_count     Int                   @default(0)

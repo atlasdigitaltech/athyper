@@ -27,6 +27,42 @@ export interface PlaneApplicationResult {
   readonly applicationProjectionCount: number;
 }
 
+export interface PlaneCatalogApplicationResult {
+  readonly plane: ProvisionPlane;
+  readonly permissionCount: number;
+  readonly scopeDeclarationCount: number;
+}
+
+/**
+ * Publishes only the immutable permission catalog and its exact scope
+ * compatibility declarations. This is the safe upgrade path for populated
+ * planes: it deliberately does not reconcile tenants, identities, roles, or
+ * assignments from the clean-slate demo pack.
+ */
+export async function applyPlaneCatalog(
+  client: QueryClient,
+  inputs: ProvisionInputs,
+  plane: ProvisionPlane,
+): Promise<PlaneCatalogApplicationResult> {
+  const definition = inputs.manifest.planes[plane];
+  await assertTarget(client, plane, definition.databaseName);
+  await client.query(
+    "SELECT set_config('app.database_plane', $1, true), set_config('app.current_tenant_id', '', true), set_config('app.current_principal_id', $2, true)",
+    [plane, inputs.manifest.systemPrincipalId],
+  );
+  const pack = inputs.authorizationPacks[plane];
+  await applyEmbeddedPermissions(client, pack, plane);
+  await applyPermissionScopeCompatibility(client, plane, pack.permissionScopeCompatibility);
+  return {
+    plane,
+    permissionCount: pack.permissionCatalog.operations?.length ?? 0,
+    scopeDeclarationCount: pack.permissionScopeCompatibility.permissions.reduce(
+      (count, permission) => count + permission.scopes.length,
+      0,
+    ),
+  };
+}
+
 export async function applyPlaneSeed(
   client: QueryClient,
   inputs: ProvisionInputs,

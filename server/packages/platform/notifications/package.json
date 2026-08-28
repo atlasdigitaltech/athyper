@@ -18,6 +18,7 @@
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-notifications": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
+    "@athyper/server-runtime-http": "workspace:*",
     "express": "^5.0.0",
     "kysely": "^0.28.17"
   },

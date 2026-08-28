@@ -9,9 +9,9 @@ import type { ProvisionPlane } from "./safe-provision.js";
 const CONFIRMATION = "LOCAL-THREE-TENANT-DEMO-AUTH";
 const SOURCE_REF = "local-demo:three-tenant-authorization:v1";
 export const DEMO_PLANE_PERMISSIONS = {
-  neon: ["neon.context.catalog.read"],
-  mesh: ["mesh.catalog.network_account.read"],
-  studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage"],
+  neon: ["neon.context.catalog.read", "workflow.work_item.read"],
+  mesh: ["mesh.catalog.network_account.read", "mesh.catalog.network_relationship.read","mesh.catalog.network_relationship.request"],
+  studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage","studio.metadata.contract.view","studio.metadata.contract.import"],
 } as const;
 const PRIMARY_TENANT_ADMINS: Record<string, string> = {
   athyper: "athyper.admin",
@@ -110,16 +110,19 @@ export async function provisionThreeTenantDemoAuthorization(options: {
 
 async function applyPlane(urlValue: string, plane: ProvisionPlane, inputs: ProvisionInputs, grants: Grant[]): Promise<unknown> {
   const url = new URL(urlValue);
-  if (!["localhost", "127.0.0.1", "::1"].includes(url.hostname) || url.pathname !== `/athyper_${plane}`) throw new Error(`${plane} demo authorization requires local athyper_${plane}`);
+  if (!localDatabase(url) || url.pathname !== `/athyper_${plane}`) throw new Error(`${plane} demo authorization requires local athyper_${plane}`);
   const client = new Client({ connectionString: urlValue });
   await client.connect();
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`${SOURCE_REF}:${plane}`]);
-    const permissions = await Promise.all(DEMO_PLANE_PERMISSIONS[plane].map(async (permissionCode) => ({
-      code: permissionCode,
-      id: (await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND status='published'", [permissionCode])).id,
-    })));
+    const permissions: { code: string; id: string }[] = [];
+    for (const permissionCode of DEMO_PLANE_PERMISSIONS[plane]) {
+      const permission = await one<{ id: string }>(client,
+        "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND status='published'",
+        [permissionCode]);
+      permissions.push({ code: permissionCode, id: permission.id });
+    }
     for (const tenant of inputs.manifest.tenants) {
       const actorId = (await one<{ id: string }>(client, "SELECT id::text AS id FROM master.principal WHERE tenant_id=$1::uuid AND code='seed.three-plane-provisioner' AND status='active'", [tenant.id])).id;
       await client.query("SELECT set_config('app.database_plane',$1,true),set_config('app.current_tenant_id',$2,true),set_config('app.current_principal_id',$3,true)", [plane, tenant.id, actorId]);
@@ -133,6 +136,16 @@ async function applyPlane(urlValue: string, plane: ProvisionPlane, inputs: Provi
     await client.query("ROLLBACK");
     throw error;
   } finally { await client.end(); }
+}
+
+function localDatabase(url: URL): boolean {
+  if (["localhost", "127.0.0.1", "::1"].includes(url.hostname)) return true;
+  const octets = url.hostname.split(".").map(Number);
+  return octets.length === 4
+    && octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255)
+    && (octets[0] === 10
+      || (octets[0] === 172 && octets[1]! >= 16 && octets[1]! <= 31)
+      || (octets[0] === 192 && octets[1] === 168));
 }
 
 async function ensureNeonScopes(client: QueryClient, inputs: ProvisionInputs, tenantCode: string, tenantId: string, actorId: string): Promise<void> {

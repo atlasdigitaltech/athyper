@@ -59,6 +59,19 @@ test("accepts an explicit authorization-pack database target", async () => {
   assert.match(planeApplicator, /assertTarget\(client, plane, definition\.databaseName\)/);
 });
 
+test("supports catalog-only upgrades without reconciling populated identities", async () => {
+  const command = await readFile(resolve(dbRoot, "scripts/apply-authorization-seed-pack.ts"), "utf8");
+  const applicator = await readFile(resolve(dbRoot, "scripts/provisioning/authorization-pack-applicator.ts"), "utf8");
+  assert.match(command, /args\.includes\("--catalog-only"\)/);
+  assert.match(command, /applyPlaneCatalog/);
+  assert.match(applicator, /export async function applyPlaneCatalog/);
+  const catalogOnlyBody = applicator.slice(
+    applicator.indexOf("export async function applyPlaneCatalog"),
+    applicator.indexOf("export async function applyPlaneSeed"),
+  );
+  assert.doesNotMatch(catalogOnlyBody, /applyPrincipal|applyMembership|applyRole/);
+});
+
 test("limits scope reconciliation to authorization-pack-owned permissions", async () => {
   const applicator = await readFile(resolve(dbRoot, "scripts/provisioning/authorization-pack-applicator.ts"), "utf8");
   const ownershipFilters = applicator.match(/permission\.metadata #>> '\{_seed,source\}'=\$\d/g) ?? [];

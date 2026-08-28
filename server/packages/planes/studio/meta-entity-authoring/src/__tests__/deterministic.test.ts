@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { MetaEntityGraph } from "@athyper/server-contract-meta-entity-authoring";
-import { compileGraph, runContractTests, validateGraph } from "../deterministic.js";
+import { compileGraph, compileListPresentation, runContractTests, validateGraph } from "../deterministic.js";
 
 const graph = (reverse = false): MetaEntityGraph => ({
   contractSchema: "athyper.meta-entity-contract/2.1", entity: { entityCode: "invoice" },
@@ -22,5 +22,29 @@ describe("deterministic meta entity pipeline", () => {
     const a:MetaEntityGraph={...graph(),fields:[{id:"f1",fieldKey:"id",dataType:"uuid",typeConfig:{kind:"uuid"}},{id:"f2",fieldKey:"total",dataType:"decimal",typeConfig:{kind:"decimal"}}],operations:[{id:"o1",operationKey:"read",operationKind:"read",label:"Read",auditEventCode:"invoice.read",fieldKeys:["total","id"]}],keys:[{id:"k1",keyKey:"primary",keyKind:"primary",uniquenessScope:"tenant"}],keyFields:[{id:"kf2",entityKeyId:"k1",entityFieldId:"f2",position:2},{id:"kf1",entityKeyId:"k1",entityFieldId:"f1",position:1}]};
     const b:MetaEntityGraph={...a,fields:[...a.fields].reverse(),operations:[{...a.operations[0]!,fieldKeys:["id","total"]}],keyFields:[...(a.keyFields??[])].reverse()};
     expect(compileGraph(a).contractHash).toBe(compileGraph(b).contractHash);
+  });
+  it("compiles an active Studio list surface into the canonical runtime list contract", () => {
+    const authored: MetaEntityGraph = {
+      ...graph(),
+      fields: [
+        { id: "field-id", fieldKey: "id", dataType: "uuid", typeConfig: { kind: "uuid" } },
+        { id: "field-total", fieldKey: "total", dataType: "decimal", typeConfig: { kind: "decimal" } },
+      ],
+      searchProfiles: [{ id: "search-default", searchKey: "default", searchKind: "contains", isDefault: true, minimumQueryLength: 2 }],
+      surfaces: [{ id: "surface-list", surfaceKey: "default_list", surfaceKind: "list", title: "Invoices", isDefault: true, layoutConfig: { identityField: "id", supportedModes: ["table", "compact"], defaultState: { sort: [{ field: "total", direction: "desc" }], density: "compact", mode: "table" }, search: { profileKey: "default", minimumQueryLength: 2 }, limits: { defaultPageSize: 25, allowedPageSizes: [25, 50], maxSortLevels: 2, countMode: "cached" } } }],
+      surfaceFieldBindings: [
+        { entitySurfaceId: "surface-list", entityFieldId: "field-id", bindingKey: "id", position: 1, displayConfig: { defaultVisible: true } },
+        { entitySurfaceId: "surface-list", entityFieldId: "field-total", bindingKey: "total", position: 2, displayConfig: { defaultVisible: true, groupable: true } },
+      ],
+    };
+    expect(validateGraph(authored).issues).toEqual([]);
+    expect(compileListPresentation(authored)).toMatchObject({
+      schemaVersion: 1,
+      identityField: "id",
+      defaultState: { columns: ["id", "total"], sort: [{ field: "total", direction: "desc" }], density: "compact", mode: "table" },
+      search: { profileKey: "default", minimumQueryLength: 2 },
+      limits: { defaultPageSize: 25, allowedPageSizes: [25, 50], maxSortLevels: 2, countMode: "cached" },
+    });
+    expect(compileGraph(authored).descriptor).toHaveProperty("listPresentation");
   });
 });

@@ -4349,18 +4349,7 @@
   "emailTheme": "neon",
   "defaultLocale": "en",
   "supportedLocales": [
-    "en",
-    "default",
-    "mono",
-    "modern-minimal",
-    "tangerine",
-    "cosmic-night",
-    "violet-bloom",
-    "vintage-paper",
-    "soft-pop",
-    "bubblegum",
-    "brutalist",
-    "doom-64"
+    "en"
   ],
   "users": [
     {

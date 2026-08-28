@@ -49,6 +49,10 @@ DO $$ BEGIN
     EXECUTE 'CREATE POLICY release_activation_head_applier ON runtime_meta.release_activation_head FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
     EXECUTE 'CREATE POLICY release_activation_event_applier ON runtime_meta.release_activation_event FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
   END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+    EXECUTE 'CREATE POLICY applied_release_runtime_read ON runtime_meta.applied_release FOR SELECT TO athyperapp USING(true)';
+    EXECUTE 'CREATE POLICY release_activation_head_runtime_read ON runtime_meta.release_activation_head FOR SELECT TO athyperapp USING(true)';
+  END IF;
 END $$;
 
 ALTER TABLE runtime_meta.entity_contract ENABLE ROW LEVEL SECURITY;

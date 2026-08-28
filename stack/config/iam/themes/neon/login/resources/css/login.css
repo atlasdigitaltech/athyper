@@ -251,6 +251,26 @@ a {
   box-shadow: none;
 }
 
+/* TOTP enrollment is taller than the viewport. Keep the two desktop columns
+ * aligned while the setup instructions scroll, rather than allowing the
+ * story panel to collapse into or move with the middle grid row. */
+.kc-page-totp .iam-shell {
+  align-items: start;
+  overflow: visible;
+}
+
+.kc-page-totp .kc-story-panel {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100dvh;
+}
+
+.kc-page-totp .kc-panel-right {
+  justify-content: flex-start;
+  overflow-y: visible;
+}
+
 .iam-brand-header {
   margin-bottom: var(--a-space-8);
 }
@@ -555,6 +575,17 @@ a {
 .kc-info-note svg {
   flex: 0 0 auto;
   margin-top: 0.125rem;
+}
+
+.kc-expired-actions {
+  display: grid;
+  justify-items: center;
+  gap: var(--a-space-4);
+  margin-top: var(--a-space-5);
+}
+
+.kc-expired-continue {
+  text-align: center;
 }
 
 .kc-register {

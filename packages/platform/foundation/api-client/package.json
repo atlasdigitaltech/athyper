@@ -9,6 +9,7 @@
   "exports": { ".": "./src/index.ts", "./bootstrap": "./src/bootstrap.ts" },
   "scripts": { "typecheck": "tsc --noEmit" },
   "dependencies": {
+    "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/contract-platform-api": "workspace:*",
     "@athyper/contract-platform-auth-session": "workspace:*",
     "@athyper/contract-platform-authorization": "workspace:*",
