@@ -10,7 +10,7 @@ const REQUEST_CREATE_ACCESS = { moduleCode: "fnd", requiredPermissions: ["neon.r
 export default function NeonHomePage() {
   return <PlatformHome
     plane="Neon"
-    purpose="Search governed business data, open your workspace, and continue operational work."
+    pendingApprovalsHref="/mdg/business-partner/requests"
     citationRoutes={{ business_partner: "/mdg/business-partner/{recordId}", business_partner_request: "/mdg/business-partner/requests/{recordId}" }}
     suggestions={["Business partners", "Pending approvals", "Duplicate checks", "New supplier"]}
     workspaces={[{ name: "Master Data Governance", description: "Create, validate, approve, and maintain trusted master records.", href: "/mdg", status: "Available workspace", modules: ["Business Partner"], access: MDG_ACCESS }]}

@@ -7,7 +7,7 @@ const MDG_ACCESS = { moduleCode: "fnd" } as const;
 export default function MeshHomePage() {
   return <PlatformHome
     plane="Mesh"
-    purpose="Search your organization profile, partner relationships, governed requests, and network exchanges."
+    pendingApprovalsHref="/mdg/business-partner/requests"
     citationRoutes={{ network_account: "/mdg/business-partner/profile", business_partner_profile: "/mdg/business-partner/profile" }}
     suggestions={["My organization", "Partner relationships", "Profile requests", "Publication status"]}
     workspaces={[{ name: "Master Data Governance", description: "Maintain and exchange trusted partner information across the business network.", href: "/mdg", status: "Available workspace", modules: ["Business Partner"], access: MDG_ACCESS }]}

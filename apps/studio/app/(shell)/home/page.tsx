@@ -7,7 +7,7 @@ const MDG_ACCESS = { moduleCode: "pub" } as const;
 export default function StudioHomePage() {
   return <PlatformHome
     plane="Studio"
-    purpose="Search governed definitions, rules, matching policies, workflows, and publication configuration."
+    pendingApprovalsHref="/mdg/business-partner/workflows"
     citationRoutes={{ metadata_entity: "/mdg/business-partner/model", business_partner_definition: "/mdg/business-partner/model" }}
     suggestions={["Business Partner model", "Validation rules", "Matching policy", "Publication"]}
     workspaces={[{ name: "Master Data Governance", description: "Design and publish the governance configuration used by Neon and Mesh.", href: "/mdg", status: "Available workspace", modules: ["Business Partner"], access: MDG_ACCESS }]}

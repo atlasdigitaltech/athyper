@@ -23,10 +23,11 @@ export interface ShellChromeProps { readonly currentLocale?:string;readonly loca
 export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,applicationName, planeDescriptor = "Business workspace", planeIconSrc, planeWordmarkSrc, homeHref = "/home", initialCollapsed = false, tenantId, tenantLabel, tenantSecondaryLabel, tenantCountryCode, tenantLogoAssetRef, contextLabel = "Business context", showOrganizationContext = true, accountLabel, accountInitials, accountLoginId, accountEmail, accountSecondaryLabel, transactionContext, workContextControl, navigation, experienceState = "ready", contexts, quickAccess, activity, children }: ShellChromeProps) {
   const t=useShellI18n().message;
   const [drawerOpen, setDrawerOpen] = useState(false), [collapsed, setCollapsed] = useState(initialCollapsed), [path, setPath] = useState("/");
+  const [dayGreeting, setDayGreeting] = useState("Good Evening");
   const [navigationPeek, setNavigationPeek] = useState<ShellNavigationPeek>(), [quickAccessTab, setQuickAccessTab] = useState<ShellQuickAccessTab>(), [headerAction, setHeaderAction] = useState<HeaderActionKind>();
   const menuButton = useRef<HTMLButtonElement>(null), firstLink = useRef<HTMLAnchorElement>(null);
   const quickAccessOpener = useRef<HTMLButtonElement>(null);
-  useEffect(() => { setPath(window.location.pathname); const stored = localStorage.getItem("athyper.shell.collapsed"); if (stored !== null) { setCollapsed(stored === "true"); document.cookie = `athyper_shell_collapsed=${stored}; Path=/; Max-Age=31536000; SameSite=Lax`; return; } if (window.matchMedia("(min-width: 761px) and (max-width: 1100px)").matches) { setCollapsed(true); localStorage.setItem("athyper.shell.collapsed", "true"); document.cookie = "athyper_shell_collapsed=true; Path=/; Max-Age=31536000; SameSite=Lax"; } }, []);
+  useEffect(() => { setPath(window.location.pathname); setDayGreeting(greetingForHour(new Date().getHours())); const stored = localStorage.getItem("athyper.shell.collapsed"); if (stored !== null) { setCollapsed(stored === "true"); document.cookie = `athyper_shell_collapsed=${stored}; Path=/; Max-Age=31536000; SameSite=Lax`; return; } if (window.matchMedia("(min-width: 761px) and (max-width: 1100px)").matches) { setCollapsed(true); localStorage.setItem("athyper.shell.collapsed", "true"); document.cookie = "athyper_shell_collapsed=true; Path=/; Max-Age=31536000; SameSite=Lax"; } }, []);
   useEffect(() => { if (!drawerOpen) return; firstLink.current?.focus(); const close = (event: KeyboardEvent) => { if (event.key === "Escape") { setDrawerOpen(false); requestAnimationFrame(() => menuButton.current?.focus()); } }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [drawerOpen]);
   const toggleCollapsed = () => setCollapsed((value) => { const next = !value; setNavigationPeek(undefined); localStorage.setItem("athyper.shell.collapsed", String(next)); document.cookie = `athyper_shell_collapsed=${next}; Path=/; Max-Age=31536000; SameSite=Lax`; return next; });
   const closeDrawer = () => { setDrawerOpen(false); requestAnimationFrame(() => menuButton.current?.focus()); };
@@ -35,7 +36,9 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
   const openQuickAccess = (tab: ShellQuickAccessTab, opener: HTMLButtonElement) => { quickAccessOpener.current = opener; setNavigationPeek(undefined); setDrawerOpen(false); setHeaderAction(undefined); setQuickAccessTab((current) => current === tab ? undefined : tab); };
   const openNavigation = () => { setQuickAccessTab(undefined); setHeaderAction(undefined); setDrawerOpen(true); };
   const crumbs = deriveBreadcrumbs(navigation, path);
-  const systemRoute = path === "/" || path === homeHref || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
+  const homeRoute = path === "/" || path === homeHref;
+  const systemRoute = homeRoute || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
+  const greetingName = accountLabel.trim().split(/\s+/u)[0] || accountLabel;
   return <div className="athyper-shell" data-collapsed={collapsed} data-drawer-open={drawerOpen} data-quick-access-open={Boolean(quickAccessTab)}>
     <a className="athyper-shell__skip" href="#main-content">{t("shell.skip")}</a>
     <header className="athyper-shell__topbar">
@@ -56,12 +59,14 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
     </aside>
     {quickAccessTab ? <ShellQuickAccess activeTab={quickAccessTab} tenantId={tenantId} accountScope={accountLoginId ?? accountSecondaryLabel ?? accountLabel} path={path} navigation={navigation} dataSource={quickAccess} onTabChange={setQuickAccessTab} onClose={closeQuickAccess} /> : null}
     <div className="athyper-shell__body">
-      <nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}>{crumbs.length ? <ol>{crumbs.map((crumb, index) => <li key={`${crumb.label}-${index}`}>{crumb.href && index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb.label}</span>}</li>)}</ol> : null}</nav>
+      {homeRoute ? <div className="athyper-shell__breadcrumbs athyper-shell__breadcrumbs--greeting"><strong>{dayGreeting}, {greetingName}</strong></div> : <nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}>{crumbs.length ? <ol>{crumbs.map((crumb, index) => <li key={`${crumb.label}-${index}`}>{crumb.href && index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb.label}</span>}</li>)}</ol> : null}</nav>}
       <main id="main-content" tabIndex={-1} className="athyper-shell__main">{experienceState === "context_not_ready" ? <ContextNotReady /> : !navigation.routes.length ? <EmptyEntitlement /> : routeAllowed ? children : <ForbiddenRoute />}</main>
       <footer className="athyper-shell__footer"><span>© 2026 Atlas Digital Technology Solutions</span></footer>
     </div>
   </div>;
 }
+
+function greetingForHour(hour: number): string { return hour >= 5 && hour < 12 ? "Good Morning" : hour >= 12 && hour < 18 ? "Good Afternoon" : "Good Evening"; }
 
 function PlaneHomeLink({ className, applicationName, planeDescriptor, planeIconSrc, planeWordmarkSrc, landingHref, onClick }: { readonly className: string; readonly applicationName: string; readonly planeDescriptor: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string; readonly landingHref?: string; readonly onClick?: () => void }) {
   return <a className={className} data-plane={applicationName.toLowerCase()} href={landingHref ?? "/"} aria-label={`${applicationName} home`} onClick={onClick}><span className="athyper-shell__brand-mark-frame">{planeIconSrc ? <img className="athyper-shell__brand-mark" src={planeIconSrc} alt="" /> : <span className="athyper-shell__brand-mark" aria-hidden="true">A</span>}<span className="athyper-shell__plane-badge" aria-hidden="true">{applicationName.slice(0, 1).toUpperCase()}</span></span><span className="athyper-shell__brand-copy">{planeWordmarkSrc ? <span className="athyper-shell__product-wordmark" aria-hidden="true"><img src={planeWordmarkSrc} alt="" /></span> : <strong>{applicationName}</strong>}<small>{planeDescriptor}</small></span><span className="athyper-shell__brand-tooltip" aria-hidden="true"><strong>{applicationName} home</strong></span></a>;

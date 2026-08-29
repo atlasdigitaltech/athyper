@@ -46,17 +46,17 @@ export interface PlatformHomeWorkspace {
 
 export interface PlatformHomeProps {
   readonly plane: "Neon" | "Mesh" | "Studio";
-  readonly purpose: string;
   readonly suggestions: readonly string[];
   readonly searchItems: readonly PlatformHomeSearchItem[];
   readonly quickActions: readonly PlatformHomeAction[];
   readonly workspaces: readonly PlatformHomeWorkspace[];
+  readonly pendingApprovalsHref?: string;
   readonly citationRoutes?: Readonly<Record<string, string>>;
 }
 
 const MAX_RESULTS = 8;
 
-export function PlatformHome({ plane, purpose, suggestions, searchItems, quickActions, workspaces, citationRoutes = {} }: PlatformHomeProps) {
+export function PlatformHome({ plane, suggestions, searchItems, quickActions, workspaces, pendingApprovalsHref, citationRoutes = {} }: PlatformHomeProps) {
   const [query, setQuery] = useState("");
   const [personalization, setPersonalization] = useState<HomePersonalization>(DEFAULT_HOME_PERSONALIZATION);
   const [personalizing, setPersonalizing] = useState(false);
@@ -113,9 +113,9 @@ export function PlatformHome({ plane, purpose, suggestions, searchItems, quickAc
 
   return <section className="athyper-home" aria-labelledby="athyper-home-title">
     <header className="athyper-home__hero">
-      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What would you like to find or accomplish?</h1><p>{purpose}</p></div></div>
+      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1><p>I’m Atlas AI. I’m here to help you find answers, take action, and get work done.</p></div></div>
       <form className="athyper-home__search" role="search" onSubmit={submit}>
-        <SearchIcon size={22}/><label htmlFor="atlas-home-search">Ask Atlas</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={`Ask about ${plane}, or find a workspace and action…`} autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<kbd>⌘ K</kbd><button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
+        <SearchIcon size={22}/><label htmlFor="atlas-home-search">Atlas AI</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={`Ask about ${plane}, or find a workspace and action…`} autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<kbd>⌘ K</kbd><button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
       </form>
       <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { setQuery(suggestion); if(configured)setSelectedAgent(configured.agentCode); input.current?.focus(); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
       {atlas.status !== "idle" ? <AtlasAnswerSurface atlas={atlas} citationRoutes={citationRoutes}/> : null}
@@ -123,7 +123,7 @@ export function PlatformHome({ plane, purpose, suggestions, searchItems, quickAc
       {normalized ? <section className="athyper-home__results" aria-live="polite" aria-label="Atlas search results"><header><strong>{results.length ? `${results.length} authorized destinations` : "No authorized matching destination"}</strong><small>Results reflect your current permissions</small></header>{results.length ? <ul>{results.map((item) => <li key={`${item.category}-${item.href}`}><a href={item.href} onClick={() => visit(item)}><span><small>{item.category}</small><strong>{item.title}</strong><em>{item.description}</em></span><ChevronRightIcon size={18}/></a></li>)}</ul> : <p>Try another business partner, workflow, profile, publication, or workspace term.</p>}</section> : null}
     </header>
 
-    <div className="athyper-home__dashboard-heading"><div><p>Your dashboard</p><h2>Recommended and personalized for your access</h2></div><button type="button" aria-expanded={personalizing} aria-controls="home-personalization" onClick={() => setPersonalizing((value) => !value)}><SlidersHorizontalIcon size={17}/>Personalize</button></div>
+    <div className="athyper-home__dashboard-heading"><div><p>Priority Tasks</p><h2>Today’s Work</h2></div>{pendingApprovalsHref ? <a href={pendingApprovalsHref}>Pending Approvals</a> : null}<button type="button" aria-expanded={personalizing} aria-controls="home-personalization" onClick={() => setPersonalizing((value) => !value)}><SlidersHorizontalIcon size={17}/>Personalize</button></div>
     {personalizing ? <PersonalizationPanel personalization={personalization} onChange={commit}/> : null}
 
     <div className="athyper-home__dashboard">
