@@ -33,7 +33,8 @@ test("builds explicit cross-plane demo scopes without member-company propagation
   assert.equal(techProcurement.scopes.filter((scope) => scope.kind === "company_code").length, 4);
 
   const catlAdminMesh = model.mesh.find((grant) => grant.username === "catl.admin")!;
-  assert.deepEqual(catlAdminMesh.scopes.map((scope) => scope.key).sort(), ["bna-1000000022", "sna-1000000022"]);
+  assert.equal(catlAdminMesh.isAdmin, true);
+  assert.deepEqual(catlAdminMesh.scopes.map((scope) => scope.key).sort(), ["bna-1000000022", "cirrusatlantic", "sna-1000000022"]);
   assert.deepEqual(DEMO_PLANE_PERMISSIONS.mesh, [
     "mesh.catalog.network_account.read",
     "mesh.catalog.network_relationship.read",
@@ -41,4 +42,9 @@ test("builds explicit cross-plane demo scopes without member-company propagation
   ]);
   assert.equal(Object.values(model).flatMap((grants) => grants).flatMap((grant) => grant.scopes)
     .some((scope) => scope.propagation === ("member_companies" as string)), false);
+  for (const tenantAdmin of ["athyper.admin", "catl.admin", "tksa.admin"]) {
+    assert.equal(model.neon.find((grant) => grant.username === tenantAdmin)?.isAdmin, true);
+    assert.equal(model.mesh.find((grant) => grant.username === tenantAdmin)?.isAdmin, true);
+  }
+  assert.equal(model.studio.every((grant) => grant.isAdmin), true);
 });

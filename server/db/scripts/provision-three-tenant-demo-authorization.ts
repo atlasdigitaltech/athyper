@@ -20,17 +20,18 @@ const PRIMARY_TENANT_ADMINS: Record<string, string> = {
 };
 
 type Scope = { kind: "tenant" | "legal_entity" | "company_code" | "operating_organization" | "network_account"; key: string; propagation: "exact" | "subtree" };
-type Grant = { tenantCode: string; subjectId: string; username: string; scopes: Scope[] };
+type Grant = { tenantCode: string; subjectId: string; username: string; scopes: Scope[]; isAdmin: boolean };
 type QueryClient = Pick<Client, "query">;
 
 export async function buildThreeTenantDemoAuthorization(providedInputs?: ProvisionInputs): Promise<Record<ProvisionPlane, Grant[]>> {
   const inputs = providedInputs ?? await loadProvisionInputs();
   const users = new Map(inputs.identitySource.users.map((user) => [user.id, user] as const));
   const grants: Record<ProvisionPlane, Map<string, Grant>> = { neon: new Map(), mesh: new Map(), studio: new Map() };
-  const add = (plane: ProvisionPlane, tenantCode: string, subjectId: string, username: string, scope: Scope): void => {
+  const add = (plane: ProvisionPlane, tenantCode: string, subjectId: string, username: string, scope: Scope, isAdmin = false): void => {
     const coordinate = `${tenantCode}:${subjectId}`;
-    const current = grants[plane].get(coordinate) ?? { tenantCode, subjectId, username, scopes: [] };
+    const current = grants[plane].get(coordinate) ?? { tenantCode, subjectId, username, scopes: [], isAdmin };
     if (!current.scopes.some((item) => item.kind === scope.kind && item.key === scope.key && item.propagation === scope.propagation)) current.scopes.push(scope);
+    if (isAdmin) current.isAdmin = true;
     grants[plane].set(coordinate, current);
   };
   const scenarios = inputs.scenarioPacks;
@@ -75,8 +76,9 @@ export async function buildThreeTenantDemoAuthorization(providedInputs?: Provisi
     const adminName = PRIMARY_TENANT_ADMINS[tenantCode];
     const admin = inputs.identitySource.users.find((user) => user.username === adminName);
     if (!admin) throw new Error(`missing tenant admin ${tenantCode}/${adminName}`);
-    add("neon", tenantCode, admin.id, admin.username, { kind: "tenant", key: tenantCode, propagation: "exact" });
-    for (const organization of scenario.operatingOrganizations) add("neon", tenantCode, admin.id, admin.username, { kind: "operating_organization", key: `operating_organization:${organization.code}`, propagation: "subtree" });
+    add("neon", tenantCode, admin.id, admin.username, { kind: "tenant", key: tenantCode, propagation: "exact" }, true);
+    for (const organization of scenario.operatingOrganizations) add("neon", tenantCode, admin.id, admin.username, { kind: "operating_organization", key: `operating_organization:${organization.code}`, propagation: "subtree" }, true);
+    add("mesh", tenantCode, admin.id, admin.username, { kind: "tenant", key: tenantCode, propagation: "exact" }, true);
     const studioAdmins = inputs.identitySource.studioTenantAdmins?.find((entry) => entry.tenantCode === tenantCode)?.usernames;
     if (!studioAdmins?.length) throw new Error(`missing explicit Studio tenant admins for ${tenantCode}`);
     for (const username of studioAdmins) {
@@ -85,7 +87,7 @@ export async function buildThreeTenantDemoAuthorization(providedInputs?: Provisi
       if (!studioAdmin.realmRoles?.includes("STUDIO_USER") || !studioAdmin.clientRoles?.["studio-web"]?.includes("AUTHORIZED")) {
         throw new Error(`Studio tenant admin lacks Keycloak admission ${tenantCode}/${username}`);
       }
-      add("studio", tenantCode, studioAdmin.id, studioAdmin.username, { kind: "tenant", key: tenantCode, propagation: "exact" });
+      add("studio", tenantCode, studioAdmin.id, studioAdmin.username, { kind: "tenant", key: tenantCode, propagation: "exact" }, true);
     }
     if (tenant.keycloakOrganizationAlias !== tenant.id) throw new Error(`tenant identity mismatch: ${tenantCode}`);
   }
@@ -123,12 +125,38 @@ async function applyPlane(urlValue: string, plane: ProvisionPlane, inputs: Provi
         [permissionCode]);
       permissions.push({ code: permissionCode, id: permission.id });
     }
+    const adminPermissionRows = (await client.query<{ code: string; id: string; scopeKind: Scope["kind"]; propagation: Scope["propagation"] }>(`
+      SELECT permission.canonical_code AS code,permission.id::text AS id,
+        compatibility.scope_kind AS "scopeKind",compatibility.propagation_mode AS propagation
+      FROM authz.permission permission
+      JOIN authz.permission_scope_kind compatibility ON compatibility.permission_id=permission.id AND compatibility.status='active'
+      WHERE permission.status='published'
+      ORDER BY compatibility.scope_kind,compatibility.propagation_mode,permission.canonical_code
+    `)).rows;
+    const adminPermissions = new Map<string, Array<{ code: string; id: string }>>();
+    for (const permission of adminPermissionRows) {
+      const key = `${permission.scopeKind}:${permission.propagation}`;
+      const compatible = adminPermissions.get(key) ?? [];
+      compatible.push({ code: permission.code, id: permission.id });
+      adminPermissions.set(key, compatible);
+    }
     for (const tenant of inputs.manifest.tenants) {
       const actorId = (await one<{ id: string }>(client, "SELECT id::text AS id FROM master.principal WHERE tenant_id=$1::uuid AND code='seed.three-plane-provisioner' AND status='active'", [tenant.id])).id;
       await client.query("SELECT set_config('app.database_plane',$1,true),set_config('app.current_tenant_id',$2,true),set_config('app.current_principal_id',$3,true)", [plane, tenant.id, actorId]);
       if (plane === "neon") await ensureNeonScopes(client, inputs, tenant.code, tenant.id, actorId);
-      const roleId = await ensureRole(client, plane, tenant.id, permissions, actorId);
-      for (const grant of grants.filter((item) => item.tenantCode === tenant.code)) await ensureGrant(client, plane, tenant.id, roleId, actorId, grant);
+      const roleId = await ensureRole(client, plane, tenant.id, permissions, actorId, "context-reader", "Local demo scoped catalog visibility");
+      for (const grant of grants.filter((item) => item.tenantCode === tenant.code)) {
+        await ensureGrant(client, plane, tenant.id, roleId, actorId, grant, "context-reader");
+        if (grant.isAdmin) {
+          for (const scope of grant.scopes) {
+            const compatible = adminPermissions.get(`${scope.kind}:${scope.propagation}`);
+            if (!compatible?.length) continue;
+            const adminRoleName = `testing-admin-${scope.kind}-${scope.propagation}`;
+            const adminRoleId = await ensureRole(client, plane, tenant.id, compatible, actorId, adminRoleName, `Local testing admin access at ${scope.kind}/${scope.propagation}`);
+            await ensureGrant(client, plane, tenant.id, adminRoleId, actorId, { ...grant, scopes: [scope] }, adminRoleName);
+          }
+        }
+      }
     }
     await client.query("COMMIT");
     return { users: grants.length, scopeAssignments: grants.reduce((sum, grant) => sum + grant.scopes.length, 0) };
@@ -171,12 +199,12 @@ async function upsertScope(client: QueryClient, tenantId: string, kind: Scope["k
   [deterministicUuid("demo-auth", tenantId, kind, key), tenantId, kind, key, targetId, parentId, name, metadata(), actorId]);
 }
 
-async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: string, permissions: readonly { readonly code: string; readonly id: string }[], actorId: string): Promise<string> {
-  const code = `demo.${plane}.context-reader`;
+async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: string, permissions: readonly { readonly code: string; readonly id: string }[], actorId: string, roleName: string, description: string): Promise<string> {
+  const code = `demo.${plane}.${roleName}`;
   const id = deterministicUuid("demo-auth", plane, tenantId, "role", code);
   await client.query(`INSERT INTO authz.role(id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
-    VALUES($1::uuid,$2::uuid,$3,$4,'Local demo scoped catalog visibility','system','seed',$5,$6::jsonb,'draft',$7::uuid) ON CONFLICT(tenant_id,code) DO NOTHING`,
-  [id, tenantId, code, `Demo ${plane} context reader`, SOURCE_REF, metadata(), actorId]);
+    VALUES($1::uuid,$2::uuid,$3,$4,$5,'system','seed',$6,$7::jsonb,'draft',$8::uuid) ON CONFLICT(tenant_id,code) DO NOTHING`,
+  [id, tenantId, code, `Demo ${plane} ${roleName.replace("-", " ")}`, description, SOURCE_REF, metadata(), actorId]);
   const actual = await one<{ id: string; sourceRef: string; status: string }>(client, "SELECT id::text AS id,source_ref AS \"sourceRef\",status FROM authz.role WHERE tenant_id=$1::uuid AND code=$2", [tenantId, code]);
   if (actual.id !== id || actual.sourceRef !== SOURCE_REF) throw new Error(`conflicting demo role ${tenantId}/${code}`);
   if (actual.status === "active") await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid", [tenantId, id, actorId]);
@@ -184,13 +212,13 @@ async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: 
     [tenantId, id, permissions.map((permission) => permission.id)]);
   for (const permission of permissions) {
     await client.query("INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING",
-      [deterministicUuid("demo-auth", plane, tenantId, "role-permission", permission.code), tenantId, id, permission.id, actorId]);
+      [deterministicUuid("demo-auth", plane, tenantId, "role-permission", permission.code, ...(roleName === "context-reader" ? [] : [roleName])), tenantId, id, permission.id, actorId]);
   }
   await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [tenantId, id, actorId]);
   return id;
 }
 
-async function ensureGrant(client: QueryClient, plane: ProvisionPlane, tenantId: string, roleId: string, actorId: string, grant: Grant): Promise<void> {
+async function ensureGrant(client: QueryClient, plane: ProvisionPlane, tenantId: string, roleId: string, actorId: string, grant: Grant, roleName: string): Promise<void> {
   const principal = await one<{ id: string }>(client, `SELECT binding.principal_id::text AS id FROM master.principal_identity_binding binding
     JOIN authz.plane_membership membership ON membership.tenant_id=binding.tenant_id AND membership.principal_id=binding.principal_id AND membership.status='active'
     WHERE binding.tenant_id=$1::uuid AND binding.provider_code='keycloak'
@@ -211,7 +239,7 @@ async function ensureGrant(client: QueryClient, plane: ProvisionPlane, tenantId:
     await client.query(`INSERT INTO authz.group_role(id,tenant_id,group_id,role_id,scope_target_id,propagation_mode,source_type,source_ref,metadata,status,created_by)
       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6,'seed',$7,$8::jsonb,'active',$9::uuid)
       ON CONFLICT(id) DO UPDATE SET status='active',effective_until=NULL,updated_by=EXCLUDED.created_by`,
-    [deterministicUuid("demo-auth", plane, tenantId, "grant", grant.subjectId, scope.kind, scope.key), tenantId, groupId, roleId, target.id, scope.propagation, SOURCE_REF, metadata(), actorId]);
+    [deterministicUuid("demo-auth", plane, tenantId, "grant", grant.subjectId, scope.kind, scope.key, ...(roleName === "context-reader" ? [] : [roleName])), tenantId, groupId, roleId, target.id, scope.propagation, SOURCE_REF, metadata(), actorId]);
   }
 }
 

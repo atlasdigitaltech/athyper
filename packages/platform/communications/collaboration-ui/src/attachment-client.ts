@@ -54,4 +54,17 @@ async function json<T = unknown>(request: typeof globalThis.fetch, url: string, 
 async function apiError(response: Response): Promise<AttachmentApiError> { const contentType = response.headers.get("content-type") ?? ""; const problem = contentType.includes("json") ? await response.json().catch(() => ({})) as AttachmentProblem : { detail: await response.text().catch(() => "") }; return new AttachmentApiError(response.status, problem, response.headers.get("retry-after") ?? undefined); }
 function headers(options: AttachmentApiClientOptions, jsonBody: boolean): HeadersInit { const csrf = options.csrfToken?.() ?? browserCsrf(); return { ...(jsonBody ? { "Content-Type": "application/json" } : {}), ...(csrf ? { "X-CSRF-Token": csrf } : {}) }; }
 function attachmentCoordinate(options: AttachmentApiClientOptions): { readonly entityType?: string; readonly entityId?: string } { if (!options.entityType && !options.entityId) return {}; if (!options.entityType || !options.entityId) throw new TypeError("Attachment entityType and entityId must be provided together"); return { entityType: options.entityType, entityId: options.entityId }; }
-function browserCsrf(): string | undefined { if (typeof document === "undefined") return undefined; const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content; if (meta) return meta; const cookie = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith("XSRF-TOKEN=")); return cookie ? decodeURIComponent(cookie.slice("XSRF-TOKEN=".length)) : undefined; }
+function browserCsrf(): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const meta = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content;
+  if (meta) return meta;
+  const cookies = new Map(document.cookie.split(";").map((part) => {
+    const [name, ...value] = part.trim().split("=");
+    return [name, value.join("=")] as const;
+  }));
+  for (const name of ["__Host-athyper-csrf", "athyper-csrf", "XSRF-TOKEN"]) {
+    const value = cookies.get(name);
+    if (value) return decodeURIComponent(value);
+  }
+  return undefined;
+}
