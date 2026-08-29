@@ -8,6 +8,8 @@ const CONFIRMATION = "LOCAL-NEON-BUSINESS-PARTNER-RUNTIME";
 const PUBLICATION_KEY = "metadata.entity.business_partner";
 const PERMISSION_CODE = "neon.relationship.business_partner.read";
 const IMPORT_PERMISSION_CODE = "neon.relationship.business_partner.create";
+const REQUEST_CREATE_PERMISSION_CODE = "neon.relationship.business_partner_request.create";
+const PRIMARY_TENANT_ADMINS = ["athyper.admin", "tksa.admin", "catl.admin"] as const;
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
 const SOURCE_VERSION = "development-v8";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
@@ -163,6 +165,7 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
     const importPermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND permission_kind='entity_operation' AND status='published'", [IMPORT_PERMISSION_CODE]);
     const updatePermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code='neon.relationship.business_partner.update' AND permission_kind='entity_operation' AND status='published'");
     const requestReadPermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code='neon.relationship.business_partner_request.read' AND permission_kind='entity_operation' AND status='published'");
+    const requestCreatePermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND permission_kind='entity_operation' AND status='published'", [REQUEST_CREATE_PERMISSION_CODE]);
     const artifact = buildDevelopmentBusinessPartnerProjection(permission.id);
     if (options.dryRun) return { mode: "planned", publicationKey: artifact.publicationKey, releaseId: artifact.releaseId, artifactHash: artifact.artifactHash, compiledHash: artifact.projection.descriptor.compiled_hash };
     await client.query("BEGIN");
@@ -174,7 +177,7 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
       if (verified.status !== "verified") throw new Error(`runtime verification failed: ${verified.failure_code ?? verified.status}`);
       await client.query("SELECT runtime_meta.fn_activate_release($1::uuid,$2::jsonb)", [staged.id, JSON.stringify({ source: "local-development-bootstrap", sourceVersion: SOURCE_VERSION })]);
     }
-    await provisionDevelopmentReaders(client, [permission,importPermission,updatePermission,requestReadPermission]);
+    await provisionDevelopmentReaders(client, [permission,importPermission,updatePermission,requestReadPermission], requestCreatePermission);
     await client.query("COMMIT");
     return { mode: "applied", publicationKey: artifact.publicationKey, releaseId: artifact.releaseId, appliedReleaseId: staged.id, artifactHash: artifact.artifactHash, compiledHash: artifact.projection.descriptor.compiled_hash };
   } catch (error) {
@@ -185,7 +188,7 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
   }
 }
 
-async function provisionDevelopmentReaders(client: QueryClient, permissions: readonly {readonly id:string}[]): Promise<void> {
+async function provisionDevelopmentReaders(client: QueryClient, permissions: readonly {readonly id:string}[], requestCreatePermission: {readonly id:string}): Promise<void> {
   const tenants = await client.query<{ tenant_id: string; actor_id: string }>(`SELECT role.tenant_id::text,principal.id::text actor_id FROM authz.role role JOIN master.principal principal ON principal.tenant_id=role.tenant_id AND principal.code='seed.three-plane-provisioner' AND principal.status='active' WHERE role.code='demo.neon.context-reader' AND role.source_ref='local-demo:three-tenant-authorization:v1' GROUP BY role.tenant_id,principal.id`);
   for (const tenant of tenants.rows) {
     await client.query("SELECT set_config('app.current_tenant_id',$1,true),set_config('app.current_principal_id',$2,true)", [tenant.tenant_id, tenant.actor_id]);
@@ -200,6 +203,19 @@ async function provisionDevelopmentReaders(client: QueryClient, permissions: rea
     for (const scope of scopes.rows) {
       const grantId = deterministicUuid(`demo-auth:neon:${tenant.tenant_id}:business-partner-reader:${scope.group_id}:${scope.scope_target_id}`);
       await client.query(`INSERT INTO authz.group_role(id,tenant_id,group_id,role_id,scope_target_id,propagation_mode,source_type,source_ref,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,'subtree','seed','local-demo:business-partner-runtime:v1','{"environment":"disposable_local"}'::jsonb,'active',$6::uuid) ON CONFLICT(id) DO UPDATE SET status='active',effective_until=NULL,updated_by=EXCLUDED.created_by`, [grantId, tenant.tenant_id, scope.group_id, actualRole.id, scope.scope_target_id, tenant.actor_id]);
+    }
+    const creatorRoleCode = "demo.neon.business-partner-request-creator";
+    const creatorRoleId = deterministicUuid(`demo-auth:neon:${tenant.tenant_id}:role:${creatorRoleCode}`);
+    await client.query(`INSERT INTO authz.role(id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3,'Demo Neon Business Partner request creator','Local primary tenant-admin authority to create governed Business Partner requests','system','seed','local-demo:business-partner-runtime:v1','{"environment":"disposable_local","persona":"primary_tenant_admin"}'::jsonb,'draft',$4::uuid) ON CONFLICT(tenant_id,code) DO NOTHING`, [creatorRoleId, tenant.tenant_id, creatorRoleCode, tenant.actor_id]);
+    const creatorRole = await one<{ id: string; status: string }>(client, "SELECT id::text,status FROM authz.role WHERE tenant_id=$1::uuid AND code=$2", [tenant.tenant_id, creatorRoleCode]);
+    if (creatorRole.status === "active") await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid", [tenant.tenant_id, creatorRole.id, tenant.actor_id]);
+    await client.query("DELETE FROM authz.role_permission WHERE tenant_id=$1::uuid AND role_id=$2::uuid AND permission_id<>$3::uuid", [tenant.tenant_id, creatorRole.id, requestCreatePermission.id]);
+    await client.query("INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING", [deterministicUuid(`demo-auth:neon:${tenant.tenant_id}:role-permission:${REQUEST_CREATE_PERMISSION_CODE}`), tenant.tenant_id, creatorRole.id, requestCreatePermission.id, tenant.actor_id]);
+    await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [tenant.tenant_id, creatorRole.id, tenant.actor_id]);
+    const creatorScopes = await client.query<{ group_id: string; scope_target_id: string }>(`SELECT DISTINCT assignment.group_id::text,assignment.scope_target_id::text FROM authz.group_role assignment JOIN authz.role context_role ON context_role.tenant_id=assignment.tenant_id AND context_role.id=assignment.role_id AND context_role.code='demo.neon.context-reader' JOIN authz.scope_target scope ON scope.tenant_id=assignment.tenant_id AND scope.id=assignment.scope_target_id AND scope.scope_kind='operating_organization' JOIN authz.group_member member ON member.tenant_id=assignment.tenant_id AND member.group_id=assignment.group_id AND member.status='active' JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.code=ANY($2::text[]) WHERE assignment.tenant_id=$1::uuid AND assignment.status='active'`, [tenant.tenant_id, PRIMARY_TENANT_ADMINS]);
+    for (const scope of creatorScopes.rows) {
+      const grantId = deterministicUuid(`demo-auth:neon:${tenant.tenant_id}:business-partner-request-creator:${scope.group_id}:${scope.scope_target_id}`);
+      await client.query(`INSERT INTO authz.group_role(id,tenant_id,group_id,role_id,scope_target_id,propagation_mode,source_type,source_ref,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,'subtree','seed','local-demo:business-partner-runtime:v1','{"environment":"disposable_local","persona":"primary_tenant_admin"}'::jsonb,'active',$6::uuid) ON CONFLICT(id) DO UPDATE SET status='active',effective_until=NULL,updated_by=EXCLUDED.created_by`, [grantId, tenant.tenant_id, scope.group_id, creatorRole.id, scope.scope_target_id, tenant.actor_id]);
     }
   }
 }

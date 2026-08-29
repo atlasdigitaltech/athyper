@@ -29,8 +29,12 @@ test("development business-partner publication is deterministic and browser-safe
   assert.match(first.projection.descriptor.compiled_hash, /^[a-f0-9]{64}$/);
 });
 
-test("development business-partner reader covers onboarding aggregate reads", async () => {
+test("development business-partner access separates reader and primary-admin request creation", async () => {
   const source = await readFile(new URL("../provision-development-business-partner-runtime.ts", import.meta.url), "utf8");
   assert.match(source, /neon\.relationship\.business_partner_request\.read/);
-  assert.match(source, /provisionDevelopmentReaders\(client, \[permission,importPermission,updatePermission,requestReadPermission\]\)/);
+  assert.match(source, /neon\.relationship\.business_partner_request\.create/);
+  assert.match(source, /demo\.neon\.business-partner-request-creator/);
+  assert.match(source, /PRIMARY_TENANT_ADMINS/);
+  assert.match(source, /principal\.code=ANY\(\$2::text\[\]\)/);
+  assert.match(source, /provisionDevelopmentReaders\(client, \[permission,importPermission,updatePermission,requestReadPermission\], requestCreatePermission\)/);
 });
