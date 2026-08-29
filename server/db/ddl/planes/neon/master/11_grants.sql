@@ -396,6 +396,11 @@ GRANT EXECUTE
 
 
 REVOKE ALL ON master.organization_amendment FROM PUBLIC;
+REVOKE ALL ON master.external_worker FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON master.external_worker TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON master.external_worker TO athyperadmin; END IF;
+END $$;
 REVOKE ALL ON FUNCTION master.trg_guard_organization_lifecycle(),master.trg_record_organization_amendment(),master.trg_sync_organization_scope_target(),master.trg_emit_operating_assignment_invalidation(),master.trg_reject_organization_amendment_mutation() FROM PUBLIC;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON master.organization_amendment TO athyperapp; END IF;

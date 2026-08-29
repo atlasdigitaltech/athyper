@@ -2289,3 +2289,90 @@ CREATE TABLE control.customer_lifecycle_event (
 
 COMMENT ON TABLE control.customer_credit_review IS 'Independent, company-scoped customer credit/commercial decision aggregate; registration approval cannot decide it.';
 COMMENT ON TABLE control.customer_lifecycle_event IS 'Immutable audited customer activation, suspension, and reactivation command ledger pinned to readiness evidence.';
+-- Fieldglass-inspired external-workforce pricing policy.  Rate cards are
+-- governed configuration; accepted commercial rates are snapshotted on work
+-- order/SOW revisions and transaction lines.
+CREATE TABLE control.external_workforce_rate_card (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    company_code_id     uuid        NOT NULL,
+    code                text        NOT NULL,
+    name                text        NOT NULL,
+    description         text,
+    currency_code       character(3) NOT NULL,
+    effective_from      date        NOT NULL,
+    effective_until     date,
+    row_version         bigint      NOT NULL DEFAULT 1,
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status              text        NOT NULL DEFAULT 'draft',
+    status_changed_at   timestamptz,
+    status_changed_by   uuid,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+    CONSTRAINT external_workforce_rate_card_pkey PRIMARY KEY (id),
+    CONSTRAINT external_workforce_rate_card_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_workforce_rate_card_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT external_workforce_rate_card_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_workforce_rate_card_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT external_workforce_rate_card_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT external_workforce_rate_card_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_workforce_rate_card_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT external_workforce_rate_card_status_chk CHECK (status IN ('draft','active','inactive','archived')),
+    CONSTRAINT external_workforce_rate_card_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_workforce_rate_card_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE control.external_workforce_rate (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    rate_card_id        uuid        NOT NULL,
+    supplier_id         uuid,
+    job_id              uuid,
+    site_id             uuid,
+    worker_classification text,
+    rate_code           text        NOT NULL,
+    unit_of_measure     text        NOT NULL,
+    regular_rate        numeric(18,6) NOT NULL,
+    minimum_rate        numeric(18,6),
+    maximum_rate        numeric(18,6),
+    overtime_multiplier numeric(9,4) NOT NULL DEFAULT 1,
+    doubletime_multiplier numeric(9,4) NOT NULL DEFAULT 1,
+    supplier_markup_percent numeric(9,4) NOT NULL DEFAULT 0,
+    effective_from      date        NOT NULL,
+    effective_until     date,
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status              text        NOT NULL DEFAULT 'active',
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+    CONSTRAINT external_workforce_rate_pkey PRIMARY KEY (id),
+    CONSTRAINT external_workforce_rate_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_workforce_rate_code_uq UNIQUE (tenant_id, rate_card_id, rate_code, effective_from),
+    CONSTRAINT external_workforce_rate_code_chk CHECK (rate_code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_workforce_rate_uom_chk CHECK (unit_of_measure IN ('hour','day','week','month','each','fixed')),
+    CONSTRAINT external_workforce_rate_classification_chk CHECK (
+        worker_classification IS NULL OR worker_classification IN (
+            'agency_worker','independent_contractor','consultant','sow_worker','other'
+        )
+    ),
+    CONSTRAINT external_workforce_rate_amount_chk CHECK (
+        regular_rate >= 0
+        AND (minimum_rate IS NULL OR minimum_rate >= 0)
+        AND (maximum_rate IS NULL OR maximum_rate >= COALESCE(minimum_rate, 0))
+        AND regular_rate BETWEEN COALESCE(minimum_rate, regular_rate) AND COALESCE(maximum_rate, regular_rate)
+        AND overtime_multiplier >= 1 AND doubletime_multiplier >= overtime_multiplier
+        AND supplier_markup_percent BETWEEN 0 AND 1000
+    ),
+    CONSTRAINT external_workforce_rate_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT external_workforce_rate_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT external_workforce_rate_status_chk CHECK (status IN ('active','inactive','archived')),
+    CONSTRAINT external_workforce_rate_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE control.external_workforce_rate_card IS
+  'Buyer-company rate policy for external labor. It is not a purchase commitment and cannot authorize spend.';
+COMMENT ON TABLE control.external_workforce_rate IS
+  'Effective rate-card row optionally narrowed by staffing supplier, job, site and worker classification.';

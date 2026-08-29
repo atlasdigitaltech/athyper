@@ -469,3 +469,9 @@ CREATE INDEX customer_credit_review_scope_idx ON control.customer_credit_review(
 CREATE UNIQUE INDEX customer_credit_review_effective_approved_uq ON control.customer_credit_review(tenant_id,customer_id,operating_organization_id,company_code_id) WHERE decision IN('approved','conditional') AND effective_until IS NULL;
 CREATE UNIQUE INDEX customer_lifecycle_event_idempotency_uq ON control.customer_lifecycle_event(tenant_id,idempotency_key);
 CREATE INDEX customer_lifecycle_event_customer_idx ON control.customer_lifecycle_event(tenant_id,customer_id,occurred_at DESC);
+CREATE INDEX external_workforce_rate_card_active_idx
+    ON control.external_workforce_rate_card (tenant_id, company_code_id, effective_from, effective_until)
+    WHERE status = 'active';
+CREATE INDEX external_workforce_rate_match_idx
+    ON control.external_workforce_rate (tenant_id, rate_card_id, supplier_id, job_id, site_id, worker_classification, effective_from)
+    WHERE status = 'active';

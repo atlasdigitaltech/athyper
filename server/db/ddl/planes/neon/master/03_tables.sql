@@ -3210,6 +3210,46 @@ COMMENT ON COLUMN master.employment.is_primary IS
 COMMENT ON COLUMN master.work_assignment.effective_until IS
   'Exclusive upper bound of the assignment effective range.';
 
+-- External workforce is a distinct person role.  It deliberately does not
+-- imply buyer employment, payroll eligibility, statutory enrollment, or
+-- employee headcount.  A person may concurrently have both employee and
+-- external_worker rows; the governing contracts remain independent.
+CREATE TABLE master.external_worker (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    person_id           uuid        NOT NULL,
+    worker_number       text        NOT NULL,
+    default_classification text,
+    metadata            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    status              text        NOT NULL DEFAULT 'prospect',
+    is_active           boolean     GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at   timestamptz,
+    status_changed_by   uuid,
+    created_at          timestamptz NOT NULL DEFAULT now(),
+    created_by          uuid        NOT NULL,
+    updated_at          timestamptz,
+    updated_by          uuid,
+    CONSTRAINT external_worker_pkey PRIMARY KEY (id),
+    CONSTRAINT external_worker_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_worker_person_uq UNIQUE (tenant_id, person_id),
+    CONSTRAINT external_worker_number_uq UNIQUE (tenant_id, worker_number),
+    CONSTRAINT external_worker_number_chk CHECK (worker_number ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_worker_classification_chk CHECK (
+        default_classification IS NULL OR default_classification IN (
+            'agency_worker','independent_contractor','consultant','sow_worker','other'
+        )
+    ),
+    CONSTRAINT external_worker_status_chk CHECK (
+        status IN ('prospect','active','suspended','inactive','archived')
+    ),
+    CONSTRAINT external_worker_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT external_worker_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_worker_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE master.external_worker IS
+  'Reusable external-workforce role for one person. Supplier, buyer, commercial terms, placement, compliance, access and tenure belong to effective-dated worker engagements; this row never creates buyer employment.';
+
 CREATE TABLE master.employee_leave_enrollment (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,

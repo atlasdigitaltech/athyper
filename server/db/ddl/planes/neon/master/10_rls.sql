@@ -1112,3 +1112,10 @@ ALTER TABLE master.organization_amendment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.organization_amendment FORCE ROW LEVEL SECURITY;
 CREATE POLICY organization_amendment_tenant_read ON master.organization_amendment FOR SELECT USING(tenant_id=shared.current_tenant_id_soft());
 CREATE POLICY organization_amendment_seed_owner ON master.organization_amendment FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+ALTER TABLE master.external_worker ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.external_worker FORCE ROW LEVEL SECURITY;
+CREATE POLICY external_worker_tenant_access ON master.external_worker FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY external_worker_seed_write ON master.external_worker FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);

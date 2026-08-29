@@ -484,3 +484,12 @@ $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperadmin; END IF; END $$;
 REVOKE ALL ON control.customer_credit_review,control.customer_lifecycle_event FROM PUBLIC;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON control.customer_credit_review TO athyperapp; GRANT SELECT,INSERT ON control.customer_lifecycle_event TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.customer_credit_review,control.customer_lifecycle_event TO athyperadmin; END IF; END $$;
+REVOKE ALL ON control.external_workforce_rate_card, control.external_workforce_rate FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+   GRANT SELECT,INSERT,UPDATE ON control.external_workforce_rate_card, control.external_workforce_rate TO athyperapp;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+   GRANT ALL PRIVILEGES ON control.external_workforce_rate_card, control.external_workforce_rate TO athyperadmin;
+ END IF;
+END $$;

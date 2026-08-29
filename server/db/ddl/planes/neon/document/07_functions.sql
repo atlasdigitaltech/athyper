@@ -4117,3 +4117,127 @@ CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_bank_verification
  IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND (NEW.application_fingerprint,NEW.applied_at,NEW.applied_by) IS DISTINCT FROM (OLD.application_fingerprint,OLD.applied_at,OLD.applied_by) THEN RAISE EXCEPTION 'Business Partner bank application evidence is immutable' USING ERRCODE='check_violation'; END IF;
  IF TG_OP='UPDATE' THEN NEW.row_version:=OLD.row_version+1; END IF; RETURN NEW; END $$;
 CREATE OR REPLACE FUNCTION document.trg_guard_supplier_activation_evidence() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'Supplier activation readiness evidence is immutable'; END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_reject_external_workforce_history_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'External workforce historical evidence is append-only'
+        USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_candidate_submission()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM document.workforce_requisition_supplier distribution
+        WHERE distribution.tenant_id = NEW.tenant_id
+          AND distribution.id = NEW.requisition_supplier_id
+          AND distribution.workforce_requisition_id = NEW.workforce_requisition_id
+          AND distribution.supplier_id = NEW.supplier_id
+          AND distribution.status IN ('distributed','acknowledged')
+    ) THEN
+        RAISE EXCEPTION 'Candidate submission must use an open distribution for the same requisition and supplier'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_contingent_work_order()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM document.external_candidate_submission submission
+        WHERE submission.tenant_id = NEW.tenant_id
+          AND submission.id = NEW.candidate_submission_id
+          AND submission.supplier_id = NEW.supplier_id
+          AND submission.status = 'selected'
+    ) THEN
+        RAISE EXCEPTION 'Contingent work order requires a selected submission from the same supplier'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_engagement()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document, master AS $$
+DECLARE
+    v_source_matches boolean;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.external_worker worker
+        WHERE worker.tenant_id = NEW.tenant_id AND worker.id = NEW.external_worker_id
+          AND worker.status IN ('prospect','active')
+    ) THEN
+        RAISE EXCEPTION 'Worker engagement requires an available external-worker role'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.contingent_work_order_id IS NOT NULL THEN
+        SELECT EXISTS (
+            SELECT 1 FROM document.contingent_work_order work_order
+            WHERE work_order.tenant_id = NEW.tenant_id AND work_order.id = NEW.contingent_work_order_id
+              AND work_order.supplier_id = NEW.supplier_id
+              AND work_order.company_code_id = NEW.company_code_id
+              AND work_order.legal_entity_id = NEW.legal_entity_id
+              AND work_order.status IN ('pending_supplier_acceptance','active','suspended','completed')
+        ) INTO v_source_matches;
+    ELSE
+        SELECT EXISTS (
+            SELECT 1 FROM document.statement_of_work sow
+            WHERE sow.tenant_id = NEW.tenant_id AND sow.id = NEW.statement_of_work_id
+              AND sow.supplier_id = NEW.supplier_id
+              AND sow.company_code_id = NEW.company_code_id
+              AND sow.legal_entity_id = NEW.legal_entity_id
+              AND sow.status IN ('pending_supplier_acceptance','active','suspended','completed')
+        ) INTO v_source_matches;
+    END IF;
+    IF NOT v_source_matches THEN
+        RAISE EXCEPTION 'Worker engagement supplier, buyer company, legal entity and source contract must agree'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_revision()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Commercial revisions cannot be deleted' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.status IN ('effective','superseded','rejected','cancelled') THEN
+        RAISE EXCEPTION 'Terminal commercial revisions are immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.status <> 'draft' AND (
+        to_jsonb(NEW) - ARRAY['status','supplier_accepted_at','supplier_accepted_by','effective_at']
+    ) IS DISTINCT FROM (
+        to_jsonb(OLD) - ARRAY['status','supplier_accepted_at','supplier_accepted_by','effective_at']
+    ) THEN
+        RAISE EXCEPTION 'Approved commercial revision terms and approval evidence are immutable'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_compliance_item()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Worker compliance evidence cannot be deleted' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF OLD.decision <> 'pending' THEN
+        RAISE EXCEPTION 'Worker compliance decision evidence is immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF (NEW.id,NEW.tenant_id,NEW.worker_engagement_id,NEW.requirement_code,NEW.requirement_version,NEW.category,NEW.required_before,NEW.created_at,NEW.created_by)
+       IS DISTINCT FROM
+       (OLD.id,OLD.tenant_id,OLD.worker_engagement_id,OLD.requirement_code,OLD.requirement_version,OLD.category,OLD.required_before,OLD.created_at,OLD.created_by) THEN
+        RAISE EXCEPTION 'Worker compliance requirement identity is immutable' USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;

@@ -765,3 +765,20 @@ ALTER TABLE document.supplier_registration_recovery ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.supplier_registration_recovery FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON document.supplier_registration_recovery USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON document.supplier_registration_recovery FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'workforce_requisition','workforce_requisition_supplier','external_candidate_submission','external_candidate_evaluation',
+        'contingent_work_order','contingent_work_order_revision','statement_of_work','statement_of_work_revision','statement_of_work_item',
+        'worker_engagement','worker_operational_placement','worker_compliance_item','engagement_onboarding_case',
+        'external_time_sheet','external_time_entry','external_expense_sheet','external_expense_item',
+        'external_service_entry','external_service_entry_line','external_workforce_invoice_allocation'
+    ] LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('CREATE POLICY tenant_access ON document.%I FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id())', v_table);
+        EXECUTE format('CREATE POLICY seed_write ON document.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)', v_table);
+    END LOOP;
+END;
+$$;

@@ -484,3 +484,33 @@ DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GR
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+   GRANT SELECT,INSERT,UPDATE ON
+     document.workforce_requisition,document.workforce_requisition_supplier,document.external_candidate_submission,
+     document.contingent_work_order,document.contingent_work_order_revision,document.statement_of_work,
+     document.statement_of_work_revision,document.statement_of_work_item,document.worker_engagement,
+     document.worker_operational_placement,document.worker_compliance_item,document.engagement_onboarding_case,
+     document.external_time_sheet,document.external_time_entry,document.external_expense_sheet,document.external_expense_item,
+     document.external_service_entry,document.external_service_entry_line
+   TO athyperapp;
+   GRANT SELECT,INSERT ON document.external_candidate_evaluation,document.external_workforce_invoice_allocation TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_reject_external_workforce_history_mutation() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_candidate_submission() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_contingent_work_order() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_worker_engagement() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_revision() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_worker_compliance_item() TO athyperapp;
+ END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+   GRANT ALL PRIVILEGES ON
+     document.workforce_requisition,document.workforce_requisition_supplier,document.external_candidate_submission,
+     document.external_candidate_evaluation,document.contingent_work_order,document.contingent_work_order_revision,
+     document.statement_of_work,document.statement_of_work_revision,document.statement_of_work_item,
+     document.worker_engagement,document.worker_operational_placement,document.worker_compliance_item,
+     document.engagement_onboarding_case,document.external_time_sheet,document.external_time_entry,
+     document.external_expense_sheet,document.external_expense_item,document.external_service_entry,
+     document.external_service_entry_line,document.external_workforce_invoice_allocation
+   TO athyperadmin;
+ END IF;
+END $$;

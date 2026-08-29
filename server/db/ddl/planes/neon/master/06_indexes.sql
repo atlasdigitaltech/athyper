@@ -1170,3 +1170,5 @@ CREATE UNIQUE INDEX business_partner_live_canonical_purpose_uq ON master.busines
 
 CREATE INDEX organization_amendment_resource_idx ON master.organization_amendment(tenant_id,resource_kind,resource_id,revision_no DESC);
 CREATE INDEX organization_amendment_effective_idx ON master.organization_amendment(tenant_id,effective_at DESC);
+CREATE INDEX external_worker_status_idx
+    ON master.external_worker (tenant_id, status, worker_number);

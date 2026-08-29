@@ -1037,3 +1037,30 @@ ALTER TABLE control.customer_lifecycle_event
   ADD CONSTRAINT customer_lifecycle_event_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_actor_fk FOREIGN KEY(tenant_id,occurred_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE control.external_workforce_rate_card
+    ADD CONSTRAINT external_workforce_rate_card_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_card_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_card_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_card_updated_by_fk FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_card_status_by_fk FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.external_workforce_rate
+    ADD CONSTRAINT external_workforce_rate_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_card_fk FOREIGN KEY (tenant_id, rate_card_id) REFERENCES control.external_workforce_rate_card(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_supplier_fk FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_job_fk FOREIGN KEY (tenant_id, job_id) REFERENCES master.job(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_site_fk FOREIGN KEY (tenant_id, site_id) REFERENCES master.site(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT external_workforce_rate_updated_by_fk FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.external_workforce_rate
+    ADD CONSTRAINT external_workforce_rate_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        rate_card_id WITH =,
+        COALESCE(supplier_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(job_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(site_id, '00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(worker_classification, '') WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');

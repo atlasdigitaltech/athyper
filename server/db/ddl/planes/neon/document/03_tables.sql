@@ -5269,3 +5269,454 @@ CREATE TABLE document.business_partner_invitation_recovery(
  CONSTRAINT business_partner_invitation_recovery_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_recovery_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_recovery_idempotency_uq UNIQUE(tenant_id,idempotency_key),CONSTRAINT business_partner_invitation_recovery_status_chk CHECK(status='requested'),CONSTRAINT business_partner_invitation_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),CONSTRAINT business_partner_invitation_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
 );
 COMMENT ON TABLE document.business_partner_invitation_recovery IS 'Immutable idempotent recovery intent. IAM recovers the subject; historic ownership is never rewritten and principals or requests are never duplicated.';
+
+-- External workforce and services procurement.
+-- These aggregates govern sourcing, commercial engagement and service
+-- acceptance. They do not reuse business_partner_request or
+-- master.employment as transaction authorities.
+CREATE TABLE document.workforce_requisition (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, purchase_requisition_id uuid,
+    code text NOT NULL, name text NOT NULL, description text,
+    engagement_model text NOT NULL DEFAULT 'contingent', job_id uuid, position_id uuid, org_unit_id uuid,
+    manager_employee_id uuid, site_id uuid, cost_center_id uuid,
+    requested_headcount numeric(10,2) NOT NULL DEFAULT 1,
+    expected_start_date date NOT NULL, expected_end_date date,
+    currency_code character(3) NOT NULL, target_rate_min numeric(18,6), target_rate_max numeric(18,6), rate_unit text,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT workforce_requisition_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_requisition_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_requisition_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT workforce_requisition_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT workforce_requisition_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT workforce_requisition_model_chk CHECK (engagement_model IN ('contingent','independent_contractor')),
+    CONSTRAINT workforce_requisition_dates_chk CHECK (expected_end_date IS NULL OR expected_end_date > expected_start_date),
+    CONSTRAINT workforce_requisition_headcount_chk CHECK (requested_headcount > 0),
+    CONSTRAINT workforce_requisition_rate_chk CHECK ((target_rate_min IS NULL OR target_rate_min >= 0) AND (target_rate_max IS NULL OR target_rate_max >= COALESCE(target_rate_min,0)) AND ((target_rate_min IS NULL AND target_rate_max IS NULL AND rate_unit IS NULL) OR rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT workforce_requisition_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT workforce_requisition_approval_state_chk CHECK (status NOT IN ('approved','released','partially_filled','filled','closed') OR approved_at IS NOT NULL),
+    CONSTRAINT workforce_requisition_version_chk CHECK (row_version >= 1),
+    CONSTRAINT workforce_requisition_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT workforce_requisition_status_chk CHECK (status IN ('draft','pending_approval','approved','released','partially_filled','filled','cancelled','closed')),
+    CONSTRAINT workforce_requisition_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT workforce_requisition_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.workforce_requisition_supplier (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    workforce_requisition_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    distributed_at timestamptz NOT NULL, distributed_by uuid NOT NULL, response_due_at timestamptz,
+    acknowledged_at timestamptz, declined_at timestamptz, decline_reason text,
+    distribution_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, status text NOT NULL DEFAULT 'distributed',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT workforce_requisition_supplier_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_requisition_supplier_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_requisition_supplier_uq UNIQUE (tenant_id, workforce_requisition_id, supplier_id),
+    CONSTRAINT workforce_requisition_supplier_dates_chk CHECK (response_due_at IS NULL OR response_due_at > distributed_at),
+    CONSTRAINT workforce_requisition_supplier_decline_chk CHECK ((status = 'declined') = (declined_at IS NOT NULL) AND (decline_reason IS NULL OR btrim(decline_reason) <> '')),
+    CONSTRAINT workforce_requisition_supplier_json_chk CHECK (jsonb_typeof(distribution_snapshot) = 'object'),
+    CONSTRAINT workforce_requisition_supplier_status_chk CHECK (status IN ('distributed','acknowledged','declined','closed'))
+);
+
+CREATE TABLE document.external_candidate_submission (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    workforce_requisition_id uuid NOT NULL, requisition_supplier_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    person_id uuid, candidate_reference_hash char(64) NOT NULL, profile_content_item_id uuid,
+    proposed_rate numeric(18,6), currency_code character(3) NOT NULL, rate_unit text, availability_date date,
+    submitted_at timestamptz NOT NULL, submitted_by uuid NOT NULL, consent_evidence_id uuid,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'submitted', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_candidate_submission_pkey PRIMARY KEY (id),
+    CONSTRAINT external_candidate_submission_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_candidate_submission_ref_uq UNIQUE (tenant_id, workforce_requisition_id, supplier_id, candidate_reference_hash),
+    CONSTRAINT external_candidate_submission_hash_chk CHECK (candidate_reference_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT external_candidate_submission_rate_chk CHECK ((proposed_rate IS NULL AND rate_unit IS NULL) OR (proposed_rate >= 0 AND rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT external_candidate_submission_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_candidate_submission_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT external_candidate_submission_status_chk CHECK (status IN ('submitted','under_review','shortlisted','selected','rejected','withdrawn')),
+    CONSTRAINT external_candidate_submission_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_candidate_submission_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_candidate_evaluation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, candidate_submission_id uuid NOT NULL,
+    evaluation_kind text NOT NULL, outcome text NOT NULL, score numeric(7,4), safe_reason_code text,
+    evidence_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+    evaluated_at timestamptz NOT NULL DEFAULT now(), evaluated_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_candidate_evaluation_pkey PRIMARY KEY (id),
+    CONSTRAINT external_candidate_evaluation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_candidate_evaluation_kind_chk CHECK (evaluation_kind IN ('screening','interview','assessment','compliance','commercial')),
+    CONSTRAINT external_candidate_evaluation_outcome_chk CHECK (outcome IN ('pass','fail','hold','recommended','not_recommended')),
+    CONSTRAINT external_candidate_evaluation_score_chk CHECK (score IS NULL OR score BETWEEN 0 AND 100),
+    CONSTRAINT external_candidate_evaluation_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_candidate_evaluation_json_chk CHECK (jsonb_typeof(evidence_snapshot) = 'object')
+);
+
+COMMENT ON TABLE document.external_candidate_submission IS 'Supplier submission against a released workforce requisition. Pre-selection identity may remain pseudonymous; resumes and restricted PII belong to protected content/person stores, never metadata.';
+COMMENT ON TABLE document.external_candidate_evaluation IS 'Append-only evaluation outcome with safe reason codes and non-PII evidence coordinates.';
+
+CREATE TABLE document.contingent_work_order (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    candidate_submission_id uuid NOT NULL, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, current_revision_no integer NOT NULL DEFAULT 0,
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT contingent_work_order_pkey PRIMARY KEY (id),
+    CONSTRAINT contingent_work_order_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT contingent_work_order_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT contingent_work_order_candidate_uq UNIQUE (tenant_id, candidate_submission_id),
+    CONSTRAINT contingent_work_order_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT contingent_work_order_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT contingent_work_order_revision_chk CHECK (current_revision_no >= 0),
+    CONSTRAINT contingent_work_order_version_chk CHECK (row_version >= 1),
+    CONSTRAINT contingent_work_order_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT contingent_work_order_status_chk CHECK (status IN ('draft','pending_approval','pending_supplier_acceptance','active','suspended','completed','cancelled','closed')),
+    CONSTRAINT contingent_work_order_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT contingent_work_order_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.contingent_work_order_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, work_order_id uuid NOT NULL,
+    revision_no integer NOT NULL, prior_revision_id uuid, change_reason text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, worker_classification text NOT NULL,
+    rate_id uuid, currency_code character(3) NOT NULL, rate_unit text NOT NULL,
+    bill_rate numeric(18,6) NOT NULL, pay_rate numeric(18,6), not_to_exceed_amount numeric(18,4),
+    standard_hours_per_day numeric(7,4), standard_hours_per_week numeric(7,4),
+    terms_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, terms_hash char(64) NOT NULL,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    supplier_accepted_at timestamptz, supplier_accepted_by uuid,
+    effective_at timestamptz, status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT contingent_work_order_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT contingent_work_order_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT contingent_work_order_revision_no_uq UNIQUE (tenant_id, work_order_id, revision_no),
+    CONSTRAINT contingent_work_order_revision_no_chk CHECK (revision_no >= 1),
+    CONSTRAINT contingent_work_order_revision_reason_chk CHECK (btrim(change_reason) <> ''),
+    CONSTRAINT contingent_work_order_revision_dates_chk CHECK (end_date > start_date),
+    CONSTRAINT contingent_work_order_revision_class_chk CHECK (worker_classification IN ('agency_worker','independent_contractor','consultant','other')),
+    CONSTRAINT contingent_work_order_revision_rate_chk CHECK (rate_unit IN ('hour','day','week','month','each','fixed') AND bill_rate >= 0 AND (pay_rate IS NULL OR pay_rate >= 0) AND (not_to_exceed_amount IS NULL OR not_to_exceed_amount >= 0)),
+    CONSTRAINT contingent_work_order_revision_hours_chk CHECK ((standard_hours_per_day IS NULL OR standard_hours_per_day > 0) AND (standard_hours_per_week IS NULL OR standard_hours_per_week > 0)),
+    CONSTRAINT contingent_work_order_revision_hash_chk CHECK (terms_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(terms_snapshot) = 'object'),
+    CONSTRAINT contingent_work_order_revision_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT contingent_work_order_revision_acceptance_pair_chk CHECK ((supplier_accepted_at IS NULL) = (supplier_accepted_by IS NULL)),
+    CONSTRAINT contingent_work_order_revision_status_chk CHECK (status IN ('draft','pending_approval','approved','supplier_accepted','effective','superseded','rejected','cancelled')),
+    CONSTRAINT contingent_work_order_revision_effective_chk CHECK (status <> 'effective' OR (approved_at IS NOT NULL AND supplier_accepted_at IS NOT NULL AND effective_at IS NOT NULL))
+);
+
+CREATE TABLE document.statement_of_work (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    purchase_requisition_id uuid, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, description text,
+    current_revision_no integer NOT NULL DEFAULT 0, row_version bigint NOT NULL DEFAULT 1,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT statement_of_work_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT statement_of_work_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT statement_of_work_name_chk CHECK (btrim(name) <> ''),
+    CONSTRAINT statement_of_work_revision_chk CHECK (current_revision_no >= 0),
+    CONSTRAINT statement_of_work_version_chk CHECK (row_version >= 1),
+    CONSTRAINT statement_of_work_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT statement_of_work_status_chk CHECK (status IN ('draft','pending_approval','pending_supplier_acceptance','active','suspended','completed','cancelled','closed')),
+    CONSTRAINT statement_of_work_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT statement_of_work_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.statement_of_work_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, statement_of_work_id uuid NOT NULL,
+    revision_no integer NOT NULL, prior_revision_id uuid, change_reason text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, currency_code character(3) NOT NULL,
+    not_to_exceed_amount numeric(18,4) NOT NULL, allow_workers boolean NOT NULL DEFAULT true,
+    allow_time_sheets boolean NOT NULL DEFAULT false, allow_expense_sheets boolean NOT NULL DEFAULT false,
+    auto_invoice_approved_items boolean NOT NULL DEFAULT false,
+    terms_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, terms_hash char(64) NOT NULL,
+    workflow_request_id uuid, approved_at timestamptz, approved_by uuid,
+    supplier_accepted_at timestamptz, supplier_accepted_by uuid,
+    effective_at timestamptz, status text NOT NULL DEFAULT 'draft',
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT statement_of_work_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_revision_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_revision_no_uq UNIQUE (tenant_id, statement_of_work_id, revision_no),
+    CONSTRAINT statement_of_work_revision_no_chk CHECK (revision_no >= 1),
+    CONSTRAINT statement_of_work_revision_reason_chk CHECK (btrim(change_reason) <> ''),
+    CONSTRAINT statement_of_work_revision_dates_chk CHECK (end_date > start_date),
+    CONSTRAINT statement_of_work_revision_amount_chk CHECK (not_to_exceed_amount >= 0),
+    CONSTRAINT statement_of_work_revision_auto_invoice_chk CHECK (NOT auto_invoice_approved_items OR allow_time_sheets OR allow_expense_sheets),
+    CONSTRAINT statement_of_work_revision_hash_chk CHECK (terms_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(terms_snapshot) = 'object'),
+    CONSTRAINT statement_of_work_revision_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT statement_of_work_revision_acceptance_pair_chk CHECK ((supplier_accepted_at IS NULL) = (supplier_accepted_by IS NULL)),
+    CONSTRAINT statement_of_work_revision_status_chk CHECK (status IN ('draft','pending_approval','approved','supplier_accepted','effective','superseded','rejected','cancelled')),
+    CONSTRAINT statement_of_work_revision_effective_chk CHECK (status <> 'effective' OR (approved_at IS NOT NULL AND supplier_accepted_at IS NOT NULL AND effective_at IS NOT NULL))
+);
+
+CREATE TABLE document.statement_of_work_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, statement_of_work_revision_id uuid NOT NULL,
+    line_no smallint NOT NULL, item_type text NOT NULL, code text NOT NULL, name text NOT NULL, description text,
+    due_date date, quantity numeric(18,4) NOT NULL DEFAULT 1, unit_price numeric(18,6) NOT NULL DEFAULT 0,
+    amount numeric(18,4) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    acceptance_required boolean NOT NULL DEFAULT true, accepted_at timestamptz, accepted_by uuid,
+    status text NOT NULL DEFAULT 'planned', metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT statement_of_work_item_pkey PRIMARY KEY (id),
+    CONSTRAINT statement_of_work_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT statement_of_work_item_line_uq UNIQUE (tenant_id, statement_of_work_revision_id, line_no),
+    CONSTRAINT statement_of_work_item_code_uq UNIQUE (tenant_id, statement_of_work_revision_id, code),
+    CONSTRAINT statement_of_work_item_line_chk CHECK (line_no > 0 AND code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT statement_of_work_item_type_chk CHECK (item_type IN ('deliverable','event','fee','schedule')),
+    CONSTRAINT statement_of_work_item_amount_chk CHECK (quantity > 0 AND unit_price >= 0),
+    CONSTRAINT statement_of_work_item_acceptance_chk CHECK ((accepted_at IS NULL) = (accepted_by IS NULL) AND (status <> 'accepted' OR accepted_at IS NOT NULL)),
+    CONSTRAINT statement_of_work_item_status_chk CHECK (status IN ('planned','submitted','accepted','rejected','cancelled')),
+    CONSTRAINT statement_of_work_item_json_chk CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+COMMENT ON TABLE document.contingent_work_order_revision IS 'Immutable-on-approval commercial terms for one contingent worker. Revisions preserve prior rates, dates, budgets and supplier acceptance.';
+COMMENT ON TABLE document.statement_of_work_revision IS 'Immutable-on-approval SOW terms controlling workers, time, expense, deliverable/event/fee acceptance and auto-invoicing.';
+
+CREATE TABLE document.worker_engagement (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    external_worker_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, legal_entity_id uuid NOT NULL,
+    contingent_work_order_id uuid, statement_of_work_id uuid,
+    code text NOT NULL, name text NOT NULL, worker_classification text NOT NULL,
+    start_date date NOT NULL, end_date date NOT NULL, maximum_tenure_days integer,
+    currency_code character(3) NOT NULL, rate_id uuid, rate_unit text, bill_rate numeric(18,6),
+    not_to_exceed_amount numeric(18,4), workflow_request_id uuid,
+    readiness_evidence jsonb NOT NULL DEFAULT '{}'::jsonb, readiness_evidence_hash char(64),
+    onboarding_status text NOT NULL DEFAULT 'not_started', access_status text NOT NULL DEFAULT 'not_requested',
+    row_version bigint NOT NULL DEFAULT 1, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'pending', status_changed_at timestamptz, status_changed_by uuid,
+    activated_at timestamptz, activated_by uuid, closed_at timestamptz, closed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT worker_engagement_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_engagement_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_engagement_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT worker_engagement_source_uq UNIQUE NULLS NOT DISTINCT (tenant_id, contingent_work_order_id, statement_of_work_id, external_worker_id),
+    CONSTRAINT worker_engagement_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT worker_engagement_source_chk CHECK (num_nonnulls(contingent_work_order_id, statement_of_work_id) = 1),
+    CONSTRAINT worker_engagement_class_chk CHECK (worker_classification IN ('agency_worker','independent_contractor','consultant','sow_worker','other')),
+    CONSTRAINT worker_engagement_dates_chk CHECK (end_date > start_date AND (maximum_tenure_days IS NULL OR maximum_tenure_days > 0)),
+    CONSTRAINT worker_engagement_rate_chk CHECK ((bill_rate IS NULL AND rate_unit IS NULL) OR (bill_rate >= 0 AND rate_unit IN ('hour','day','week','month','each','fixed'))),
+    CONSTRAINT worker_engagement_amount_chk CHECK (not_to_exceed_amount IS NULL OR not_to_exceed_amount >= 0),
+    CONSTRAINT worker_engagement_readiness_chk CHECK (jsonb_typeof(readiness_evidence) = 'object' AND (readiness_evidence_hash IS NULL OR readiness_evidence_hash ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT worker_engagement_activation_pair_chk CHECK ((activated_at IS NULL) = (activated_by IS NULL)),
+    CONSTRAINT worker_engagement_close_pair_chk CHECK ((closed_at IS NULL) = (closed_by IS NULL)),
+    CONSTRAINT worker_engagement_activation_chk CHECK (status <> 'active' OR (activated_at IS NOT NULL AND onboarding_status = 'completed' AND readiness_evidence @> '{"eligible":true}'::jsonb)),
+    CONSTRAINT worker_engagement_onboarding_chk CHECK (onboarding_status IN ('not_started','in_progress','blocked','completed','cancelled')),
+    CONSTRAINT worker_engagement_access_chk CHECK (access_status IN ('not_requested','requested','provisioned','failed','deprovision_requested','deprovisioned')),
+    CONSTRAINT worker_engagement_status_chk CHECK (status IN ('pending','active','suspended','completed','terminated','cancelled','closed')),
+    CONSTRAINT worker_engagement_version_chk CHECK (row_version >= 1),
+    CONSTRAINT worker_engagement_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT worker_engagement_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT worker_engagement_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.worker_operational_placement (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    position_id uuid, org_unit_id uuid, manager_employee_id uuid, company_code_id uuid NOT NULL,
+    cost_center_id uuid, profit_center_id uuid, project_id uuid, site_id uuid,
+    allocation_percent numeric(7,4) NOT NULL DEFAULT 100,
+    effective_from date NOT NULL, effective_until date,
+    is_primary boolean NOT NULL DEFAULT true, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    status text NOT NULL DEFAULT 'active', created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    updated_at timestamptz, updated_by uuid,
+    CONSTRAINT worker_operational_placement_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_operational_placement_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_operational_placement_effective_uq UNIQUE (tenant_id, worker_engagement_id, effective_from, is_primary),
+    CONSTRAINT worker_operational_placement_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT worker_operational_placement_allocation_chk CHECK (allocation_percent > 0 AND allocation_percent <= 100),
+    CONSTRAINT worker_operational_placement_status_chk CHECK (status IN ('active','inactive','superseded')),
+    CONSTRAINT worker_operational_placement_json_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT worker_operational_placement_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.worker_compliance_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    requirement_code text NOT NULL, requirement_version text NOT NULL, category text NOT NULL,
+    required_before text NOT NULL DEFAULT 'activation', evidence_content_item_id uuid,
+    evidence_fingerprint char(64), valid_from date, valid_until date,
+    decision text NOT NULL DEFAULT 'pending', safe_reason_code text,
+    decided_at timestamptz, decided_by uuid, decision_fingerprint char(64),
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT worker_compliance_item_pkey PRIMARY KEY (id),
+    CONSTRAINT worker_compliance_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT worker_compliance_item_requirement_uq UNIQUE (tenant_id, worker_engagement_id, requirement_code, requirement_version),
+    CONSTRAINT worker_compliance_item_code_chk CHECK (requirement_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$' AND btrim(requirement_version) <> ''),
+    CONSTRAINT worker_compliance_item_category_chk CHECK (category IN ('identity','right_to_work','background','insurance','license','training','health_safety','classification','other')),
+    CONSTRAINT worker_compliance_item_gate_chk CHECK (required_before IN ('selection','activation','site_access','renewal')),
+    CONSTRAINT worker_compliance_item_evidence_chk CHECK ((evidence_fingerprint IS NULL OR evidence_fingerprint ~ '^[a-f0-9]{64}$') AND (valid_until IS NULL OR valid_from IS NULL OR valid_until >= valid_from)),
+    CONSTRAINT worker_compliance_item_decision_chk CHECK (decision IN ('pending','verified','rejected','waived','expired') AND (decision = 'pending') = (decided_at IS NULL AND decided_by IS NULL AND decision_fingerprint IS NULL)),
+    CONSTRAINT worker_compliance_item_decision_hash_chk CHECK (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT worker_compliance_item_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$')
+);
+
+CREATE TABLE document.engagement_onboarding_case (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, name text NOT NULL, target_start_date date NOT NULL,
+    checklist jsonb NOT NULL DEFAULT '[]'::jsonb, workflow_request_id uuid,
+    activated_at timestamptz, completed_at timestamptz,
+    row_version bigint NOT NULL DEFAULT 1, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT engagement_onboarding_case_pkey PRIMARY KEY (id),
+    CONSTRAINT engagement_onboarding_case_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT engagement_onboarding_case_engagement_uq UNIQUE (tenant_id, worker_engagement_id),
+    CONSTRAINT engagement_onboarding_case_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT engagement_onboarding_case_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT engagement_onboarding_case_json_chk CHECK (jsonb_typeof(checklist) = 'array'),
+    CONSTRAINT engagement_onboarding_case_completion_chk CHECK (status <> 'completed' OR completed_at IS NOT NULL),
+    CONSTRAINT engagement_onboarding_case_version_chk CHECK (row_version >= 1),
+    CONSTRAINT engagement_onboarding_case_status_chk CHECK (status IN ('draft','active','blocked','completed','cancelled')),
+    CONSTRAINT engagement_onboarding_case_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT engagement_onboarding_case_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE document.worker_engagement IS 'Commercial and lifecycle authority for a supplier-provided person working for the buyer. Exactly one contingent work order or SOW is authoritative; no buyer employment is implied.';
+COMMENT ON TABLE document.worker_operational_placement IS 'Effective buyer-side manager, organization, site and cost allocation for an external engagement. This is not master.work_assignment and does not affect employee headcount.';
+COMMENT ON TABLE document.worker_compliance_item IS 'Engagement-specific compliance gate. Evidence content is protected separately; only fingerprints, validity and safe decisions are stored here.';
+
+CREATE TABLE document.external_time_sheet (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, period_start date NOT NULL, period_end date NOT NULL,
+    submitted_at timestamptz, submitted_by uuid, workflow_request_id uuid,
+    approved_at timestamptz, approved_by uuid, rejection_reason_code text,
+    revision_of_time_sheet_id uuid, row_version bigint NOT NULL DEFAULT 1,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_time_sheet_pkey PRIMARY KEY (id),
+    CONSTRAINT external_time_sheet_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_time_sheet_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT external_time_sheet_period_uq UNIQUE NULLS NOT DISTINCT (tenant_id, worker_engagement_id, period_start, revision_of_time_sheet_id),
+    CONSTRAINT external_time_sheet_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_time_sheet_period_chk CHECK (period_end >= period_start),
+    CONSTRAINT external_time_sheet_submit_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT external_time_sheet_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_time_sheet_approval_state_chk CHECK (status NOT IN ('approved','invoiced') OR approved_at IS NOT NULL),
+    CONSTRAINT external_time_sheet_rejection_chk CHECK (status <> 'rejected' OR rejection_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_time_sheet_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_time_sheet_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','invoiced','cancelled')),
+    CONSTRAINT external_time_sheet_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_time_sheet_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_time_entry (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, time_sheet_id uuid NOT NULL,
+    line_no smallint NOT NULL, work_date date NOT NULL, time_category text NOT NULL DEFAULT 'regular',
+    hours numeric(9,4) NOT NULL, rate numeric(18,6) NOT NULL, currency_code character(3) NOT NULL,
+    amount numeric(18,4) GENERATED ALWAYS AS (hours * rate) STORED,
+    cost_center_id uuid, project_id uuid, project_task_id uuid, statement_of_work_item_id uuid,
+    task_code text, notes text, rate_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb, rate_snapshot_hash char(64) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_time_entry_pkey PRIMARY KEY (id),
+    CONSTRAINT external_time_entry_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_time_entry_line_uq UNIQUE (tenant_id, time_sheet_id, line_no),
+    CONSTRAINT external_time_entry_line_chk CHECK (line_no > 0 AND hours > 0 AND hours <= 24 AND rate >= 0),
+    CONSTRAINT external_time_entry_category_chk CHECK (time_category IN ('regular','overtime','doubletime','on_call','absence','other')),
+    CONSTRAINT external_time_entry_hash_chk CHECK (rate_snapshot_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(rate_snapshot) = 'object')
+);
+
+CREATE TABLE document.external_expense_sheet (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, worker_engagement_id uuid NOT NULL,
+    code text NOT NULL, period_start date NOT NULL, period_end date NOT NULL,
+    submitted_at timestamptz, submitted_by uuid, workflow_request_id uuid,
+    approved_at timestamptz, approved_by uuid, rejection_reason_code text,
+    revision_of_expense_sheet_id uuid, row_version bigint NOT NULL DEFAULT 1,
+    status text NOT NULL DEFAULT 'draft', status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_expense_sheet_pkey PRIMARY KEY (id),
+    CONSTRAINT external_expense_sheet_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_expense_sheet_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT external_expense_sheet_period_uq UNIQUE NULLS NOT DISTINCT (tenant_id, worker_engagement_id, period_start, revision_of_expense_sheet_id),
+    CONSTRAINT external_expense_sheet_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'),
+    CONSTRAINT external_expense_sheet_period_chk CHECK (period_end >= period_start),
+    CONSTRAINT external_expense_sheet_submit_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT external_expense_sheet_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_expense_sheet_approval_state_chk CHECK (status NOT IN ('approved','invoiced') OR approved_at IS NOT NULL),
+    CONSTRAINT external_expense_sheet_rejection_chk CHECK (status <> 'rejected' OR rejection_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT external_expense_sheet_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_expense_sheet_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','invoiced','cancelled')),
+    CONSTRAINT external_expense_sheet_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_expense_sheet_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_expense_item (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, expense_sheet_id uuid NOT NULL,
+    line_no smallint NOT NULL, expense_date date NOT NULL, expense_code text NOT NULL, description text NOT NULL,
+    amount numeric(18,4) NOT NULL, tax_amount numeric(18,4) NOT NULL DEFAULT 0, currency_code character(3) NOT NULL,
+    cost_center_id uuid, project_id uuid, project_task_id uuid, statement_of_work_item_id uuid,
+    receipt_content_item_id uuid, merchant_name text, metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_expense_item_pkey PRIMARY KEY (id),
+    CONSTRAINT external_expense_item_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_expense_item_line_uq UNIQUE (tenant_id, expense_sheet_id, line_no),
+    CONSTRAINT external_expense_item_line_chk CHECK (line_no > 0 AND amount >= 0 AND tax_amount >= 0),
+    CONSTRAINT external_expense_item_code_chk CHECK (expense_code ~ '^[A-Za-z][A-Za-z0-9_.-]{1,126}$' AND btrim(description) <> ''),
+    CONSTRAINT external_expense_item_json_chk CHECK (jsonb_typeof(metadata) = 'object')
+);
+
+CREATE TABLE document.external_service_entry (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    company_code_id uuid NOT NULL, supplier_id uuid NOT NULL, commitment_id uuid,
+    code text NOT NULL, name text NOT NULL, service_period_start date NOT NULL, service_period_end date NOT NULL,
+    currency_code character(3) NOT NULL, workflow_request_id uuid,
+    submitted_at timestamptz, submitted_by uuid, approved_at timestamptz, approved_by uuid,
+    row_version bigint NOT NULL DEFAULT 1, status text NOT NULL DEFAULT 'draft',
+    status_changed_at timestamptz, status_changed_by uuid,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT external_service_entry_pkey PRIMARY KEY (id),
+    CONSTRAINT external_service_entry_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_service_entry_code_uq UNIQUE (tenant_id, company_code_id, code),
+    CONSTRAINT external_service_entry_code_chk CHECK (code ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$' AND btrim(name) <> ''),
+    CONSTRAINT external_service_entry_period_chk CHECK (service_period_end >= service_period_start),
+    CONSTRAINT external_service_entry_submit_pair_chk CHECK ((submitted_at IS NULL) = (submitted_by IS NULL)),
+    CONSTRAINT external_service_entry_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT external_service_entry_approval_state_chk CHECK (status NOT IN ('approved','invoiced') OR approved_at IS NOT NULL),
+    CONSTRAINT external_service_entry_version_chk CHECK (row_version >= 1),
+    CONSTRAINT external_service_entry_status_chk CHECK (status IN ('draft','submitted','pending_approval','approved','rejected','reversed','invoiced','cancelled')),
+    CONSTRAINT external_service_entry_status_pair_chk CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT external_service_entry_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE document.external_service_entry_line (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, service_entry_id uuid NOT NULL,
+    line_no smallint NOT NULL, time_sheet_id uuid, expense_sheet_id uuid, statement_of_work_item_id uuid,
+    description text NOT NULL, quantity numeric(18,4) NOT NULL DEFAULT 1, unit_price numeric(18,6) NOT NULL,
+    accepted_amount numeric(18,4) GENERATED ALWAYS AS (quantity * unit_price) STORED,
+    currency_code character(3) NOT NULL, acceptance_snapshot jsonb NOT NULL DEFAULT '{}'::jsonb,
+    acceptance_hash char(64) NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_service_entry_line_pkey PRIMARY KEY (id),
+    CONSTRAINT external_service_entry_line_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_service_entry_line_no_uq UNIQUE (tenant_id, service_entry_id, line_no),
+    CONSTRAINT external_service_entry_line_source_chk CHECK (num_nonnulls(time_sheet_id, expense_sheet_id, statement_of_work_item_id) = 1),
+    CONSTRAINT external_service_entry_line_amount_chk CHECK (line_no > 0 AND quantity > 0 AND unit_price >= 0 AND btrim(description) <> ''),
+    CONSTRAINT external_service_entry_line_hash_chk CHECK (acceptance_hash ~ '^[a-f0-9]{64}$' AND jsonb_typeof(acceptance_snapshot) = 'object')
+);
+
+CREATE TABLE document.external_workforce_invoice_allocation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    purchase_invoice_line_id uuid NOT NULL, service_entry_line_id uuid NOT NULL,
+    allocation_kind text NOT NULL DEFAULT 'invoice', allocated_amount numeric(18,4) NOT NULL,
+    currency_code character(3) NOT NULL, reverses_allocation_id uuid, idempotency_key text NOT NULL,
+    allocated_at timestamptz NOT NULL DEFAULT now(), allocated_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT external_workforce_invoice_allocation_pkey PRIMARY KEY (id),
+    CONSTRAINT external_workforce_invoice_allocation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT external_workforce_invoice_allocation_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT external_workforce_invoice_allocation_kind_chk CHECK (allocation_kind IN ('invoice','reversal')),
+    CONSTRAINT external_workforce_invoice_allocation_amount_chk CHECK (allocated_amount > 0 AND btrim(idempotency_key) <> ''),
+    CONSTRAINT external_workforce_invoice_allocation_reversal_chk CHECK ((allocation_kind = 'reversal') = (reverses_allocation_id IS NOT NULL))
+);
+
+COMMENT ON TABLE document.external_time_sheet IS 'External-worker time document. Corrections create a linked revision/reversal; approved history is never overwritten.';
+COMMENT ON TABLE document.external_expense_sheet IS 'External-worker expense document. Receipt content is protected separately and approved history is never overwritten.';
+COMMENT ON TABLE document.external_service_entry IS 'Buyer acceptance of approved time, expense or SOW deliverables. This is the auditable bridge to AP invoicing.';
+COMMENT ON TABLE document.external_workforce_invoice_allocation IS 'Append-only allocation from an accepted external-workforce service entry line to an AP invoice line, including explicit reversal pairs.';
