@@ -1,17 +1,17 @@
 apiVersion: athyper.io/v1alpha1
 kind: ImageSet
 metadata:
-  id: dev-5bdcb77293b9
+  id: dev-251ee259a77f
   channel: development
 spec:
-  sourceRevision: 5bdcb77293b97bd7a2c97482c12869ad8b17f668
+  sourceRevision: 251ee259a77f758fbe29dd637e1203b1f8f5078b
   images:
     - id: neon-web
-      reference: athyper/neon-web@sha256:0958133694d06086799e9c9cc1965c9680d1cf99d267f521236326ea932778f5
+      reference: athyper/neon-web@sha256:5b99302cbc807244d62c71037de50c514b52ba408777b595600bae9a112f3bdb
     - id: mesh-web
-      reference: athyper/mesh-web@sha256:fbe81778024a571a2d880cc5f0f2803b52bec14b4d1efed227aee20110421c2e
+      reference: athyper/mesh-web@sha256:e6358b2541c62fd6a9fbc58cc8a02774171b9b9711d688a9a90a8bc260502e29
     - id: studio-web
-      reference: athyper/studio-web@sha256:22cb8e5a293533ecb294c540e833daa34e07399f211104d98a650f573223d1f9
+      reference: athyper/studio-web@sha256:7a07c5f2c402ea543b89a72c369cb80af8163cb937d0d8f183c7b56329510710
     - id: runtime-server
       reference: athyper/runtime-server@sha256:27545bc7aaf54121ed4dbbd4372bd870b1abdda922bf71fbf7bef79bab27a2b4
     - id: iam
