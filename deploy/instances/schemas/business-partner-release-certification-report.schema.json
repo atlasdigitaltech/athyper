@@ -1,0 +1,31 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://athyper.io/schemas/business-partner-release-certification-report-v1alpha1.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "metadata", "readOnly", "executionAuthorized", "status", "sourceRevision", "images", "gates", "blockers"],
+  "properties": {
+    "apiVersion": { "const": "athyper.io/v1alpha1" },
+    "kind": { "const": "BusinessPartnerReleaseCertificationReport" },
+    "metadata": { "type": "object", "additionalProperties": false, "required": ["id"], "properties": { "id": { "type": "string", "minLength": 3 } } },
+    "readOnly": { "const": true },
+    "executionAuthorized": { "const": false },
+    "status": { "enum": ["blocked", "certified"] },
+    "sourceRevision": { "type": "string", "pattern": "^[a-f0-9]{40}$", "not": { "pattern": "^0{40}$" } },
+    "images": { "type": "object", "minProperties": 5, "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" } },
+    "gates": {
+      "type": "array", "minItems": 7, "maxItems": 7,
+      "items": {
+        "type": "object", "additionalProperties": false, "required": ["id", "environment", "path", "status", "blockers"],
+        "properties": {
+          "id": { "enum": ["database", "domain-service", "cross-plane", "security-privacy", "ux", "operations", "ownership"] },
+          "environment": { "enum": ["staging", "production"] },
+          "path": { "type": "string", "minLength": 3 },
+          "status": { "enum": ["blocked", "passed"] },
+          "blockers": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "blockers": { "type": "array", "items": { "type": "string" } }
+  }
+}

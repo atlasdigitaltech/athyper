@@ -35,6 +35,7 @@
     "db:mark-disposable:studio": "tsx scripts/mark-disposable-database.ts --plane=studio",
     "db:operate:authorization": "tsx scripts/operations/authorization/manage-authorization-operation-activation.ts",
     "db:repair:authorization:projection-owner-read-grants": "tsx scripts/operations/authorization/repair-projection-owner-read-grants.ts",
+    "db:rotate:local:postgres-admin": "tsx scripts/operations/security/rotate-local-postgres-admin-secret.ts",
     "db:operate:authorization:clean-slate-reset": "tsx scripts/operations/authorization/reset-authorization-clean-slate.ts",
     "db:reconcile:iam-runtime-subjects": "tsx scripts/operations/iam/reconcile-runtime-subjects.ts",
     "db:operate:mesh:sync-shared": "tsx scripts/operations/mesh/sync-shared-to-mesh.ts",

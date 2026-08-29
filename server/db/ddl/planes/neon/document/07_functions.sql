@@ -3793,12 +3793,12 @@ BEGIN
             USING ERRCODE = 'restrict_violation';
     END IF;
     IF TG_OP = 'UPDATE' AND (
-        NEW.id, NEW.tenant_id, NEW.invitation_no,
+        NEW.id, NEW.tenant_id, NEW.invitation_no, NEW.registration_role,
         NEW.requested_operating_organization_id, NEW.optional_company_code_id,
         NEW.intended_supplier_name, NEW.invitee_email_hash, NEW.token_hash,
         NEW.expires_at, NEW.idempotency_key, NEW.created_at, NEW.created_by
     ) IS DISTINCT FROM (
-        OLD.id, OLD.tenant_id, OLD.invitation_no,
+        OLD.id, OLD.tenant_id, OLD.invitation_no, OLD.registration_role,
         OLD.requested_operating_organization_id, OLD.optional_company_code_id,
         OLD.intended_supplier_name, OLD.invitee_email_hash, OLD.token_hash,
         OLD.expires_at, OLD.idempotency_key, OLD.created_at, OLD.created_by
@@ -3825,6 +3825,15 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_registration_role_immutable()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
+BEGIN
+    IF NEW.registration_role IS DISTINCT FROM OLD.registration_role THEN
+        RAISE EXCEPTION 'Registration invitation role is immutable' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END $$;
 
 CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request()
 RETURNS trigger
@@ -4002,21 +4011,7 @@ BEGIN
         OR NEW.materialization_snapshot_id IS NULL
         OR NEW.application_idempotency_key IS NULL
         OR NEW.application_fingerprint IS NULL
-        OR NOT (
-            (NEW.requested_role IN ('supplier','customer')
-             AND num_nonnulls(NEW.materialized_supplier_id, NEW.materialized_customer_id) = 1
-             AND num_nonnulls(NEW.materialized_supplier_company_profile_id, NEW.materialized_customer_company_profile_id)
-                 = CASE WHEN NEW.request_kind = 'configure_company' THEN 1 ELSE 0 END
-             AND NEW.materialized_operating_organization_assignment_id IS NOT NULL
-             AND num_nonnulls(NEW.materialized_person_id,NEW.materialized_employee_id,NEW.materialized_employment_id,NEW.materialized_work_assignment_id,NEW.materialized_principal_id)=0)
-            OR
-            (NEW.requested_role='workforce'
-             AND NEW.materialized_person_id IS NOT NULL
-             AND NEW.materialized_employee_id IS NOT NULL
-             AND NEW.materialized_employment_id IS NOT NULL
-             AND NEW.materialized_work_assignment_id IS NOT NULL
-             AND num_nonnulls(NEW.materialized_supplier_id,NEW.materialized_customer_id,NEW.materialized_supplier_company_profile_id,NEW.materialized_customer_company_profile_id,NEW.materialized_operating_organization_assignment_id)=0)
-        )
+        OR NEW.application_result_kind IS NULL
     ) THEN
         RAISE EXCEPTION 'Applied Business Partner request requires application evidence and materialized partner'
             USING ERRCODE = 'check_violation';
@@ -4052,9 +4047,11 @@ BEGIN
     END IF;
     IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
        AND NEW.registration_mode = 'self_service' AND NOT EXISTS (
-           SELECT 1 FROM document.supplier_registration_invitation invitation
+           SELECT 1 FROM document.business_partner_invitation invitation
            WHERE invitation.tenant_id = NEW.tenant_id AND invitation.id = NEW.invitation_id
              AND invitation.status = 'accepted'
+             AND invitation.journey_kind IN ('supplier','customer','candidate')
+             AND invitation.requested_role = NEW.requested_role
              AND invitation.business_partner_request_id = NEW.id
              AND invitation.applicant_principal_id = NEW.applicant_principal_id
        ) THEN
@@ -4064,9 +4061,59 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_invitation() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner invitations cannot be deleted' USING ERRCODE='check_violation'; END IF;
+ IF (NEW.id,NEW.tenant_id,NEW.invitation_no,NEW.journey_kind,NEW.registration_mode,NEW.requested_role,NEW.scope_kind,NEW.requested_operating_organization_id,NEW.company_code_id,NEW.legal_entity_id,NEW.org_unit_id,NEW.position_id,NEW.intended_party_name,NEW.invitee_email_hash,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.invitation_no,OLD.journey_kind,OLD.registration_mode,OLD.requested_role,OLD.scope_kind,OLD.requested_operating_organization_id,OLD.company_code_id,OLD.legal_entity_id,OLD.org_unit_id,OLD.position_id,OLD.intended_party_name,OLD.invitee_email_hash,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Invitation journey, authority, scope, recipient, and creation evidence are immutable' USING ERRCODE='check_violation'; END IF;
+ IF OLD.status<>'pending' THEN RAISE EXCEPTION 'Terminal Business Partner invitations are immutable' USING ERRCODE='check_violation'; END IF;
+ IF NEW.status='accepted' AND NEW.expires_at<=statement_timestamp() THEN RAISE EXCEPTION 'An expired invitation cannot be accepted' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+ IF NEW.status='pending' AND (NEW.token_hash=OLD.token_hash OR NEW.resend_count<>OLD.resend_count+1) AND (NEW.token_hash,NEW.expires_at,NEW.resend_count) IS DISTINCT FROM (OLD.token_hash,OLD.expires_at,OLD.resend_count) THEN RAISE EXCEPTION 'Resend must atomically rotate the token hash' USING ERRCODE='check_violation'; END IF;
+ RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_duplicate_resolution() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
+DECLARE v_duplicate master.business_partner%ROWTYPE; v_survivor master.business_partner%ROWTYPE;
+BEGIN
+  IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'Business Partner duplicate resolutions are immutable' USING ERRCODE='restrict_violation'; END IF;
+  SELECT * INTO v_duplicate FROM master.business_partner WHERE tenant_id=NEW.tenant_id AND id=NEW.duplicate_business_partner_id FOR UPDATE;
+  SELECT * INTO v_survivor FROM master.business_partner WHERE tenant_id=NEW.tenant_id AND id=NEW.surviving_business_partner_id FOR UPDATE;
+  IF v_duplicate.id IS NULL OR v_survivor.id IS NULL OR v_duplicate.partner_category<>v_survivor.partner_category OR v_survivor.status='archived' THEN
+    RAISE EXCEPTION 'Duplicate resolution requires two same-category partners and an available survivor' USING ERRCODE='check_violation';
+  END IF;
+  IF v_duplicate.status<>'inactive' THEN RAISE EXCEPTION 'Duplicate must be inactive after dependency review before supersession' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
+  IF NEW.resolution_kind IN('merge','rekey') AND COALESCE((NEW.dependency_evidence->>'rekeyComplete')::boolean,false)<>true THEN RAISE EXCEPTION 'Merge and re-key require completed dependency evidence' USING ERRCODE='check_violation'; END IF;
+  RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.fn_resolve_business_partner_duplicate(p_tenant_id uuid,p_duplicate_id uuid,p_survivor_id uuid,p_resolution_kind text,p_reason_code text,p_dependency_evidence jsonb,p_rekey_manifest jsonb,p_snapshot_id uuid,p_resolved_by uuid) RETURNS uuid
+LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$ DECLARE v_id uuid; BEGIN
+  IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id() THEN RAISE EXCEPTION 'Tenant context mismatch' USING ERRCODE='insufficient_privilege'; END IF;
+  INSERT INTO document.business_partner_duplicate_resolution(tenant_id,duplicate_business_partner_id,surviving_business_partner_id,resolution_kind,reason_code,dependency_evidence,rekey_manifest,snapshot_id,resolved_by)
+  VALUES(p_tenant_id,p_duplicate_id,p_survivor_id,p_resolution_kind,p_reason_code,p_dependency_evidence,p_rekey_manifest,p_snapshot_id,p_resolved_by) RETURNING id INTO v_id;
+  UPDATE master.business_partner SET status='archived',status_changed_at=now(),status_changed_by=p_resolved_by,updated_by=p_resolved_by WHERE tenant_id=p_tenant_id AND id=p_duplicate_id AND status='inactive';
+  IF NOT FOUND THEN RAISE EXCEPTION 'Duplicate supersession lost its lifecycle precondition' USING ERRCODE='serialization_failure'; END IF;
+  RETURN v_id;
+END $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_application_result() RETURNS trigger
+LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$ BEGIN
+  IF TG_OP='INSERT' AND num_nonnulls(NEW.application_result_kind,NEW.application_reason_code,NEW.materialized_bank_verification_id)>0 THEN
+    RAISE EXCEPTION 'New Business Partner requests cannot contain application results' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND
+    (NEW.application_result_kind,NEW.application_reason_code,NEW.materialized_bank_verification_id)
+      IS DISTINCT FROM (OLD.application_result_kind,OLD.application_reason_code,OLD.materialized_bank_verification_id) THEN
+    RAISE EXCEPTION 'Business Partner application result is immutable' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
 CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_bank_verification() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$ BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner bank verification cannot be deleted' USING ERRCODE='restrict_violation'; END IF;
  IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.bank_projection_id,NEW.business_partner_id,NEW.supplier_company_profile_id,NEW.company_code_id,NEW.prior_bank_account_link_id,NEW.expected_account_fingerprint,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.bank_projection_id,OLD.business_partner_id,OLD.supplier_company_profile_id,OLD.company_code_id,OLD.prior_bank_account_link_id,OLD.expected_account_fingerprint,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Business Partner bank verification coordinates are immutable' USING ERRCODE='check_violation'; END IF;
  IF TG_OP='UPDATE' AND OLD.decision_fingerprint IS NOT NULL AND (NEW.candidate_bank_account_link_id,NEW.verification_method,NEW.verification_evidence,NEW.decision_fingerprint,NEW.verified_at,NEW.verified_by,NEW.rejected_at,NEW.rejected_by,NEW.rejection_reason) IS DISTINCT FROM (OLD.candidate_bank_account_link_id,OLD.verification_method,OLD.verification_evidence,OLD.decision_fingerprint,OLD.verified_at,OLD.verified_by,OLD.rejected_at,OLD.rejected_by,OLD.rejection_reason) THEN RAISE EXCEPTION 'Business Partner bank verification decision evidence is immutable' USING ERRCODE='check_violation'; END IF;
  IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND (NEW.application_fingerprint,NEW.applied_at,NEW.applied_by) IS DISTINCT FROM (OLD.application_fingerprint,OLD.applied_at,OLD.applied_by) THEN RAISE EXCEPTION 'Business Partner bank application evidence is immutable' USING ERRCODE='check_violation'; END IF;
  IF TG_OP='UPDATE' THEN NEW.row_version:=OLD.row_version+1; END IF; RETURN NEW; END $$;
+CREATE OR REPLACE FUNCTION document.trg_guard_supplier_activation_evidence() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'Supplier activation readiness evidence is immutable'; END $$;

@@ -10,6 +10,7 @@ import {
   type PublicationVerifier,
   type PublicationErrorCode,
 } from "@athyper/server-contract-publication";
+import { parseBusinessPartnerDefinitionBundle } from "./business-partner-definition-service.js";
 
 export interface PublicationArtifactLoaderOptions {
   readonly store: PublicationArtifactStore;
@@ -43,6 +44,16 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
     if (!signatureVerified) throw failure("ARTIFACT_SIGNATURE_INVALID");
     const runtimeCompatible = compatible(this.options.runtimeVersion, envelope.minimumRuntimeVersion);
     if (!runtimeCompatible) throw failure("RUNTIME_INCOMPATIBLE");
+    if(envelope.artifactKind==="business_partner_definition_bundle"){
+      const payload=envelope.payload;
+      if(payload.bundleSchemaVersion!=="1.0.0")throw failure("PROJECTION_SCHEMA_VERSION_MISMATCH");
+      try{parseBusinessPartnerDefinitionBundle(payload.bundle);}catch{throw failure("ARTIFACT_PAYLOAD_INVALID");}
+      if(this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(payload.bundle))!==payload.bundleHash)throw failure("PROJECTION_HASH_MISMATCH");
+      const report=payload.compileReport;
+      if(!report||report["schema"]!=="athyper.business-partner-definition-compile-report.v1"||report["plane"]!==payload.plane||report["compiledBundleHash"]!==payload.bundleHash||report["sourceBundleHash"]!==payload.sourceBundleHash||report["deterministic"]!==true||report["compatible"]!==true)throw failure("ARTIFACT_MANIFEST_INVALID");
+      const compileReportHash=this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(report));
+      if(manifest.evidence?.["compiledBundleHash"]!==payload.bundleHash||manifest.evidence?.["sourceBundleHash"]!==payload.sourceBundleHash||manifest.evidence?.["compileReportHash"]!==compileReportHash)throw failure("ARTIFACT_MANIFEST_INVALID");
+    }
     const projectionEvidence = envelope.artifactKind === "entity_runtime"
       ? {
           contractHash: envelope.payload.entityContract.contractHash,

@@ -116,6 +116,8 @@ Verify:
 
 **Exit:** customer onboarding has functional, control, and UX parity with supplier onboarding.
 
+Implementation evidence (2026-08-29): NEON now provides internal organization/person customer onboarding, independent add-role approval, customer-scoped invitations and applicant self-service, company-scoped credit review with maker/checker, AR readiness, immutable activation/suspension/reactivation evidence, buyer-role MESH selective acceptance, and a portal-IAM projection intent. The customer control UI and production browser matrix cover the governed internal, external, MESH, returned, and lifecycle paths; runtime execution still requires the production-session fixture variables documented by the E2E suite.
+
 ### P4 — Close supplier readiness and lifecycle
 
 **Priority:** P0  
@@ -140,6 +142,8 @@ Verify:
 
 **Exit:** an approved supplier progresses through qualification and finance controls to activation, suspension, reactivation, and archive with auditable readiness.
 
+Implementation evidence (2026-08-29): the NEON service now separates registration, qualification, preference, bank verification, and supplier activation authorities; persists immutable activation/readiness and support-recovery evidence; exposes only applicant-owned external status/correction/evidence operations behind abuse controls; and registers qualification-expiry plus activation-reevaluation jobs. Coverage is in `server/db/scripts/__tests__/business-partner-supplier-readiness-lifecycle.test.ts` and the master-data service suite.
+
 ### P5 — Generalize invitations across journeys
 
 **Priority:** P1  
@@ -161,6 +165,8 @@ Verify:
 - each journey exposes only its approved fields and actions.
 
 **Exit:** one invitation aggregate supports all onboarding journeys with no supplier-only authority leak.
+
+Implementation evidence (2026-08-29): NEON now has a generalized supplier/customer/candidate invitation contract, typed commercial/workforce scopes, hashed one-time secrets, OCC resend/cancel/expire/accept transitions, atomic request and restricted-applicant binding, idempotent recovery intent, journey field/action allowlists, a read-only supplier compatibility projection, and controlled-write compatibility routes. Composition uses only the generalized repository. Rollout and later compatibility retirement are documented in `business-partner-invitation-rollout.md`; live database and authenticated production journeys remain environment-gated.
 
 ### P6 — Complete and activate STUDIO definition bundles
 
@@ -184,6 +190,8 @@ Verify:
 - canary and rollback retain the exact prior active revision.
 
 **Exit:** all journeys are definition-driven from verified local projections, with no hard-coded policy fork.
+
+Implementation evidence (2026-08-29): the `business_partner.onboarding` v2 source bundle now covers the full supplier/customer/workforce journey matrix, party visibility/validation/duplicate rules, five ingress mappings, workflow/SoD/SLA/evidence/readiness/reasons, NEON descriptors, and MESH-safe schemas. Publication deterministically compiles and Ed25519-signs plane projections with source/compiled hashes and compile reports; the loader rejects signature, hash, schema, plane, compatibility, source-contract, and downgrade failures. NEON request schemas/workflows/descriptors and MESH profile allowlists resolve only from verified local last-known-good heads. Activation-head guards and the canary restore the exact prior revision tuple. The staged activation and outage/rollback procedure is documented in `business-partner-definition-bundle-rollout.md`; live three-plane migration, signing, canary, and authenticated production journeys remain environment-gated.
 
 ### P7 — Complete TrustIAM/Keycloak organization and identity sagas
 
@@ -269,8 +277,8 @@ This table is the live progress index. Update evidence links and status in the s
 | Capability | NEON DB/service | NEON UI | MESH | STUDIO | IAM | Status / closing package |
 |---|---:|---:|---:|---:|---:|---|
 | Supplier registration/request apply | Done | Done | Done for intake | Foundation | Partial | Partial — P4, P6, P7 |
-| Supplier qualification/readiness/activation | Partial | Partial | N/A | Foundation | N/A | Partial — P4, P6 |
-| Customer onboarding and credit/readiness | Partial | Partial | Partial | Foundation | Partial | Pending parity — P3, P6–P8 |
+| Supplier qualification/readiness/activation | Done | Partial | N/A | Foundation | N/A | P4 backend closed; definition-driven UX remains P6 |
+| Customer onboarding and credit/readiness | Done | Done | Done for buyer intake | Foundation | Projection intent | P3 core closed; definition, saga monitoring, and evidence console remain P6–P8 |
 | Workforce person creation | Done | Initial route | Denied by design | Foundation | Partial | Partial — P2, P6, P7 |
 | Workforce change/onboarding/offboarding | Partial | Pending | Denied by design | Foundation | Partial | Pending — P2, P6, P7 |
 | Lifecycle request kinds | Partial | Partial | Recommendations only | Foundation | Partial | Pending — P1–P4, P6, P7 |
@@ -308,4 +316,3 @@ Begin with **P1 request/materializer closure**, narrowly scoped to lifecycle com
 6. only then start the P2 onboarding-case materialization slice.
 
 This ordering closes the common governance kernel before customer, supplier, and workforce teams add journey-specific behavior.
-

@@ -19,6 +19,7 @@ spec:
     emailCanary: production/email-canary.json
     webPushCanary: production/web-push-canary.json
     rollbackDrill: production/rollback-drill.json
+    businessPartnerP9: production/business-partner/release-certification.json
     releaseApproval: production/release-approval.json
   rollout:
     emailCanaryPercent: 1

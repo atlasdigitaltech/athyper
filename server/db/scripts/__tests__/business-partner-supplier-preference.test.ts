@@ -22,11 +22,15 @@ test("supplier preference is effective-dated, scoped, governed, and tenant-isola
 });
 
 test("preference authorization and audit contracts are production reference seeds",async()=>{
-  const[permission,audit,auditMigration,neonManifest,meshManifest,studioManifest]=await Promise.all([
+  const[permission,audit,auditBaseline,auditMigration,neonManifest,meshManifest,studioManifest]=await Promise.all([
     read("ddl/planes/neon/authz/16_supplier_preference_permission_reference_seed.sql"),read("ddl/common/audit/12_reference_seed.sql"),
-    read("migrations/20260828_business_partner_preference_audit_contract.sql"),read("migrations/manifests/neon.txt"),read("migrations/manifests/mesh.txt"),read("migrations/manifests/studio.txt")]);
+    read("migrations/20260829_business_partner_audit_contract_baseline.sql"),read("migrations/20260828_business_partner_preference_audit_contract.sql"),read("migrations/manifests/neon.txt"),read("migrations/manifests/mesh.txt"),read("migrations/manifests/studio.txt")]);
   assert.match(permission,/seed-expected-row-count: exact:1/);assert.match(permission,/neon\.supplier\.preference\.admin/);assert.match(permission,/'high',true,true/);assert.match(permission,/'operating_organization','subtree'/);
   for(const source of[audit,auditMigration]){assert.match(source,/preference\\\.\(created\|approved\|rejected\|revoked\)/);assert.match(source,/'revoke'/);}
+  assert.match(auditBaseline,/ON CONFLICT \(code\) DO NOTHING/);assert.match(auditBaseline,/schema_version >= 2/);
   assert.match(audit,/65536, 5/);assert.match(auditMigration,/schema_version=3/);
-  for(const manifest of[neonManifest,meshManifest,studioManifest])assert.match(manifest,/^20260828_business_partner_preference_audit_contract\.sql$/m);
+  for(const manifest of[neonManifest,meshManifest,studioManifest]){
+    assert.match(manifest,/^20260829_business_partner_audit_contract_baseline\.sql$/m);
+    assert.ok(manifest.indexOf("20260829_business_partner_audit_contract_baseline.sql")<manifest.indexOf("20260828_business_partner_preference_audit_contract.sql"));
+  }
 });

@@ -54,11 +54,17 @@ export interface BusinessPartnerDefinitionBundleV1 {
   readonly bundleCode: string;
   readonly semanticVersion: string;
   readonly requestSchemas: Readonly<Record<string, unknown>>;
+  readonly fieldPolicies: Readonly<Record<string, unknown>>;
   readonly validationDeclarations: readonly Readonly<Record<string, unknown>>[];
+  readonly duplicateRules: Readonly<Record<string, unknown>>;
   readonly formDescriptors: Readonly<Record<string, unknown>>;
   readonly viewDescriptors: Readonly<Record<string, unknown>>;
   readonly mappingContracts: Readonly<Record<string, unknown>>;
   readonly workflowDefinitions: Readonly<Record<string, unknown>>;
+  readonly evidencePolicies: Readonly<Record<string, unknown>>;
+  readonly readinessGates: Readonly<Record<string, unknown>>;
+  readonly reasonCodeCatalog: Readonly<Record<string, string>>;
+  readonly meshSafeSchemas: Readonly<Record<string, unknown>>;
   readonly compatibilityRules: Readonly<Record<string, unknown>>;
   readonly sourceContractHashes: Readonly<Record<string, string>>;
 }
@@ -75,7 +81,9 @@ export interface BusinessPartnerDefinitionProjection {
   readonly semanticVersion: string;
   readonly bundleSchemaVersion: string;
   readonly bundleHash: string;
+  readonly sourceBundleHash?: string;
   readonly bundle: BusinessPartnerDefinitionBundleV1;
+  readonly compileReport?: Readonly<Record<string, unknown>>;
   readonly generatedAt: string;
 }
 

@@ -1,0 +1,59 @@
+apiVersion: athyper.io/v1alpha1
+kind: BusinessPartnerReleaseCertification
+metadata:
+  id: business-partner-p9-production
+spec:
+  sourceImageSet: deploy/image-sets/releases/stg-local.yaml
+  sourceRevision: 37008726bd85bb67cb9bf583b00e03cedbfa2851
+  images:
+    iam: 22ab45da7d792f1726b2e84fe7d9fca26bd72d610c068a21b7da711511614cbe
+    mesh-web: a436f882d52a8f176faa220a3936142cb48271015eea3f79e994931934aef850
+    neon-web: b02759aaf9dd379660a27f509f783197d62377282b0b65624805b0355262d29f
+    runtime-server: 64a5b8e767ed59bd5091ea16d0f3d8b06e4e04448836ca7e6f80e8155fd83196
+    studio-web: 63c069d231f1490248832b38c7ad0c57ce0520c9123f018ac128dd7ef07a8885
+  gates:
+    - id: database
+      environment: staging
+      evidence: production/business-partner/database.json
+      requiredChecks: [migrationPreflight, forwardOnlyRehearsal, constraintsValidated, rlsValidated, backupRestoreProven, disasterRecoveryProven, rollForwardProven]
+    - id: domain-service
+      environment: staging
+      evidence: production/business-partner/domain-service.json
+      requiredChecks: [requestKindMatrix, concurrency, idempotency, atomicRollback, load, queueBackpressure, poisonMessage, replay, reconciliation]
+    - id: cross-plane
+      environment: staging
+      evidence: production/business-partner/cross-plane.json
+      requiredChecks: [definitionSignature, downgradeProtection, meshReplay, meshQuarantine, meshReconciliation, iamConvergence, iamFencing, studioOfflineProjection]
+    - id: security-privacy
+      environment: staging
+      evidence: production/business-partner/security-privacy.json
+      requiredChecks: [threatModel, negativeAuthorization, rlsIsolation, piiNonLeakage, bankNonLeakage, secretLogScan, retention, export, delete, accessAudit]
+    - id: ux
+      environment: staging
+      evidence: production/business-partner/ux.json
+      requiredChecks: [supplierE2e, customerE2e, workforceE2e, externalInvitationE2e, accessibility, supportedBrowsers]
+    - id: operations
+      environment: production
+      evidence: production/business-partner/operations.json
+      requiredChecks: [dashboards, alerts, sloObservation, canaryCohort, outage, exactRollback, supportRunbook, training, priorRevisionRetained]
+    - id: ownership
+      environment: production
+      evidence: production/business-partner/ownership.json
+      requiredChecks: [namedApprovals, releaseOwnerApproval]
+  thresholds:
+    requestFailureRateMax: 0.01
+    requestP95MillisecondsMax: 1500
+    outboxLagSecondsMax: 60
+    quarantineCountMax: 0
+    iamDriftMax: 0
+    meshDriftMax: 0
+    readinessFailuresMax: 0
+  canary:
+    cohortPercent: 1
+    minimumObservationMinutes: 60
+    journeys: [supplier, customer, workforce, external-invitation]
+    retainPriorRevision: true
+  requiredOwners: [neon, mesh, studio-iam, security-privacy, operations, product]
+  runbooks:
+    - docs/runbooks/business-partner-production-rollout.md
+    - docs/runbooks/business-partner-p9-qualification.md

@@ -6,3 +6,7 @@ export * from "./business-partner-eligibility.js";
 export type * from "./business-partner-eligibility-ports.js";
 export * from "./supplier-registration.js";
 export type * from "./supplier-registration-ports.js";
+export * from "./business-partner-invitations.js";
+export type * from "./business-partner-invitation-ports.js";
+export * from "./workforce.js";
+export type * from "./workforce-ports.js";

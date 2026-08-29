@@ -823,12 +823,15 @@ CREATE INDEX multipart_upload_series_idx
     WHERE attachment_series_id IS NOT NULL;
 
 CREATE INDEX supplier_registration_invitation_status_idx
-    ON document.supplier_registration_invitation (tenant_id, status, expires_at);
+    ON document.supplier_registration_invitation_legacy (tenant_id, status, expires_at);
 CREATE INDEX supplier_registration_invitation_org_idx
-    ON document.supplier_registration_invitation (tenant_id, requested_operating_organization_id, created_at DESC);
+    ON document.supplier_registration_invitation_legacy (tenant_id, requested_operating_organization_id, created_at DESC);
 CREATE INDEX supplier_registration_invitation_request_idx
-    ON document.supplier_registration_invitation (tenant_id, business_partner_request_id)
+    ON document.supplier_registration_invitation_legacy (tenant_id, business_partner_request_id)
     WHERE business_partner_request_id IS NOT NULL;
+CREATE INDEX business_partner_invitation_status_idx ON document.business_partner_invitation(tenant_id,status,expires_at);
+CREATE INDEX business_partner_invitation_journey_scope_idx ON document.business_partner_invitation(tenant_id,journey_kind,scope_kind,created_at DESC);
+CREATE UNIQUE INDEX business_partner_invitation_request_uq ON document.business_partner_invitation(tenant_id,business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
 
 CREATE INDEX business_partner_request_status_idx
     ON document.business_partner_request (tenant_id, status, created_at DESC);
@@ -885,3 +888,5 @@ CREATE INDEX mesh_business_partner_acceptance_match_idx ON document.mesh_busines
 CREATE UNIQUE INDEX mesh_business_partner_acceptance_event_request_global_uq ON document.mesh_business_partner_acceptance_event (tenant_id, business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
 CREATE UNIQUE INDEX business_partner_bank_verification_open_uq ON document.business_partner_bank_verification(tenant_id,bank_projection_id,supplier_company_profile_id) WHERE status IN('pending_verification','verified');
 CREATE INDEX business_partner_bank_verification_profile_idx ON document.business_partner_bank_verification(tenant_id,supplier_company_profile_id,status,created_at DESC);
+CREATE INDEX supplier_activation_evidence_partner_idx ON document.supplier_activation_evidence(tenant_id,business_partner_id,activated_at DESC);
+CREATE INDEX supplier_registration_recovery_request_idx ON document.supplier_registration_recovery(tenant_id,request_id,requested_at DESC);

@@ -177,7 +177,7 @@ test("rejects a Studio boundary that writes Mesh directly or fabricates a relati
   assert.ok(result.errors.includes("Studio network onboarding can activate Mesh business state"));
 });
 
-test("publishes a deterministic 78-row non-enforcing Mesh inventory", async () => {
+test("publishes a deterministic 82-row non-enforcing Mesh inventory", async () => {
   const artifact = JSON.parse(await readFile(resolve(dbRoot, "seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json"), "utf8")) as {
     mode: string;
     counts: { tables: number; masterTables: number; documentTables: number; meshTables: number; reviewedTables: number; pendingReviewTables: number; operations: number; lifecycles: number; broadParticipantMutationPolicies: number; currentUserBroadWritePolicies: number; roles: number; grants: number };
@@ -186,17 +186,17 @@ test("publishes a deterministic 78-row non-enforcing Mesh inventory", async () =
     releaseBlockers: string[];
   };
   assert.equal(artifact.mode, "inventory_only_non_enforcing");
-  assert.deepEqual([artifact.counts.tables, artifact.counts.masterTables, artifact.counts.documentTables, artifact.counts.meshTables], [78, 28, 24, 26]);
-  assert.equal(artifact.counts.reviewedTables, 8);
-  assert.equal(artifact.counts.pendingReviewTables, 70);
+  assert.deepEqual([artifact.counts.tables, artifact.counts.masterTables, artifact.counts.documentTables, artifact.counts.meshTables], [82, 28, 24, 30]);
+  assert.equal(artifact.counts.reviewedTables, 9);
+  assert.equal(artifact.counts.pendingReviewTables, 73);
   assert.equal(artifact.counts.operations, 18);
   assert.equal(artifact.counts.lifecycles, 2);
   assert.equal(artifact.counts.broadParticipantMutationPolicies, 1);
-  assert.equal(artifact.counts.currentUserBroadWritePolicies, 8);
+  assert.equal(artifact.counts.currentUserBroadWritePolicies, 9);
   assert.equal(artifact.counts.roles, 0);
   assert.equal(artifact.counts.grants, 0);
-  assert.equal(new Set(artifact.tables.map((row) => row.table)).size, 78);
+  assert.equal(new Set(artifact.tables.map((row) => row.table)).size, 82);
   assert.equal(artifact.studioMeshNetworkBoundary.target.implementationStatus, "required_not_implemented");
-  assert.equal(artifact.releaseBlockers.length, 73);
+  assert.equal(artifact.releaseBlockers.length, 76);
   assert.ok(artifact.releaseBlockers.includes("broad participant FOR ALL mutation RLS: mesh.network_relationship"));
 });

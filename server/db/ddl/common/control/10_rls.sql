@@ -255,6 +255,26 @@ CREATE POLICY policy_test_case_tenant_read ON control.policy_test_case
                 OR definition.tenant_id = shared.current_tenant_id_soft())
     ));
 
+ALTER TABLE control.policy_activation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.policy_activation FORCE ROW LEVEL SECURITY;
+CREATE POLICY policy_activation_admin_access ON control.policy_activation
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY policy_activation_tenant_read ON control.policy_activation
+    FOR SELECT TO athyperapp
+    USING (
+        tenant_id IS NULL
+        OR (shared.current_tenant_id_soft() IS NOT NULL
+            AND tenant_id = shared.current_tenant_id_soft())
+    );
+
+ALTER TABLE control.policy_evaluation_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.policy_evaluation_history FORCE ROW LEVEL SECURITY;
+CREATE POLICY policy_evaluation_history_admin_access ON control.policy_evaluation_history
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY policy_evaluation_history_tenant_read ON control.policy_evaluation_history
+    FOR SELECT TO athyperapp
+    USING (tenant_id = shared.current_tenant_id_soft());
+
 ALTER TABLE control.rounding_rule ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.rounding_rule FORCE ROW LEVEL SECURITY;
 

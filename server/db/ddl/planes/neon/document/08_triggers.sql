@@ -943,15 +943,21 @@ CREATE TRIGGER trg_multipart_upload_part_10_immutable
 BEFORE UPDATE OR DELETE ON document.multipart_upload_part
 FOR EACH ROW EXECUTE FUNCTION document.trg_multipart_upload_part_immutable();
 
+CREATE TRIGGER trg_supplier_registration_invitation_05_role
+BEFORE UPDATE ON document.supplier_registration_invitation_legacy
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_registration_role_immutable();
 CREATE TRIGGER trg_supplier_registration_invitation_10_guard
-BEFORE UPDATE OR DELETE ON document.supplier_registration_invitation
+BEFORE UPDATE OR DELETE ON document.supplier_registration_invitation_legacy
 FOR EACH ROW EXECUTE FUNCTION document.trg_guard_supplier_registration_invitation();
 CREATE TRIGGER trg_supplier_registration_invitation_80_version
-BEFORE UPDATE ON document.supplier_registration_invitation
+BEFORE UPDATE ON document.supplier_registration_invitation_legacy
 FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
 CREATE TRIGGER trg_supplier_registration_invitation_90_updated
-BEFORE UPDATE ON document.supplier_registration_invitation
+BEFORE UPDATE ON document.supplier_registration_invitation_legacy
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_business_partner_invitation_10_guard BEFORE UPDATE OR DELETE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_invitation();
+CREATE TRIGGER trg_business_partner_invitation_80_version BEFORE UPDATE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
+CREATE TRIGGER trg_business_partner_invitation_90_updated BEFORE UPDATE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_business_partner_request_10_guard
 BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request
@@ -980,4 +986,8 @@ CREATE TRIGGER trg_mesh_business_partner_match_immutable BEFORE UPDATE OR DELETE
 CREATE TRIGGER trg_mesh_business_partner_acceptance_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_mesh_business_partner_acceptance_event_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance_event FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_business_partner_bank_verification_guard BEFORE UPDATE OR DELETE ON document.business_partner_bank_verification FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_bank_verification();
+CREATE TRIGGER trg_business_partner_request_16_application_result BEFORE INSERT OR UPDATE ON document.business_partner_request FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_application_result();
+CREATE TRIGGER trg_business_partner_duplicate_resolution_guard BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_duplicate_resolution FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_duplicate_resolution();
 CREATE TRIGGER trg_business_partner_bank_verification_updated BEFORE UPDATE ON document.business_partner_bank_verification FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_supplier_activation_evidence_immutable BEFORE UPDATE OR DELETE ON document.supplier_activation_evidence FOR EACH ROW EXECUTE FUNCTION document.trg_guard_supplier_activation_evidence();
+CREATE TRIGGER trg_supplier_registration_recovery_immutable BEFORE UPDATE OR DELETE ON document.supplier_registration_recovery FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();

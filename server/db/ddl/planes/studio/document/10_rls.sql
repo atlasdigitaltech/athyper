@@ -18,6 +18,10 @@ ALTER TABLE document.comment_mention ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.comment_mention FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.comment_reaction ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.comment_reaction FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.comment_revision ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.comment_revision FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.comment_moderation_flag ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.comment_moderation_flag FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.content_item ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.content_item FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.content_item_link ENABLE ROW LEVEL SECURITY;
@@ -148,6 +152,11 @@ CREATE POLICY principal_write ON document.comment_reaction
     );
 CREATE POLICY seed_write ON document.comment_reaction
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+CREATE POLICY admin_access ON document.comment_revision
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+CREATE POLICY admin_access ON document.comment_moderation_flag
+    FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.content_item
     FOR ALL

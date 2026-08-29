@@ -1018,3 +1018,22 @@ ALTER TABLE control.mesh_bank_account_projection
   ADD CONSTRAINT mesh_bank_account_projection_snapshot_fk FOREIGN KEY(tenant_id,current_snapshot_id) REFERENCES snapshot.mesh_bank_account_disclosure_received(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bank_account_projection_inbox_fk FOREIGN KEY(tenant_id,last_inbox_event_id) REFERENCES control.mesh_bank_account_disclosure_inbox(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT mesh_bank_account_projection_actor_fk FOREIGN KEY(tenant_id,updated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE control.customer_credit_review
+  ADD CONSTRAINT customer_credit_review_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_customer_fk FOREIGN KEY(tenant_id,customer_id) REFERENCES master.customer(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_reviewed_by_fk FOREIGN KEY(tenant_id,reviewed_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_approved_by_fk FOREIGN KEY(tenant_id,approved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_updated_by_fk FOREIGN KEY(tenant_id,updated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE control.customer_lifecycle_event
+  ADD CONSTRAINT customer_lifecycle_event_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_customer_fk FOREIGN KEY(tenant_id,customer_id) REFERENCES master.customer(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_actor_fk FOREIGN KEY(tenant_id,occurred_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;

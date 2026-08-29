@@ -565,6 +565,9 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_mesh_bp_profile_inbox_immutable
 BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_inbox
 FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_customer_lifecycle_event_immutable
+BEFORE UPDATE OR DELETE ON control.customer_lifecycle_event
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_customer_lifecycle_event_mutation();
 CREATE TRIGGER trg_mesh_bp_profile_attempt_immutable
 BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_processing_attempt
 FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();

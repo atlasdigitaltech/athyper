@@ -1,3 +1,8 @@
+CREATE VIEW document.supplier_registration_invitation WITH (security_invoker=true,security_barrier=true) AS
+SELECT id,tenant_id,invitation_no,requested_role AS registration_role,requested_operating_organization_id,company_code_id AS optional_company_code_id,intended_party_name AS intended_supplier_name,invitee_email_hash,token_hash,expires_at,status,applicant_principal_id,business_partner_request_id,accepted_at,cancelled_at,idempotency_key,row_version,created_at,created_by,updated_at,updated_by
+FROM document.business_partner_invitation WHERE journey_kind='supplier';
+COMMENT ON VIEW document.supplier_registration_invitation IS 'Read-only supplier compatibility projection; controlled writes use the generalized invitation service and this view is retired after consumer cutover.';
+
 CREATE VIEW document.active_attachment AS
 SELECT *
   FROM document.attachment

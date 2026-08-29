@@ -230,6 +230,10 @@ REVOKE ALL ON control.policy_rule, control.policy_test_case FROM PUBLIC;
 GRANT SELECT ON control.policy_rule, control.policy_test_case TO athyperapp;
 GRANT ALL PRIVILEGES ON control.policy_rule, control.policy_test_case TO athyperadmin;
 
+REVOKE ALL ON control.policy_activation, control.policy_evaluation_history FROM PUBLIC;
+GRANT SELECT ON control.policy_activation, control.policy_evaluation_history TO athyperapp;
+GRANT ALL PRIVILEGES ON control.policy_activation, control.policy_evaluation_history TO athyperadmin;
+
 REVOKE ALL ON control.ui_locale_catalog, master.tenant_locale_activation FROM PUBLIC;
 DO $$
 BEGIN

@@ -2217,3 +2217,75 @@ CREATE TABLE control.company_fiscal_calendar_assignment (
 
 COMMENT ON TABLE control.company_fiscal_calendar_assignment IS
   'Non-overlapping effective fiscal-year assignment of one active calendar version to a Neon company code.';
+
+CREATE TABLE control.customer_credit_review (
+    id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                  uuid        NOT NULL,
+    business_partner_id        uuid        NOT NULL,
+    customer_id                uuid        NOT NULL,
+    operating_organization_id  uuid        NOT NULL,
+    company_code_id            uuid        NOT NULL,
+    review_type_code           text        NOT NULL DEFAULT 'initial',
+    requested_credit_limit     numeric(20,4),
+    currency_code              character(3),
+    risk_class_code            text,
+    decision                   text        NOT NULL DEFAULT 'pending',
+    decision_reason            text,
+    conditions                 jsonb       NOT NULL DEFAULT '[]'::jsonb,
+    effective_from             date,
+    effective_until            date,
+    idempotency_key            text        NOT NULL,
+    decision_idempotency_key   text,
+    decision_fingerprint       text,
+    reviewed_at                timestamptz,
+    reviewed_by                uuid,
+    approved_at                timestamptz,
+    approved_by                uuid,
+    row_version                bigint      NOT NULL DEFAULT 1,
+    created_at                 timestamptz NOT NULL DEFAULT now(),
+    created_by                 uuid        NOT NULL,
+    updated_at                 timestamptz,
+    updated_by                 uuid,
+    CONSTRAINT customer_credit_review_pkey PRIMARY KEY(id),
+    CONSTRAINT customer_credit_review_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT customer_credit_review_decision_chk CHECK(decision IN('pending','approved','conditional','rejected','suspended','expired')),
+    CONSTRAINT customer_credit_review_limit_chk CHECK(requested_credit_limit IS NULL OR requested_credit_limit>=0),
+    CONSTRAINT customer_credit_review_currency_chk CHECK((requested_credit_limit IS NULL)=(currency_code IS NULL)),
+    CONSTRAINT customer_credit_review_range_chk CHECK(effective_until IS NULL OR effective_from IS NULL OR effective_until>effective_from),
+    CONSTRAINT customer_credit_review_conditions_chk CHECK(jsonb_typeof(conditions)='array'),
+    CONSTRAINT customer_credit_review_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT customer_credit_review_decision_evidence_chk CHECK((decision='pending' AND reviewed_at IS NULL AND reviewed_by IS NULL AND decision_reason IS NULL AND decision_idempotency_key IS NULL AND decision_fingerprint IS NULL) OR (decision<>'pending' AND reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND decision_reason IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT customer_credit_review_approval_pair_chk CHECK((approved_at IS NULL)=(approved_by IS NULL)),
+    CONSTRAINT customer_credit_review_approved_chk CHECK((decision IN('approved','conditional'))=(approved_at IS NOT NULL)),
+    CONSTRAINT customer_credit_review_version_chk CHECK(row_version>=1),
+    CONSTRAINT customer_credit_review_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE control.customer_lifecycle_event (
+    id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                  uuid        NOT NULL,
+    business_partner_id        uuid        NOT NULL,
+    customer_id                uuid        NOT NULL,
+    operating_organization_id  uuid        NOT NULL,
+    company_code_id            uuid        NOT NULL,
+    action_code                text        NOT NULL,
+    from_status                text        NOT NULL,
+    to_status                  text        NOT NULL,
+    reason_code                text        NOT NULL,
+    readiness_fingerprint      text,
+    readiness_evidence         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    idempotency_key            text        NOT NULL,
+    occurred_at                timestamptz NOT NULL DEFAULT now(),
+    occurred_by                uuid        NOT NULL,
+    CONSTRAINT customer_lifecycle_event_pkey PRIMARY KEY(id),
+    CONSTRAINT customer_lifecycle_event_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT customer_lifecycle_event_action_chk CHECK(action_code IN('activate','suspend','reactivate')),
+    CONSTRAINT customer_lifecycle_event_transition_chk CHECK((action_code='activate' AND from_status='prospect' AND to_status='active') OR (action_code='suspend' AND from_status='active' AND to_status='suspended') OR (action_code='reactivate' AND from_status='suspended' AND to_status='active')),
+    CONSTRAINT customer_lifecycle_event_reason_chk CHECK(reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'),
+    CONSTRAINT customer_lifecycle_event_fingerprint_chk CHECK(readiness_fingerprint IS NULL OR readiness_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT customer_lifecycle_event_evidence_chk CHECK(jsonb_typeof(readiness_evidence)='object'),
+    CONSTRAINT customer_lifecycle_event_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+COMMENT ON TABLE control.customer_credit_review IS 'Independent, company-scoped customer credit/commercial decision aggregate; registration approval cannot decide it.';
+COMMENT ON TABLE control.customer_lifecycle_event IS 'Immutable audited customer activation, suspension, and reactivation command ledger pinned to readiness evidence.';

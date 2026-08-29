@@ -1,0 +1,8 @@
+import type { Authorizer,VerifiedRequestContext } from "@athyper/server-contract-auth";
+import {defineRouteContract,registerContractRoute,type Application,type RequestHandler,type Response}from"@athyper/server-runtime-http";
+import type{LocalBusinessPartnerDefinitionConsumer}from"./business-partner-definition-consumer.js";
+
+const objectSchema={type:"object",additionalProperties:true}as const;
+const active=defineRouteContract({method:"get",path:"/api/neon/business-partner-definitions/active-descriptors",operationId:"neon.activeBusinessPartnerDefinitionDescriptors",summary:"Read verified locally active Business Partner forms and views",tags:["NEON Business Partner Definitions"],authenticated:true,permission:"neon.relationship.business_partner.read",responses:{200:{description:"Pinned local descriptors",body:objectSchema},403:{description:"Forbidden"},503:{description:"No verified local definition"}}});
+
+export function registerLocalBusinessPartnerDefinitionRoutes(application:Application,options:{readonly authenticate:RequestHandler;readonly readContext:(response:Response)=>VerifiedRequestContext;readonly authorizer:Authorizer;readonly consumer:LocalBusinessPartnerDefinitionConsumer}){registerContractRoute(application,active,options.authenticate,async(_request,response,next)=>{try{const context=options.readContext(response),decision=await options.authorizer.authorize({context,permissionCode:"neon.relationship.business_partner.read",resource:{verifiedLocalProjectionRequired:true}});if(!decision.allowed){response.status(403).json({error:"FORBIDDEN"});return;}response.json(await options.consumer.descriptors());}catch(error){next(error);}});}

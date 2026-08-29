@@ -15,7 +15,7 @@ test("WP14 governs organization assignment and exact company finance profiles",a
   assert.match(indexes,/business_partner_request_open_org_assignment_uq[\s\S]*assign_organization/);
   assert.match(indexes,/business_partner_request_open_company_configuration_uq[\s\S]*configure_company/);
   assert.match(functions,/materialized_supplier_company_profile_id/);
-  assert.match(functions,/CASE WHEN NEW\.request_kind = 'configure_company' THEN 1 ELSE 0 END/);
+  assert.match(tables,/WHEN 'configure_company'[\s\S]*application_result_kind='company_configured'/);
   assert.match(migration,/current_database\(\) <> 'athyper_neon'/);
   assert.match(migration,/num_nonnulls\(NEW\.materialized_supplier_company_profile_id, NEW\.materialized_customer_company_profile_id\)/);
   assert.match(manifest,/^20260828_neon_business_partner_company_configuration\.sql$/m);

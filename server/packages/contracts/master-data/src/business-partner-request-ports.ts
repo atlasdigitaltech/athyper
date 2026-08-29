@@ -69,7 +69,7 @@ export interface BusinessPartnerRequestRepository<Transaction = unknown> {
 }
 
 export interface BusinessPartnerRequestSchemaResolver {
-  resolve(input: { readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly kind: CreateBusinessPartnerRequestCommand["kind"]; readonly sourceKind: CreateBusinessPartnerRequestCommand["source"]["kind"] }): Promise<BusinessPartnerRequestSchemaReference>;
+  resolve(input: { readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly kind: CreateBusinessPartnerRequestCommand["kind"]; readonly sourceKind: CreateBusinessPartnerRequestCommand["source"]["kind"]; readonly requestedRole?: CreateBusinessPartnerRequestCommand["requestedRole"] }): Promise<BusinessPartnerRequestSchemaReference>;
 }
 
 export interface BusinessPartnerRequestValidator<Transaction = unknown> {

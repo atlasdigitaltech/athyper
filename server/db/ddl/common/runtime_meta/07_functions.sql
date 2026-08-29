@@ -514,3 +514,18 @@ $$;
 
 COMMENT ON FUNCTION runtime_meta.fn_active_business_partner_definition(text) IS
   'Offline-safe read of the last locally verified and activated signed Business Partner definition bundle.';
+
+CREATE OR REPLACE FUNCTION runtime_meta.trg_guard_business_partner_definition_head() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,runtime_meta AS $$
+DECLARE v_candidate text;v_active text;v_exact_previous boolean;
+BEGIN
+ IF TG_OP='UPDATE' AND NEW.publication_key LIKE 'studio.business_partner.definition.%' THEN
+  SELECT payload.coordinates->>'semantic_version' INTO v_candidate FROM runtime_meta.applied_release_payload payload WHERE payload.applied_release_id=NEW.applied_release_id AND payload.artifact_kind='business_partner_definition_bundle';
+  SELECT payload.coordinates->>'semantic_version' INTO v_active FROM runtime_meta.applied_release_payload payload WHERE payload.applied_release_id=OLD.applied_release_id AND payload.artifact_kind='business_partner_definition_bundle';
+  IF v_candidate IS NULL OR v_active IS NULL THEN RAISE EXCEPTION 'BUSINESS_PARTNER_DEFINITION_ACTIVATION_PAYLOAD_REQUIRED' USING ERRCODE='check_violation';END IF;
+  IF NEW.source_release_no<OLD.source_release_no THEN
+   SELECT EXISTS(SELECT 1 FROM runtime_meta.release_activation_event event WHERE event.publication_key=NEW.publication_key AND event.applied_release_id=OLD.applied_release_id AND event.previous_applied_release_id=NEW.applied_release_id) INTO v_exact_previous;
+   IF NOT v_exact_previous THEN RAISE EXCEPTION 'BUSINESS_PARTNER_DEFINITION_ROLLBACK_NOT_EXACT_PREVIOUS' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+  ELSIF string_to_array(split_part(v_candidate,'-',1),'.')::int[]<=string_to_array(split_part(v_active,'-',1),'.')::int[] THEN RAISE EXCEPTION 'BUSINESS_PARTNER_DEFINITION_DOWNGRADE_FORBIDDEN' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+ END IF;
+ RETURN NEW;
+END$$;

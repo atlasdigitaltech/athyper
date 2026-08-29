@@ -7,7 +7,7 @@ const context={planeKey:"neon",realmKey:"athyper",tenantId:tenant,principalId:pr
 
 class Repository extends KyselyBusinessPartnerProfileMatchRepository{
   matches=new Map<string,any>();acceptances=new Map<string,any>();events=new Map<string,any>();sequence=0;
-  override async source(_tenant:string,id:string){return id===snapshot?{projectionId:projection,publicationId:publication,publicationVersion:3,payloadHash:"a".repeat(64),payload:{partner:{accountCode:"SUPPLIER.ONE",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Ltd",countryCode:"MY",websiteUrl:"https://supplier.example/about",description:"source"}}}:null;}
+  override async source(_tenant:string,id:string){return id===snapshot?{projectionId:projection,publicationId:publication,publicationVersion:3,payloadHash:"a".repeat(64),payload:{recipient:{proposedNeonRole:"supplier"},partner:{accountCode:"SUPPLIER.ONE",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Ltd",countryCode:"MY",websiteUrl:"https://supplier.example/about",description:"source"}}}:null;}
   override async candidates(){return[{id:candidate,code:"SUPPLIER.ONE",name:"Supplier One",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Sdn Bhd",countryCode:"MY",websiteUrl:"https://supplier.example",description:"local"},{id:"88888888-8888-4888-8888-888888888888",code:"OTHER",name:"Other"}];}
   override async matchByKey(_tenant:string,key:string){return[...this.matches.values()].find(row=>row.idempotency_key===key)??null;}
   override async match(_tenant:string,id:string){return this.matches.get(id)??null;}

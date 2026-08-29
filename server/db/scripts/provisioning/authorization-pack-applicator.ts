@@ -1050,6 +1050,25 @@ async function applyPrincipal(
   const principal = await one<{ id: string }>(client,
     "SELECT id::text AS id FROM master.principal WHERE tenant_id=$1::uuid AND code=$2",
     [tenantId, subject.username.toLowerCase()]);
+  const existingRuntimeBinding = await client.query<{ subjectId: string }>(`
+    UPDATE master.principal_identity_binding
+       SET last_verified_at=now(),synced_at=now(),sync_status='synced',
+           sync_error_message=NULL,
+           provider_attributes=$4::jsonb,metadata=$5::jsonb,updated_by=$6::uuid
+     WHERE tenant_id=$1::uuid AND principal_id=$2::uuid
+       AND provider_code='keycloak' AND realm_key=$3
+       AND status='active' AND is_primary
+       AND lower(username)=lower($7)
+     RETURNING subject_id AS "subjectId"
+  `, [tenantId, principal.id, inputs.manifest.realmKey,
+    JSON.stringify({ source: "keycloak", managedBy: SOURCE_REF }),
+    JSON.stringify(seedMetadata(inputs, plane, { sourceSubject: subject.keycloakSubject })),
+    SYSTEM_PRINCIPAL, subject.username]);
+  // Keycloak assigns runtime JWT subjects for existing users. The compiled
+  // fixture subject is a stable source coordinate, not authority to replace an
+  // immutable live provider binding. Reconcile the binding by tenant-local
+  // principal and username while retaining its actual JWT subject.
+  if (existingRuntimeBinding.rows.length === 1) return principal.id;
   const bindingId = deterministicUuid(plane, tenantId, "identity-binding", subject.keycloakSubject);
   await client.query(`
     INSERT INTO master.principal_identity_binding (

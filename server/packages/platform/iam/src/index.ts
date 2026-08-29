@@ -18,3 +18,5 @@ export * from "./kysely-identity-provisioning-attempt-repository.js";
 export * from "./legacy-compatibility.js";
 export * from "./projection-reconciliation.js";
 export * from "./kysely-projection-reconciliation.js";
+export * from "./identity-saga.js";
+export * from "./kysely-identity-saga.js";

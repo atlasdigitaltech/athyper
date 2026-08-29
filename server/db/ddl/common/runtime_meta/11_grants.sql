@@ -25,6 +25,7 @@ REVOKE ALL ON FUNCTION runtime_meta.fn_active_business_partner_definition(text) 
 REVOKE ALL ON FUNCTION runtime_meta.fn_stage_entity_projection(uuid,jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION runtime_meta.fn_stage_release_projection(text,uuid,bigint,uuid,text,jsonb,jsonb) FROM PUBLIC;
 REVOKE ALL ON FUNCTION runtime_meta.fn_rollback_release(text,uuid,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION runtime_meta.trg_guard_business_partner_definition_head() FROM PUBLIC;
 REVOKE ALL ON FUNCTION runtime_meta.fn_active_entity_descriptor(text,text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION runtime_meta.trg_guard_entity_contract() FROM PUBLIC;
 REVOKE ALL ON FUNCTION runtime_meta.trg_guard_entity_descriptor() FROM PUBLIC;

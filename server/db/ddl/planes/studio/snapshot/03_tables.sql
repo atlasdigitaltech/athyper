@@ -120,7 +120,10 @@ CREATE TABLE snapshot.business_partner_definition_revision (
       AND bundle_json->>'schema'='athyper.business-partner-definition-bundle.v1'
       AND bundle_json->>'bundleCode'=bundle_code
       AND bundle_json->>'semanticVersion'=semantic_version
-      AND bundle_json ?& ARRAY['requestSchemas','validationDeclarations','formDescriptors','viewDescriptors','mappingContracts','workflowDefinitions','compatibilityRules','sourceContractHashes']
+      AND bundle_json ?& ARRAY['requestSchemas','fieldPolicies','validationDeclarations','duplicateRules','formDescriptors','viewDescriptors','mappingContracts','workflowDefinitions','evidencePolicies','readinessGates','reasonCodeCatalog','meshSafeSchemas','compatibilityRules','sourceContractHashes']
+      AND bundle_json->'requestSchemas' ?& ARRAY['supplier.new','supplier.add','supplier.qualify','supplier.company','supplier.bank','customer.new','customer.add','customer.credit','customer.company','workforce.new','workforce.add','workforce.change','workforce.offboard']
+      AND bundle_json->'mappingContracts' ?& ARRAY['internal','portal','mesh','import','api']
+      AND bundle_json->'workflowDefinitions' ?& ARRAY['supplier','customer','workforce']
     ),
     CONSTRAINT business_partner_definition_revision_targets_chk CHECK (
       cardinality(target_planes)>0 AND target_planes <@ ARRAY['studio','neon','mesh']::text[]

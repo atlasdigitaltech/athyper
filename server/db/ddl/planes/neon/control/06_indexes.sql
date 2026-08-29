@@ -463,3 +463,9 @@ CREATE INDEX mesh_bp_account_link_relationship_idx ON control.mesh_business_part
 CREATE UNIQUE INDEX mesh_bp_account_link_active_partner_role_uq ON control.mesh_business_partner_account_link(tenant_id,business_partner_id,source_network_account_id,proposed_role) WHERE status='active';
 CREATE INDEX mesh_bank_disclosure_inbox_relationship_idx ON control.mesh_bank_account_disclosure_inbox(tenant_id,network_relationship_id,received_at DESC);
 CREATE INDEX mesh_bank_account_projection_partner_idx ON control.mesh_bank_account_projection(tenant_id,account_link_id,projection_status);
+CREATE UNIQUE INDEX customer_credit_review_idempotency_uq ON control.customer_credit_review(tenant_id,idempotency_key);
+CREATE UNIQUE INDEX customer_credit_review_decision_idempotency_uq ON control.customer_credit_review(tenant_id,decision_idempotency_key) WHERE decision_idempotency_key IS NOT NULL;
+CREATE INDEX customer_credit_review_scope_idx ON control.customer_credit_review(tenant_id,business_partner_id,operating_organization_id,company_code_id,created_at DESC);
+CREATE UNIQUE INDEX customer_credit_review_effective_approved_uq ON control.customer_credit_review(tenant_id,customer_id,operating_organization_id,company_code_id) WHERE decision IN('approved','conditional') AND effective_until IS NULL;
+CREATE UNIQUE INDEX customer_lifecycle_event_idempotency_uq ON control.customer_lifecycle_event(tenant_id,idempotency_key);
+CREATE INDEX customer_lifecycle_event_customer_idx ON control.customer_lifecycle_event(tenant_id,customer_id,occurred_at DESC);

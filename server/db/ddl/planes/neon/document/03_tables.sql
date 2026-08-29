@@ -4707,10 +4707,11 @@ COMMENT ON TABLE document.multipart_upload_part IS
 -- Source-neutral Business Partner onboarding and amendment envelope.
 -- Manual NEON, governed import, API, and MESH proposals converge here. The
 -- approved master remains in master.business_partner and its role extensions.
-CREATE TABLE document.supplier_registration_invitation (
+CREATE TABLE document.supplier_registration_invitation_legacy (
     id                                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                           uuid        NOT NULL,
     invitation_no                       text        NOT NULL,
+    registration_role                   master.partner_role_d NOT NULL DEFAULT 'supplier',
     requested_operating_organization_id uuid        NOT NULL,
     optional_company_code_id            uuid,
     intended_supplier_name              text        NOT NULL,
@@ -4750,8 +4751,32 @@ CREATE TABLE document.supplier_registration_invitation (
     CONSTRAINT supplier_registration_invitation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
-COMMENT ON TABLE document.supplier_registration_invitation IS
+COMMENT ON TABLE document.supplier_registration_invitation_legacy IS
   'Single-use, tenant-bound authority for external supplier self-registration. Only SHA-256 email and invitation-token hashes are persisted; raw invitation secrets are never stored.';
+
+-- Cross-journey invitation aggregate. The legacy supplier table above is kept
+-- private for rollback only; 09_views.sql exposes its compatible projection.
+CREATE TABLE document.business_partner_invitation (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL, invitation_no text NOT NULL,
+    journey_kind text NOT NULL, registration_mode text NOT NULL DEFAULT 'self_service',
+    requested_role document.business_partner_requested_role_d NOT NULL, scope_kind text NOT NULL,
+    requested_operating_organization_id uuid, company_code_id uuid, legal_entity_id uuid, org_unit_id uuid, position_id uuid,
+    intended_party_name text NOT NULL, invitee_email_hash text NOT NULL, token_hash text NOT NULL,
+    expires_at timestamptz NOT NULL, status text NOT NULL DEFAULT 'pending', resend_count integer NOT NULL DEFAULT 0,
+    last_sent_at timestamptz NOT NULL DEFAULT now(), applicant_principal_id uuid, business_partner_request_id uuid,
+    accepted_at timestamptz, cancelled_at timestamptz, superseded_at timestamptz,
+    idempotency_key text NOT NULL, row_version bigint NOT NULL DEFAULT 1,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL, updated_at timestamptz, updated_by uuid,
+    CONSTRAINT business_partner_invitation_pkey PRIMARY KEY(id), CONSTRAINT business_partner_invitation_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_invitation_no_uq UNIQUE(tenant_id,invitation_no), CONSTRAINT business_partner_invitation_idempotency_uq UNIQUE(tenant_id,idempotency_key), CONSTRAINT business_partner_invitation_token_uq UNIQUE(tenant_id,token_hash),
+    CONSTRAINT business_partner_invitation_journey_chk CHECK(journey_kind IN('supplier','customer','candidate')), CONSTRAINT business_partner_invitation_mode_chk CHECK(registration_mode IN('self_service','on_behalf','integration')),
+    CONSTRAINT business_partner_invitation_role_chk CHECK((journey_kind='supplier' AND requested_role='supplier') OR (journey_kind='customer' AND requested_role='customer') OR (journey_kind='candidate' AND requested_role='workforce')),
+    CONSTRAINT business_partner_invitation_scope_chk CHECK((scope_kind='commercial' AND journey_kind IN('supplier','customer') AND requested_operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL) OR (scope_kind='workforce' AND journey_kind='candidate' AND requested_operating_organization_id IS NULL AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL)),
+    CONSTRAINT business_partner_invitation_hash_chk CHECK(invitee_email_hash~'^[a-f0-9]{64}$' AND token_hash~'^[a-f0-9]{64}$'), CONSTRAINT business_partner_invitation_status_chk CHECK(status IN('pending','accepted','cancelled','expired','superseded')),
+    CONSTRAINT business_partner_invitation_lifecycle_chk CHECK((status='pending' AND applicant_principal_id IS NULL AND business_partner_request_id IS NULL AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND business_partner_request_id IS NOT NULL AND accepted_at IS NOT NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='cancelled' AND accepted_at IS NULL AND cancelled_at IS NOT NULL AND superseded_at IS NULL) OR (status='expired' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='superseded' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NOT NULL)),
+    CONSTRAINT business_partner_invitation_expiry_chk CHECK(expires_at>created_at), CONSTRAINT business_partner_invitation_name_chk CHECK(length(btrim(intended_party_name)) BETWEEN 1 AND 512), CONSTRAINT business_partner_invitation_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200), CONSTRAINT business_partner_invitation_version_chk CHECK(row_version>=1 AND resend_count>=0), CONSTRAINT business_partner_invitation_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+COMMENT ON TABLE document.business_partner_invitation IS 'Tenant-bound, expiring, single-use invitation authority for supplier, customer, and candidate onboarding. Only SHA-256 token and email hashes persist; raw secrets must never be stored or logged.';
 
 CREATE TABLE document.business_partner_request (
     id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -4797,12 +4822,15 @@ CREATE TABLE document.business_partner_request (
     materialized_employment_id      uuid,
     materialized_work_assignment_id uuid,
     materialized_principal_id       uuid,
+    materialized_bank_verification_id uuid,
     materialized_supplier_company_profile_id uuid,
     materialized_customer_company_profile_id uuid,
     materialized_operating_organization_assignment_id uuid,
     materialization_snapshot_id     uuid,
     application_idempotency_key     text,
     application_fingerprint         text,
+    application_result_kind         text,
+    application_reason_code         text,
     decision_fingerprint            text,
     idempotency_key                 text        NOT NULL,
     status                          text        NOT NULL DEFAULT 'draft',
@@ -4898,34 +4926,45 @@ CREATE TABLE document.business_partner_request (
             AND length(application_idempotency_key) BETWEEN 8 AND 200
         )
     ),
+    CONSTRAINT business_partner_request_result_kind_chk CHECK (application_result_kind IS NULL OR application_result_kind IN (
+        'partner_role_created', 'workforce_created', 'partner_amended', 'organization_assigned', 'company_configured',
+        'bank_verification_started', 'employment_changed', 'partner_deactivated', 'partner_reactivated', 'partner_archived'
+    )),
+    CONSTRAINT business_partner_request_safe_reason_chk CHECK (
+        application_reason_code IS NULL OR application_reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'
+    ),
     CONSTRAINT business_partner_request_materialization_evidence_chk CHECK (
         (status = 'applied') = (
             materialized_business_partner_id IS NOT NULL
             AND materialization_snapshot_id IS NOT NULL
             AND application_idempotency_key IS NOT NULL
             AND application_fingerprint IS NOT NULL
+            AND application_result_kind IS NOT NULL
             AND applied_at IS NOT NULL AND applied_by IS NOT NULL
-            AND (
-                (requested_role IN ('supplier', 'customer')
-                 AND num_nonnulls(materialized_supplier_id, materialized_customer_id) = 1
-                 AND num_nonnulls(materialized_supplier_company_profile_id, materialized_customer_company_profile_id)
-                     = CASE WHEN request_kind = 'configure_company' THEN 1 ELSE 0 END
-                 AND materialized_operating_organization_assignment_id IS NOT NULL
-                 AND num_nonnulls(materialized_person_id, materialized_employee_id, materialized_employment_id, materialized_work_assignment_id, materialized_principal_id) = 0)
-                OR
-                (requested_role = 'workforce'
-                 AND materialized_person_id IS NOT NULL
-                 AND materialized_employee_id IS NOT NULL
-                 AND materialized_employment_id IS NOT NULL
-                 AND materialized_work_assignment_id IS NOT NULL
-                 AND num_nonnulls(materialized_supplier_id, materialized_customer_id, materialized_supplier_company_profile_id, materialized_customer_company_profile_id, materialized_operating_organization_assignment_id) = 0)
-            )
+            AND CASE request_kind
+              WHEN 'new_partner' THEN (requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL) OR (requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_customer_id IS NULL AND materialized_person_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL) OR (requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_supplier_id IS NULL AND materialized_operating_organization_assignment_id IS NOT NULL AND (CASE WHEN COALESCE(proposed_payload->>'partnerCategory',proposed_payload->>'partner_category') IN('person','individual') THEN materialized_person_id IS NOT NULL ELSE materialized_person_id IS NULL END) AND num_nonnulls(materialized_employee_id,materialized_employment_id,materialized_work_assignment_id)=0)
+              WHEN 'add_supplier' THEN requested_role='supplier' AND application_result_kind='partner_role_created' AND materialized_supplier_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
+              WHEN 'add_customer' THEN requested_role='customer' AND application_result_kind='partner_role_created' AND materialized_customer_id IS NOT NULL AND materialized_operating_organization_assignment_id IS NOT NULL
+              WHEN 'add_workforce' THEN requested_role='workforce' AND application_result_kind='workforce_created' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL
+              WHEN 'amend_partner' THEN requested_role IS NULL AND application_result_kind='partner_amended' AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'assign_organization' THEN requested_role IN('supplier','customer') AND application_result_kind='organization_assigned' AND materialized_operating_organization_assignment_id IS NOT NULL AND num_nonnulls(materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'configure_company' THEN requested_role IN('supplier','customer') AND application_result_kind='company_configured' AND num_nonnulls(materialized_supplier_company_profile_id,materialized_customer_company_profile_id)=1 AND num_nonnulls(materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'change_bank' THEN requested_role='supplier' AND application_result_kind='bank_verification_started' AND materialized_bank_verification_id IS NOT NULL
+              WHEN 'change_employment' THEN requested_role='workforce' AND application_result_kind='employment_changed' AND materialized_person_id IS NOT NULL AND materialized_employee_id IS NOT NULL AND materialized_employment_id IS NOT NULL AND materialized_work_assignment_id IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'deactivate' THEN requested_role IS NULL AND application_result_kind='partner_deactivated' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'reactivate' THEN requested_role IS NULL AND application_result_kind='partner_reactivated' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              WHEN 'archive' THEN requested_role IS NULL AND application_result_kind='partner_archived' AND application_reason_code IS NOT NULL AND num_nonnulls(materialized_supplier_id,materialized_customer_id,materialized_person_id,materialized_employee_id,materialized_employment_id,materialized_work_assignment_id,materialized_supplier_company_profile_id,materialized_customer_company_profile_id,materialized_operating_organization_assignment_id,materialized_bank_verification_id)=0
+              ELSE false END
         )
     ),
     CONSTRAINT business_partner_request_role_scope_chk CHECK (
-        (requested_role = 'workforce' AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL AND operating_organization_id IS NULL)
-        OR (requested_role IN ('supplier','customer') AND operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL)
-        OR requested_role IS NULL
+        ((request_kind IN ('add_workforce','change_employment') OR (request_kind='new_partner' AND requested_role='workforce')) AND requested_role='workforce' AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL AND operating_organization_id IS NULL)
+        OR (request_kind IN ('new_partner','add_supplier','add_customer','assign_organization','configure_company','change_bank') AND requested_role IN ('supplier','customer') AND operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL)
+        OR (request_kind IN ('amend_partner','deactivate','reactivate','archive') AND requested_role IS NULL)
+    ),
+    CONSTRAINT business_partner_request_lifecycle_impact_chk CHECK (
+        request_kind NOT IN ('deactivate','reactivate','archive') OR status NOT IN ('pending_approval','approved','applying','applied') OR
+        (jsonb_typeof(change_impact->'dependencies')='array' AND change_impact->>'evidenceVersion' ~ '^[1-9][0-9]*$' AND change_impact->>'reasonCode' ~ '^[A-Z][A-Z0-9_.-]{2,126}$' AND change_impact->>'assessedAt' IS NOT NULL)
     ),
     CONSTRAINT business_partner_request_company_profile_role_chk CHECK (
         (materialized_supplier_company_profile_id IS NULL OR (requested_role = 'supplier' AND materialized_supplier_id IS NOT NULL))
@@ -5172,3 +5211,61 @@ CREATE TABLE document.business_partner_bank_verification (
 
 COMMENT ON TABLE document.business_partner_bank_verification IS
   'Independent NEON verification and optimistic preferred-remittance switch for one masked MESH disclosure. It never stores the raw disclosed account identifier.';
+
+CREATE TABLE document.business_partner_duplicate_resolution (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    duplicate_business_partner_id uuid NOT NULL, surviving_business_partner_id uuid NOT NULL,
+    resolution_kind text NOT NULL, reason_code text NOT NULL, dependency_evidence jsonb NOT NULL,
+    rekey_manifest jsonb NOT NULL DEFAULT '[]'::jsonb, snapshot_id uuid NOT NULL,
+    resolved_at timestamptz NOT NULL DEFAULT now(), resolved_by uuid NOT NULL,
+    CONSTRAINT business_partner_duplicate_resolution_pkey PRIMARY KEY(id),
+    CONSTRAINT business_partner_duplicate_resolution_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_duplicate_resolution_duplicate_uq UNIQUE(tenant_id,duplicate_business_partner_id),
+    CONSTRAINT business_partner_duplicate_resolution_distinct_chk CHECK(duplicate_business_partner_id<>surviving_business_partner_id),
+    CONSTRAINT business_partner_duplicate_resolution_kind_chk CHECK(resolution_kind IN('merge','rekey','supersede')),
+    CONSTRAINT business_partner_duplicate_resolution_reason_chk CHECK(reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'),
+    CONSTRAINT business_partner_duplicate_resolution_evidence_chk CHECK(jsonb_typeof(dependency_evidence)='object' AND dependency_evidence<>'{}'::jsonb AND jsonb_typeof(rekey_manifest)='array')
+);
+
+COMMENT ON TABLE document.business_partner_duplicate_resolution IS
+  'Steward-only immutable evidence for category-preserving duplicate merge, explicit foreign-key re-key manifest, and supersession. Category is never corrected in place.';
+
+CREATE TABLE document.supplier_activation_evidence (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    business_partner_id uuid NOT NULL, supplier_id uuid NOT NULL,
+    operating_organization_id uuid NOT NULL, company_code_id uuid,
+    business_date date NOT NULL, prior_status text NOT NULL, resulting_status text NOT NULL DEFAULT 'active',
+    readiness_fingerprint text NOT NULL, readiness_evidence jsonb NOT NULL,
+    idempotency_key text NOT NULL, command_fingerprint text NOT NULL,
+    activated_at timestamptz NOT NULL DEFAULT now(), activated_by uuid NOT NULL,
+    CONSTRAINT supplier_activation_evidence_pkey PRIMARY KEY(id),
+    CONSTRAINT supplier_activation_evidence_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT supplier_activation_evidence_idempotency_uq UNIQUE(tenant_id,idempotency_key),
+    CONSTRAINT supplier_activation_evidence_status_chk CHECK(prior_status IN('onboarding','suspended','inactive') AND resulting_status='active'),
+    CONSTRAINT supplier_activation_evidence_hash_chk CHECK(readiness_fingerprint~'^[a-f0-9]{64}$' AND command_fingerprint~'^[a-f0-9]{64}$'),
+    CONSTRAINT supplier_activation_evidence_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT supplier_activation_evidence_payload_chk CHECK(jsonb_typeof(readiness_evidence)='object' AND readiness_evidence->>'decisionFingerprint'=readiness_fingerprint AND readiness_evidence->>'role'='supplier' AND (readiness_evidence->>'eligible')::boolean=true AND pg_column_size(readiness_evidence)<=262144)
+);
+COMMENT ON TABLE document.supplier_activation_evidence IS 'Immutable evidence for the sole readiness-driven supplier activation command; registration and qualification decisions cannot activate a supplier.';
+
+CREATE TABLE document.supplier_registration_recovery (
+ id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,request_id uuid NOT NULL,
+ prior_applicant_principal_id uuid NOT NULL,requested_applicant_principal_id uuid NOT NULL,reason text NOT NULL,
+ status text NOT NULL DEFAULT 'requested',requested_at timestamptz NOT NULL DEFAULT now(),requested_by uuid NOT NULL,
+ CONSTRAINT supplier_registration_recovery_pkey PRIMARY KEY(id),CONSTRAINT supplier_registration_recovery_tenant_id_uq UNIQUE(tenant_id,id),
+ CONSTRAINT supplier_registration_recovery_status_chk CHECK(status='requested'),
+ CONSTRAINT supplier_registration_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),
+ CONSTRAINT supplier_registration_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
+);
+COMMENT ON TABLE document.supplier_registration_recovery IS 'Immutable support recovery orchestration evidence. IAM completes identity recovery; this record never rewrites historic applicant or request ownership.';
+
+CREATE TABLE document.business_partner_invitation_applicant_policy(
+ id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,applicant_principal_id uuid NOT NULL,journey_kind text NOT NULL,approved_fields text[] NOT NULL,approved_actions text[] NOT NULL,created_at timestamptz NOT NULL DEFAULT now(),created_by uuid NOT NULL,revoked_at timestamptz,revoked_by uuid,
+ CONSTRAINT business_partner_invitation_applicant_policy_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_applicant_policy_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_applicant_policy_invitation_uq UNIQUE(tenant_id,invitation_id),CONSTRAINT business_partner_invitation_applicant_policy_journey_chk CHECK(journey_kind IN('supplier','customer','candidate')),CONSTRAINT business_partner_invitation_applicant_policy_actions_chk CHECK(approved_actions<@ARRAY['accept','status','correct','evidence']::text[] AND cardinality(approved_actions)>0),CONSTRAINT business_partner_invitation_applicant_policy_revocation_chk CHECK((revoked_at IS NULL)=(revoked_by IS NULL))
+);
+COMMENT ON TABLE document.business_partner_invitation_applicant_policy IS 'Restricted applicant principal/session ceiling with journey-approved fields and external actions; it grants no internal decision, finance, HR, IAM administration, or master-data authority.';
+CREATE TABLE document.business_partner_invitation_recovery(
+ id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,request_id uuid NOT NULL,prior_applicant_principal_id uuid NOT NULL,requested_applicant_principal_id uuid NOT NULL,reason text NOT NULL,idempotency_key text NOT NULL,status text NOT NULL DEFAULT 'requested',requested_at timestamptz NOT NULL DEFAULT now(),requested_by uuid NOT NULL,
+ CONSTRAINT business_partner_invitation_recovery_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_recovery_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_recovery_idempotency_uq UNIQUE(tenant_id,idempotency_key),CONSTRAINT business_partner_invitation_recovery_status_chk CHECK(status='requested'),CONSTRAINT business_partner_invitation_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),CONSTRAINT business_partner_invitation_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
+);
+COMMENT ON TABLE document.business_partner_invitation_recovery IS 'Immutable idempotent recovery intent. IAM recovers the subject; historic ownership is never rewritten and principals or requests are never duplicated.';

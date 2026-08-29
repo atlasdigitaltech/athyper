@@ -47,8 +47,11 @@ $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT ON document.supplier_registration_invitation TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON
-            document.supplier_registration_invitation,
+            document.business_partner_invitation,
+            document.business_partner_invitation_applicant_policy,
+            document.business_partner_invitation_recovery,
             document.business_partner_request
         TO athyperapp;
         GRANT SELECT, INSERT ON
@@ -63,11 +66,14 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
-            document.supplier_registration_invitation,
+            document.business_partner_invitation,
+            document.business_partner_invitation_applicant_policy,
+            document.business_partner_invitation_recovery,
             document.business_partner_request,
             document.business_partner_request_evidence,
             document.business_partner_request_validation
         TO athyperadmin;
+        GRANT SELECT ON document.supplier_registration_invitation TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_supplier_registration_invitation() TO athyperadmin;
@@ -473,3 +479,8 @@ DO $$ BEGIN
     END IF;
 END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON document.business_partner_bank_verification TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON document.business_partner_bank_verification TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.business_partner_duplicate_resolution TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.business_partner_duplicate_resolution TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;

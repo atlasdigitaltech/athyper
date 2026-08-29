@@ -52,13 +52,13 @@ test("Step 1 materializes governed workforce Person onboarding and seals the leg
   assert.match(documentTables,/legal_entity_id\s+uuid/);
   assert.match(documentTables,/materialized_work_assignment_id\s+uuid/);
   assert.match(documentConstraints,/business_partner_request_materialized_person_fk/);
-  assert.match(documentFunctions,/requested_role='workforce'/);
+  assert.match(documentTables,/requested_role='workforce'/);
   assert.match(masterTables,/business_partner_id\s+uuid\s+NOT NULL/);
   assert.match(masterFunctions,/trg_assert_active_person_business_partner/);
   assert.match(masterTriggers,/trg_business_partner_person_cardinality/);
   assert.match(contracts,/"supplier" \| "customer" \| "workforce"/);
   assert.match(routes,/add_workforce/);
-  assert.match(service,/workforce onboarding requires legalEntityId, companyCodeId, and orgUnitId/i);
+  assert.match(service,/workforce requests require legalEntityId, companyCodeId, and orgUnitId/i);
   assert.match(validator,/workforce\.identity\.required/);
   assert.match(repository,/applyWorkforceOnboarding/);
   assert.match(repository,/INSERT INTO master\.work_assignment/);

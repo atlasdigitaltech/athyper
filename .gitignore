@@ -201,6 +201,9 @@ tmp/
 # =========================
 docs/local/
 
+# Generated browser/disruption evidence is retained outside source control.
+tests/e2e/acceptance-output/
+
 # Local database backups and diagnostic evidence
 **/.local-backups/
 **/.local-evidence/

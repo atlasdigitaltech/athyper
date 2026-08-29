@@ -53,22 +53,21 @@ done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
 random_base64_32 > "$staging/session-token-encryption-key"
 
-if [[ "$instance" == "stg" && "$preserve_stg_vapid" == "false" ]]; then
-  node - "$staging" <<'NODE'
+if [[ "$preserve_stg_vapid" == "false" ]]; then
+  ATHYPER_VAPID_INSTANCE="$instance" node - "$staging" <<'NODE'
 const { generateKeyPairSync } = require("node:crypto");
 const { writeFileSync } = require("node:fs");
 const root = process.argv[2];
 const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
 const { x, y, d } = privateKey.export({ format: "jwk" });
-writeFileSync(`${root}/vapid-subject`, "mailto:notifications@stg.athyper.test\n", { mode: 0o600 });
+writeFileSync(`${root}/vapid-subject`, `mailto:notifications@${process.env.ATHYPER_VAPID_INSTANCE}.athyper.test\n`, { mode: 0o600 });
 writeFileSync(`${root}/vapid-public-key`, `${Buffer.concat([Buffer.from([4]), Buffer.from(x, "base64url"), Buffer.from(y, "base64url")]).toString("base64url")}\n`, { mode: 0o600 });
 writeFileSync(`${root}/vapid-private-key`, `${d}\n`, { mode: 0o600 });
 NODE
 fi
 
 chmod 600 "$staging"/*
-expected=15
-[[ "$instance" == "stg" ]] && expected=18
+expected=18
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
 [[ "$count" == "$expected" ]] || { echo "Expected $expected secrets, generated $count" >&2; exit 1; }
 if [[ "$preserve_stg_vapid" == "true" ]]; then

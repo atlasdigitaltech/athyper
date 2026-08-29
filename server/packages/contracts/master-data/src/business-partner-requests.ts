@@ -25,6 +25,10 @@ export type BusinessPartnerRequestStatus =
   | "draft" | "validating" | "validation_failed" | "pending_approval"
   | "returned" | "approved" | "rejected" | "applying" | "applied"
   | "failed" | "cancelled" | "superseded";
+export type BusinessPartnerApplicationResultKind =
+  | "partner_role_created" | "workforce_created" | "partner_amended"
+  | "organization_assigned" | "company_configured" | "bank_verification_started"
+  | "employment_changed" | "partner_deactivated" | "partner_reactivated" | "partner_archived";
 
 export interface BusinessPartnerRequestSource {
   readonly kind: BusinessPartnerRequestSourceKind;
@@ -55,6 +59,7 @@ export interface BusinessPartnerRequest {
   readonly representedPartyName?: string;
   readonly representationEvidenceId?: string;
   readonly targetBusinessPartnerId?: string;
+  readonly baseRecordVersion?: number;
   readonly requestedRole?: BusinessPartnerRequestedRole;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
@@ -74,13 +79,17 @@ export interface BusinessPartnerRequest {
   readonly materializedEmployeeId?: string;
   readonly materializedEmploymentId?: string;
   readonly materializedWorkAssignmentId?: string;
+  readonly materializedOnboardingCaseId?: string;
   readonly materializedPrincipalId?: string;
+  readonly materializedBankVerificationId?: string;
   readonly materializedSupplierCompanyProfileId?: string;
   readonly materializedCustomerCompanyProfileId?: string;
   readonly materializedOperatingOrganizationAssignmentId?: string;
   readonly materializationSnapshotId?: string;
   readonly applicationIdempotencyKey?: string;
   readonly applicationFingerprint?: string;
+  readonly applicationResultKind?: BusinessPartnerApplicationResultKind;
+  readonly applicationReasonCode?: string;
   readonly decisionFingerprint?: string;
   readonly submittedAt?: string;
   readonly submittedBy?: string;
@@ -235,15 +244,19 @@ export interface ApplyBusinessPartnerRequestCommand {
 
 export interface BusinessPartnerRequestMaterialization {
   readonly businessPartnerId: string;
-  readonly partnerRole: "supplier" | "customer" | "workforce";
-  readonly roleId: string;
+  readonly resultKind: BusinessPartnerApplicationResultKind;
+  readonly partnerRole?: "supplier" | "customer" | "workforce";
+  readonly roleId?: string;
   readonly supplierId?: string;
   readonly customerId?: string;
   readonly personId?: string;
   readonly employeeId?: string;
   readonly employmentId?: string;
   readonly workAssignmentId?: string;
+  readonly onboardingCaseId?: string;
   readonly principalId?: string;
+  readonly bankVerificationId?: string;
+  readonly reasonCode?: string;
   readonly companyProfileId?: string;
   readonly operatingOrganizationAssignmentId?: string;
   readonly snapshotId: string;

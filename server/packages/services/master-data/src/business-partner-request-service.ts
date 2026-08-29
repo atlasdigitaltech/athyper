@@ -39,7 +39,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       assertContext(command.context);
       validateCreate(command);
       await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, scope(command.operatingOrganizationId, command.companyCodeId));
-      const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind });
+      const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind, ...(command.requestedRole?{requestedRole:command.requestedRole}:{}) });
       validateSchema(schema);
       return options.transactions.run("neon", actor(command.context), async (transaction) => {
         const existing = await options.repository.findByIdempotencyKey(command.context.tenantId, command.idempotencyKey, transaction);
@@ -182,14 +182,19 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
           ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}),
         }, transaction);
         if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPLICATION_CONFLICT", "Request version, approval, validation, duplicate, source, or organization evidence changed before materialization");
-        if (!result.replayed) await effects(options, command.context, transaction, "business_partner.request.applied", result.request, {
+        const appliedEvent=current.kind==="deactivate"?"business_partner.lifecycle.deactivated":current.kind==="reactivate"?"business_partner.lifecycle.reactivated":current.kind==="archive"?"business_partner.lifecycle.archived":current.kind==="change_bank"?"business_partner.bank_verification.requested":"business_partner.request.applied";
+        if (!result.replayed) await effects(options, command.context, transaction, appliedEvent, result.request, {
           businessPartnerId: result.materialization.businessPartnerId,
+          resultKind: result.materialization.resultKind,
           partnerRole: result.materialization.partnerRole,
           roleId: result.materialization.roleId,
           ...(result.materialization.supplierId ? { supplierId: result.materialization.supplierId } : {}),
           ...(result.materialization.customerId ? { customerId: result.materialization.customerId } : {}),
           operatingOrganizationAssignmentId: result.materialization.operatingOrganizationAssignmentId,
+          ...(result.materialization.onboardingCaseId ? { onboardingCaseId: result.materialization.onboardingCaseId } : {}),
           snapshotId: result.materialization.snapshotId,
+          ...(result.materialization.bankVerificationId ? { bankVerificationId: result.materialization.bankVerificationId } : {}),
+          ...(result.materialization.reasonCode ? { reasonCode: result.materialization.reasonCode } : {}),
           applicationFingerprint: result.materialization.applicationFingerprint,
         });
         return result;
@@ -201,8 +206,9 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
 function assertContext(context: VerifiedRequestContext): void { if (context.planeKey !== "neon") throw new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_NEON_REQUIRED", "Business Partner requests execute only in NEON"); }
 function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
   const workforce=command.requestedRole==="workforce";
-  if (!workforce&&!command.operatingOrganizationId) throw invalid("operatingOrganizationId is required for commercial onboarding scope");
-  if (workforce&&(!command.legalEntityId||!command.companyCodeId||!command.orgUnitId)) throw invalid("workforce onboarding requires legalEntityId, companyCodeId, and orgUnitId");
+  const commercial=["new_partner","add_supplier","add_customer","assign_organization","configure_company","change_bank"].includes(command.kind)&&!workforce;
+  if (commercial&&!command.operatingOrganizationId) throw invalid("operatingOrganizationId is required for commercial scope");
+  if ((command.kind==="add_workforce"||command.kind==="change_employment"||(command.kind==="new_partner"&&workforce))&&(!command.legalEntityId||!command.companyCodeId||!command.orgUnitId)) throw invalid("workforce requests require legalEntityId, companyCodeId, and orgUnitId");
   if (command.idempotencyKey.trim() !== command.idempotencyKey || command.idempotencyKey.length < 8 || command.idempotencyKey.length > 200) throw invalid("idempotencyKey must be trimmed and contain 8 to 200 characters");
   if ((command.kind === "new_partner") !== !command.targetBusinessPartnerId) throw invalid("new_partner must not have a target; every other request kind requires one");
   if (command.kind === "add_supplier" && command.requestedRole !== "supplier") throw invalid("add_supplier requires requestedRole supplier");
@@ -210,6 +216,9 @@ function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
   if (command.kind === "add_workforce" && command.requestedRole !== "workforce") throw invalid("add_workforce requires requestedRole workforce");
   if (command.kind === "new_partner" && !["supplier", "customer", "workforce"].includes(command.requestedRole ?? "")) throw invalid("new_partner requires supplier, customer, or workforce role");
   if (["add_supplier", "add_customer", "assign_organization", "configure_company"].includes(command.kind) && !["supplier", "customer"].includes(command.requestedRole ?? "")) throw invalid("Commercial role onboarding and configuration support only supplier or customer");
+  if (command.kind === "change_bank" && command.requestedRole !== "supplier") throw invalid("change_bank requires requestedRole supplier");
+  if (command.kind === "change_employment" && command.requestedRole !== "workforce") throw invalid("change_employment requires requestedRole workforce");
+  if (["amend_partner","deactivate","reactivate","archive"].includes(command.kind) && command.requestedRole) throw invalid("Partner amendment and lifecycle requests must not claim a role result");
   if (command.kind === "configure_company" && !command.companyCodeId) throw invalid("configure_company requires companyCodeId");
   const registrationMode = command.registrationMode ?? defaultRegistrationMode(command.source.kind);
   if (registrationMode === "self_service" && (command.source.kind !== "portal" || !command.invitationId || !command.applicantPrincipalId || command.representedPartyName || command.representationEvidenceId)) throw invalid("Self-service registration requires portal source, invitation, and applicant coordinates only");
@@ -218,6 +227,7 @@ function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
   if (registrationMode === "direct" && (command.source.kind !== "manual" || command.invitationId || command.applicantPrincipalId || command.representedPartyName || command.representationEvidenceId)) throw invalid("Direct maintenance requires a manual source without representation coordinates");
   if (command.source.kind === "mesh" && (command.source.systemCode !== "athyper_mesh" || !command.source.entityCode || !command.source.entityId || !command.source.projectionId || !command.source.version || !isHash(command.source.payloadHash))) throw invalid("MESH source coordinates, pinned version, and payload hash are required");
   validatePayload(command.proposedPayload);
+  validatePayloadBoundary(command);
 }
 function validateSchema(schema: { readonly code: string; readonly version: number; readonly hash: string }): void { if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(schema.code) || !Number.isSafeInteger(schema.version) || schema.version < 1 || !isHash(schema.hash)) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_SCHEMA_INVALID", "Published request schema coordinates are invalid"); }
 function validateValidationResult(result: Awaited<ReturnType<BusinessPartnerRequestValidator<unknown>["validate"]>>): void {
@@ -228,6 +238,14 @@ function validateValidationResult(result: Awaited<ReturnType<BusinessPartnerRequ
   }
 }
 function validatePayload(payload: Readonly<Record<string, unknown>>): void { if (!payload || Array.isArray(payload) || typeof payload !== "object") throw invalid("proposedPayload must be an object"); if (Buffer.byteLength(JSON.stringify(payload), "utf8") > 1_048_576) throw invalid("proposedPayload exceeds 1 MiB"); }
+function validatePayloadBoundary(command: CreateBusinessPartnerRequestCommand): void {
+  if(command.source.kind==="mesh"&&command.requestedRole==="workforce")throw invalid("MESH cannot originate workforce or person materialization");
+  if(command.requestedRole==="workforce")return;
+  const denied=new Set(["employeenumber","personnumber","hiredate","servicedate","probationenddate","terminationdate","employmenttype","manageremployeeid","fte","dateofbirth","nationalid","nationalidtoken","taxidentifiertoken","passportnumber","passportnumbertoken","emergencycontact","protectedattributes"]);
+  const keys=(value:unknown):string[]=>Array.isArray(value)?value.flatMap(keys):value&&typeof value==="object"?Object.entries(value as Record<string,unknown>).flatMap(([key,item])=>[key.replace(/[_-]/g,"").toLowerCase(),...keys(item)]):[];
+  const field=keys(command.proposedPayload).find(key=>denied.has(key));
+  if(field)throw invalid("Generic Business Partner and commercial payloads cannot contain workforce or restricted person fields");
+}
 function validateWorkflowCommand(expectedVersion: number, idempotencyKey: string): void { if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw invalid("expectedVersion must be a positive integer"); if (idempotencyKey.trim() !== idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 200) throw invalid("idempotencyKey must be trimmed and contain 8 to 200 characters"); }
 function validateDecisionCommand(command: DecideBusinessPartnerRequestCommand): void { validateWorkflowCommand(command.expectedRequestVersion, command.idempotencyKey); if (!Number.isSafeInteger(command.expectedWorkItemVersion) || command.expectedWorkItemVersion < 1) throw invalid("expectedWorkItemVersion must be a positive integer"); if (!command.reason.trim() || command.reason.trim() !== command.reason || command.reason.length > 2_000) throw invalid("A trimmed decision reason of at most 2000 characters is required"); }
 function assertRoleMaterializable(request: BusinessPartnerRequest): void {
@@ -238,9 +256,12 @@ function assertRoleMaterializable(request: BusinessPartnerRequest): void {
     || (request.kind === "add_supplier" && Boolean(request.targetBusinessPartnerId) && request.requestedRole === "supplier")
     || (request.kind === "add_customer" && Boolean(request.targetBusinessPartnerId) && request.requestedRole === "customer")
     || (request.kind === "assign_organization" && Boolean(request.targetBusinessPartnerId) && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
-    || (request.kind === "configure_company" && Boolean(request.targetBusinessPartnerId) && Boolean(request.companyCodeId) && (request.requestedRole === "supplier" || request.requestedRole === "customer"));
-  if (!supported) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_ROLE_EXTENSION_UNSUPPORTED", "Materialization supports commercial roles and governed workforce onboarding");
-  if (!request.approvedAt || !request.approvedBy || !request.decisionFingerprint || (request.requestedRole!=="workforce"&&!request.operatingOrganizationId) || (request.requestedRole==="workforce"&&(!request.legalEntityId||!request.companyCodeId||!request.orgUnitId))) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPROVAL_EVIDENCE_INVALID", "Pinned approval and role-specific scope evidence are required");
+    || (request.kind === "configure_company" && Boolean(request.targetBusinessPartnerId) && Boolean(request.companyCodeId) && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
+    || (request.kind === "change_bank" && Boolean(request.targetBusinessPartnerId) && Boolean(request.companyCodeId) && request.requestedRole === "supplier")
+    || (request.kind === "change_employment" && Boolean(request.targetBusinessPartnerId) && request.requestedRole === "workforce")
+    || (["amend_partner","deactivate","reactivate","archive"].includes(request.kind) && Boolean(request.targetBusinessPartnerId) && !request.requestedRole);
+  if (!supported) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_KIND_UNSUPPORTED", "The request kind, target, role, and scope combination has no application authority");
+  if (!request.approvedAt || !request.approvedBy || !request.decisionFingerprint || (["supplier","customer"].includes(request.requestedRole??"")&&!request.operatingOrganizationId) || (request.requestedRole==="workforce"&&(!request.legalEntityId||!request.companyCodeId||!request.orgUnitId))) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPROVAL_EVIDENCE_INVALID", "Pinned approval and request-kind-specific scope evidence are required");
   assertPassedValidation(request);
 }
 function assertPassedValidation(request: BusinessPartnerRequest): void { if (request.validationSummary["outcome"] !== "passed") throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VALIDATION_REQUIRED", "A current passing validation evaluation is required before submission"); if (request.duplicateSummary["blocking"] === true) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_DUPLICATE_BLOCKED", "Blocking duplicate evidence must be resolved before submission"); }
@@ -259,7 +280,7 @@ function creationFingerprint(request: BusinessPartnerRequest): string { return h
 function defaultRegistrationMode(sourceKind: CreateBusinessPartnerRequestCommand["source"]["kind"]): BusinessPartnerRequest["registrationMode"] { return sourceKind === "manual" ? "direct" : sourceKind === "portal" ? "self_service" : "integration"; }
 function submissionFingerprint(request: BusinessPartnerRequest, definition: BusinessPartnerRequestWorkflowDefinition): string { return hash({ requestId: request.id, rowVersion: request.rowVersion, schema: request.schema, proposedPayload: request.proposedPayload, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, changeImpact: request.changeImpact, source: request.source, workflow: { ...definition, approverPrincipalIds: [...definition.approverPrincipalIds].sort() } }); }
 function decisionFingerprint(request: BusinessPartnerRequest, command: DecideBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, workflowRequestId: command.workflowRequestId, workItemId: command.workItemId, requestFingerprint: request.decisionFingerprint, expectedRequestVersion: command.expectedRequestVersion, expectedWorkItemVersion: command.expectedWorkItemVersion, decision: command.decision, reason: command.reason, decidedBy: command.context.principalId }); }
-function applicationFingerprint(request: BusinessPartnerRequest, command: ApplyBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, expectedVersion: command.expectedVersion, applicationIdempotencyKey: command.idempotencyKey, decisionFingerprint: request.decisionFingerprint, approvedAt: request.approvedAt, approvedBy: request.approvedBy, schema: request.schema, proposedPayload: request.proposedPayload, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, source: request.source, requestedRole: request.requestedRole, operatingOrganizationId: request.operatingOrganizationId, companyCodeId: request.companyCodeId,legalEntityId:request.legalEntityId,orgUnitId:request.orgUnitId,positionId:request.positionId, appliedBy: command.context.principalId }); }
+function applicationFingerprint(request: BusinessPartnerRequest, command: ApplyBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, requestKind:request.kind, baseRecordVersion:request.baseRecordVersion, expectedVersion: command.expectedVersion, applicationIdempotencyKey: command.idempotencyKey, decisionFingerprint: request.decisionFingerprint, approvedAt: request.approvedAt, approvedBy: request.approvedBy, schema: request.schema, proposedPayload: request.proposedPayload, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, changeImpact:request.changeImpact, source: request.source, requestedRole: request.requestedRole, operatingOrganizationId: request.operatingOrganizationId, companyCodeId: request.companyCodeId,legalEntityId:request.legalEntityId,orgUnitId:request.orgUnitId,positionId:request.positionId, appliedBy: command.context.principalId }); }
 function withoutDecisionContext(command: DecideBusinessPartnerRequestCommand): Omit<DecideBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
 function withoutApplyContext(command: ApplyBusinessPartnerRequestCommand): Omit<ApplyBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
 async function effects<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>, context: VerifiedRequestContext, transaction: Transaction, eventCode: string, request: BusinessPartnerRequest, metadata: Readonly<Record<string, unknown>>): Promise<void> { await options.outbox.append({ tenantId: context.tenantId, topic: "business-partner-onboarding", eventType: eventCode, entityType: "business_partner_request", entityId: request.id, actorId: context.principalId, correlationId: context.correlationId, payload: { requestId: request.id, requestNo: request.requestNo, status: request.status, rowVersion: request.rowVersion, ...metadata } }, transaction); const action=eventCode.endsWith("created")?"create":eventCode.endsWith("approved")?"approve":eventCode.endsWith("rejected")?"reject":"update"; await options.audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "business_partner_request", entityId: request.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata }, transaction); }

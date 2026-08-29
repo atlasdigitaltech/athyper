@@ -38,6 +38,10 @@ const ruleDefinitions = Object.freeze([
   { code: "source.mesh.pin.required", severity: "error", fieldPath: "$.source" },
   { code: "identity.registration_country.format", severity: "error", fieldPath: "$.registrationCountryCode" },
   { code: "identity.legal_name.duplicate", severity: "warning", fieldPath: "$.legalName" },
+  { code: "lifecycle.reason.required", severity: "error", fieldPath: "$.reasonCode" },
+  { code: "lifecycle.dependencies.required", severity: "error", fieldPath: "$.dependencies" },
+  { code: "customer.person.policy", severity: "error", fieldPath: "$.partnerCategory" },
+  { code: "customer.sales_scope.required", severity: "error", fieldPath: "$.operatingOrganizationId" },
 ] as const);
 
 export const businessPartnerRequestRuleset = Object.freeze({
@@ -55,12 +59,25 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
       const registrationCountryCode = stringValue(request.proposedPayload, "registrationCountryCode", "registration_country_code");
       const isNew = request.kind === "new_partner";
       const workforce=request.requestedRole==="workforce";
+      const customer=request.requestedRole==="customer";
+      const requestedCategory=stringValue(request.proposedPayload,"partnerCategory","partner_category");
+      const personCustomer=customer&&isNew&&["person","individual"].includes(requestedCategory??"");
+      const personCustomerValid=!personCustomer||(stringValue(request.proposedPayload,"customerType","customer_type")==="individual"&&stringValue(request.proposedPayload,"ownershipClass","ownership_class")==="external"&&Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")));
+      const lifecycle=["deactivate","reactivate","archive"].includes(request.kind);
+      const lifecycleDependencies=request.proposedPayload["dependencies"];
+      const requiredDependencyCodes=["supplier_roles","customer_roles","active_organization_assignments","active_employments","effective_blocks","effective_qualifications"];
+      const lifecycleDependenciesValid=Array.isArray(lifecycleDependencies)&&requiredDependencyCodes.every(code=>lifecycleDependencies.some(item=>Boolean(item&&typeof item==="object"&&(item as Record<string,unknown>)["code"]===code&&Number.isSafeInteger((item as Record<string,unknown>)["count"])&&typeof (item as Record<string,unknown>)["blocking"]==="boolean")));
+      const roleless=["amend_partner","deactivate","reactivate","archive"].includes(request.kind);
+      const workforceOnboarding=workforce&&request.kind!=="change_employment";
       const roleKindCompatible = (isNew && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
         || (isNew && workforce)
         || (request.kind === "add_workforce" && workforce)
         || (request.kind === "add_supplier" && request.requestedRole === "supplier")
         || (request.kind === "add_customer" && request.requestedRole === "customer")
-        || ((request.kind === "assign_organization" || request.kind === "configure_company") && (request.requestedRole === "supplier" || request.requestedRole === "customer"));
+        || ((request.kind === "assign_organization" || request.kind === "configure_company") && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
+        || (request.kind === "change_bank" && request.requestedRole === "supplier")
+        || (request.kind === "change_employment" && workforce)
+        || (roleless && !request.requestedRole);
       const meshPinned = request.source.kind !== "mesh" || (
         request.source.systemCode === "athyper_mesh" && Boolean(request.source.entityCode) && Boolean(request.source.entityId)
         && Boolean(request.source.projectionId) && Number.isSafeInteger(request.source.version) && (request.source.version ?? 0) > 0
@@ -76,13 +93,15 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         : [];
       const findings: BusinessPartnerRequestValidationFinding[] = [
         isNew ? finding("identity.legal_name.required", "error", "$.legalName", workforce?Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")):Boolean(legalName), workforce?"PERSON_NAME_REQUIRED":"LEGAL_NAME_REQUIRED", { valuePresent: workforce?Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")):Boolean(legalName) }) : skipped("identity.legal_name.required", "error", "$.legalName", "EXISTING_IDENTITY_REUSED"),
-        finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),
+        roleless ? skipped("role.requested.required", "error", "$.requestedRole", "ROLE_NOT_APPLICABLE") : finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),
         finding("role.request_kind.compatible", "error", "$.requestKind", roleKindCompatible, "REQUEST_KIND_ROLE_MISMATCH", { requestKind: request.kind, requestedRole: request.requestedRole ?? null }),
         finding("role.target.required", "error", "$.targetBusinessPartnerId", isNew ? !request.targetBusinessPartnerId : Boolean(request.targetBusinessPartnerId), "TARGET_BUSINESS_PARTNER_REQUIRED", { requestKind: request.kind, targetBusinessPartnerId: request.targetBusinessPartnerId ?? null }),
-        workforce ? skipped("organization.operating.required", "error", "$.operatingOrganizationId", "COMMERCIAL_ORGANIZATION_NOT_REQUIRED") : finding("organization.operating.required", "error", "$.operatingOrganizationId", Boolean(request.operatingOrganizationId), "OPERATING_ORGANIZATION_REQUIRED", { operatingOrganizationId: request.operatingOrganizationId ?? null }),
+        workforce||roleless ? skipped("organization.operating.required", "error", "$.operatingOrganizationId", "COMMERCIAL_ORGANIZATION_NOT_REQUIRED") : finding("organization.operating.required", "error", "$.operatingOrganizationId", Boolean(request.operatingOrganizationId), "OPERATING_ORGANIZATION_REQUIRED", { operatingOrganizationId: request.operatingOrganizationId ?? null }),
         workforce ? finding("workforce.scope.required","error","$.legalEntityId",Boolean(request.legalEntityId&&request.companyCodeId&&request.orgUnitId),"WORKFORCE_SCOPE_REQUIRED",{legalEntityId:request.legalEntityId??null,companyCodeId:request.companyCodeId??null,orgUnitId:request.orgUnitId??null}) : skipped("workforce.scope.required","error","$.legalEntityId","WORKFORCE_SCOPE_NOT_APPLICABLE"),
-        workforce ? finding("workforce.identity.required","error","$.firstName",Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")&&stringValue(request.proposedPayload,"employeeNumber","employee_number")&&stringValue(request.proposedPayload,"hireDate","hire_date")),"WORKFORCE_IDENTITY_REQUIRED",{}) : skipped("workforce.identity.required","error","$.firstName","WORKFORCE_IDENTITY_NOT_APPLICABLE"),
+        workforceOnboarding ? finding("workforce.identity.required","error","$.firstName",Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")&&stringValue(request.proposedPayload,"employeeNumber","employee_number")&&stringValue(request.proposedPayload,"hireDate","hire_date")),"WORKFORCE_IDENTITY_REQUIRED",{}) : skipped("workforce.identity.required","error","$.firstName","WORKFORCE_IDENTITY_NOT_APPLICABLE"),
         request.kind === "configure_company" ? finding("company.code.required", "error", "$.companyCodeId", Boolean(request.companyCodeId), "COMPANY_CODE_REQUIRED", { companyCodeId: request.companyCodeId ?? null }) : skipped("company.code.required", "error", "$.companyCodeId", "COMPANY_CODE_NOT_REQUIRED"),
+        customer ? finding("customer.sales_scope.required","error","$.operatingOrganizationId",Boolean(request.operatingOrganizationId),"CUSTOMER_SALES_SCOPE_REQUIRED",{operatingOrganizationId:request.operatingOrganizationId??null}) : skipped("customer.sales_scope.required","error","$.operatingOrganizationId","CUSTOMER_SCOPE_NOT_APPLICABLE"),
+        customer&&isNew ? finding("customer.person.policy","error","$.partnerCategory",personCustomerValid,"CUSTOMER_PERSON_POLICY_DENIED",{partnerCategory:requestedCategory??"organization",customerType:stringValue(request.proposedPayload,"customerType","customer_type")??null}) : skipped("customer.person.policy","error","$.partnerCategory","CUSTOMER_PERSON_POLICY_NOT_APPLICABLE"),
         finding("source.mesh.pin.required", "error", "$.source", meshPinned, "MESH_SOURCE_PIN_REQUIRED", { sourceKind: request.source.kind, sourceVersion: request.source.version ?? null }),
         registrationCountryCode
           ? finding("identity.registration_country.format", "error", "$.registrationCountryCode", /^[A-Z]{2}$/.test(registrationCountryCode), "REGISTRATION_COUNTRY_INVALID", { registrationCountryCode })
@@ -90,6 +109,8 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         isNew && legalName
           ? finding("identity.legal_name.duplicate", "warning", "$.legalName", candidates.length === 0, "LEGAL_NAME_DUPLICATE_CANDIDATE", { candidateIds: candidates.map(candidate => candidate.id), candidateCount: candidates.length })
           : skipped("identity.legal_name.duplicate", "warning", "$.legalName", "LEGAL_NAME_NOT_AVAILABLE"),
+        lifecycle ? finding("lifecycle.reason.required","error","$.reasonCode",/^[A-Z][A-Z0-9_.-]{2,126}$/.test(stringValue(request.proposedPayload,"reasonCode","reason_code")??""),"LIFECYCLE_REASON_REQUIRED",{}) : skipped("lifecycle.reason.required","error","$.reasonCode","LIFECYCLE_REASON_NOT_APPLICABLE"),
+        lifecycle ? finding("lifecycle.dependencies.required","error","$.dependencies",lifecycleDependenciesValid,"LIFECYCLE_DEPENDENCY_EVIDENCE_REQUIRED",{requiredDependencyCodes}) : skipped("lifecycle.dependencies.required","error","$.dependencies","LIFECYCLE_DEPENDENCIES_NOT_APPLICABLE"),
       ];
       const failed = findings.filter(item => item.outcome === "failed");
       const counts = { passed: findings.filter(item => item.outcome === "passed").length, failed: failed.length, skipped: findings.filter(item => item.outcome === "skipped").length };
@@ -102,7 +123,14 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         findings,
         validationSummary: { outcome: valid ? "passed" : "failed", counts, ruleset: businessPartnerRequestRuleset },
         duplicateSummary: { exactLegalNameCandidateCount: candidates.length, requiresResolution: candidates.length > 0, candidates },
-        changeImpact: {
+        changeImpact: lifecycle ? {
+          requestKind: request.kind,
+          targetBusinessPartnerId: request.targetBusinessPartnerId ?? null,
+          evidenceVersion: 1,
+          assessedAt: now().toISOString(),
+          reasonCode: stringValue(request.proposedPayload,"reasonCode","reason_code") ?? null,
+          dependencies: Array.isArray(lifecycleDependencies) ? lifecycleDependencies : [],
+        } : {
           requestKind: request.kind,
           requestedRole: request.requestedRole ?? null,
           operatingOrganizationId: request.operatingOrganizationId ?? null,

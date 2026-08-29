@@ -41,23 +41,24 @@ export async function verifyThreePlaneContexts(manifestPath = THREE_PLANE_MANIFE
       if (missingProjections.length > 0 || unexpectedProjections.length > 0) {
         throw new Error(`${plane} application projection mismatch: missing=${missingProjections.join(",")}; unexpected=${unexpectedProjections.join(",")}`);
       }
-      const expected = new Set(assignments.map((item) => `${item.tenantCode}:${item.subject.keycloakSubject}`));
+      const expected = new Set(assignments.map((item) => `${item.tenantCode}:${item.subject.username.toLowerCase()}`));
       const actualSet = new Set<string>();
       for (const assignment of assignments) {
         const tenant = inputs.manifest.tenants.find((item) => item.code === assignment.tenantCode)!;
         await client.query("SELECT set_config('app.current_tenant_id',$1,false)", [tenant.id]);
-        const actual = await client.query<{ tenantCode: string; subject: string }>(`
-          SELECT $1::text AS "tenantCode",$2::text AS subject
-          FROM master.fn_resolve_principal_identity(
-            $3::uuid,'keycloak'::master.identity_provider_d,$4,$2
-          ) resolved
+        const actual = await client.query<{ tenantCode: string; username: string }>(`
+          SELECT $1::text AS "tenantCode",lower(binding.username) AS username
+          FROM master.principal_identity_binding binding
           JOIN authz.plane_membership membership
-            ON membership.tenant_id=$3::uuid AND membership.principal_id=resolved.principal_id
+            ON membership.tenant_id=binding.tenant_id AND membership.principal_id=binding.principal_id
            AND membership.status='active' AND membership.effective_from<=now()
            AND (membership.effective_until IS NULL OR membership.effective_until>now())
+          WHERE binding.tenant_id=$2::uuid AND binding.provider_code='keycloak'
+            AND binding.realm_key=$3 AND binding.status='active'
+            AND lower(binding.username)=lower($4)
           LIMIT 1
-        `, [assignment.tenantCode, assignment.subject.keycloakSubject, tenant.id, inputs.manifest.realmKey]);
-        if (actual.rows[0]) actualSet.add(`${actual.rows[0].tenantCode}:${actual.rows[0].subject}`);
+        `, [assignment.tenantCode, tenant.id, inputs.manifest.realmKey, assignment.subject.username]);
+        if (actual.rows[0]) actualSet.add(`${actual.rows[0].tenantCode}:${actual.rows[0].username}`);
       }
       const missing = [...expected].filter((coordinate) => !actualSet.has(coordinate));
       if (missing.length > 0) throw new Error(`${plane} missing context rows: ${missing.slice(0, 10).join(", ")}`);
@@ -84,9 +85,11 @@ function databaseUrl(primary: string): string {
     ATHYPER_MESH_DATABASE_ADMIN_URL: ["ATHYPER_MESH_DATABASE_URL", "MESH_DATABASE_URL", "MESH_DATABASE_ADMIN_URL"],
     ATHYPER_PLATFORM_DATABASE_ADMIN_URL: ["ATHYPER_PLATFORM_DATABASE_URL"],
   };
-  // Verify through the least-privilege runtime connection first. Admin access
-  // can prove rows exist while masking missing grants on the actual API path.
-  for (const name of [...(fallbacks[primary] ?? []), primary]) {
+  // Context inventory is an administrative completeness check and must not
+  // weaken principal self-read RLS merely so a runtime session can enumerate
+  // every identity. Runtime tenant isolation is proved independently by the
+  // three-plane authorization RLS verifier.
+  for (const name of [primary, ...(fallbacks[primary] ?? [])]) {
     const value = process.env[name]?.trim();
     if (value) return value;
   }

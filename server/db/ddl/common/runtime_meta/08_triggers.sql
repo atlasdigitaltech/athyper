@@ -95,3 +95,4 @@ END; $$;
 CREATE TRIGGER runtime_applied_release_payload_immutable
 BEFORE UPDATE OR DELETE ON runtime_meta.applied_release_payload
 FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_applied_release_payload();
+CREATE TRIGGER runtime_business_partner_definition_head_guard BEFORE UPDATE ON runtime_meta.release_activation_head FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_business_partner_definition_head();

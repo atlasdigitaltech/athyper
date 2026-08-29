@@ -177,6 +177,7 @@ planes/studio/trustiam/10_rls.sql
 planes/studio/snapshot/10_rls.sql
 planes/studio/metadata/10_rls.sql
 planes/studio/document/10_rls.sql
+planes/studio/publication/10_rls.sql
 common/event/10_rls.sql
 common/governance/10_rls.sql
 common/document/10_rls.sql
@@ -228,3 +229,4 @@ planes/studio/control/12_reference_seed.sql
 planes/studio/control/12_subscription_plan_reference_seed.sql
 planes/studio/control/12_subscription_plan_module_reference_seed.sql
 planes/studio/control/12_bank_format_rule_reference_seed.sql
+common/shared/99_security_definer_hardening.sql

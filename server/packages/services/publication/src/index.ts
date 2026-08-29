@@ -20,3 +20,6 @@ export * from "./kysely-publication-operations-repository.js";
 export * from "./business-partner-definition-service.js";
 export * from "./business-partner-definition-routes.js";
 export * from "./business-partner-foundation-definition.js";
+export * from "./business-partner-definition-compiler.js";
+export * from "./business-partner-definition-consumer.js";
+export * from "./business-partner-definition-consumer-routes.js";

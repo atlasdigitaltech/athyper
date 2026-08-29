@@ -902,7 +902,7 @@ BEGIN
 
     IF TG_OP = 'UPDATE'
        AND OLD.decision <> 'pending'
-       AND (NEW.decision IS DISTINCT FROM OLD.decision
+       AND (NOT (OLD.decision IN ('approved','conditional') AND NEW.decision = 'expired')
             OR NEW.decision_idempotency_key IS DISTINCT FROM OLD.decision_idempotency_key
             OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
             OR NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at
@@ -3467,6 +3467,14 @@ CREATE OR REPLACE FUNCTION control.trg_guard_mesh_business_partner_profile_evide
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
 BEGIN
     RAISE EXCEPTION 'NEON MESH Business Partner inbox and processing evidence are immutable' USING ERRCODE = 'integrity_constraint_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION control.trg_reject_customer_lifecycle_event_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'Customer lifecycle events are immutable'
+        USING ERRCODE = 'integrity_constraint_violation';
 END;
 $$;
 

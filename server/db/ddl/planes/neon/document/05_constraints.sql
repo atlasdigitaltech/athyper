@@ -1675,7 +1675,7 @@ ALTER TABLE document.multipart_upload_part
     FOREIGN KEY (tenant_id, recorded_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE document.supplier_registration_invitation
+ALTER TABLE document.supplier_registration_invitation_legacy
     ADD CONSTRAINT supplier_registration_invitation_tenant_fk
         FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT supplier_registration_invitation_operating_org_fk
@@ -1743,6 +1743,9 @@ ALTER TABLE document.business_partner_request
     ADD CONSTRAINT business_partner_request_materialized_principal_fk
         FOREIGN KEY (tenant_id, materialized_principal_id)
         REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_bank_verification_fk
+        FOREIGN KEY (tenant_id, materialized_bank_verification_id)
+        REFERENCES document.business_partner_bank_verification(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_request_materialized_supplier_company_profile_fk
         FOREIGN KEY (tenant_id, materialized_supplier_company_profile_id)
         REFERENCES master.company_code_supplier_profile(tenant_id, id) ON DELETE RESTRICT,
@@ -1771,7 +1774,7 @@ ALTER TABLE document.business_partner_request
 ALTER TABLE document.business_partner_request
     ADD CONSTRAINT business_partner_request_invitation_fk
         FOREIGN KEY (tenant_id, invitation_id)
-        REFERENCES document.supplier_registration_invitation(tenant_id, id) ON DELETE RESTRICT,
+        REFERENCES document.business_partner_invitation(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_request_applicant_fk
         FOREIGN KEY (tenant_id, applicant_principal_id)
         REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
@@ -1805,7 +1808,11 @@ ALTER TABLE document.business_partner_request
         FOREIGN KEY (tenant_id, representation_evidence_id)
         REFERENCES document.business_partner_request_evidence(tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE document.supplier_registration_invitation
+ALTER TABLE document.business_partner_invitation
+    ADD CONSTRAINT business_partner_invitation_request_fk
+        FOREIGN KEY (tenant_id, business_partner_request_id)
+        REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE document.supplier_registration_invitation_legacy
     ADD CONSTRAINT supplier_registration_invitation_request_fk
         FOREIGN KEY (tenant_id, business_partner_request_id)
         REFERENCES document.business_partner_request(tenant_id, id) ON DELETE RESTRICT;
@@ -1838,3 +1845,44 @@ ALTER TABLE document.business_partner_bank_verification
   ADD CONSTRAINT business_partner_bank_verification_verified_by_fk FOREIGN KEY(tenant_id,verified_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT business_partner_bank_verification_rejected_by_fk FOREIGN KEY(tenant_id,rejected_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT business_partner_bank_verification_applied_by_fk FOREIGN KEY(tenant_id,applied_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE document.business_partner_duplicate_resolution
+  ADD CONSTRAINT business_partner_duplicate_resolution_duplicate_fk FOREIGN KEY(tenant_id,duplicate_business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT business_partner_duplicate_resolution_survivor_fk FOREIGN KEY(tenant_id,surviving_business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT business_partner_duplicate_resolution_snapshot_fk FOREIGN KEY(tenant_id,snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT business_partner_duplicate_resolution_resolved_by_fk FOREIGN KEY(tenant_id,resolved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.supplier_activation_evidence
+  ADD CONSTRAINT supplier_activation_evidence_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT supplier_activation_evidence_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT supplier_activation_evidence_supplier_fk FOREIGN KEY(tenant_id,supplier_id) REFERENCES master.supplier(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT supplier_activation_evidence_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT supplier_activation_evidence_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT supplier_activation_evidence_actor_fk FOREIGN KEY(tenant_id,activated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.supplier_registration_recovery
+ ADD CONSTRAINT supplier_registration_recovery_invitation_fk FOREIGN KEY(tenant_id,invitation_id) REFERENCES document.business_partner_invitation(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT supplier_registration_recovery_request_fk FOREIGN KEY(tenant_id,request_id) REFERENCES document.business_partner_request(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT supplier_registration_recovery_prior_principal_fk FOREIGN KEY(tenant_id,prior_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT supplier_registration_recovery_requested_principal_fk FOREIGN KEY(tenant_id,requested_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT supplier_registration_recovery_actor_fk FOREIGN KEY(tenant_id,requested_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE document.business_partner_invitation
+ ADD CONSTRAINT business_partner_invitation_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_operating_org_fk FOREIGN KEY(tenant_id,requested_operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_legal_entity_fk FOREIGN KEY(tenant_id,legal_entity_id) REFERENCES master.legal_entity(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_org_unit_fk FOREIGN KEY(tenant_id,org_unit_id) REFERENCES master.org_unit(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_position_fk FOREIGN KEY(tenant_id,position_id) REFERENCES master.position(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_applicant_fk FOREIGN KEY(tenant_id,applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_updated_by_fk FOREIGN KEY(tenant_id,updated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.business_partner_invitation_applicant_policy
+ ADD CONSTRAINT business_partner_invitation_applicant_policy_invitation_fk FOREIGN KEY(tenant_id,invitation_id) REFERENCES document.business_partner_invitation(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_applicant_policy_principal_fk FOREIGN KEY(tenant_id,applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_applicant_policy_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_applicant_policy_revoked_by_fk FOREIGN KEY(tenant_id,revoked_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+ALTER TABLE document.business_partner_invitation_recovery
+ ADD CONSTRAINT business_partner_invitation_recovery_invitation_fk FOREIGN KEY(tenant_id,invitation_id) REFERENCES document.business_partner_invitation(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_recovery_request_fk FOREIGN KEY(tenant_id,request_id) REFERENCES document.business_partner_request(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_recovery_prior_fk FOREIGN KEY(tenant_id,prior_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_recovery_requested_fk FOREIGN KEY(tenant_id,requested_applicant_principal_id) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+ ADD CONSTRAINT business_partner_invitation_recovery_actor_fk FOREIGN KEY(tenant_id,requested_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
