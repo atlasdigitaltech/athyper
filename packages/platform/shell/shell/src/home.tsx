@@ -113,7 +113,7 @@ export function PlatformHome({ plane, purpose, suggestions, searchItems, quickAc
 
   return <section className="athyper-home" aria-labelledby="athyper-home-title">
     <header className="athyper-home__hero">
-      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><p>{plane} home</p><h1 id="athyper-home-title">What would you like to find or accomplish?</h1><p>{purpose}</p></div></div>
+      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What would you like to find or accomplish?</h1><p>{purpose}</p></div></div>
       <form className="athyper-home__search" role="search" onSubmit={submit}>
         <SearchIcon size={22}/><label htmlFor="atlas-home-search">Ask Atlas</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={`Ask about ${plane}, or find a workspace and action…`} autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<kbd>⌘ K</kbd><button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
       </form>
