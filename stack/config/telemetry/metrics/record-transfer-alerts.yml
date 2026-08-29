@@ -1,0 +1,32 @@
+groups:
+  - name: athyper_record_transfers
+    interval: 30s
+    rules:
+      - alert: RecordTransferTerminalFailures
+        expr: sum by (plane, kind) (increase(athyper_record_transfer_operations_total{outcome="failed"}[10m])) >= 3
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Repeated {{ $labels.kind }} failures in {{ $labels.plane }}"
+          description: "Three or more terminal transfer failures occurred in ten minutes."
+      - alert: RecordTransferRetryStorm
+        expr: sum by (plane, kind) (increase(athyper_record_transfer_retries_total[10m])) >= 10
+        for: 5m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Record-transfer retries are elevated"
+          description: "{{ $labels.plane }} {{ $labels.kind }} jobs retried at least ten times in ten minutes."
+      - alert: RecordTransferQueueDelayHigh
+        expr: histogram_quantile(0.95, sum by (le, plane, kind) (rate(athyper_record_transfer_queue_delay_ms_bucket[10m]))) > 120000
+        for: 10m
+        labels: { severity: warning, team: platform }
+        annotations:
+          summary: "Record-transfer worker backlog"
+          description: "p95 queue delay for {{ $labels.plane }} {{ $labels.kind }} exceeds two minutes."
+      - alert: RecordTransferStuckExecution
+        expr: max by (plane, kind) (athyper_record_transfer_stuck) > 0
+        for: 5m
+        labels: { severity: critical, team: platform }
+        annotations:
+          summary: "A record transfer is stuck"
+          description: "At least one {{ $labels.plane }} {{ $labels.kind }} transfer has exceeded its configured execution timeout."

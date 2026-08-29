@@ -22,9 +22,20 @@ test("shared platform ingress exclusively owns workstation HTTP ports", () => {
   assert.equal(platform.networks["platform-ingress"].name, "athyper-platform-ingress");
   assert.equal(instance.networks["platform-ingress"].external, true);
   assert.equal(instance.networks["platform-ingress"].name, "athyper-platform-ingress");
+  assert.equal(platform.networks["platform-observability"].name,"athyper-platform-observability");
+  assert.equal(instance.networks["platform-observability"].name,"athyper-platform-observability");
   assert.deepEqual(platform.services["platform-outage"].ports ?? [], []);
   assert.equal(platform.services["platform-outage"].read_only, true);
   assert.ok(platform.services["platform-outage"].security_opt.includes("no-new-privileges:true"));
+});
+
+test("worker and scheduler metrics use private cross-project discovery",()=>{
+  const parity=read("deploy/compose/instance/compose.parity.yaml"),operations=read("deploy/compose/operations/compose.yaml"),prometheus=readFileSync(join(repoRoot,"deploy/compose/operations/config/prometheus.yaml"),"utf8");
+  assert.deepEqual(parity.services.worker.networks["platform-observability"].aliases,["worker-${ATHYPER_INSTANCE:-dev}"]);
+  assert.deepEqual(parity.services.scheduler.networks["platform-observability"].aliases,["scheduler-${ATHYPER_INSTANCE:-dev}"]);
+  assert.equal(operations.services.metrics.networks.includes("platform-observability"),true);
+  assert.match(operations.services.metrics.volumes.join("\n"),/operations\/prometheus-targets/u);
+  assert.match(prometheus,/file_sd_configs/u);
 });
 
 test("instance gateway has a unique shared-network alias and no Docker socket", () => {
@@ -203,15 +214,18 @@ test("MinIO bootstrap has enough memory for concurrent full-stack startup", () =
   assert.equal(service.resources.memoryMiB, 128);
 });
 
-test("DEV exposes only the MinIO console through the TLS gateway", () => {
+test("DEV exposes the MinIO console and governed presigned-object endpoint through TLS", () => {
   const dynamic = read("deploy/compose/instance/config/traefik/dev.yaml");
   assert.equal(dynamic.http.routers.minio.rule, "Host(`minio.dev.athyper.test`)");
   assert.equal(dynamic.http.services.minio.loadBalancer.servers[0].url, "http://objectstorage:9001");
-  assert.equal(JSON.stringify(dynamic).includes("http://objectstorage:9000"), false);
+  assert.equal(dynamic.http.routers.objects.rule, "Host(`objects.dev.athyper.test`)");
+  assert.equal(dynamic.http.services.objects.loadBalancer.servers[0].url, "http://objectstorage:9000");
   for (const environment of ["qa", "stg"]) {
     const routes = read(`deploy/compose/instance/config/traefik/${environment}.yaml`);
     assert.equal(routes.http.routers.minio, undefined);
     assert.equal(routes.http.services.minio, undefined);
+    assert.equal(routes.http.routers.objects, undefined);
+    assert.equal(routes.http.services.objects, undefined);
   }
 });
 

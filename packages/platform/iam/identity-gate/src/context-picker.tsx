@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { ChevronRightIcon } from "@athyper/platform-icons";
 import { Notice, SelectionCard, StatusBadge } from "@athyper/platform-ui/presentation";
 
 export interface IdentityContextOption {
@@ -31,7 +32,7 @@ export function IdentityContextPicker({ contexts, returnTo = "/" }: { readonly c
       {contexts.map((context) => <SelectionCard disabled={Boolean(pending)} key={context.tenantId} onClick={() => void activate(context)} role="listitem">
         <span className="a-context-monogram" aria-hidden="true">{initials(context.tenantName)}</span>
         <span className="a-context-copy"><strong>{pending === context.tenantId ? "Opening securely…" : context.tenantName}</strong><span>{context.description ?? context.tenantCode}</span>{context.badges?.length ? <span className="a-context-badges">{context.badges.map((badge) => <StatusBadge key={badge}>{badge}</StatusBadge>)}</span> : null}</span>
-        <span className="a-context-open" aria-hidden="true">Open <Chevron /></span>
+        <span className="a-context-open" aria-hidden="true">Open <ChevronRightIcon /></span>
       </SelectionCard>)}
     </div>
   </div>;
@@ -43,4 +44,3 @@ function readCookie(name: string): string | undefined {
 
 function safeReturnTo(value: string): string { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/"; }
 function initials(value: string): string { const words=value.trim().split(/\s+/).filter(Boolean); return (words.length>1?`${words[0]?.[0]??""}${words[1]?.[0]??""}`:words[0]?.slice(0,2)??"A").toUpperCase(); }
-function Chevron() { return <svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>; }

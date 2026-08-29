@@ -49,7 +49,7 @@ async function provisionMesh(client: Client, dryRun: boolean) {
 
 async function provisionStudio(client: Client, dryRun: boolean) {
   const codes=["business_partner","company_code","legal_entity","operating_organization","supplier","customer","product","item","purchase_order","purchase_requisition","goods_receipt","supplier_invoice","payment","journal_entry","cost_center","profit_center","project","employee","network_account","network_relationship","catalog","catalog_item","document_envelope","workflow_item","notification","saved_view","entity_definition","entity_change_set","entity_release","publication_job"] as const;
-  if(dryRun)return{mode:"planned",plane:"studio",entities:codes.length,codes};
+  if(dryRun)return{mode:"planned",plane:"studio",entities:codes.length,tenantOverlays:1,codes};
   await client.query("BEGIN");
   try{
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended('development.studio-metadata-entity-list.v1',0)),set_config('app.database_plane','studio',true),set_config('app.current_principal_id','00000000-0000-0000-0000-000000000000',true)");
@@ -60,7 +60,13 @@ async function provisionStudio(client: Client, dryRun: boolean) {
       const actual=await one<{id:string;entity_class:string;ownership_model:string;status:string}>(client,"SELECT id::text,entity_class::text,ownership_model::text,status::text FROM metadata.entity WHERE tenant_id IS NULL AND entity_code=$1",[code]);
       if(actual.id!==id||actual.entity_class!==entityClass||actual.ownership_model!=="system"||actual.status!=="active")throw new Error(`metadata Entity fixture conflict: ${code}`);
     }
-    await client.query("COMMIT");return{mode:"applied",plane:"studio",entities:codes.length,codes};
+    const tenant=await one<{tenant_id:string;actor_id:string}>(client,"SELECT tenant.id::text tenant_id,principal.id::text actor_id FROM master.tenant tenant JOIN master.principal principal ON principal.tenant_id=tenant.id WHERE tenant.code='cirrusatlantic' AND principal.code='catl.admin' AND tenant.status='active' AND principal.status='active'");
+    await client.query("SELECT set_config('app.current_tenant_id',$1,true),set_config('app.current_principal_id',$2,true)",[tenant.tenant_id,tenant.actor_id]);
+    const overlayId=deterministicUuid("metadata-entity:cirrusatlantic:business_partner");
+    await client.query("INSERT INTO metadata.entity(id,tenant_id,module_id,entity_code,entity_class,ownership_model,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'business_partner','configuration','overlay','active',$4::uuid) ON CONFLICT(tenant_id,entity_code) DO NOTHING",[overlayId,tenant.tenant_id,module.id,tenant.actor_id]);
+    const overlay=await one<{id:string;ownership_model:string;status:string}>(client,"SELECT id::text,ownership_model::text,status::text FROM metadata.entity WHERE tenant_id=$1::uuid AND entity_code='business_partner'",[tenant.tenant_id]);
+    if(overlay.id!==overlayId||overlay.ownership_model!=="overlay"||overlay.status!=="active")throw new Error("metadata Entity tenant overlay fixture conflict: cirrusatlantic/business_partner");
+    await client.query("COMMIT");return{mode:"applied",plane:"studio",entities:codes.length,tenantOverlays:1,tenantOverlayEntityId:overlayId,codes};
   }catch(error){await client.query("ROLLBACK").catch(()=>undefined);throw error;}
 }
 

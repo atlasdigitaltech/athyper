@@ -8,10 +8,10 @@ import type { S3ObjectStorageAdapter } from "@athyper/server-adapter-object-stor
 import type { ClamAvMalwareScanner } from "@athyper/server-adapter-malware-clamav";
 import type { TikaContentExtractor } from "@athyper/server-adapter-document-parser-tika";
 import type { MeilisearchIndex } from "@athyper/server-adapter-search-meilisearch";
-import type { OpenTelemetryAdapter } from "@athyper/server-adapter-telemetry-otel";
+import type { OpenTelemetryAdapter, PrometheusMetricsRegistry } from "@athyper/server-adapter-telemetry-otel";
 import type { SecretStore } from "@athyper/server-contract-secrets";
 import type { PublicationArtifactStore, PublicationAuthorityRepository, PublicationSigner, PublicationVerifier, LocalProjectionRepository, PublicationPlane } from "@athyper/server-contract-publication";
-import type { PublicationOrchestrator } from "@athyper/server-service-publication";
+import type { BusinessPartnerDefinitionService,PublicationOrchestrator } from "@athyper/server-service-publication";
 import type { PdfRenderer } from "@athyper/server-contract-rendering";
 import type { DerivativeRenderer } from "@athyper/server-contract-derivatives";
 import type { JobAdministration, JobDefinition, ScheduledJobDefinition } from "@athyper/server-contract-jobs";
@@ -34,8 +34,10 @@ import type { ContentServices } from "@athyper/server-service-content";
 import type {CollaborationService}from"@athyper/server-contract-collaboration";
 import type { DocumentSearchService } from "@athyper/server-contract-search";
 import type { NumberingService } from "@athyper/server-contract-numbering";
+import type { BusinessPartnerEligibilityService, BusinessPartnerRequestService, SupplierRegistrationInvitationService } from "@athyper/server-contract-master-data";
 import type { BookPeriodService, FinancePostingGuard, RoundingResolver } from "@athyper/server-service-finance";
-import type { NeonFinanceRegistration } from "@athyper/server-plane-neon";
+import type { BusinessPartnerAccountBankLinkageService, BusinessPartnerProfileMatchService, BusinessPartnerProfileProjectionService, NeonFinanceRegistration } from "@athyper/server-plane-neon";
+import type { BusinessPartnerBankDisclosureService, BusinessPartnerProfilePublicationService } from "@athyper/server-plane-mesh";
 import type { ChannelConsentService, CycleCertificationService, CycleDeviationService, CycleRunService, CycleTaskService, LegalHoldService, ModerationService, ReportPackService } from "@athyper/server-contract-governance";
 import type { CycleConfigReader, CycleConfigService } from "@athyper/server-contract-control-admin";
 import type { ControlServices, ControlServiceRouteFlags, RuntimeCommandService } from "@athyper/server-platform-control-admin";
@@ -73,6 +75,7 @@ export interface Container {
     contentExtractor?: TikaContentExtractor;
     searchIndex?: MeilisearchIndex;
     openTelemetry?: OpenTelemetryAdapter;
+    processMetrics?: PrometheusMetricsRegistry;
     secretStore?: SecretStore;
     publicationArtifactStore?: PublicationArtifactStore;
     publicationSigner?: PublicationSigner;
@@ -127,10 +130,19 @@ export interface Container {
     notifications?: NotificationDispatcher;
     jobs?: JobAdministration;
     numbering?: NumberingService;
+    businessPartnerRequests?: BusinessPartnerRequestService;
+    supplierRegistrationInvitations?: SupplierRegistrationInvitationService;
+    businessPartnerEligibility?: BusinessPartnerEligibilityService;
+    businessPartnerProfilePublications?: BusinessPartnerProfilePublicationService;
+    businessPartnerProfileProjections?: BusinessPartnerProfileProjectionService;
+    businessPartnerProfileMatches?: BusinessPartnerProfileMatchService;
+    businessPartnerBankDisclosures?: BusinessPartnerBankDisclosureService;
+    businessPartnerAccountBankLinkage?: BusinessPartnerAccountBankLinkageService;
     publication?: {
       readonly authority: PublicationAuthorityRepository;
       readonly projections: Readonly<Partial<Record<PublicationPlane, LocalProjectionRepository>>>;
       readonly orchestrators: Readonly<Partial<Record<PublicationPlane, PublicationOrchestrator>>>;
+      readonly definitions?: BusinessPartnerDefinitionService;
     };
   };
 }

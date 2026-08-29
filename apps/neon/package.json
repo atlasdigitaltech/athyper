@@ -24,6 +24,7 @@
     "@athyper/product-neon-shell": "workspace:*",
     "@athyper/product-neon-procurement": "workspace:*",
     "@athyper/product-neon-list-view": "workspace:*",
+    "@athyper/product-neon-business-partner": "workspace:*",
     "@athyper/platform-entity-list-view": "workspace:*",
     "@athyper/platform-theme": "workspace:*",
     "@athyper/platform-ui": "workspace:*",

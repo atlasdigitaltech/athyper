@@ -22,6 +22,7 @@
     "db:provision:three-tenant-demo-auth": "tsx scripts/provision-three-tenant-demo-authorization.ts",
     "db:provision:neon:business-partner-runtime": "tsx scripts/provision-development-business-partner-runtime.ts",
     "db:provision:neon:business-partner-fixtures": "tsx scripts/provision-development-business-partner-fixtures.ts",
+    "db:provision:development:notification-acceptance": "tsx scripts/provision-development-notification-acceptance.ts",
     "db:provision:mesh": "tsx scripts/provision-mesh.ts",
     "db:provision:three-plane:plan": "tsx scripts/provision-three-plane.ts --plan",
     "db:provision:three-plane": "tsx scripts/provision-three-plane.ts --apply",

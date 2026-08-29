@@ -44,6 +44,12 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
           name=COALESCE(${nullableText(row,"name")},name),display_name=COALESCE(${nullableText(row,"display_name")},display_name),legal_name=COALESCE(${nullableText(row,"legal_name")},legal_name),partner_category=COALESCE(${nullableText(row,"partner_category")},partner_category),legal_form=COALESCE(${nullableText(row,"legal_form")},legal_form),registration_country_code=COALESCE(${nullableText(row,"registration_country_code")},registration_country_code),incorporation_date=COALESCE(${nullableText(row,"incorporation_date")}::date,incorporation_date),website_url=COALESCE(${nullableText(row,"website_url")},website_url),description=COALESCE(${nullableText(row,"description")},description),metadata=CASE WHEN ${has(row,"metadata")} THEN ${JSON.stringify(object(row,"metadata"))}::jsonb ELSE metadata END,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
           WHERE tenant_id=${context.tenantId}::uuid AND id=${partnerId}::uuid`.execute(transaction);
       const role = nullableText(row, "partner_role") ?? "supplier";
+      if (role === "supplier") await sql`INSERT INTO master.supplier(tenant_id,business_partner_id,supplier_code,supplier_type,metadata,status,created_by)
+        VALUES(${context.tenantId}::uuid,${partnerId}::uuid,${code},'general',${JSON.stringify(object(row,"role_metadata"))}::jsonb,'active',${context.principalId}::uuid)
+        ON CONFLICT(tenant_id,business_partner_id) DO NOTHING`.execute(transaction);
+      if (role === "customer") await sql`INSERT INTO master.customer(tenant_id,business_partner_id,customer_code,customer_type,metadata,status,created_by)
+        VALUES(${context.tenantId}::uuid,${partnerId}::uuid,${code},'corporate',${JSON.stringify(object(row,"role_metadata"))}::jsonb,'active',${context.principalId}::uuid)
+        ON CONFLICT(tenant_id,business_partner_id) DO NOTHING`.execute(transaction);
       await sql`INSERT INTO master.business_partner_operating_organization_assignment(tenant_id,business_partner_id,operating_organization_id,partner_role,effective_from,metadata,status,created_by)
         VALUES(${context.tenantId}::uuid,${partnerId}::uuid,${organizationId}::uuid,${role},COALESCE(${nullableText(row,"effective_from")}::date,CURRENT_DATE),${JSON.stringify(object(row,"assignment_metadata"))}::jsonb,'active',${context.principalId}::uuid)
         ON CONFLICT DO NOTHING`.execute(transaction);
@@ -55,7 +61,7 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
 
 function neonScope(scope: Scope) { return scope.constraints.find(item => item.kind === "neon.business_partner.operating_organization.v1"); }
 function requiredNeonScope(scope: Scope) { const value = neonScope(scope); if (!value || value.kind !== "neon.business_partner.operating_organization.v1") throw new Error("Neon import scope is unavailable"); return value.operatingOrganizationId; }
-function conflict(policy: "reject" | "skip", message: string) { if (policy === "skip") return { outcome: "skipped" as const }; throw new Error(message); }
+function conflict(policy: "reject" | "skip", message: string) { if (policy === "skip") return { outcome: "skipped" as const }; throw Object.assign(new Error(message), { code: "IMPORT_CONFLICT", retryable: false as const }); }
 function has(row: Row, key: string) { return Object.prototype.hasOwnProperty.call(row, key); }
 function text(row: Row, key: string) { const value = row[key]; if (typeof value !== "string" || !value.trim()) throw new Error(`IMPORT_FIELD_REQUIRED:${key}`); return value.trim(); }
 function nullableText(row: Row, key: string) { const value = row[key]; return typeof value === "string" && value.trim() ? value.trim() : null; }

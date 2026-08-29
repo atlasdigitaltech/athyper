@@ -18,6 +18,7 @@ const planes = ["neon", "mesh", "studio"] as const;
 async function main(): Promise<void> {
   await fs.mkdir(iamDir, { recursive: true });
   await fs.mkdir(legacyGatewayDir, { recursive: true });
+  await Promise.all(["admin-wordmark-black.png", "mesh-wordmark-black.png", "neon-wordmark-black.png"].map((name) => fs.rm(path.join(legacyGatewayDir, name), { force: true })));
 
   const embeddedStatuses = new Map(
     await Promise.all(embeddedStatusPaths.map(async (statusPath) => [statusPath, await fs.readFile(statusPath, "utf8")] as const)),
@@ -28,7 +29,7 @@ async function main(): Promise<void> {
     const iamTarget = path.join(iamDir, `${plane}-advertising.svg`);
     const legacyTarget = path.join(legacyGatewayDir, `${plane}-advertising.svg`);
     const applicationTarget = path.join(repoRoot, `apps/${plane}/public/brand/${plane}/identity-lockup.svg`);
-    const iconSource = path.join(repoRoot, `apps/${plane}/public/brand/${plane}/icon.png`);
+    const iconSource = path.join(repoRoot, `apps/${plane}/public/brand/${plane}/app-icon.png`);
     const iconTarget = path.join(legacyGatewayDir, `${plane}-icon.png`);
 
     await Promise.all([

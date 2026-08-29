@@ -1,9 +1,9 @@
 "use client";
 
-import { BellIcon, CheckIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, CloseIcon, InboxIcon, InfoIcon, WarningIcon } from "@athyper/platform-icons";
+import { BellIcon, CheckIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, InboxIcon, InfoIcon, WarningIcon } from "@athyper/platform-icons";
+import { Drawer } from "@athyper/platform-ui";
 import * as React from "react";
-import { createPortal } from "react-dom";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 export type ShellActivityTab = "notifications" | "inbox";
 export type ShellNotificationTone = "info" | "success" | "warning" | "critical";
@@ -66,9 +66,6 @@ interface ShellActivityCenterProps {
 }
 
 export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClose }: ShellActivityCenterProps) {
-  const panel = useRef<HTMLElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const [portalReady, setPortalReady] = useState(false);
   const notifications = dataSource?.notifications ?? [];
   const inbox = dataSource?.inbox ?? [];
   const [notificationScope, setNotificationScope] = useState<"all" | "unread">("all");
@@ -81,43 +78,25 @@ export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClos
     ? groupItems(visibleNotifications)
     : groupItems(visibleInbox);
   const fullPageHref = activeTab === "notifications" ? dataSource?.notificationsHref : dataSource?.inboxHref;
+  const content = <>{dataSource?.loading ? <ActivityLoading/> : null}
+    {!dataSource?.loading && dataSource?.error ? <ActivityError message={dataSource.error} onRetry={dataSource.onRetry}/> : null}
+    {!dataSource?.loading && !dataSource?.error && groups.map((group) => <section className="athyper-activity-center__group" key={group.label}>
+      <header><strong>{group.label}</strong><span>{group.items.length}</span></header>
+      <ul>{group.items.map((item) => <li key={item.id}>{activeTab === "notifications"
+        ? <NotificationRow item={item as ShellNotificationItem} onMarkRead={dataSource?.onMarkNotificationRead}/>
+        : <InboxRow item={item as ShellInboxItem} onComplete={dataSource?.onCompleteInboxItem}/>}</li>)}</ul>
+    </section>)}
+    {!dataSource?.loading && !dataSource?.error && !groups.length ? <ActivityEmpty tab={activeTab} filtered={activeTab === "notifications" ? notificationScope === "unread" : inboxScope === "priority"}/> : null}</>;
 
-  useEffect(() => setPortalReady(true), []);
-  useEffect(() => {
-    if (!portalReady) return;
-    closeButton.current?.focus();
-    const handleKeyboard = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { event.preventDefault(); onClose(); return; }
-      if (event.key !== "Tab") return;
-      const focusable = Array.from(panel.current?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),[tabindex]:not([tabindex="-1"])') ?? []);
-      const first = focusable[0], last = focusable.at(-1);
-      if (!first || !last) return;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    window.addEventListener("keydown", handleKeyboard);
-    return () => window.removeEventListener("keydown", handleKeyboard);
-  }, [onClose, portalReady]);
+  return <Drawer.Root open onOpenChange={(open) => { if (!open) onClose(); }}><Drawer.Panel id="athyper-activity-center" size="standard" variant="activity" mobilePresentation="fullscreen" className="athyper-activity-center">
+    <Drawer.Header className="athyper-activity-center__header" icon={<span className="athyper-activity-center__hero" data-tab={activeTab}><ActivityGlyph kind={activeTab}/></span>} title="Activity center" description="Updates and work that need your attention" closeLabel="Close activity center"/>
+    <Drawer.Tabs value={activeTab} onValueChange={(value) => onTabChange(value as ShellActivityTab)}>
+      <Drawer.Navigation className="athyper-activity-center__tabs" aria-label="Activity type"><Drawer.TabList className="athyper-activity-center__tab-list">
+        <ActivityTab label="Notifications" kind="notifications" count={unreadCount}/>
+        <ActivityTab label="Inbox" kind="inbox" count={dataSource?.openInboxCount ?? inbox.length}/>
+      </Drawer.TabList></Drawer.Navigation>
 
-  if (!portalReady) return null;
-  return createPortal(<>
-    <button className="athyper-activity-center__scrim" type="button" aria-label="Close activity center" onClick={onClose} />
-    <aside ref={panel} id="athyper-activity-center" className="athyper-activity-center" role="dialog" aria-modal="true" aria-labelledby="athyper-activity-center-title">
-      <header className="athyper-activity-center__header">
-        <span className="athyper-activity-center__hero" data-tab={activeTab} aria-hidden="true"><ActivityGlyph kind={activeTab}/></span>
-        <span>
-          <strong id="athyper-activity-center-title">Activity center</strong>
-          <small>Updates and work that need your attention</small>
-        </span>
-        <button ref={closeButton} className="athyper-activity-center__close" type="button" aria-label="Close activity center" onClick={onClose}><CloseIcon size={18}/></button>
-      </header>
-
-      <div className="athyper-activity-center__tabs" role="tablist" aria-label="Activity type">
-        <ActivityTab label="Notifications" kind="notifications" count={unreadCount} active={activeTab === "notifications"} onSelect={onTabChange}/>
-        <ActivityTab label="Inbox" kind="inbox" count={dataSource?.openInboxCount ?? inbox.length} active={activeTab === "inbox"} onSelect={onTabChange}/>
-      </div>
-
-      <div className="athyper-activity-center__toolbar">
+      <Drawer.Toolbar className="athyper-activity-center__toolbar">
         <div className="athyper-activity-center__filters" aria-label={`${activeTab === "notifications" ? "Notification" : "Inbox"} filters`}>
           {activeTab === "notifications" ? <>
             <FilterButton label="All" count={notifications.length} active={notificationScope === "all"} onClick={() => setNotificationScope("all")}/>
@@ -131,23 +110,11 @@ export function ShellActivityCenter({ activeTab, dataSource, onTabChange, onClos
           {unreadCount > 0 && dataSource?.onMarkAllNotificationsRead ? <button className="athyper-activity-center__quiet-action" type="button" onClick={() => void dataSource.onMarkAllNotificationsRead?.()}>Mark all read</button> : null}
           <PushEnrollmentControl dataSource={dataSource}/>
         </div> : null}
-      </div>
-
-      <div id="athyper-activity-center-content" className="athyper-activity-center__content" role="tabpanel" aria-labelledby={`athyper-activity-tab-${activeTab}`} aria-live="polite">
-        {dataSource?.loading ? <ActivityLoading/> : null}
-        {!dataSource?.loading && dataSource?.error ? <ActivityError message={dataSource.error} onRetry={dataSource.onRetry}/> : null}
-        {!dataSource?.loading && !dataSource?.error && groups.map((group) => <section className="athyper-activity-center__group" key={group.label}>
-          <header><strong>{group.label}</strong><span>{group.items.length}</span></header>
-          <ul>{group.items.map((item) => <li key={item.id}>{activeTab === "notifications"
-            ? <NotificationRow item={item as ShellNotificationItem} onMarkRead={dataSource?.onMarkNotificationRead}/>
-            : <InboxRow item={item as ShellInboxItem} onComplete={dataSource?.onCompleteInboxItem}/>}</li>)}</ul>
-        </section>)}
-        {!dataSource?.loading && !dataSource?.error && !groups.length ? <ActivityEmpty tab={activeTab} filtered={activeTab === "notifications" ? notificationScope === "unread" : inboxScope === "priority"}/> : null}
-      </div>
-
-      {fullPageHref ? <footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronRightIcon/></a></footer> : null}
-    </aside>
-  </>, document.body);
+      </Drawer.Toolbar>
+      <Drawer.Body className="athyper-activity-center__content" aria-live="polite"><Drawer.TabPanel id="athyper-activity-center-content" value="notifications" mount="lazy">{content}</Drawer.TabPanel><Drawer.TabPanel id="athyper-activity-center-content" value="inbox" mount="lazy">{content}</Drawer.TabPanel></Drawer.Body>
+      {fullPageHref ? <Drawer.Footer className="athyper-activity-center__footer"><a href={fullPageHref}>View all {activeTab}<ChevronRightIcon/></a></Drawer.Footer> : null}
+    </Drawer.Tabs>
+  </Drawer.Panel></Drawer.Root>;
 }
 
 function PushEnrollmentControl({dataSource}:{readonly dataSource?:ShellActivityDataSource}) {
@@ -158,8 +125,8 @@ function PushEnrollmentControl({dataSource}:{readonly dataSource?:ShellActivityD
   return <button className="athyper-activity-center__quiet-action" type="button" title={dataSource?.pushEnrollmentError} onClick={()=>void dataSource?.onEnableBrowserPush?.()}>Enable alerts</button>;
 }
 
-function ActivityTab({ label, kind, count, active, onSelect }: { readonly label: string; readonly kind: ShellActivityTab; readonly count: number; readonly active: boolean; readonly onSelect: (tab: ShellActivityTab) => void }) {
-  return <button id={`athyper-activity-tab-${kind}`} type="button" role="tab" aria-selected={active} aria-controls="athyper-activity-center-content" onClick={() => onSelect(kind)}><span><ActivityGlyph kind={kind}/>{label}</span>{count > 0 ? <b aria-label={`${count} ${kind === "notifications" ? "unread" : "open"}`}>{formatCount(count)}</b> : null}</button>;
+function ActivityTab({ label, kind, count }: { readonly label: string; readonly kind: ShellActivityTab; readonly count: number }) {
+  return <Drawer.Tab id={`athyper-activity-tab-${kind}`} value={kind} aria-controls="athyper-activity-center-content"><span><ActivityGlyph kind={kind}/>{label}</span>{count > 0 ? <b aria-label={`${count} ${kind === "notifications" ? "unread" : "open"}`}>{formatCount(count)}</b> : null}</Drawer.Tab>;
 }
 
 function FilterButton({ label, count, active, onClick }: { readonly label: string; readonly count: number; readonly active: boolean; readonly onClick: () => void }) {

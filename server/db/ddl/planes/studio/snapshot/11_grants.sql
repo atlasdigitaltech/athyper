@@ -126,3 +126,13 @@ BEGIN
     END IF;
 END
 $$;
+REVOKE ALL ON snapshot.business_partner_definition_revision FROM PUBLIC;
+REVOKE ALL ON FUNCTION snapshot.trg_guard_business_partner_definition_revision() FROM PUBLIC;
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_publication_service') THEN
+    GRANT SELECT,INSERT ON snapshot.business_partner_definition_revision TO athyper_publication_service;
+  END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+    GRANT ALL PRIVILEGES ON snapshot.business_partner_definition_revision TO athyperadmin;
+  END IF;
+END $$;

@@ -93,11 +93,15 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE ON
             mesh.network_account_profile,
             mesh.network_account_commodity_capability,
+            mesh.network_account_industry_classification,
             mesh.network_account_tax_registration,
             mesh.bank_party,
             mesh.bank_account_link,
-            mesh.bank_account_disclosure
+            mesh.bank_account_disclosure,
+            mesh.bank_account_disclosure_event
         TO athyperapp;
+        GRANT SELECT, INSERT ON mesh.network_account_profile_publication,mesh.network_account_profile_publication_event TO athyperapp;
+        GRANT EXECUTE ON FUNCTION mesh.profile_publication_payload_is_safe(jsonb),mesh.profile_publication_is_visible(uuid) TO athyperapp;
         GRANT INSERT, UPDATE ON mesh.bank_account TO athyperapp;
         GRANT SELECT (
             id, tenant_id, network_account_id, code, name, bank_party_id,
@@ -113,11 +117,13 @@ BEGIN
         GRANT ALL PRIVILEGES ON
             mesh.network_account_profile,
             mesh.network_account_commodity_capability,
+            mesh.network_account_industry_classification,
             mesh.network_account_tax_registration,
             mesh.bank_party,
             mesh.bank_account,
             mesh.bank_account_link,
-            mesh.bank_account_disclosure
+            mesh.bank_account_disclosure,
+            mesh.bank_account_disclosure_event
         TO athyperadmin;
     END IF;
 END;

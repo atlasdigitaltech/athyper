@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { EntityListDataOperationsV1, EntityListDescriptorV1, EntityListResultV1, JsonValue, ListFieldDescriptorV1, ListFilterV1, ListSortV1, ListViewMode } from "@athyper/contract-platform-entity-list";
+import type { EntityListDataOperationsV1, EntityListDescriptorV1, EntityListResultV1, JsonValue, ListFieldDescriptorV1, ListFilterOperator, ListFilterV1, ListSortV1, ListViewMode } from "@athyper/contract-platform-entity-list";
 import type { Authorizer, EffectiveAuthorizationScope, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EntityFieldDescriptor, EntityListDefaultStateDescriptor, EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-contract-metadata";
 import type { ListRecordsQuery, RecordCollectionScopeResolution, RecordCollectionScopeResolver } from "@athyper/server-contract-records";
@@ -104,13 +104,14 @@ export function compileEntityListDescriptor(context: VerifiedRequestContext, des
   const defaultGroup = configuredState?.group && ordered.some((field) => field.key === configuredState.group && field.groupable) ? configuredState.group : undefined;
   const defaultMode = configuredState?.mode && modes.includes(configuredState.mode) ? configuredState.mode : modes[0]!;
   const minimumQueryLength = descriptor.listPresentation?.search?.minimumQueryLength ?? 1;
-  const surfaceProjection = { entityCode: descriptor.entityCode, fields: ordered, modes, pageSizes, maxSortLevels, defaultSort, defaultFilters, defaultGroup, defaultMode, minimumQueryLength };
+  const filterPresentation = resolveFilterPresentation(descriptor, ordered);
+  const surfaceProjection = { entityCode: descriptor.entityCode, fields: ordered, modes, pageSizes, maxSortLevels, defaultSort, defaultFilters, defaultGroup, defaultMode, minimumQueryLength, filterPresentation };
   return Object.freeze({
     schemaVersion: 1,
     plane: descriptor.planeKey,
-    entity: Object.freeze({ code: descriptor.entityCode, label, pluralLabel: pluralize(label), identityField: identityKey }),
+    entity: Object.freeze({ code: descriptor.entityCode, label, pluralLabel: pluralize(label), identityField: identityKey, ...(descriptor.detailRouteTemplate ? { detailRouteTemplate: descriptor.detailRouteTemplate } : {}) }),
     revision: Object.freeze({ release: descriptor.releaseNo, descriptorHash: normalizeDigest(descriptor.compiledHash), surfaceHash: digest(surfaceProjection) }),
-    surface: Object.freeze({ key: "default_list", title: descriptor.listPresentation?.title ?? pluralize(label), description: descriptor.listPresentation?.description ?? `Read-only ${pluralize(label).toLowerCase()} available to your current access.`, defaultState: Object.freeze({ ...(configuredState?.query ? { query: configuredState.query } : {}), filters: defaultFilters, sort: defaultSort, ...(defaultGroup ? { group: defaultGroup } : {}), columns, density: configuredState?.density ?? descriptor.listPresentation?.defaultDensity ?? "comfortable", mode: defaultMode }), supportedModes: modes, search: Object.freeze({ ...(descriptor.listPresentation?.search?.profileKey ? { profileKey: descriptor.listPresentation.search.profileKey } : {}), minimumQueryLength }) }),
+    surface: Object.freeze({ key: "default_list", title: descriptor.listPresentation?.title ?? pluralize(label), description: descriptor.listPresentation?.description ?? `Read-only ${pluralize(label).toLowerCase()} available to your current access.`, defaultState: Object.freeze({ ...(configuredState?.query ? { query: configuredState.query } : {}), filters: defaultFilters, sort: defaultSort, ...(defaultGroup ? { group: defaultGroup } : {}), columns, density: configuredState?.density ?? descriptor.listPresentation?.defaultDensity ?? "comfortable", mode: defaultMode }), supportedModes: modes, search: Object.freeze({ ...(descriptor.listPresentation?.search?.profileKey ? { profileKey: descriptor.listPresentation.search.profileKey } : {}), minimumQueryLength }), filterPresentation }),
     fields: ordered,
     actions: Object.freeze([]),
     ...(dataOperations ? { dataOperations } : {}),
@@ -138,11 +139,11 @@ async function effectiveDataOperations(authorizer: Authorizer, context: Verified
   const importModes=new Set(config?.importOperations??["create","update","upsert"]);
   const modeAllowed=async(mode:"create"|"update"|"upsert"|"delete"|"replace")=>{const permissions=config?.importOperationPermissions?.[mode]??[];if(!permissions.length)return false;const decisions=await Promise.all(permissions.map(permissionCode=>authorizer.authorize({context,permissionCode,resource})));return decisions.every(decision=>decision.allowed);};
   const [createAllowed,updateAllowed,upsertAllowed,deleteAllowed,replaceAllowed]=await Promise.all([modeAllowed("create"),modeAllowed("update"),modeAllowed("upsert"),modeAllowed("delete"),modeAllowed("replace")]);
-  const exportFormats = Object.freeze(config?.exportFormats?.length ? [...new Set(config.exportFormats)] : ["csv", "json", "ndjson"] as const);
+  const exportFormats = Object.freeze(config?.exportFormats?.length ? [...new Set(config.exportFormats)] : ["xlsx", "csv", "json", "ndjson"] as const);
   const importFormats = Object.freeze(config?.importFormats?.length ? [...new Set(config.importFormats)] : ["csv", "json"] as const);
   return Object.freeze({
     export: Object.freeze({
-      currentPage: enabled(undefined, 500), selected: enabled(undefined, 500), filtered: serverExport,
+      currentPage: serverExport, selected: serverExport, filtered: serverExport,
       all: exportAuthority?.allowed && config?.allowEntireEntityExport === true && scope?.tenantWide ? serverExport : hidden,
       formats: exportFormats, defaultFormat: exportFormats[0]!, exportableFields: Object.freeze(readable.map((field) => field.key)),
       asynchronousThreshold: config?.asynchronousThreshold ?? 5_000,
@@ -196,6 +197,21 @@ function normalizeDefaultSort(value: readonly ListSortV1[] | undefined, fields: 
 function configuredFilterOperators(field: EntityFieldDescriptor): ListFieldDescriptorV1["filterOperators"] {
   return recordFieldFilterOperators(field);
 }
+
+function resolveFilterPresentation(descriptor: EntityRuntimeDescriptor, fields: readonly ListFieldDescriptorV1[]): EntityListDescriptorV1["surface"]["filterPresentation"] {
+  const byKey = new Map(fields.map((field) => [field.key, field])), configured = descriptor.listPresentation?.filterPresentation?.quickFields ?? [];
+  const metadata = configured.flatMap((item) => {
+    const field = byKey.get(item.field);
+    if (!field?.filterOperators.length) return [];
+    const defaultOperator = item.defaultOperator && field.filterOperators.includes(item.defaultOperator as ListFilterOperator) ? item.defaultOperator as ListFilterOperator : preferredFilterOperator(field);
+    return [Object.freeze({ field: field.key, defaultOperator })];
+  }).slice(0, 4);
+  const quickFields = metadata.length ? metadata : fields.filter((field) => field.filterOperators.length).sort((left, right) => quickFilterPriority(left) - quickFilterPriority(right)).slice(0, 4).map((field) => Object.freeze({ field: field.key, defaultOperator: preferredFilterOperator(field) }));
+  return Object.freeze({ quickFields: Object.freeze(quickFields), source: metadata.length ? "metadata" : "fallback", allowUserPinning: descriptor.listPresentation?.filterPresentation?.allowUserPinning === true });
+}
+
+function quickFilterPriority(field: ListFieldDescriptorV1): number { const value = `${field.key} ${field.label}`; return field.semanticRole === "status" || /\bstatus\b/i.test(value) ? 0 : /category|group|class|kind/i.test(value) ? 1 : field.semanticRole === "country_code" || /country/i.test(value) ? 2 : field.semanticRole === "updated_at" || /updated|modified/i.test(value) ? 3 : 10 + field.defaultOrder; }
+function preferredFilterOperator(field: ListFieldDescriptorV1): ListFilterOperator { const preferred = field.valueKind === "date" || field.valueKind === "datetime" ? "relative" : field.filterOptions?.length || field.valueKind === "enum" || field.valueKind === "boolean" || field.valueKind === "reference" ? "eq" : "contains"; return field.filterOperators.includes(preferred) ? preferred : field.filterOperators[0]!; }
 
 function normalizeDefaultFilters(value: EntityListDefaultStateDescriptor["filters"], fields: readonly ListFieldDescriptorV1[]): readonly ListFilterV1[] {
   const byKey = new Map(fields.map((field) => [field.key, field]));

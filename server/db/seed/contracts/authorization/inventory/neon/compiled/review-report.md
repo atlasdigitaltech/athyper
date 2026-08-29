@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 ## Coverage
 
-- Physical tables: 260 (140 master, 120 document)
-- Reviewed tables: 45
-- Pending business review: 215
+- Physical tables: 269 (141 master, 128 document)
+- Reviewed tables: 50
+- Pending business review: 219
 - Proposed operations: 43
 - Proposed lifecycles: 6
 - Studio-to-Neon organization resource contracts: 3
@@ -17,11 +17,11 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 | Classification | Tables |
 | --- | ---: |
-| aggregate_child | 19 |
-| aggregate_root | 11 |
+| aggregate_child | 21 |
+| aggregate_root | 13 |
 | immutable_evidence | 1 |
 | projection_derived_state | 5 |
-| sensitive_overlay | 5 |
+| sensitive_overlay | 6 |
 | technical_work_state | 4 |
 
 ## Reviewed tables
@@ -37,6 +37,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | document.attachment_quota_reservation | attachment_content | technical_work_state | document.attachment | @athyper/svc-attachments | tenant |
 | document.attachment_quota_usage | attachment_content | projection_derived_state | document.attachment | @athyper/svc-attachments | tenant |
 | document.attachment_series | attachment_content | aggregate_child | document.attachment | @athyper/svc-attachments | resource |
+| document.business_partner_request | business_partner_onboarding | aggregate_root | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
+| document.business_partner_request_evidence | business_partner_onboarding | sensitive_overlay | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
+| document.business_partner_request_validation | business_partner_onboarding | aggregate_child | document.business_partner_request | @athyper/server-plane-neon | operating_organization |
 | document.comment | attachment_content | aggregate_root | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_draft | attachment_content | aggregate_child | document.comment | @athyper/platform-collaboration | resource |
 | document.comment_feed_cursor | attachment_content | projection_derived_state | document.comment | @athyper/platform-collaboration | resource |
@@ -52,10 +55,12 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | document.multipart_upload | attachment_content | technical_work_state | document.attachment | @athyper/svc-attachments | resource |
 | document.multipart_upload_part | attachment_content | technical_work_state | document.attachment | @athyper/svc-attachments | resource |
 | document.render_output | attachment_content | projection_derived_state | document.content_item | @athyper/svc-document-processing | resource |
+| document.supplier_registration_invitation | business_partner_onboarding | aggregate_root | document.supplier_registration_invitation | @athyper/server-service-master-data | operating_organization |
 | master.business_partner | business_partner | aggregate_root | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_commodity_capability | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_governance_relation | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_identifier | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
+| master.business_partner_industry_classification | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_operating_organization_assignment | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.business_partner_relationship | business_partner | aggregate_root | master.business_partner_relationship | @athyper/svc-records | operating_organization |
 | master.business_partner_tax_registration | business_partner | sensitive_overlay | master.business_partner | @athyper/svc-records | legal_entity |
@@ -186,6 +191,7 @@ Required before enforcement:
 - document.bank_statement_line
 - document.budget_allocation
 - document.budget_profile
+- document.business_partner_bank_verification
 - document.catalog_import
 - document.catalog_import_line
 - document.commitment
@@ -213,6 +219,9 @@ Required before enforcement:
 - document.leave_balance_entry
 - document.leave_request
 - document.match_exception
+- document.mesh_business_partner_acceptance
+- document.mesh_business_partner_acceptance_event
+- document.mesh_business_partner_match
 - document.netting_batch
 - document.obligation_horizon
 - document.offboarding_case
@@ -394,5 +403,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 215 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 219 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

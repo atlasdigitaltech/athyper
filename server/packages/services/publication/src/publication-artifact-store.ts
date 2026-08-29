@@ -57,13 +57,15 @@ export function publicationArtifactKey(input: {
   readonly releaseNo: number;
   readonly releaseId: string;
   readonly targetPlane: PublicationPlane;
+  readonly artifactKind?: import("@athyper/server-contract-publication").PublicationArtifactKind;
   readonly contentHash: string;
 }): string {
   const publicationKey = requireSegment(input.publicationKey, "publication key");
   const releaseId = requireSegment(input.releaseId, "release ID");
   if (!Number.isSafeInteger(input.releaseNo) || input.releaseNo < 1) throw new TypeError("Release number must be a positive safe integer");
   if (!/^[a-f0-9]{64}$/.test(input.contentHash)) throw new TypeError("Artifact content hash must be lowercase SHA-256");
-  return `publication/v1/${publicationKey}/releases/${input.releaseNo}-${releaseId}/${input.targetPlane}/entity-runtime-${input.contentHash}.json`;
+  const artifactKind = requireSegment(input.artifactKind ?? "entity_runtime", "artifact kind").replaceAll("_", "-");
+  return `publication/v1/${publicationKey}/releases/${input.releaseNo}-${releaseId}/${input.targetPlane}/${artifactKind}-${input.contentHash}.json`;
 }
 
 export function publicationArtifactUri(bucket: string, key: string): string {

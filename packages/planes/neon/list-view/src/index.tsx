@@ -1,17 +1,22 @@
 "use client";
 import type { EntityListScopeCoordinateV1 } from "@athyper/contract-platform-entity-list";
-import { EntityListRuntime, ListScopeControl } from "@athyper/platform-entity-list-view";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { EntityListRuntime, ListScopeControl, type EntityListPageAction } from "@athyper/platform-entity-list-view";
+import { useApiClient, usePermissions } from "@athyper/platform-shell-app-foundation";
 import { useNeonOperatingOrganization, useNeonWorkContext } from "@athyper/product-neon-shell";
 import { useEffect, useMemo, useState } from "react";
 
 export function NeonEntityList({ entityCode }: { readonly entityCode: string }) {
   const client = useApiClient();
+  const permissions = usePermissions();
   if (entityCode !== "business_partner") return <EntityListRuntime client={client} entityCode={entityCode}/>;
-  return <ScopedBusinessPartnerList client={client} entityCode={entityCode}/>;
+  const pageActions: readonly EntityListPageAction[] = [
+    { href: "/app/business_partner/requests", label: "Onboarding requests" },
+    ...(permissions.has("neon.relationship.business_partner_request.create") ? [{ href: "/app/business_partner/new", label: "New supplier request", variant: "primary" as const }] : []),
+  ];
+  return <ScopedBusinessPartnerList client={client} entityCode={entityCode} pageActions={pageActions}/>;
 }
 
-function ScopedBusinessPartnerList({ client, entityCode }: { readonly client: ReturnType<typeof useApiClient>; readonly entityCode: string }) {
+function ScopedBusinessPartnerList({ client, entityCode, pageActions }: { readonly client: ReturnType<typeof useApiClient>; readonly entityCode: string; readonly pageActions: readonly EntityListPageAction[] }) {
   const work = useNeonWorkContext();
   const operating = useNeonOperatingOrganization();
   const [organizationId, setOrganizationId] = useState<string>();
@@ -25,5 +30,5 @@ function ScopedBusinessPartnerList({ client, entityCode }: { readonly client: Re
   }, [compatible]);
   const coordinate = useMemo<EntityListScopeCoordinateV1 | undefined>(() => organizationId ? Object.freeze({ ...(company ? { companyCodeId: company.companyCodeId, legalEntityId: company.legalEntityId } : {}), operatingOrganizationId: organizationId }) : undefined, [company?.companyCodeId, company?.legalEntityId, organizationId]);
   const control = <ListScopeControl id="neon-list-operating-organization" label="Organization" value={organizationId} options={compatible.map((organization) => ({ value: organization.id, label: `${organization.code} · ${organization.displayName}` }))} status={operating.status} loadingLabel="Loading operating organizations…" emptyLabel="No compatible operating organizations" selectLabel="Select an operating organization" summaryLabel="Authorized operating organization" summaryDetails={company ? ["Company access is applied"] : undefined} accessLabel="Read-only access" onChange={setOrganizationId}/>;
-  return <EntityListRuntime client={client} entityCode={entityCode} scopeCoordinate={coordinate} scopeControl={control}/>;
+  return <EntityListRuntime client={client} entityCode={entityCode} scopeCoordinate={coordinate} scopeControl={control} headerDescription="Organization-scoped partner master and governed onboarding." pageActions={pageActions}/>;
 }

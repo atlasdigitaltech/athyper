@@ -65,6 +65,13 @@ describe("S3 object-storage adapter", () => {
       createS3ObjectStorageAdapter({
         region: "us-east-1",
         bucket: "documents",
+        publicEndpoint: "ftp://objects.test",
+      }),
+    ).toThrow("public endpoint");
+    expect(() =>
+      createS3ObjectStorageAdapter({
+        region: "us-east-1",
+        bucket: "documents",
         accessKeyId: "key-only",
       }),
     ).toThrow("configured together");
@@ -216,6 +223,20 @@ describe("S3 object-storage adapter", () => {
     await expect(adapter.createDownloadUrl("file", 604_801)).rejects.toThrow(
       "604800",
     );
+  });
+
+  it("signs browser URLs with the separately configured public client", async () => {
+    const internal = { send: vi.fn(), destroy: vi.fn() } as unknown as S3Client;
+    const signing = { send: vi.fn(), destroy: vi.fn() } as unknown as S3Client;
+    const adapter = new S3ObjectStorageRuntime(internal, {
+      region: "us-east-1", bucket: "documents", forcePathStyle: true,
+      multipartPartSizeBytes: 5 * 1024 * 1024, multipartQueueSize: 4,
+      maxUploadBytes: 100 * 1024 * 1024, presignedTtlSeconds: 900,
+    }, signing);
+    await adapter.createDownloadUrl("report.ndjson", 60);
+    expect(sdkMocks.signedUrl).toHaveBeenCalledWith(signing, expect.any(GetObjectCommand), { expiresIn: 60 });
+    adapter.close();
+    expect(signing.destroy).toHaveBeenCalled();
   });
 
   it("characterizes health and access-probe behavior", async () => {

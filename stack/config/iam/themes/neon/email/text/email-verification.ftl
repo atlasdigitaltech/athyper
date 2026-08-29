@@ -18,15 +18,15 @@ by clicking or copying the link below:
 
   ${link}
 
-⚠  This link expires in ${linkExpiration} minutes.
+Warning: This link expires in ${linkExpiration} minutes.
    If it has expired, sign in again — you'll be prompted to re-verify.
 
 ─────────────────────────────────────────────
 WHAT HAPPENS NEXT?
 
-✓  Your account is activated immediately after verification.
-✓  You'll be redirected back to the platform automatically.
-✓  Your data and settings are safe and waiting for you.
+- Your account is activated immediately after verification.
+- You'll be redirected back to the platform automatically.
+- Your data and settings are safe and waiting for you.
 
 ─────────────────────────────────────────────
 DIDN'T SIGN UP?

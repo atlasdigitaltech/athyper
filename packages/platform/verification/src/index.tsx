@@ -3,6 +3,7 @@
 import { ApiTransportError, verificationFunctionalRunOperation, verificationSnapshotOperation, type PlatformVerificationRun, type VerificationCheckResult, type VerificationPlane } from "@athyper/platform-api-client";
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { ContentHeader } from "@athyper/platform-shell";
+import { CircleCheckIcon, MinusIcon, WarningIcon } from "@athyper/platform-icons";
 import { Button } from "@athyper/platform-ui";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -42,7 +43,7 @@ export function SystemVerificationPage({ plane }: { readonly plane: Verification
   </section>;
 }
 
-function Check({ value }: { readonly value: VerificationCheckResult }) { return <li className={`verification__check verification__check--${value.status}`}><span className="verification__check-icon" aria-label={value.status}>{value.status === "passed" ? "✓" : value.status === "failed" ? "!" : "–"}</span><div><strong>{value.label}</strong><p>{value.detail}</p><small>{value.durationMs} ms{value.cleanup && value.cleanup !== "not-required" ? ` · cleanup ${value.cleanup}` : ""}</small></div></li>; }
+function Check({ value }: { readonly value: VerificationCheckResult }) { const StatusIcon = value.status === "passed" ? CircleCheckIcon : value.status === "failed" ? WarningIcon : MinusIcon; return <li className={`verification__check verification__check--${value.status}`}><span className="verification__check-icon" aria-label={value.status}><StatusIcon size={16}/></span><div><strong>{value.label}</strong><p>{value.detail}</p><small>{value.durationMs} ms{value.cleanup && value.cleanup !== "not-required" ? ` · cleanup ${value.cleanup}` : ""}</small></div></li>; }
 function group(checks: readonly VerificationCheckResult[]) { const result = new Map<string, VerificationCheckResult[]>(); for (const check of checks) result.set(check.category, [...(result.get(check.category) ?? []), check]); return [...result.entries()]; }
 function categoryLabel(value: string): string { return value === "runtime" ? "Worker and scheduler" : value === "document" ? "Document pipeline" : title(value); }
 function title(value: string): string { return value.charAt(0).toUpperCase() + value.slice(1); }

@@ -3,6 +3,7 @@ import type { ListRecordsQuery, RecordFilter, RecordFilterOperator, RecordMutati
 import { HttpError, defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
 import type { Application, Request, RequestHandler, Response } from "express";
 import { RecordServiceError } from "./errors.js";
+import { MAX_LIST_FIELDS, MAX_LIST_FILTERS, MAX_LIST_SORT_LEVELS } from "./list-limits.js";
 
 export interface RecordsRouteOptions {
   readonly authenticate: RequestHandler;
@@ -38,7 +39,7 @@ function param(value: string | string[] | undefined, name: string): string { con
 const objectSchema = { type: "object", additionalProperties: true } as const;
 const problemResponses = { 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Conflict" }, 422: { description: "Validation failed" }, 428: { description: "Precondition required" } } as const;
 const contracts = {
-  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: 100, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: 20, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: 10, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
+  list: defineRouteContract({ method: "get", path: "/api/records/:entityCode", operationId: "records.list", summary: "List records", tags: ["Records"], authenticated: true, request: { query: { type: "object", additionalProperties: false, properties: { limit: { type: "string", pattern: "^[0-9]{1,3}$" }, cursor: { type: "string", minLength: 1, maxLength: 4096 }, search: { type: "string", minLength: 1, maxLength: 512 }, fields: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FIELDS, items: { type: "string" } }] }, group: { type: "string", minLength: 1, maxLength: 127 }, filter: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_FILTERS, items: { type: "string" } }] }, sort: { oneOf: [{ type: "string" }, { type: "array", maxItems: MAX_LIST_SORT_LEVELS, items: { type: "string" } }] }, countMode: { type: "string", enum: ["none", "cached", "approximate", "exact"] }, hydrateReferences: { type: "string", enum: ["true", "false"] } } } }, responses: { 200: { description: "Record page", body: objectSchema }, 401: problemResponses[401], 403: problemResponses[403] } }),
   get: defineRouteContract({ method: "get", path: "/api/records/:entityCode/:recordId", operationId: "records.get", summary: "Get a record", tags: ["Records"], authenticated: true, responses: { 200: { description: "Record", body: objectSchema }, 404: { description: "Not found" } } }),
   create: defineRouteContract({ method: "post", path: "/api/records/:entityCode", operationId: "records.create", summary: "Create a record", tags: ["Records"], authenticated: true, request: { headers: { type: "object", properties: { "Idempotency-Key": { type: "string", minLength: 16, maxLength: 128 } }, required: ["Idempotency-Key"] }, body: objectSchema }, responses: { 201: { description: "Created", body: objectSchema }, ...problemResponses } }),
   patch: defineRouteContract({ method: "patch", path: "/api/records/:entityCode/:recordId", operationId: "records.patch", summary: "Patch a record", tags: ["Records"], authenticated: true, request: { headers: { type: "object", properties: { "Idempotency-Key": { type: "string", minLength: 16, maxLength: 128 }, "If-Match": { type: "integer", minimum: 0 } }, required: ["Idempotency-Key"] }, body: objectSchema }, responses: { 200: { description: "Patched", body: objectSchema }, ...problemResponses } }),
@@ -54,12 +55,12 @@ export function parseRecordListParameters(query: Readonly<Record<string, unknown
   const limit = integerQuery(query["limit"]);
   const cursor = boundedQueryText(query["cursor"], "cursor", 4096);
   const search = boundedQueryText(query["search"], "search", 512);
-  const fields = queryValues(query["fields"], "fields", 100).map((value, index) => catalogQueryCode(value, `fields[${index}]`));
+  const fields = queryValues(query["fields"], "fields", MAX_LIST_FIELDS).map((value, index) => catalogQueryCode(value, `fields[${index}]`));
   const group = query["group"] === undefined ? undefined : catalogQueryCode(query["group"], "group");
-  const filters = queryValues(query["filter"], "filter", 20).map(parseFilter);
+  const filters = queryValues(query["filter"], "filter", MAX_LIST_FILTERS).map(parseFilter);
   // Admission is capped here at the contract maximum; the Entity descriptor
   // applies its lower per-list maxSortLevels limit in the query service.
-  const sort = queryValues(query["sort"], "sort", 10).map(parseSort);
+  const sort = queryValues(query["sort"], "sort", MAX_LIST_SORT_LEVELS).map(parseSort);
   const countMode = query["countMode"] === undefined ? undefined : oneOfQuery(query["countMode"], ["none", "cached", "approximate", "exact"] as const, "countMode");
   const hydrateReferences = query["hydrateReferences"] === undefined ? undefined : oneOfQuery(query["hydrateReferences"], ["true", "false"] as const, "hydrateReferences") === "true";
   return {

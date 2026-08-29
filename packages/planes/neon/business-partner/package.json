@@ -1,0 +1,25 @@
+{
+  "name": "@athyper/product-neon-business-partner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": { ".": "./src/index.tsx", "./styles.css": "./src/styles.css" },
+  "scripts": { "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "dependencies": {
+    "@athyper/platform-api-client": "workspace:*",
+    "@athyper/platform-shell-app-foundation": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/product-neon-shell": "workspace:*"
+  },
+  "peerDependencies": { "react": "^19.2.5" },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.0"
+  }
+}

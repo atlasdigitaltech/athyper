@@ -695,6 +695,8 @@ DECLARE
 BEGIN
     IF TG_TABLE_NAME = 'business_partner_qualification' THEN
         v_role := NEW.partner_role;
+    ELSIF TG_TABLE_NAME = 'supplier_preference_designation' THEN
+        v_role := 'supplier';
     ELSIF NEW.partner_role_scope <> 'all' THEN
         v_role := NEW.partner_role_scope::text::master.partner_role_d;
     END IF;
@@ -729,11 +731,14 @@ BEGIN
                   NEW.operating_organization_id
               AND assignment.company_code_id = NEW.company_code_id
               AND assignment.status = 'active'
-              AND assignment.effective_from <= CURRENT_DATE
+              AND assignment.effective_from <= COALESCE(NEW.effective_from, CURRENT_DATE)
               AND (
                   assignment.effective_until IS NULL
-                  OR assignment.effective_until > CURRENT_DATE
+                  OR assignment.effective_until > COALESCE(NEW.effective_from, CURRENT_DATE)
               )
+              AND (TG_TABLE_NAME <> 'supplier_preference_designation'
+                   OR assignment.effective_until IS NULL
+                   OR (NEW.effective_until IS NOT NULL AND assignment.effective_until >= NEW.effective_until))
        ) THEN
         RAISE EXCEPTION
             'Company code % does not actively participate in operating organization %',
@@ -756,6 +761,51 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
 
+    IF TG_TABLE_NAME = 'supplier_preference_designation' AND NOT EXISTS (
+        SELECT 1 FROM master.supplier supplier
+         WHERE supplier.tenant_id = NEW.tenant_id
+           AND supplier.id = NEW.supplier_id
+           AND supplier.business_partner_id = NEW.business_partner_id
+           AND supplier.status <> 'archived'
+    ) THEN
+        RAISE EXCEPTION 'Supplier does not belong to the selected business partner'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_TABLE_NAME = 'supplier_preference_designation' AND NOT EXISTS (
+        SELECT 1 FROM master.business_partner_operating_organization_assignment assignment
+         WHERE assignment.tenant_id = NEW.tenant_id
+           AND assignment.business_partner_id = NEW.business_partner_id
+           AND assignment.operating_organization_id = NEW.operating_organization_id
+           AND assignment.partner_role = 'supplier'
+           AND assignment.status = 'active'
+           AND assignment.effective_from <= NEW.effective_from
+           AND (assignment.effective_until IS NULL OR assignment.effective_until > NEW.effective_from)
+           AND (assignment.effective_until IS NULL OR
+                (NEW.effective_until IS NOT NULL AND assignment.effective_until >= NEW.effective_until))
+    ) THEN
+        RAISE EXCEPTION 'Supplier is not actively assigned to the selected operating organization at effective start'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_TABLE_NAME = 'supplier_preference_designation'
+       AND NEW.commodity_category_id IS NOT NULL
+       AND NOT EXISTS (
+        SELECT 1 FROM master.business_partner_commodity_capability capability
+         WHERE capability.tenant_id = NEW.tenant_id
+           AND capability.business_partner_id = NEW.business_partner_id
+           AND capability.partner_role = 'supplier'
+           AND capability.commodity_category_id = NEW.commodity_category_id
+           AND capability.status = 'active'
+           AND capability.effective_from <= NEW.effective_from
+           AND (capability.effective_until IS NULL OR capability.effective_until > NEW.effective_from)
+           AND (capability.effective_until IS NULL OR
+                (NEW.effective_until IS NOT NULL AND capability.effective_until >= NEW.effective_until))
+    ) THEN
+        RAISE EXCEPTION 'Supplier has no active capability for the selected commodity category at effective start'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
     IF TG_TABLE_NAME = 'business_partner_qualification'
        AND NEW.risk_assessment_id IS NOT NULL
        AND NOT EXISTS (
@@ -773,6 +823,63 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION control.trg_guard_supplier_preference_designation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, control
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
+        OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id
+        OR NEW.operating_organization_id IS DISTINCT FROM OLD.operating_organization_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.commodity_category_id IS DISTINCT FROM OLD.commodity_category_id
+        OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+        OR NEW.effective_until IS DISTINCT FROM OLD.effective_until
+        OR NEW.rationale IS DISTINCT FROM OLD.rationale
+        OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+        OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'Supplier preference scope and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.row_version <> OLD.row_version + 1 THEN
+        RAISE EXCEPTION 'Supplier preference row version must advance exactly once'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status = 'pending' AND NEW.status NOT IN ('approved','rejected') THEN
+        RAISE EXCEPTION 'Pending supplier preference may only be approved or rejected'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status = 'approved' AND NEW.status <> 'revoked' THEN
+        RAISE EXCEPTION 'Approved supplier preference may only be revoked'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status IN ('rejected','revoked') THEN
+        RAISE EXCEPTION 'Terminal supplier preference is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status = 'approved' AND EXISTS (
+        SELECT 1 FROM control.supplier_preference_designation existing
+         WHERE existing.tenant_id = NEW.tenant_id
+           AND existing.id <> NEW.id
+           AND existing.supplier_id = NEW.supplier_id
+           AND existing.operating_organization_id = NEW.operating_organization_id
+           AND existing.status = 'approved'
+           AND (existing.company_code_id IS NULL OR NEW.company_code_id IS NULL OR existing.company_code_id = NEW.company_code_id)
+           AND (existing.commodity_category_id IS NULL OR NEW.commodity_category_id IS NULL OR existing.commodity_category_id = NEW.commodity_category_id)
+           AND daterange(existing.effective_from, existing.effective_until, '[)') && daterange(NEW.effective_from, NEW.effective_until, '[)')
+    ) THEN
+        RAISE EXCEPTION 'Overlapping approved supplier preference scope exists'
+            USING ERRCODE = 'exclusion_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION control.trg_guard_business_partner_qualification()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -784,11 +891,29 @@ BEGIN
         OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
         OR NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
         OR NEW.partner_role IS DISTINCT FROM OLD.partner_role
+        OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
         OR NEW.created_at IS DISTINCT FROM OLD.created_at
         OR NEW.created_by IS DISTINCT FROM OLD.created_by
     ) THEN
         RAISE EXCEPTION
             'Qualification identity and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND OLD.decision <> 'pending'
+       AND (NEW.decision IS DISTINCT FROM OLD.decision
+            OR NEW.decision_idempotency_key IS DISTINCT FROM OLD.decision_idempotency_key
+            OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+            OR NEW.reviewed_at IS DISTINCT FROM OLD.reviewed_at
+            OR NEW.reviewed_by IS DISTINCT FROM OLD.reviewed_by
+            OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
+            OR NEW.approved_by IS DISTINCT FROM OLD.approved_by) THEN
+        RAISE EXCEPTION 'Qualification decision evidence is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.row_version <> OLD.row_version + 1 THEN
+        RAISE EXCEPTION 'Qualification row version must advance exactly once'
             USING ERRCODE = 'check_violation';
     END IF;
 
@@ -3337,3 +3462,36 @@ COMMENT ON FUNCTION control.generate_fiscal_periods(
     uuid, uuid, integer, uuid, uuid, boolean
 ) IS
   'Tenant-session-bound idempotent generator for master fiscal periods and ledger book-period gates.';
+
+CREATE OR REPLACE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'NEON MESH Business Partner inbox and processing evidence are immutable' USING ERRCODE = 'integrity_constraint_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION control.trg_guard_mesh_business_partner_profile_projection()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'NEON MESH Business Partner projections are withdrawn, not deleted' USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF ROW(OLD.id, OLD.tenant_id, OLD.source_tenant_id, OLD.source_network_account_id, OLD.recipient_network_account_id, OLD.network_relationship_id)
+       IS DISTINCT FROM ROW(NEW.id, NEW.tenant_id, NEW.source_tenant_id, NEW.source_network_account_id, NEW.recipient_network_account_id, NEW.network_relationship_id) THEN
+        RAISE EXCEPTION 'NEON MESH Business Partner projection coordinates are immutable' USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    NEW.updated_at := clock_timestamp();
+    RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE FUNCTION control.trg_guard_mesh_business_partner_account_link() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control AS $$ BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'MESH Business Partner account links cannot be deleted' USING ERRCODE='restrict_violation'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.profile_projection_id,NEW.source_tenant_id,NEW.source_network_account_id,NEW.recipient_network_account_id,NEW.network_relationship_id,NEW.business_partner_id,NEW.proposed_role,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.profile_projection_id,OLD.source_tenant_id,OLD.source_network_account_id,OLD.recipient_network_account_id,OLD.network_relationship_id,OLD.business_partner_id,OLD.proposed_role,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'MESH Business Partner account link coordinates are immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND OLD.decision_fingerprint IS NOT NULL AND (NEW.decision_fingerprint,NEW.reviewed_at,NEW.reviewed_by,NEW.approved_at,NEW.approved_by,NEW.external_reference_id) IS DISTINCT FROM (OLD.decision_fingerprint,OLD.reviewed_at,OLD.reviewed_by,OLD.approved_at,OLD.approved_by,OLD.external_reference_id) THEN RAISE EXCEPTION 'MESH Business Partner account link decision evidence is immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' THEN NEW.row_version:=OLD.row_version+1; END IF; RETURN NEW; END $$;
+
+CREATE OR REPLACE FUNCTION control.trg_reject_mesh_bank_disclosure_inbox_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'MESH bank disclosure inbox is immutable' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION control.trg_guard_mesh_bank_account_projection() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control AS $$ BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'MESH bank projection history cannot be deleted' USING ERRCODE='restrict_violation'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.account_link_id,NEW.source_tenant_id,NEW.source_network_account_id,NEW.recipient_network_account_id,NEW.network_relationship_id) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.account_link_id,OLD.source_tenant_id,OLD.source_network_account_id,OLD.recipient_network_account_id,OLD.network_relationship_id) THEN RAISE EXCEPTION 'MESH bank projection coordinates are immutable' USING ERRCODE='check_violation'; END IF; RETURN NEW; END $$;

@@ -1,3 +1,26 @@
+-- seed-contract-version: 1
+-- seed-pack: neon.control.business-notification
+-- seed-pack-version: 1.0.0
+-- seed-dataset: control.notification_template;control.notification_routing_rule
+-- seed-data-class: production_reference
+-- seed-provenance: {"source":"NEON document and workflow notification contract","publisher":"Athyper","source_version":"1.0.0","retrieved_at":"2026-08-28","license":"internal"}
+-- seed-plane: neon
+-- seed-tenant-scope: none
+-- seed-natural-key: control.notification_template(tenant_id,template_key,channel,locale,version);control.notification_routing_rule(tenant_id,code)
+-- seed-cross-file-ids: false
+-- seed-id-strategy: database-generated
+-- seed-expected-row-count: exact:33
+-- seed-assertions: expected-count,orphan,uniqueness,semantic
+-- seed-demo-data: false
+-- seed-assertion: expected-count
+-- seed-assertion: orphan
+-- seed-assertion: uniqueness
+-- seed-assertion: semantic
+
+DO $guard$ BEGIN
+  IF current_setting('app.database_plane',true)<>'neon' THEN RAISE EXCEPTION 'NEON notification seed requires app.database_plane=neon'; END IF;
+END $guard$;
+
 -- Neon business-event notification defaults.
 INSERT INTO control.notification_template (
     tenant_id, template_key, channel, locale, version, subject, body_text,
@@ -15,7 +38,9 @@ INSERT INTO control.notification_template (
 ON CONFLICT (tenant_id, template_key, channel, locale, version)
 DO UPDATE SET subject = EXCLUDED.subject, body_text = EXCLUDED.body_text,
     variables_schema = EXCLUDED.variables_schema, status = EXCLUDED.status,
-    updated_at = now(), updated_by = EXCLUDED.created_by;
+    updated_at = now(), updated_by = EXCLUDED.created_by
+WHERE (control.notification_template.subject,control.notification_template.body_text,control.notification_template.variables_schema,control.notification_template.status)
+  IS DISTINCT FROM (EXCLUDED.subject,EXCLUDED.body_text,EXCLUDED.variables_schema,EXCLUDED.status);
 
 -- Neon document lifecycle and workflow-SLA contracts retained from the live
 -- platform seed. IDs are deliberately omitted so target environments allocate
@@ -127,7 +152,9 @@ INSERT INTO control.notification_template (
 ON CONFLICT (tenant_id, template_key, channel, locale, version)
 DO UPDATE SET subject = EXCLUDED.subject, body_text = EXCLUDED.body_text,
     variables_schema = EXCLUDED.variables_schema, status = EXCLUDED.status,
-    updated_at = now(), updated_by = EXCLUDED.created_by;
+    updated_at = now(), updated_by = EXCLUDED.created_by
+WHERE (control.notification_template.subject,control.notification_template.body_text,control.notification_template.variables_schema,control.notification_template.status)
+  IS DISTINCT FROM (EXCLUDED.subject,EXCLUDED.body_text,EXCLUDED.variables_schema,EXCLUDED.status);
 
 INSERT INTO control.notification_routing_rule (
     tenant_id, code, name, description, event_type, entity_type, template_key,
@@ -148,7 +175,9 @@ DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description,
     priority = EXCLUDED.priority, recipient_rules = EXCLUDED.recipient_rules,
     dedup_window_ms = EXCLUDED.dedup_window_ms,
     is_enabled = EXCLUDED.is_enabled, sort_order = EXCLUDED.sort_order,
-    updated_at = now(), updated_by = EXCLUDED.created_by;
+    updated_at = now(), updated_by = EXCLUDED.created_by
+WHERE (control.notification_routing_rule.name,control.notification_routing_rule.description,control.notification_routing_rule.event_type,control.notification_routing_rule.entity_type,control.notification_routing_rule.template_key,control.notification_routing_rule.channels,control.notification_routing_rule.priority,control.notification_routing_rule.recipient_rules,control.notification_routing_rule.dedup_window_ms,control.notification_routing_rule.is_enabled,control.notification_routing_rule.sort_order)
+  IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.description,EXCLUDED.event_type,EXCLUDED.entity_type,EXCLUDED.template_key,EXCLUDED.channels,EXCLUDED.priority,EXCLUDED.recipient_rules,EXCLUDED.dedup_window_ms,EXCLUDED.is_enabled,EXCLUDED.sort_order);
 
 INSERT INTO control.notification_routing_rule (
     tenant_id, code, name, description, event_type, entity_type, template_key,
@@ -225,7 +254,9 @@ DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description,
     template_key = EXCLUDED.template_key, channels = EXCLUDED.channels,
     priority = EXCLUDED.priority, recipient_rules = EXCLUDED.recipient_rules,
     dedup_window_ms = EXCLUDED.dedup_window_ms, is_enabled = EXCLUDED.is_enabled,
-    sort_order = EXCLUDED.sort_order, updated_at = now(), updated_by = EXCLUDED.created_by;
+    sort_order = EXCLUDED.sort_order, updated_at = now(), updated_by = EXCLUDED.created_by
+WHERE (control.notification_routing_rule.name,control.notification_routing_rule.description,control.notification_routing_rule.event_type,control.notification_routing_rule.entity_type,control.notification_routing_rule.template_key,control.notification_routing_rule.channels,control.notification_routing_rule.priority,control.notification_routing_rule.recipient_rules,control.notification_routing_rule.dedup_window_ms,control.notification_routing_rule.is_enabled,control.notification_routing_rule.sort_order)
+  IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.description,EXCLUDED.event_type,EXCLUDED.entity_type,EXCLUDED.template_key,EXCLUDED.channels,EXCLUDED.priority,EXCLUDED.recipient_rules,EXCLUDED.dedup_window_ms,EXCLUDED.is_enabled,EXCLUDED.sort_order);
 
 -- Keep catalog drafts inert until their owning modules publish the documented
 -- canonical event and recipient payload. This prevents false production
@@ -248,3 +279,19 @@ WHERE tenant_id IS NULL
     'workflow.sla_auto_reject',
     'workflow.sla_auto_cancel'
   ]);
+
+DO $assertions$ BEGIN
+  IF (SELECT count(*) FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('purchase_invoice.lifecycle.changed','purchase_requisition.lifecycle.changed','purchase_order_confirmation.lifecycle.changed','delivery_note.lifecycle.changed','receipt.lifecycle.changed','service_sheet.lifecycle.changed','payment_entry.lifecycle.changed','wfl.sla_reminder','wfl.sla_breach','wfl.sla_auto_reject','wfl.sla_auto_cancel')) <> 22
+     OR (SELECT count(*) FROM control.notification_routing_rule WHERE tenant_id IS NULL AND code IN ('document.purchase_invoice_lifecycle_changed','document.purchase_requisition_lifecycle_changed','document.purchase_order_confirmation_lifecycle_changed','document.delivery_note_lifecycle_changed','document.receipt_lifecycle_changed','document.service_sheet_lifecycle_changed','document.payment_entry_lifecycle_changed','workflow.sla_reminder','workflow.sla_breach','workflow.sla_auto_reject','workflow.sla_auto_cancel')) <> 11 THEN
+    RAISE EXCEPTION 'NEON notification expected-count mismatch';
+  END IF;
+  IF EXISTS (SELECT 1 FROM control.notification_routing_rule rule WHERE rule.tenant_id IS NULL AND rule.code IN ('document.purchase_invoice_lifecycle_changed','document.purchase_requisition_lifecycle_changed','document.purchase_order_confirmation_lifecycle_changed','document.delivery_note_lifecycle_changed','document.receipt_lifecycle_changed','document.service_sheet_lifecycle_changed','document.payment_entry_lifecycle_changed','workflow.sla_reminder','workflow.sla_breach','workflow.sla_auto_reject','workflow.sla_auto_cancel') AND NOT EXISTS (SELECT 1 FROM control.notification_template template WHERE template.tenant_id IS NULL AND template.template_key=rule.template_key AND template.status='active')) THEN
+    RAISE EXCEPTION 'NEON notification orphan routing rule';
+  END IF;
+  IF EXISTS (SELECT template_key,channel,locale,version FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('purchase_invoice.lifecycle.changed','purchase_requisition.lifecycle.changed','purchase_order_confirmation.lifecycle.changed','delivery_note.lifecycle.changed','receipt.lifecycle.changed','service_sheet.lifecycle.changed','payment_entry.lifecycle.changed','wfl.sla_reminder','wfl.sla_breach','wfl.sla_auto_reject','wfl.sla_auto_cancel') GROUP BY template_key,channel,locale,version HAVING count(*)<>1) THEN
+    RAISE EXCEPTION 'NEON notification uniqueness mismatch';
+  END IF;
+  IF EXISTS (SELECT 1 FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('purchase_invoice.lifecycle.changed','purchase_requisition.lifecycle.changed','purchase_order_confirmation.lifecycle.changed','delivery_note.lifecycle.changed','receipt.lifecycle.changed','service_sheet.lifecycle.changed','payment_entry.lifecycle.changed','wfl.sla_reminder','wfl.sla_breach','wfl.sla_auto_reject','wfl.sla_auto_cancel') AND (status<>'active' OR jsonb_typeof(variables_schema)<>'object')) THEN
+    RAISE EXCEPTION 'NEON notification semantic mismatch';
+  END IF;
+END $assertions$;

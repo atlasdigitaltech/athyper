@@ -1,22 +1,27 @@
 import { PublicationContractError } from "./errors.js";
-import type { EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
+import type { BusinessPartnerDefinitionProjection, EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
 
 export const PUBLICATION_ARTIFACT_SCHEMA_V1 = "athyper.publication-artifact.v1" as const;
 export const PUBLICATION_ARTIFACT_MEDIA_TYPE_V1 = "application/vnd.athyper.publication-artifact.v1+json" as const;
 
-export interface PublicationArtifactEnvelopeV1 {
+export type PublicationArtifactKind = "entity_runtime" | "business_partner_definition_bundle";
+
+interface PublicationArtifactEnvelopeBaseV1 {
   readonly schema: typeof PUBLICATION_ARTIFACT_SCHEMA_V1;
   readonly publicationKey: string;
   readonly releaseId: string;
   readonly releaseNo: number;
   readonly releaseKind: "publish" | "rollback";
   readonly targetPlane: PublicationPlane;
-  readonly artifactKind: "entity_runtime";
+  readonly artifactKind: PublicationArtifactKind;
   readonly generatedAt: string;
   readonly minimumRuntimeVersion?: string;
   readonly compatibilityLevel: PublicationCompatibilityLevel;
-  readonly payload: EntityRuntimeProjection;
 }
+
+export type PublicationArtifactEnvelopeV1 =
+  | (PublicationArtifactEnvelopeBaseV1 & { readonly artifactKind: "entity_runtime"; readonly payload: EntityRuntimeProjection })
+  | (PublicationArtifactEnvelopeBaseV1 & { readonly artifactKind: "business_partner_definition_bundle"; readonly payload: BusinessPartnerDefinitionProjection });
 
 export interface PublicationArtifactManifestV1 {
   readonly artifactSchema: typeof PUBLICATION_ARTIFACT_SCHEMA_V1;
@@ -25,7 +30,7 @@ export interface PublicationArtifactManifestV1 {
   readonly releaseId: string;
   readonly releaseNo: number;
   readonly targetPlane: PublicationPlane;
-  readonly artifactKind: "entity_runtime";
+  readonly artifactKind: PublicationArtifactKind;
   readonly payloadSha256: string;
   readonly compiler: { readonly name: string; readonly version: string };
   readonly contractSchemaVersion: string;
@@ -54,14 +59,21 @@ export function parsePublicationArtifactEnvelope(value: unknown): PublicationArt
   if (schema !== PUBLICATION_ARTIFACT_SCHEMA_V1) {
     throw new PublicationContractError("ARTIFACT_SCHEMA_UNSUPPORTED", `Unsupported artifact schema: ${schema}`);
   }
-  if (!isRecord(value.payload) || !isRecord(value.payload.entityContract) || !isRecord(value.payload.entityDescriptor)) {
-    throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Entity runtime payload is required");
-  }
+  if (!isRecord(value.payload)) throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Artifact payload is required");
   if (!(["studio", "neon", "mesh"] as const).includes(value.targetPlane as PublicationPlane)) {
     throw new PublicationContractError("ARTIFACT_PLANE_INVALID", "Artifact target plane is invalid");
   }
-  if (value.artifactKind !== "entity_runtime" || typeof value.publicationKey !== "string" || typeof value.releaseId !== "string" || typeof value.releaseNo !== "number") {
+  if (typeof value.publicationKey !== "string" || typeof value.releaseId !== "string" || typeof value.releaseNo !== "number") {
     throw new PublicationContractError("ARTIFACT_COORDINATES_INVALID", "Artifact coordinates are invalid");
+  }
+  if (value.artifactKind === "entity_runtime") {
+    if (!isRecord(value.payload.entityContract) || !isRecord(value.payload.entityDescriptor))
+      throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Entity runtime payload is required");
+  } else if (value.artifactKind === "business_partner_definition_bundle") {
+    if (!isRecord(value.payload.bundle) || typeof value.payload.bundleHash !== "string" || typeof value.payload.bundleSchemaVersion !== "string" || value.payload.plane !== value.targetPlane)
+      throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Business Partner definition bundle payload is required");
+  } else {
+    throw new PublicationContractError("ARTIFACT_KIND_UNSUPPORTED", "Artifact kind is unsupported");
   }
   return value as unknown as PublicationArtifactEnvelopeV1;
 }

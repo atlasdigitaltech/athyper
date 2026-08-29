@@ -1,3 +1,4 @@
+import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_SORT_LEVELS, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
 import type {
   EffectiveListActionV1,
   EntityListDescriptorV1,
@@ -40,11 +41,22 @@ export function parseEntityListDescriptor(value: unknown): EntityListDescriptorV
   const fieldByKey = new Map(fields.map((field) => [field.key, field]));
   const identityField = code(entityRecord.identityField, "entity.identityField");
   if (!fieldByKey.has(identityField)) throw new TypeError("entity.identityField must reference a readable field");
+  const filterPresentationRecord = surfaceRecord.filterPresentation === undefined ? undefined : object(surfaceRecord.filterPresentation, "surface.filterPresentation");
+  const quickCandidates = filterPresentationRecord?.quickFields === undefined ? [] : array(filterPresentationRecord.quickFields, "surface.filterPresentation.quickFields");
+  if (quickCandidates.length > 4) throw new TypeError("surface.filterPresentation.quickFields exceeds four fields");
+  const quickFields = freezeUnique(quickCandidates.flatMap((candidate, index) => {
+    const item = object(candidate, `surface.filterPresentation.quickFields[${index}]`), fieldKey = code(item.field, `surface.filterPresentation.quickFields[${index}].field`), field = fieldByKey.get(fieldKey);
+    if (!field?.filterOperators.length) return [];
+    const requested = item.defaultOperator === undefined ? undefined : oneOf(item.defaultOperator, FILTER_OPERATORS, `surface.filterPresentation.quickFields[${index}].defaultOperator`);
+    const defaultOperator = requested && field.filterOperators.includes(requested) ? requested : preferredFilterOperator(field);
+    return [Object.freeze({ field: fieldKey, defaultOperator })];
+  }), "quick filter fields", (item) => item.field);
+  const resolvedQuickFields = quickFields.length ? quickFields : fallbackQuickFields(fields);
   const allowedPageSizes = uniqueIntegers(limitsRecord.allowedPageSizes, "limits.allowedPageSizes", 1, 500);
   if (!allowedPageSizes.length) throw new TypeError("limits.allowedPageSizes must not be empty");
   const defaultPageSize = integer(limitsRecord.defaultPageSize, "limits.defaultPageSize", 1, 500);
   if (!allowedPageSizes.includes(defaultPageSize)) throw new TypeError("limits.defaultPageSize must be allowed");
-  const maxSortLevels = integer(limitsRecord.maxSortLevels, "limits.maxSortLevels", 0, 10);
+  const maxSortLevels = integer(limitsRecord.maxSortLevels, "limits.maxSortLevels", 0, ENTITY_LIST_MAX_SORT_LEVELS);
   const supportedModes = uniqueEnums(surfaceRecord.supportedModes, MODES, "surface.supportedModes");
   if (!supportedModes.length) throw new TypeError("surface.supportedModes must not be empty");
   const defaultState = parseState(surfaceRecord.defaultState, {
@@ -74,7 +86,7 @@ export function parseEntityListDescriptor(value: unknown): EntityListDescriptorV
     plane: oneOf(record.plane, ["neon", "mesh", "studio"] as const, "plane"),
     entity,
     revision: Object.freeze({ release: integer(revisionRecord.release, "revision.release", 1), descriptorHash: digest(revisionRecord.descriptorHash, "revision.descriptorHash"), surfaceHash: digest(revisionRecord.surfaceHash, "revision.surfaceHash") }),
-    surface: Object.freeze({ key: code(surfaceRecord.key, "surface.key"), title: text(surfaceRecord.title, "surface.title"), ...(optionalText(surfaceRecord.description, "surface.description") ? { description: optionalText(surfaceRecord.description, "surface.description") } : {}), defaultState, supportedModes, search: Object.freeze({ ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey") ? { profileKey: optionalCode(searchRecord.profileKey, "surface.search.profileKey") } : {}), minimumQueryLength: searchRecord.minimumQueryLength === undefined ? 1 : integer(searchRecord.minimumQueryLength, "surface.search.minimumQueryLength", 1, 64) }) }),
+    surface: Object.freeze({ key: code(surfaceRecord.key, "surface.key"), title: text(surfaceRecord.title, "surface.title"), ...(optionalText(surfaceRecord.description, "surface.description") ? { description: optionalText(surfaceRecord.description, "surface.description") } : {}), defaultState, supportedModes, search: Object.freeze({ ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey") ? { profileKey: optionalCode(searchRecord.profileKey, "surface.search.profileKey") } : {}), minimumQueryLength: searchRecord.minimumQueryLength === undefined ? 1 : integer(searchRecord.minimumQueryLength, "surface.search.minimumQueryLength", 1, 64) }), filterPresentation: Object.freeze({ quickFields: resolvedQuickFields, source: quickFields.length ? "metadata" : "fallback", allowUserPinning: filterPresentationRecord?.allowUserPinning === true }) }),
     fields,
     actions,
     ...(dataOperations ? { dataOperations } : {}),
@@ -209,6 +221,7 @@ function parseState(value: unknown, rules: StateRules): SaveableListStateV1 | Li
   const record = object(value, "list state");
   const filters: ListFilterV1[] = [];
   for (const [index, candidate] of array(record.filters, "filters").entries()) {
+    if (filters.length >= ENTITY_LIST_MAX_FILTERS) break;
     const item = object(candidate, `filters[${index}]`);
     const field = code(item.field, `filters[${index}].field`);
     const descriptor = rules.fields.get(field);
@@ -229,8 +242,9 @@ function parseState(value: unknown, rules: StateRules): SaveableListStateV1 | Li
     const nulls = item.nulls === undefined ? undefined : oneOf(item.nulls, ["first", "last"] as const, `sort[${index}].nulls`);
     sort.push(Object.freeze({ field, direction: oneOf(item.direction, ["asc", "desc"] as const, `sort[${index}].direction`), ...(nulls ? { nulls } : {}) }));
   }
-  const columns = uniqueCodes(record.columns, "columns").filter((key) => rules.fields.has(key));
+  const columns = uniqueCodes(record.columns, "columns").filter((key) => rules.fields.has(key)).slice(0, ENTITY_LIST_MAX_VISIBLE_COLUMNS);
   if (!columns.includes(rules.identityField)) columns.unshift(rules.identityField);
+  if (columns.length > ENTITY_LIST_MAX_VISIBLE_COLUMNS) columns.length = ENTITY_LIST_MAX_VISIBLE_COLUMNS;
   const requestedMode = oneOf(record.mode, MODES, "mode");
   const mode = rules.supportedModes.has(requestedMode) ? requestedMode : rules.supportedModes.values().next().value;
   if (!mode) throw new TypeError("list state has no supported mode");
@@ -288,6 +302,13 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
   });
 }
 
+function fallbackQuickFields(fields: readonly ListFieldDescriptorV1[]) {
+  return Object.freeze(fields.filter((field) => field.filterOperators.length).sort((left, right) => filterPriority(left) - filterPriority(right)).slice(0, 4).map((field) => Object.freeze({ field: field.key, defaultOperator: preferredFilterOperator(field) })));
+}
+
+function filterPriority(field: ListFieldDescriptorV1): number { const value = `${field.key} ${field.label}`; return field.semanticRole === "status" || /\bstatus\b/i.test(value) ? 0 : /category|group/i.test(value) ? 1 : field.semanticRole === "country_code" || /country/i.test(value) ? 2 : field.semanticRole === "updated_at" || /updated|modified/i.test(value) ? 3 : 10 + field.defaultOrder; }
+function preferredFilterOperator(field: ListFieldDescriptorV1): ListFilterOperator { const preferred = field.valueKind === "date" || field.valueKind === "datetime" ? "relative" : field.filterOptions?.length || field.valueKind === "enum" || field.valueKind === "boolean" || field.valueKind === "reference" ? "eq" : "contains"; return field.filterOperators.includes(preferred) ? preferred : field.filterOperators[0]!; }
+
 function parseAction(candidate: unknown, index: number): EffectiveListActionV1 {
   const action = object(candidate, `actions[${index}]`);
   const state = oneOf(action.state, ["enabled", "disabled", "hidden"] as const, `actions[${index}].state`);
@@ -309,9 +330,9 @@ function parseAction(candidate: unknown, index: number): EffectiveListActionV1 {
 
 function parseSpreadsheet(value: unknown, fields: ReadonlyMap<string, ListFieldDescriptorV1>) {
   const record = object(value, "spreadsheet");
-  const pinned = uniqueCodes(record.pinned, "spreadsheet.pinned").filter((key) => fields.has(key));
+  const pinned = uniqueCodes(record.pinned, "spreadsheet.pinned").filter((key) => fields.has(key)).slice(0, ENTITY_LIST_MAX_VISIBLE_COLUMNS);
   const widthsRecord = object(record.widths, "spreadsheet.widths");
-  const widths = Object.freeze(Object.fromEntries(Object.entries(widthsRecord).filter(([key]) => fields.has(key)).map(([key, width]) => [key, integer(width, `spreadsheet.widths.${key}`, 48, 1200)])));
+  const widths = Object.freeze(Object.fromEntries(Object.entries(widthsRecord).filter(([key]) => fields.has(key)).slice(0, ENTITY_LIST_MAX_VISIBLE_COLUMNS).map(([key, width]) => [key, integer(width, `spreadsheet.widths.${key}`, 48, 1200)])));
   return Object.freeze({ pinned: Object.freeze(pinned), widths });
 }
 

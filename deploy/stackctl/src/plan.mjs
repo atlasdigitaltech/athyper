@@ -192,7 +192,7 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
   const ingressServices = ["api", "iam", "mesh", "neon", "studio"];
   if (instance.spec.mode === "development") {
     if (model.selected.some((service) => service.id === "mailtrap")) ingressServices.push("mail");
-    if (model.selected.some((service) => service.id === "objectstorage")) ingressServices.push("minio");
+    if (model.selected.some((service) => service.id === "objectstorage")) ingressServices.push("minio", "objects");
   }
   const domains = ingressServices.map((service) => `${service}.${instance.spec.domainSuffix}`);
   const imageOverrides = new Map(model.imageSet.spec.images.map(({ id, reference }) => [id, reference]));

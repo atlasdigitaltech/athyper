@@ -5,6 +5,8 @@ export function FilterIcon(props: IconProps) { return <IconFrame {...props}><pat
 export function SortIcon(props: IconProps) { return <IconFrame {...props}><path d="m3 16 4 4 4-4M7 20V4M21 8l-4-4-4 4M17 4v16" /></IconFrame>; }
 export function ColumnsIcon(props: IconProps) { return <IconFrame {...props}><rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18M15 3v18" /></IconFrame>; }
 export function MoreHorizontalIcon(props: IconProps) { return <IconFrame {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></IconFrame>; }
+/** Lucide SlidersHorizontal geometry for consolidated list controls. */
+export function SlidersHorizontalIcon(props: IconProps) { return <IconFrame {...props}><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" /></IconFrame>; }
 export function GroupIcon(props: IconProps) { return <IconFrame {...props}><rect width="7" height="7" x="3" y="3" rx="1" /><rect width="7" height="7" x="14" y="3" rx="1" /><rect width="7" height="7" x="3" y="14" rx="1" /><rect width="7" height="7" x="14" y="14" rx="1" /></IconFrame>; }
 /** Lucide GripVertical geometry used by reorderable list controls. */
 export function GripVerticalIcon(props: IconProps) { return <IconFrame {...props}><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></IconFrame>; }
@@ -32,3 +34,7 @@ export function ArrowDownIcon(props: IconProps) { return <IconFrame {...props}><
 export function MoreVerticalIcon(props: IconProps) { return <IconFrame {...props}><circle cx="12" cy="5" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="19" r="1" fill="currentColor" stroke="none" /></IconFrame>; }
 /** Lucide Star geometry. Consumers opt into fill through currentColor. */
 export function StarIcon(props: IconProps) { return <IconFrame {...props}><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2Z" /></IconFrame>; }
+/** Lucide Eye geometry for entity-neutral view actions. */
+export function EyeIcon(props: IconProps) { return <IconFrame {...props}><path d="M2.06 12.35a1 1 0 0 1 0-.7C3.73 7.6 7.68 5 12 5c4.32 0 8.27 2.6 9.94 6.65a1 1 0 0 1 0 .7C20.27 16.4 16.32 19 12 19c-4.32 0-8.27-2.6-9.94-6.65Z" /><circle cx="12" cy="12" r="3" /></IconFrame>; }
+/** Lucide Copy geometry for entity-neutral copy actions. */
+export function CopyIcon(props: IconProps) { return <IconFrame {...props}><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></IconFrame>; }

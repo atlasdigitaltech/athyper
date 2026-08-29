@@ -27,8 +27,15 @@ export class KyselyPublicationAuthorityRepository implements PublicationAuthorit
           ${input.compatibilityLevel},${input.releaseHash},${input.manifestHash},${input.minimumRuntimeVersion??null},${input.actorId}::uuid,${JSON.stringify(input.metadata??{})}::jsonb)
         ON CONFLICT (id) DO NOTHING RETURNING *`.execute(transaction);
       if (inserted.rows.length) {
-        await sql`INSERT INTO publication.entity_release_link(publication_release_id,entity_release_id)
-          VALUES(${input.id}::uuid,${input.entityReleaseId}::uuid)`.execute(transaction);
+        if (input.entityReleaseId) {
+          await sql`INSERT INTO publication.entity_release_link(publication_release_id,entity_release_id)
+            VALUES(${input.id}::uuid,${input.entityReleaseId}::uuid)`.execute(transaction);
+        } else if (input.businessPartnerDefinitionRevisionId) {
+          await sql`INSERT INTO publication.business_partner_definition_release_link(publication_release_id,definition_revision_id,publish_idempotency_key,created_by)
+            VALUES(${input.id}::uuid,${input.businessPartnerDefinitionRevisionId}::uuid,${String(input.metadata?.["publishIdempotencyKey"]??input.id)},${input.actorId}::uuid)`.execute(transaction);
+        } else {
+          throw new Error("PUBLICATION_RELEASE_SOURCE_REQUIRED");
+        }
       }
       const row = await sql<Row>`SELECT * FROM publication.release WHERE id=${input.id}::uuid`.execute(transaction);
       const release = required(row.rows[0], "PUBLICATION_RELEASE_NOT_FOUND");

@@ -105,7 +105,7 @@
                 <tr>
                   <td style="background-color:#fafafa;border:1px solid #e5e5e5;border-radius:6px;padding:14px 18px;">
                     <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">
-                      &#9432;&nbsp; This link expires in <strong>${linkExpiration} minutes</strong>.
+                      <strong>Expiry:</strong> This link expires in ${linkExpiration} minutes.
                       If it expires, return to the sign-in page and request a new one.
                     </p>
                   </td>

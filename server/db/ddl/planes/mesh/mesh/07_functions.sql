@@ -749,9 +749,28 @@ BEGIN
         RAISE EXCEPTION 'Mesh bank-disclosure coordinates and evidence are immutable'
             USING ERRCODE = 'check_violation';
     END IF;
-    IF OLD.status <> 'active' AND NEW.status IS DISTINCT FROM OLD.status THEN
+    IF OLD.status IN ('expired','revoked','superseded','rejected') AND NEW.status IS DISTINCT FROM OLD.status THEN
         RAISE EXCEPTION 'Terminal bank disclosure cannot transition'
             USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.disclosure_version IS DISTINCT FROM OLD.disclosure_version
+       OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key THEN
+        RAISE EXCEPTION 'Bank disclosure version and request idempotency are immutable'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF OLD.decision_fingerprint IS NOT NULL AND (
+       NEW.snapshot_id IS DISTINCT FROM OLD.snapshot_id
+       OR NEW.payload_hash IS DISTINCT FROM OLD.payload_hash
+       OR NEW.secure_retrieval_reference IS DISTINCT FROM OLD.secure_retrieval_reference
+       OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+       OR NEW.approved_at IS DISTINCT FROM OLD.approved_at
+       OR NEW.approved_by IS DISTINCT FROM OLD.approved_by) THEN
+        RAISE EXCEPTION 'Bank disclosure approval and payload evidence are immutable'
+            USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.approved_by IS NOT NULL AND NEW.approved_by=NEW.disclosed_by THEN
+        RAISE EXCEPTION 'Bank disclosure requires independent approval'
+            USING ERRCODE='insufficient_privilege';
     END IF;
     IF NEW.status = 'revoked'
        AND (NEW.revoked_at IS NULL OR NEW.revoked_by IS NULL) THEN
@@ -761,6 +780,10 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION mesh.trg_reject_bank_disclosure_event_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'Bank disclosure lifecycle events are append-only' USING ERRCODE='integrity_constraint_violation'; END $$;
 
 CREATE OR REPLACE FUNCTION mesh.trg_validate_certification_type_scope()
 RETURNS trigger
@@ -861,3 +884,29 @@ END $$;
 
 CREATE OR REPLACE FUNCTION mesh.trg_reject_network_lifecycle_event_mutation() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'network_lifecycle_event is append-only' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION mesh.profile_publication_payload_is_safe(p_payload jsonb)
+RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog,mesh AS $$
+DECLARE v_key text; v_value jsonb;
+BEGIN
+  IF jsonb_typeof(p_payload)='object' THEN
+    FOR v_key,v_value IN SELECT key,value FROM jsonb_each(p_payload) LOOP
+      IF lower(v_key) ~ '(bank|iban|swift|bic|routing|account.?number|tax|registration.?number|metadata|contact|email|phone|address|identifier)' THEN RETURN false; END IF;
+      IF NOT mesh.profile_publication_payload_is_safe(v_value) THEN RETURN false; END IF;
+    END LOOP;
+  ELSIF jsonb_typeof(p_payload)='array' THEN
+    FOR v_value IN SELECT value FROM jsonb_array_elements(p_payload) LOOP
+      IF NOT mesh.profile_publication_payload_is_safe(v_value) THEN RETURN false; END IF;
+    END LOOP;
+  END IF;
+  RETURN true;
+END $$;
+
+CREATE OR REPLACE FUNCTION mesh.trg_reject_profile_publication_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN RAISE EXCEPTION 'MESH Business Partner profile publications are immutable; create a new version or lifecycle event' USING ERRCODE='integrity_constraint_violation'; END $$;
+
+CREATE OR REPLACE FUNCTION mesh.profile_publication_is_visible(p_publication_id uuid)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,mesh,shared SET row_security=off AS $$
+  SELECT EXISTS (SELECT 1 FROM mesh.network_account_profile_publication publication WHERE publication.id=p_publication_id AND shared.current_tenant_id_soft() IN (publication.owner_tenant_id,publication.recipient_tenant_id))
+$$;

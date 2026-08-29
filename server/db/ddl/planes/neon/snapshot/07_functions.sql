@@ -10,6 +10,37 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION snapshot.mesh_business_partner_profile_payload_is_safe(p_payload jsonb)
+RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path = pg_catalog, snapshot AS $$
+DECLARE v_key text; v_value jsonb;
+BEGIN
+    IF jsonb_typeof(p_payload) = 'object' THEN
+        FOR v_key, v_value IN SELECT key, value FROM jsonb_each(p_payload) LOOP
+            IF lower(v_key) ~ '(bank|iban|swift|bic|routing|account.?number|tax|registration.?number|metadata|contact|email|phone|address|identifier)' THEN RETURN false; END IF;
+            IF NOT snapshot.mesh_business_partner_profile_payload_is_safe(v_value) THEN RETURN false; END IF;
+        END LOOP;
+    ELSIF jsonb_typeof(p_payload) = 'array' THEN
+        FOR v_value IN SELECT value FROM jsonb_array_elements(p_payload) LOOP
+            IF NOT snapshot.mesh_business_partner_profile_payload_is_safe(v_value) THEN RETURN false; END IF;
+        END LOOP;
+    END IF;
+    RETURN true;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION snapshot.trg_guard_mesh_business_partner_profile_received()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, snapshot AS $$
+BEGIN
+    IF TG_OP <> 'INSERT' THEN
+        RAISE EXCEPTION 'snapshot.mesh_business_partner_profile_received is immutable' USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NOT snapshot.mesh_business_partner_profile_payload_is_safe(NEW.payload_json) THEN
+        RAISE EXCEPTION 'MESH Business Partner profile contains a prohibited key family' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION snapshot.trg_set_template_version_created_by()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -145,3 +176,4 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+CREATE OR REPLACE FUNCTION snapshot.trg_reject_mesh_bank_disclosure_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$ BEGIN RAISE EXCEPTION 'MESH bank disclosure received snapshot is immutable' USING ERRCODE='integrity_constraint_violation'; END $$;

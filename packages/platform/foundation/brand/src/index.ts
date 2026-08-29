@@ -18,11 +18,8 @@ export interface PlaneBrand {
   readonly shortName: string;
   readonly description: string;
   readonly identityLockup: BrandAssetDescriptor;
-  readonly wordmark: BrandAssetDescriptor;
-  readonly inverseWordmark: BrandAssetDescriptor;
   readonly appIcon: BrandAssetDescriptor;
   readonly favicon: `/${string}`;
-  readonly icon: BrandAssetDescriptor;
   readonly manifest: `/${string}`;
   readonly themeColor: string;
 }
@@ -35,30 +32,24 @@ export const PLANE_BRANDS: Readonly<Record<BrandPlane, PlaneBrand>> = Object.fre
     plane: "neon", applicationName: presentation.planes.neon.applicationName, shortName: presentation.planes.neon.shortName,
     description: presentation.planes.neon.description,
     identityLockup: asset("/brand/neon/identity-lockup.svg", 565, 189, "Athyper Neon"),
-    wordmark: asset("/brand/neon/wordmark.svg", 1000, 1000, "Neon"),
-    inverseWordmark: asset("/brand/neon/wordmark-inverse.svg", 1000, 1000, "Neon"),
     appIcon: asset("/brand/neon/app-icon.png", 2048, 2048, ""),
-    icon: asset("/brand/neon/icon.png", 2048, 2048, ""), favicon: "/brand/neon/athyper-favicon.svg",
+    favicon: "/brand/neon/athyper-favicon.svg",
     manifest: "/brand/neon/manifest.webmanifest", themeColor: ATLAS_MODERN_BRAND.colors.primary,
   }),
   mesh: Object.freeze({
     plane: "mesh", applicationName: presentation.planes.mesh.applicationName, shortName: presentation.planes.mesh.shortName,
     description: presentation.planes.mesh.description,
     identityLockup: asset("/brand/mesh/identity-lockup.svg", 567, 189, "Athyper Mesh"),
-    wordmark: asset("/brand/mesh/wordmark.png", 3920, 748, "Mesh"),
-    inverseWordmark: asset("/brand/mesh/wordmark-inverse.png", 3920, 748, "Mesh"),
     appIcon: asset("/brand/mesh/app-icon.png", 2048, 2048, ""),
-    icon: asset("/brand/mesh/icon.png", 2048, 2048, ""), favicon: "/brand/mesh/athyper-favicon.svg",
+    favicon: "/brand/mesh/athyper-favicon.svg",
     manifest: "/brand/mesh/manifest.webmanifest", themeColor: ATLAS_MODERN_BRAND.colors.primary,
   }),
   studio: Object.freeze({
     plane: "studio", applicationName: presentation.planes.studio.applicationName, shortName: presentation.planes.studio.shortName,
     description: presentation.planes.studio.description,
     identityLockup: asset("/brand/studio/identity-lockup.svg", 736, 189, "Athyper Studio"),
-    wordmark: asset("/brand/studio/wordmark.png", 6520, 748, "Athyper"),
-    inverseWordmark: asset("/brand/studio/wordmark-inverse.png", 6520, 748, "Athyper"),
     appIcon: asset("/brand/studio/app-icon.png", 2048, 2048, ""),
-    icon: asset("/brand/studio/icon.png", 2048, 2048, ""), favicon: "/brand/studio/athyper-favicon.svg",
+    favicon: "/brand/studio/athyper-favicon.svg",
     manifest: "/brand/studio/manifest.webmanifest", themeColor: ATLAS_MODERN_BRAND.colors.primary,
   }),
 });

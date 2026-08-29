@@ -219,6 +219,8 @@ ALTER TABLE mesh.network_account_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_profile FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_commodity_capability ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_commodity_capability FORCE ROW LEVEL SECURITY;
+ALTER TABLE mesh.network_account_industry_classification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.network_account_industry_classification FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_tax_registration ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_tax_registration FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_party ENABLE ROW LEVEL SECURITY;
@@ -229,6 +231,8 @@ ALTER TABLE mesh.bank_account_link ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account_link FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account_disclosure ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account_disclosure FORCE ROW LEVEL SECURITY;
+ALTER TABLE mesh.bank_account_disclosure_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.bank_account_disclosure_event FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_access ON mesh.network_account_profile FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
@@ -242,11 +246,28 @@ CREATE POLICY tenant_access ON mesh.network_account_commodity_capability FOR ALL
 CREATE POLICY seed_write ON mesh.network_account_commodity_capability FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
 
+CREATE POLICY tenant_access ON mesh.network_account_industry_classification FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON mesh.network_account_industry_classification FOR ALL TO CURRENT_USER
+    USING (true) WITH CHECK (true);
+
 CREATE POLICY tenant_access ON mesh.network_account_tax_registration FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON mesh.network_account_tax_registration FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
+
+ALTER TABLE mesh.network_account_profile_publication ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.network_account_profile_publication FORCE ROW LEVEL SECURITY;
+ALTER TABLE mesh.network_account_profile_publication_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.network_account_profile_publication_event FORCE ROW LEVEL SECURITY;
+CREATE POLICY profile_publication_participant_read ON mesh.network_account_profile_publication FOR SELECT USING(shared.current_tenant_id_soft() IN (owner_tenant_id,recipient_tenant_id));
+CREATE POLICY profile_publication_owner_insert ON mesh.network_account_profile_publication FOR INSERT WITH CHECK(owner_tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON mesh.network_account_profile_publication FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+CREATE POLICY profile_publication_event_participant_read ON mesh.network_account_profile_publication_event FOR SELECT USING(shared.current_tenant_id_soft() IN (owner_tenant_id,recipient_tenant_id));
+CREATE POLICY profile_publication_event_owner_insert ON mesh.network_account_profile_publication_event FOR INSERT WITH CHECK(owner_tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON mesh.network_account_profile_publication_event FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 
 CREATE POLICY tenant_access ON mesh.bank_party FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
@@ -278,6 +299,11 @@ CREATE POLICY owner_update ON mesh.bank_account_disclosure FOR UPDATE
     WITH CHECK (owner_tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON mesh.bank_account_disclosure FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
+CREATE POLICY participant_read ON mesh.bank_account_disclosure_event FOR SELECT
+    USING(owner_tenant_id=shared.current_tenant_id_soft() OR recipient_tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY owner_insert ON mesh.bank_account_disclosure_event FOR INSERT
+    WITH CHECK(owner_tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON mesh.bank_account_disclosure_event FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 
 ALTER TABLE mesh.certification_type ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.certification_type FORCE ROW LEVEL SECURITY;

@@ -91,6 +91,8 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
       validate(document, receiptPath); atomicJson(receiptPath, document); return { ...document, receiptPath };
     };
     const artifacts = { operator: dependencies.operator ?? userInfo().username, mode: mode ?? "lite" };
+    mkdirSync(join(root,"operations","prometheus-targets"),{recursive:true,mode:0o755});
+    chmodSync(join(root,"operations","prometheus-targets"),0o755);
     let rollback = { attempted: false, succeeded: false };
     try {
       if (operation === "up") {

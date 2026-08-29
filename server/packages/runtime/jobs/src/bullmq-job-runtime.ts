@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { Queue, Worker, type JobsOptions, type Processor } from "bullmq";
+import { Queue, UnrecoverableError, Worker, type JobsOptions, type Processor } from "bullmq";
 import type {
   EnqueueOptions,
   JobEnvelope,
@@ -289,7 +289,11 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
                   await options.lifecycle?.completed(envelope, result);
                   return result;
                 } catch (error) {
-                  await options.lifecycle?.failed(envelope, classifyFailure(error, envelope));
+                  const failure = classifyFailure(error, envelope);
+                  await options.lifecycle?.failed(envelope, failure);
+                  if (failure.disposition === "permanent" && !(error instanceof UnrecoverableError)) {
+                    throw new UnrecoverableError(failure.message);
+                  }
                   throw error;
                 }
               },
@@ -466,10 +470,15 @@ function classifyFailure(error: unknown, job: JobEnvelope): JobExecutionFailure 
       ...(error.detail ? { detail: error.detail } : {}),
     };
   }
+  const governed = error && typeof error === "object" && !Array.isArray(error)
+    ? error as Readonly<Record<string, unknown>>
+    : undefined;
   const message = error instanceof Error ? error.message : "Unknown job execution failure";
   return {
-    disposition: job.attempt < job.maxAttempts ? "retryable" : "permanent",
-    code: "JOB_EXECUTION_FAILED",
+    disposition: governed?.["retryable"] === false
+      ? "permanent"
+      : job.attempt < job.maxAttempts ? "retryable" : "permanent",
+    code: typeof governed?.["code"] === "string" ? governed["code"] : "JOB_EXECUTION_FAILED",
     message,
   };
 }

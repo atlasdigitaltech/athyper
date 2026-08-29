@@ -212,6 +212,7 @@ function delivery(channel: "email" | "in_app", id: string) {
     planeKey: "neon" as const,
     messageId: "message-1",
     principalId: PRINCIPAL_ID,
+    actorPrincipalId: PRINCIPAL_ID,
     recipientAddress: channel === "email" ? "person@example.test" : PRINCIPAL_ID,
     channel,
     templateKey: "record.changed",

@@ -51,7 +51,7 @@ for (const plane of ["neon", "mesh", "studio"]) {
     if (!source.includes('@athyper/platform-iam-identity-gate')) violations.push(`${relative(root, page)} does not consume the production identity-gate surface`);
   }
   const brand = plane === "studio" ? "studio" : plane;
-  for (const asset of ["wordmark.png", "wordmark-inverse.png", "app-icon.png", "athyper-favicon.svg", "manifest.webmanifest"]) if (!statSync(join(root, "apps", plane, "public", "brand", brand, asset)).isFile()) violations.push(`${plane} is missing production brand asset ${asset}`);
+  for (const asset of ["identity-lockup.svg", "app-icon.png", "athyper-favicon.svg", "manifest.webmanifest"]) if (!statSync(join(root, "apps", plane, "public", "brand", brand, asset)).isFile()) violations.push(`${plane} is missing production brand asset ${asset}`);
 }
 
 const authCss = readFileSync(join(root, "packages", "platform", "iam", "identity-gate", "src", "styles.css"), "utf8");

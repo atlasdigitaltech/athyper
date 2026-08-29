@@ -147,7 +147,7 @@ test("rejects a Studio organization boundary that bypasses the Neon plane-local 
   assert.ok(result.errors.includes("Studio organization onboarding can activate Neon business state"));
 });
 
-test("publishes a deterministic 260-row non-enforcing Neon inventory", async () => {
+test("publishes a deterministic 263-row non-enforcing Neon inventory", async () => {
   const artifact = JSON.parse(await readFile(resolve(dbRoot, "seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json"), "utf8")) as {
     mode: string;
     counts: { tables: number; masterTables: number; documentTables: number; reviewedTables: number; pendingReviewTables: number; operations: number; lifecycles: number; crossPlaneOrganizationResources: number; roles: number; grants: number };
@@ -158,9 +158,9 @@ test("publishes a deterministic 260-row non-enforcing Neon inventory", async () 
   assert.equal(artifact.mode, "inventory_only_non_enforcing");
   assert.deepEqual(
     [artifact.counts.tables, artifact.counts.masterTables, artifact.counts.documentTables],
-    [260, 140, 120],
+    [263, 140, 123],
   );
-  assert.equal(artifact.counts.reviewedTables, 45);
+  assert.equal(artifact.counts.reviewedTables, 48);
   assert.equal(artifact.counts.pendingReviewTables, 215);
   assert.equal(artifact.counts.operations, 43);
   assert.equal(artifact.counts.lifecycles, 6);
@@ -169,5 +169,5 @@ test("publishes a deterministic 260-row non-enforcing Neon inventory", async () 
   assert.equal(artifact.counts.grants, 0);
   assert.equal(artifact.studioNeonOrganizationBoundary.target.implementationStatus, "required_not_implemented");
   assert.ok(artifact.releaseBlockers.includes("cross-plane applier not implemented: @athyper/server-service-master-data"));
-  assert.equal(new Set(artifact.tables.map((row) => row.table)).size, 260);
+  assert.equal(new Set(artifact.tables.map((row) => row.table)).size, 263);
 });

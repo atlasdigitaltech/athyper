@@ -282,6 +282,42 @@ BEGIN
 END;
 $$;
 
+ALTER TABLE document.supplier_registration_invitation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.supplier_registration_invitation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.supplier_registration_invitation
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.supplier_registration_invitation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.business_partner_request ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_request
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.business_partner_request_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request_evidence FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.business_partner_request_evidence
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.business_partner_request_evidence
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request_evidence
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE document.business_partner_request_validation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_request_validation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.business_partner_request_validation
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.business_partner_request_validation
+    FOR INSERT WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_request_validation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
 DO $$
 DECLARE
     v_table text;
@@ -681,3 +717,22 @@ $$;
 CREATE POLICY tenant_access ON document.content_item_access_grant FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
 CREATE POLICY tenant_access ON document.content_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
 CREATE POLICY tenant_access ON document.content_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
+ALTER TABLE document.mesh_business_partner_match ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_match FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_match FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_match FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_match FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.mesh_business_partner_acceptance ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_acceptance FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_acceptance FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_acceptance FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_acceptance FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.mesh_business_partner_acceptance_event ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_business_partner_acceptance_event FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON document.mesh_business_partner_acceptance_event FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY tenant_insert ON document.mesh_business_partner_acceptance_event FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.mesh_business_partner_acceptance_event FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+ALTER TABLE document.business_partner_bank_verification ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.business_partner_bank_verification FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON document.business_partner_bank_verification USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON document.business_partner_bank_verification FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

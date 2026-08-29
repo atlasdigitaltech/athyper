@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $hostsPath = Join-Path $env:SystemRoot "System32\drivers\etc\hosts"
 $domains = @(
   "api.dev.athyper.test", "iam.dev.athyper.test", "mail.dev.athyper.test",
-  "mesh.dev.athyper.test", "minio.dev.athyper.test", "neon.dev.athyper.test",
+  "mesh.dev.athyper.test", "minio.dev.athyper.test", "objects.dev.athyper.test", "neon.dev.athyper.test",
   "studio.dev.athyper.test",
   "api.qa.athyper.test", "iam.qa.athyper.test", "mesh.qa.athyper.test",
   "neon.qa.athyper.test", "studio.qa.athyper.test",

@@ -1,0 +1,55 @@
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { BusinessPartnerRegistrationMode, BusinessPartnerRequestDecision, BusinessPartnerRequestKind, BusinessPartnerRequestService, BusinessPartnerRequestSource, BusinessPartnerRequestStatus, BusinessPartnerRequestedRole } from "@athyper/server-contract-master-data";
+import type { Application, NextFunction, Request, RequestHandler, Response } from "express";
+import { MasterDataError } from "./errors.js";
+
+export interface BusinessPartnerRequestRouteOptions {
+  readonly authenticate: RequestHandler;
+  readonly readContext: (response: Response) => VerifiedRequestContext;
+  readonly service: BusinessPartnerRequestService;
+  readonly telemetry?: (measurement: { readonly operation: string; readonly outcome: "success" | "denied" | "error"; readonly statusCode: number; readonly durationMs: number }) => void;
+}
+
+export function registerBusinessPartnerRequestRoutes(app: Application, options: BusinessPartnerRequestRouteOptions): void {
+  const route = (operation: string, work: (request: Request, context: VerifiedRequestContext, response: Response) => Promise<unknown>): RequestHandler => async (request, response, next) => {
+    const startedAt = performance.now();
+    let outcome: "success" | "denied" | "error" = "success";
+    let statusCode = 200;
+    try { const result = await work(request, options.readContext(response), response); if (!response.headersSent) response.json(result); statusCode = response.statusCode; }
+    catch (error) { outcome = error instanceof MasterDataError && error.status === 403 ? "denied" : "error"; statusCode = error instanceof MasterDataError ? error.status : 500; handle(error, response, next); }
+    finally { options.telemetry?.({ operation, outcome, statusCode, durationMs: performance.now() - startedAt }); }
+  };
+  app.post("/api/neon/business-partner-requests", options.authenticate, route("create", async (request, context, response) => {
+    const body = object(request.body), result = await options.service.create({ context, idempotencyKey: required(body, "idempotencyKey"), kind: enumeration(body["kind"], kinds), source: source(body["source"]), registrationMode: enumerationOptional(body["registrationMode"], registrationModes), invitationId: uuidOptional(body["invitationId"], "invitationId"), applicantPrincipalId: uuidOptional(body["applicantPrincipalId"], "applicantPrincipalId"), representedPartyName: textOptional(body["representedPartyName"]), representationEvidenceId: uuidOptional(body["representationEvidenceId"], "representationEvidenceId"), targetBusinessPartnerId: uuidOptional(body["targetBusinessPartnerId"], "targetBusinessPartnerId"), requestedRole: enumerationOptional(body["requestedRole"], roles), operatingOrganizationId: uuid(body["operatingOrganizationId"], "operatingOrganizationId"), companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"), proposedPayload: object(body["proposedPayload"]) });
+    response.status(result.replayed ? 200 : 201); return result;
+  }));
+  app.get("/api/neon/business-partner-requests", options.authenticate, route("list", (request, context) => options.service.list({ context, operatingOrganizationId: uuid(request.query["operatingOrganizationId"], "operatingOrganizationId"), status: enumerationOptional(request.query["status"], statuses), limit: positiveIntegerOptional(request.query["limit"]), beforeCreatedAt: textOptional(request.query["beforeCreatedAt"]) })));
+  app.get("/api/neon/business-partner-requests/:requestId", options.authenticate, route("get", (request, context) => options.service.get({ context, requestId: uuid(request.params["requestId"], "requestId") })));
+  app.get("/api/neon/business-partner-requests/:requestId/view", options.authenticate, route("get-view", (request, context) => options.service.getView({ context, requestId: uuid(request.params["requestId"], "requestId") })));
+  app.get("/api/neon/business-partners/:businessPartnerId", options.authenticate, route("get-aggregate", (request, context) => options.service.getAggregate({ context, businessPartnerId: uuid(request.params["businessPartnerId"], "businessPartnerId"), operatingOrganizationId: uuid(request.query["operatingOrganizationId"], "operatingOrganizationId") })));
+  app.patch("/api/neon/business-partner-requests/:requestId", options.authenticate, route("patch", (request, context) => { const body = object(request.body); return options.service.patch({ context, requestId: uuid(request.params["requestId"], "requestId"), expectedVersion: positiveInteger(body["expectedVersion"], "expectedVersion"), proposedPayload: object(body["proposedPayload"]), operatingOrganizationId: uuidOptional(body["operatingOrganizationId"], "operatingOrganizationId"), companyCodeId: nullableUuidOptional(body, "companyCodeId"), requestedRole: nullableEnumOptional(body, "requestedRole", roles), representationEvidenceId: nullableUuidOptional(body, "representationEvidenceId") }); }));
+  app.post("/api/neon/business-partner-requests/:requestId/validate", options.authenticate, route("validate", (request, context) => { const body = object(request.body); return options.service.validate({ context, requestId: uuid(request.params["requestId"], "requestId"), expectedVersion: positiveInteger(body["expectedVersion"], "expectedVersion") }); }));
+  app.post("/api/neon/business-partner-requests/:requestId/submit", options.authenticate, route("submit", async (request, context, response) => { const body=object(request.body); const result=await options.service.submit({context,requestId:uuid(request.params["requestId"],"requestId"),expectedVersion:positiveInteger(body["expectedVersion"],"expectedVersion"),idempotencyKey:required(body,"idempotencyKey")}); response.status(result.replayed?200:201); return result; }));
+  app.post("/api/neon/business-partner-requests/:requestId/decisions", options.authenticate, route("decide", (request, context) => { const body=object(request.body); return options.service.decide({context,requestId:uuid(request.params["requestId"],"requestId"),workflowRequestId:uuid(body["workflowRequestId"],"workflowRequestId"),workItemId:uuid(body["workItemId"],"workItemId"),expectedRequestVersion:positiveInteger(body["expectedRequestVersion"],"expectedRequestVersion"),expectedWorkItemVersion:positiveInteger(body["expectedWorkItemVersion"],"expectedWorkItemVersion"),decision:enumeration(body["decision"],decisions),reason:required(body,"reason"),idempotencyKey:required(body,"idempotencyKey")}); }));
+  app.post("/api/neon/business-partner-requests/:requestId/apply", options.authenticate, route("apply", async (request, context, response) => { const body=object(request.body); const result=await options.service.apply({context,requestId:uuid(request.params["requestId"],"requestId"),expectedVersion:positiveInteger(body["expectedVersion"],"expectedVersion"),idempotencyKey:required(body,"idempotencyKey")}); response.status(result.replayed?200:201); return result; }));
+}
+
+const kinds = ["new_partner", "amend_partner", "add_supplier", "add_customer", "assign_organization", "configure_company", "change_bank", "deactivate", "reactivate", "archive"] as const satisfies readonly BusinessPartnerRequestKind[];
+const roles = ["supplier", "customer", "carrier", "service_provider", "other"] as const satisfies readonly BusinessPartnerRequestedRole[];
+const statuses = ["draft", "validating", "validation_failed", "pending_approval", "returned", "approved", "rejected", "applying", "applied", "failed", "cancelled", "superseded"] as const satisfies readonly BusinessPartnerRequestStatus[];
+const decisions=["return","reject","approve"] as const satisfies readonly BusinessPartnerRequestDecision[];
+const registrationModes=["direct","self_service","on_behalf","integration"] as const satisfies readonly BusinessPartnerRegistrationMode[];
+function source(value: unknown): BusinessPartnerRequestSource { const item = object(value), kind = enumeration(item["kind"], ["manual", "portal", "mesh", "import", "api"] as const); return { kind, systemCode: textOptional(item["systemCode"]), entityCode: textOptional(item["entityCode"]), entityId: textOptional(item["entityId"]), entityCodeValue: textOptional(item["entityCodeValue"]), projectionId: uuidOptional(item["projectionId"], "source.projectionId"), version: positiveIntegerOptional(item["version"]), payloadHash: textOptional(item["payloadHash"]) }; }
+function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) throw bad("JSON object required"); return value as Record<string, unknown>; }
+function required(value: Record<string, unknown>, key: string): string { const result = textOptional(value[key]); if (!result) throw bad(`${key} is required`); return result; }
+function textOptional(value: unknown): string | undefined { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
+function enumeration<T extends string>(value: unknown, allowed: readonly T[]): T { if (typeof value !== "string" || !allowed.includes(value as T)) throw bad(`Expected one of: ${allowed.join(", ")}`); return value as T; }
+function enumerationOptional<T extends string>(value: unknown, allowed: readonly T[]): T | undefined { return value == null || value === "" ? undefined : enumeration(value, allowed); }
+function positiveInteger(value: unknown, name: string): number { const result = typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value; if (!Number.isSafeInteger(result) || Number(result) < 1) throw bad(`${name} must be a positive integer`); return Number(result); }
+function positiveIntegerOptional(value: unknown): number | undefined { return value == null || value === "" ? undefined : positiveInteger(value, "value"); }
+function uuid(value: unknown, name: string): string { const result = textOptional(value); if (!result || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(result)) throw bad(`${name} must be a UUID`); return result; }
+function uuidOptional(value: unknown, name: string): string | undefined { return value == null || value === "" ? undefined : uuid(value, name); }
+function nullableUuidOptional(value: Record<string, unknown>, key: string): string | null | undefined { return !(key in value) ? undefined : value[key] === null ? null : uuid(value[key], key); }
+function nullableEnumOptional<T extends string>(value: Record<string, unknown>, key: string, allowed: readonly T[]): T | null | undefined { return !(key in value) ? undefined : value[key] === null ? null : enumeration(value[key], allowed); }
+function bad(message: string): MasterDataError { return new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_INVALID", message); }
+function handle(error: unknown, response: Response, next: NextFunction): void { if (!(error instanceof MasterDataError)) { next(error); return; } response.status(error.status).type("application/problem+json").json({ type: `https://athyper.dev/problems/${error.code.toLowerCase()}`, title: error.code, status: error.status, detail: error.message, code: error.code }); }

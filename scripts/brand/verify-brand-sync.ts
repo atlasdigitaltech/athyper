@@ -32,11 +32,12 @@ function sha256(value: Buffer): string {
 
 async function verifyApplications(): Promise<void> {
   const canonicalFavicon = sha256(await read("packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg"));
+  const obsoleteAssets = ["app-icon-inverse.png", "app-icon.svg", "icon.png", "wordmark-inverse.png", "wordmark-inverse.svg", "wordmark.png", "wordmark.svg"] as const;
   for (const plane of BRAND_PLANES) {
     const brand = getPlaneBrand(plane);
     const root = `apps/${plane}/public`;
     if (brand.themeColor !== ATLAS_MODERN_BRAND.colors.primary) failures.push(`${plane} browser theme color is not Atlas Modern`);
-    for (const descriptor of [brand.wordmark, brand.inverseWordmark, brand.appIcon]) {
+    for (const descriptor of [brand.identityLockup, brand.appIcon]) {
       const target = `${root}${descriptor.src}`;
       if (!(await exists(target))) failures.push(`${plane} is missing registered asset ${descriptor.src}`);
     }
@@ -53,15 +54,7 @@ async function verifyApplications(): Promise<void> {
     const manifest = JSON.parse(await text(manifestPath)) as Record<string, unknown>;
     if (manifest.name !== brand.applicationName || manifest.short_name !== brand.shortName || manifest.description !== brand.description) failures.push(`${plane} web manifest identity is stale`);
     if (manifest.theme_color !== ATLAS_MODERN_BRAND.colors.primary) failures.push(`${plane} web manifest does not use Atlas Modern`);
-    const lightSvg = `apps/${plane}/public/brand/${plane}/wordmark.svg`;
-    const inverseSvg = `apps/${plane}/public/brand/${plane}/wordmark-inverse.svg`;
-    if (plane === "neon") {
-      if (sha256(await read(lightSvg)) !== sha256(await read("packages/platform/foundation/brand/assets/master-wordmarks/neon.svg"))) failures.push("Neon light wordmark is not the approved Illustrator master");
-      if (sha256(await read(inverseSvg)) !== sha256(await read("packages/platform/foundation/brand/assets/master-wordmarks/neon-reverse.svg"))) failures.push("Neon inverse wordmark is not the approved Illustrator master");
-    } else {
-      if ((await exists(lightSvg)) && !(await text(lightSvg)).includes(ATLAS_MODERN_BRAND.colors.primary)) failures.push(`${plane} light SVG does not use the shared brand color`);
-      if ((await exists(inverseSvg)) && !(await text(inverseSvg)).includes("#A9C7F0")) failures.push(`${plane} inverse SVG does not use the Atlas Modern dark-surface accent`);
-    }
+    for (const name of obsoleteAssets) if (await exists(`apps/${plane}/public/brand/${plane}/${name}`)) failures.push(`${plane} still deploys obsolete brand asset ${name}`);
   }
 }
 
@@ -94,14 +87,13 @@ async function verifyKeycloak(): Promise<void> {
     if (!svg.includes("#234B84")) failures.push(`${product} advertising wordmark is not Atlas Modern blue`);
     if (/<(?:text|image|script|foreignObject)[\s>]/iu.test(svg)) failures.push(`${product} advertising wordmark is not self-contained path-only SVG`);
   }
-  for (const product of ["neon", "mesh", "admin"] as const) {
-    for (const suffix of ["wordmark-black.png", "icon.png"] as const) {
-      if (!(await exists(`${root}/resources/img/${product}-${suffix}`))) failures.push(`Keycloak is missing ${product}-${suffix}`);
-    }
+  for (const name of ["admin-icon.png", "admin-wordmark-black.png", "mesh-icon.png", "mesh-wordmark-black.png", "neon-icon.png", "neon-wordmark-black.png"] as const) {
+    if (await exists(`${root}/resources/img/${name}`)) failures.push(`Keycloak still deploys obsolete brand asset ${name}`);
   }
 }
 
 async function verifyGateways(): Promise<void> {
+  const canonicalIcon = sha256(await read("packages/platform/foundation/brand/assets/master-marks/mark-blue-transparent-2048.png"));
   for (const page of [
     "deploy/compose/instance/config/nginx/status.html",
     "deploy/compose/platform/outage/status.html",
@@ -118,10 +110,14 @@ async function verifyGateways(): Promise<void> {
     const canonical = await read(`packages/platform/foundation/brand/assets/plane-lockups/${plane}.svg`);
     const legacy = `stack/config/gateway/fallback/brand/${plane}-advertising.svg`;
     if (!(await exists(legacy)) || sha256(await read(legacy)) !== sha256(canonical)) failures.push(`Legacy gateway ${plane} pre-authentication lockup is stale`);
+    const legacyIcon = `stack/config/gateway/fallback/brand/${plane}-icon.png`;
+    if (!(await exists(legacyIcon)) || sha256(await read(legacyIcon)) !== canonicalIcon) failures.push(`Legacy gateway ${plane} icon is stale`);
     if (!instancePage.includes(`data-plane-brand="${plane}" src="data:image/svg+xml;base64,${canonical.toString("base64")}"`)) failures.push(`Stack v2 gateway ${plane} embedded lockup is stale`);
     if (!legacyPage.includes(`wordmark: "/brand/${plane}-advertising.svg"`)) failures.push(`Legacy gateway does not select the ${plane} pre-authentication lockup`);
   }
-  if (legacyPage.includes("admin-wordmark-black.png")) failures.push("Legacy gateway still maps Studio through the obsolete admin brand");
+  for (const obsolete of ["admin-wordmark-black.png", "mesh-wordmark-black.png", "neon-wordmark-black.png"] as const) {
+    if (legacyPage.includes(obsolete) || await exists(`stack/config/gateway/fallback/brand/${obsolete}`)) failures.push(`Legacy gateway still contains obsolete asset ${obsolete}`);
+  }
 }
 
 async function main(): Promise<void> {

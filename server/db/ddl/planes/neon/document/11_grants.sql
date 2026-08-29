@@ -48,6 +48,38 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT, UPDATE ON
+            document.supplier_registration_invitation,
+            document.business_partner_request
+        TO athyperapp;
+        GRANT SELECT, INSERT ON
+            document.business_partner_request_evidence,
+            document.business_partner_request_validation
+        TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_supplier_registration_invitation() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperapp;
+    END IF;
+
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON
+            document.supplier_registration_invitation,
+            document.business_partner_request,
+            document.business_partner_request_evidence,
+            document.business_partner_request_validation
+        TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_supplier_registration_invitation() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperadmin;
+    END IF;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE ON
             document.workflow_request,
             document.workflow_stage,
             document.commitment,
@@ -432,3 +464,12 @@ BEGIN
     END IF;
 END;
 $$;
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        GRANT SELECT, INSERT ON document.mesh_business_partner_match, document.mesh_business_partner_acceptance, document.mesh_business_partner_acceptance_event TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON document.mesh_business_partner_match, document.mesh_business_partner_acceptance, document.mesh_business_partner_acceptance_event TO athyperadmin;
+    END IF;
+END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON document.business_partner_bank_verification TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON document.business_partner_bank_verification TO athyperadmin; END IF; END $$;

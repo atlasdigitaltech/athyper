@@ -2,6 +2,7 @@
 
 import { useHasPermission } from "@athyper/platform-shell-app-foundation";
 import { ContentHeader } from "@athyper/platform-shell";
+import { ClipboardCheckIcon, LanguagesIcon } from "@athyper/platform-icons";
 
 export function OperationsHub() {
   const canManageLanguages = useHasPermission("studio.platform.catalog.manage");
@@ -12,14 +13,14 @@ export function OperationsHub() {
       <div className="studio-operations__grid">
         {canManageLanguages ? (
           <a href="/operations/localization">
-            <span aria-hidden="true">文</span>
+            <span aria-hidden="true"><LanguagesIcon /></span>
             <strong>Languages and regions</strong>
             <p>Activate supported languages and choose the default independently for each plane.</p>
             <small>Studio · Neon · Mesh</small>
           </a>
         ) : null}
         <a href="/operations/verification">
-          <span aria-hidden="true">✓</span>
+          <span aria-hidden="true"><ClipboardCheckIcon /></span>
           <strong>System verification</strong>
           <p>Inspect authenticated platform checks and operational readiness evidence.</p>
           <small>Assurance</small>

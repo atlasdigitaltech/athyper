@@ -31,7 +31,7 @@ const ddlSources = [
   "ddl/planes/mesh/mesh/03_tables.sql",
 ] as const;
 const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"] as const;
-const expectedTableCount = 78;
+const expectedTableCount = 82;
 
 type DiscoveredTable = {
   readonly table: string;

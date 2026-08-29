@@ -20,7 +20,7 @@ Click or copy the link below to set a new password:
 
   ${link}
 
-⚠  This link expires in ${linkExpiration} minutes.
+Warning: This link expires in ${linkExpiration} minutes.
    After that, return to the sign-in page and request a new reset link.
 
 ─────────────────────────────────────────────

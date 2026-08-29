@@ -115,7 +115,7 @@
                 <tr>
                   <td style="background-color:#fafafa;border:1px solid #e5e5e5;border-radius:6px;padding:14px 18px;">
                     <p style="margin:0;font-size:12px;color:#6b6b6b;line-height:1.6;">
-                      &#9432;&nbsp; This verification link expires in <strong>${linkExpiration} minutes</strong>.
+                      <strong>Expiry:</strong> This verification link expires in ${linkExpiration} minutes.
                       If it has expired, sign in again — Keycloak will prompt you to re-verify.
                     </p>
                   </td>
@@ -130,17 +130,17 @@
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#6b6b6b;line-height:1.6;">
-                          ✓ &nbsp;Your account is activated immediately after verification
+                          Your account is activated immediately after verification
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#6b6b6b;line-height:1.6;">
-                          ✓ &nbsp;You'll be redirected back to the platform automatically
+                          You'll be redirected back to the platform automatically
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#6b6b6b;line-height:1.6;">
-                          ✓ &nbsp;Your data and settings are safe and waiting for you
+                          Your data and settings are safe and waiting for you
                         </td>
                       </tr>
                     </table>

@@ -1,0 +1,259 @@
+import { createHash, randomUUID } from "node:crypto";
+import type { AuditRecorder } from "@athyper/server-contract-audit";
+import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type { OutboxWriter } from "@athyper/server-contract-events";
+import {
+  businessPartnerRequestPermissions,
+  businessPartnerPermissions,
+  type ApplyBusinessPartnerRequestCommand,
+  type BusinessPartnerRequest,
+  type BusinessPartnerRequestRepository,
+  type BusinessPartnerRequestSchemaResolver,
+  type BusinessPartnerRequestService,
+  type BusinessPartnerRequestTransactionCoordinator,
+  type BusinessPartnerRequestValidator,
+  type BusinessPartnerRequestWorkflowDefinition,
+  type BusinessPartnerRequestWorkflowResolver,
+  type CreateBusinessPartnerRequestCommand,
+  type DecideBusinessPartnerRequestCommand,
+  type SubmitBusinessPartnerRequestCommand,
+} from "@athyper/server-contract-master-data";
+import { MasterDataError } from "./errors.js";
+
+export interface BusinessPartnerRequestServiceOptions<Transaction> {
+  readonly authorizer: Authorizer;
+  readonly repository: BusinessPartnerRequestRepository<Transaction>;
+  readonly transactions: BusinessPartnerRequestTransactionCoordinator<Transaction>;
+  readonly schemas: BusinessPartnerRequestSchemaResolver;
+  readonly validator: BusinessPartnerRequestValidator<Transaction>;
+  readonly workflows: BusinessPartnerRequestWorkflowResolver<Transaction>;
+  readonly audit: AuditRecorder<Transaction>;
+  readonly outbox: OutboxWriter<Transaction>;
+  readonly createRequestNo?: () => string;
+}
+
+export function createBusinessPartnerRequestService<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>): BusinessPartnerRequestService {
+  const requestNo = options.createRequestNo ?? (() => `BPR-${randomUUID().replaceAll("-", "").toUpperCase()}`);
+  return {
+    async create(command) {
+      assertContext(command.context);
+      validateCreate(command);
+      await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, scope(command.operatingOrganizationId, command.companyCodeId));
+      const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind });
+      validateSchema(schema);
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const existing = await options.repository.findByIdempotencyKey(command.context.tenantId, command.idempotencyKey, transaction);
+        if (existing) {
+          if (creationFingerprint(existing) !== commandFingerprint(command, schema)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_IDEMPOTENCY_CONFLICT", "Idempotency key was reused with different request content");
+          return { request: existing, replayed: true };
+        }
+        const created = await options.repository.create({ tenantId: command.context.tenantId, requestNo: requestNo(), command: withoutContext(command), schema, createdBy: command.context.principalId }, transaction);
+        await effects(options, command.context, transaction, "business_partner.request.created", created, { sourceKind: created.source.kind, requestKind: created.kind });
+        return { request: created, replayed: false };
+      });
+    },
+    async get(query) {
+      assertContext(query.context);
+      return options.transactions.run("neon", actor(query.context), async (transaction) => {
+        const request = await options.repository.get(query.context.tenantId, query.requestId, transaction);
+        if (!request) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(request.operatingOrganizationId, request.companyCodeId));
+        return request;
+      });
+    },
+    async getView(query) {
+      assertContext(query.context);
+      return options.transactions.run("neon", actor(query.context), async (transaction) => {
+        const view = await options.repository.getView(query.context.tenantId, query.requestId, transaction);
+        if (!view) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(view.request.operatingOrganizationId, view.request.companyCodeId));
+        return view;
+      });
+    },
+    async list(query) {
+      assertContext(query.context);
+      if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) throw invalid("limit must be between 1 and 200");
+      await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(query.operatingOrganizationId));
+      return options.transactions.run("neon", actor(query.context), transaction => options.repository.list({ tenantId: query.context.tenantId, operatingOrganizationId: query.operatingOrganizationId, ...(query.status ? { status: query.status } : {}), ...(query.limit ? { limit: query.limit } : {}), ...(query.beforeCreatedAt ? { beforeCreatedAt: query.beforeCreatedAt } : {}) }, transaction));
+    },
+    async getAggregate(query) {
+      assertContext(query.context);
+      await authorize(options.authorizer, query.context, businessPartnerPermissions.read, scope(query.operatingOrganizationId));
+      return options.transactions.run("neon", actor(query.context), async (transaction) => {
+        const aggregate = await options.repository.getAggregate(query.context.tenantId, query.businessPartnerId, query.operatingOrganizationId, transaction);
+        if (!aggregate) throw new MasterDataError(404, "BUSINESS_PARTNER_NOT_FOUND", "Business Partner was not found in the selected operating organization");
+        return aggregate;
+      });
+    },
+    async patch(command) {
+      assertContext(command.context);
+      if (!Number.isSafeInteger(command.expectedVersion) || command.expectedVersion < 1) throw invalid("expectedVersion must be a positive integer");
+      validatePayload(command.proposedPayload);
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
+        if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        if (!["draft", "validation_failed", "returned"].includes(current.status)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_EDITABLE", "Only draft, validation-failed, or returned requests can be edited");
+        const organizationId = command.operatingOrganizationId ?? current.operatingOrganizationId;
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.update, scope(organizationId, command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined));
+        const updated = await options.repository.patch({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, proposedPayload: command.proposedPayload, ...(command.operatingOrganizationId ? { operatingOrganizationId: command.operatingOrganizationId } : {}), ...(command.companyCodeId !== undefined ? { companyCodeId: command.companyCodeId } : {}), ...(command.requestedRole !== undefined ? { requestedRole: command.requestedRole } : {}), updatedBy: command.context.principalId }, transaction);
+        if (!updated) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version or editable state changed");
+        await effects(options, command.context, transaction, "business_partner.request.updated", updated, { priorVersion: command.expectedVersion });
+        return updated;
+      });
+    },
+    async validate(command) {
+      assertContext(command.context);
+      if (!Number.isSafeInteger(command.expectedVersion) || command.expectedVersion < 1) throw invalid("expectedVersion must be a positive integer");
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
+        if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        if (!['draft', 'validation_failed', 'returned'].includes(current.status)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_VALIDATABLE", "Only draft, validation-failed, or returned requests can be validated");
+        if (current.rowVersion !== command.expectedVersion) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version changed before validation");
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.validate, scope(current.operatingOrganizationId, current.companyCodeId));
+        const validation = await options.validator.validate({ context: command.context, request: current }, transaction);
+        validateValidationResult(validation);
+        const request = await options.repository.recordValidation({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, evaluatedBy: command.context.principalId, result: validation }, transaction);
+        if (!request) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version or validation state changed");
+        await effects(options, command.context, transaction, "business_partner.request.validated", request, { evaluationId: validation.evaluationId, valid: validation.valid, ruleset: validation.ruleset });
+        return { request, validation };
+      });
+    },
+    async submit(command) {
+      assertContext(command.context);
+      validateWorkflowCommand(command.expectedVersion, command.idempotencyKey);
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
+        if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.submit, { ...scope(current.operatingOrganizationId, current.companyCodeId), tenantId: current.tenantId, requestId: current.id, makerCheckerEnforced: true });
+        if (current.status === "pending_approval" && current.workflowRequestId) {
+          const replay = await options.repository.submit({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, submittedBy: command.context.principalId, idempotencyKey: command.idempotencyKey, definition: placeholderDefinition(), decisionFingerprint: current.decisionFingerprint ?? "", ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}) }, transaction);
+          if (replay?.replayed) return replay;
+          throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_ALREADY_SUBMITTED", "Request is already submitted with different command evidence");
+        }
+        if (current.status !== "draft") throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_SUBMITTABLE", "Only a validated draft can be submitted");
+        if (current.rowVersion !== command.expectedVersion) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version changed before submission");
+        assertPassedValidation(current);
+        if (current.registrationMode === "on_behalf" && !current.representationEvidenceId) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_REPRESENTATION_EVIDENCE_REQUIRED", "On-behalf registration requires representation evidence before submission");
+        const definition = await options.workflows.resolve({ context: command.context, request: current }, transaction);
+        validateWorkflowDefinition(definition, command.context.principalId);
+        const fingerprint = submissionFingerprint(current, definition);
+        const result = await options.repository.submit({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, submittedBy: command.context.principalId, idempotencyKey: command.idempotencyKey, definition, decisionFingerprint: fingerprint, ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}) }, transaction);
+        if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version, validation evidence, or submission state changed");
+        await effects(options, command.context, transaction, "business_partner.request.submitted", result.request, { workflowRequestId: result.workflow.requestId, workItemId: result.workflow.workItemId, definition: result.workflow.definition, decisionFingerprint: fingerprint });
+        return result;
+      });
+    },
+    async decide(command) {
+      assertContext(command.context);
+      validateDecisionCommand(command);
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
+        if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        if (current.workflowRequestId !== command.workflowRequestId) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_WORKFLOW_MISMATCH", "Decision does not address the request's pinned workflow");
+        if (command.decision === "approve" && current.submittedBy === command.context.principalId) throw new MasterDataError(403, "BUSINESS_PARTNER_REQUEST_SELF_APPROVAL_FORBIDDEN", "The submitter cannot approve their own Business Partner request");
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.decide, { ...scope(current.operatingOrganizationId, current.companyCodeId), tenantId: current.tenantId, requestId: current.id, workflowRequestId: command.workflowRequestId, submittedBy: current.submittedBy });
+        const fingerprint = decisionFingerprint(current, command);
+        const result = await options.repository.decide({ tenantId: command.context.tenantId, command: withoutDecisionContext(command), decidedBy: command.context.principalId, decisionFingerprint: fingerprint }, transaction);
+        if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_DECISION_CONFLICT", "Request or work-item state/version changed, or the actor is not eligible");
+        if (!result.replayed) await effects(options, command.context, transaction, `business_partner.request.${command.decision === "approve" ? "approved" : command.decision === "reject" ? "rejected" : "returned"}`, result.request, { workflowRequestId: result.workflow.requestId, workItemId: result.workflow.workItemId, decision: command.decision, decisionFingerprint: fingerprint });
+        return result;
+      });
+    },
+    async apply(command) {
+      assertContext(command.context);
+      validateWorkflowCommand(command.expectedVersion, command.idempotencyKey);
+      return options.transactions.run("neon", actor(command.context), async (transaction) => {
+        const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
+        if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.apply, {
+          ...scope(current.operatingOrganizationId, current.companyCodeId),
+          tenantId: current.tenantId,
+          requestId: current.id,
+          approvedBy: current.approvedBy,
+          approvedEvidencePinned: Boolean(current.approvedAt && current.approvedBy && current.decisionFingerprint),
+        });
+        assertRoleMaterializable(current);
+        const fingerprint = applicationFingerprint(current, command);
+        const result = await options.repository.apply({
+          tenantId: command.context.tenantId,
+          command: withoutApplyContext(command),
+          appliedBy: command.context.principalId,
+          applicationFingerprint: fingerprint,
+          ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}),
+        }, transaction);
+        if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPLICATION_CONFLICT", "Request version, approval, validation, duplicate, source, or organization evidence changed before materialization");
+        if (!result.replayed) await effects(options, command.context, transaction, "business_partner.request.applied", result.request, {
+          businessPartnerId: result.materialization.businessPartnerId,
+          partnerRole: result.materialization.partnerRole,
+          roleId: result.materialization.roleId,
+          ...(result.materialization.supplierId ? { supplierId: result.materialization.supplierId } : {}),
+          ...(result.materialization.customerId ? { customerId: result.materialization.customerId } : {}),
+          operatingOrganizationAssignmentId: result.materialization.operatingOrganizationAssignmentId,
+          snapshotId: result.materialization.snapshotId,
+          applicationFingerprint: result.materialization.applicationFingerprint,
+        });
+        return result;
+      });
+    },
+  };
+}
+
+function assertContext(context: VerifiedRequestContext): void { if (context.planeKey !== "neon") throw new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_NEON_REQUIRED", "Business Partner requests execute only in NEON"); }
+function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
+  if (!command.operatingOrganizationId) throw invalid("operatingOrganizationId is required for the Phase 1 onboarding scope");
+  if (command.idempotencyKey.trim() !== command.idempotencyKey || command.idempotencyKey.length < 8 || command.idempotencyKey.length > 200) throw invalid("idempotencyKey must be trimmed and contain 8 to 200 characters");
+  if ((command.kind === "new_partner") !== !command.targetBusinessPartnerId) throw invalid("new_partner must not have a target; every other request kind requires one");
+  if (command.kind === "add_supplier" && command.requestedRole !== "supplier") throw invalid("add_supplier requires requestedRole supplier");
+  if (command.kind === "add_customer" && command.requestedRole !== "customer") throw invalid("add_customer requires requestedRole customer");
+  if (["new_partner", "add_supplier", "add_customer", "assign_organization", "configure_company"].includes(command.kind) && !["supplier", "customer"].includes(command.requestedRole ?? "")) throw invalid("Role onboarding and configuration support only supplier or customer");
+  if (command.kind === "configure_company" && !command.companyCodeId) throw invalid("configure_company requires companyCodeId");
+  const registrationMode = command.registrationMode ?? defaultRegistrationMode(command.source.kind);
+  if (registrationMode === "self_service" && (command.source.kind !== "portal" || !command.invitationId || !command.applicantPrincipalId || command.representedPartyName || command.representationEvidenceId)) throw invalid("Self-service registration requires portal source, invitation, and applicant coordinates only");
+  if (registrationMode === "on_behalf" && (command.source.kind !== "manual" || !command.representedPartyName?.trim() || command.invitationId || command.applicantPrincipalId)) throw invalid("On-behalf registration requires manual source and represented party coordinates");
+  if (registrationMode === "integration" && !["mesh", "import", "api"].includes(command.source.kind)) throw invalid("Integration registration requires mesh, import, or api source");
+  if (registrationMode === "direct" && (command.source.kind !== "manual" || command.invitationId || command.applicantPrincipalId || command.representedPartyName || command.representationEvidenceId)) throw invalid("Direct maintenance requires a manual source without representation coordinates");
+  if (command.source.kind === "mesh" && (command.source.systemCode !== "athyper_mesh" || !command.source.entityCode || !command.source.entityId || !command.source.projectionId || !command.source.version || !isHash(command.source.payloadHash))) throw invalid("MESH source coordinates, pinned version, and payload hash are required");
+  validatePayload(command.proposedPayload);
+}
+function validateSchema(schema: { readonly code: string; readonly version: number; readonly hash: string }): void { if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(schema.code) || !Number.isSafeInteger(schema.version) || schema.version < 1 || !isHash(schema.hash)) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_SCHEMA_INVALID", "Published request schema coordinates are invalid"); }
+function validateValidationResult(result: Awaited<ReturnType<BusinessPartnerRequestValidator<unknown>["validate"]>>): void {
+  validateSchema(result.ruleset);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(result.evaluationId) || Number.isNaN(Date.parse(result.evaluatedAt)) || result.findings.length === 0) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_VALIDATOR_INVALID", "Validator returned invalid evaluation coordinates");
+  for (const finding of result.findings) {
+    if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(finding.ruleCode) || !/^[A-Z][A-Z0-9_.-]{1,126}$/.test(finding.messageCode) || !finding.fieldPath.trim() || finding.fieldPath.length > 512 || Buffer.byteLength(JSON.stringify(finding.evidenceReference), "utf8") > 65_536) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_VALIDATOR_INVALID", "Validator returned an invalid finding");
+  }
+}
+function validatePayload(payload: Readonly<Record<string, unknown>>): void { if (!payload || Array.isArray(payload) || typeof payload !== "object") throw invalid("proposedPayload must be an object"); if (Buffer.byteLength(JSON.stringify(payload), "utf8") > 1_048_576) throw invalid("proposedPayload exceeds 1 MiB"); }
+function validateWorkflowCommand(expectedVersion: number, idempotencyKey: string): void { if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) throw invalid("expectedVersion must be a positive integer"); if (idempotencyKey.trim() !== idempotencyKey || idempotencyKey.length < 8 || idempotencyKey.length > 200) throw invalid("idempotencyKey must be trimmed and contain 8 to 200 characters"); }
+function validateDecisionCommand(command: DecideBusinessPartnerRequestCommand): void { validateWorkflowCommand(command.expectedRequestVersion, command.idempotencyKey); if (!Number.isSafeInteger(command.expectedWorkItemVersion) || command.expectedWorkItemVersion < 1) throw invalid("expectedWorkItemVersion must be a positive integer"); if (!command.reason.trim() || command.reason.trim() !== command.reason || command.reason.length > 2_000) throw invalid("A trimmed decision reason of at most 2000 characters is required"); }
+function assertRoleMaterializable(request: BusinessPartnerRequest): void {
+  if (request.status !== "approved" && request.status !== "applied") throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_APPLICABLE", "Only an approved request can be materialized");
+  const supported = (request.kind === "new_partner" && !request.targetBusinessPartnerId && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
+    || (request.kind === "add_supplier" && Boolean(request.targetBusinessPartnerId) && request.requestedRole === "supplier")
+    || (request.kind === "add_customer" && Boolean(request.targetBusinessPartnerId) && request.requestedRole === "customer")
+    || (request.kind === "assign_organization" && Boolean(request.targetBusinessPartnerId) && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
+    || (request.kind === "configure_company" && Boolean(request.targetBusinessPartnerId) && Boolean(request.companyCodeId) && (request.requestedRole === "supplier" || request.requestedRole === "customer"));
+  if (!supported) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_ROLE_EXTENSION_UNSUPPORTED", "Materialization supports new supplier/customer identities and independent add-role requests");
+  if (!request.operatingOrganizationId || !request.approvedAt || !request.approvedBy || !request.decisionFingerprint) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPROVAL_EVIDENCE_INVALID", "Pinned approval and operating-organization evidence are required");
+  assertPassedValidation(request);
+}
+function assertPassedValidation(request: BusinessPartnerRequest): void { if (request.validationSummary["outcome"] !== "passed") throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VALIDATION_REQUIRED", "A current passing validation evaluation is required before submission"); if (request.duplicateSummary["blocking"] === true) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_DUPLICATE_BLOCKED", "Blocking duplicate evidence must be resolved before submission"); }
+function validateWorkflowDefinition(definition: BusinessPartnerRequestWorkflowDefinition, submitterId: string): void { validateSchema(definition); if (!/^[A-Za-z][A-Za-z0-9_.-]{0,62}$/.test(definition.stageCode) || !definition.stageName.trim() || definition.approverPrincipalIds.length === 0 || new Set(definition.approverPrincipalIds).size !== definition.approverPrincipalIds.length || definition.approverPrincipalIds.includes(submitterId) || definition.approverPrincipalIds.some(id => !/^[0-9a-f-]{36}$/i.test(id))) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPROVER_UNAVAILABLE", "Workflow requires at least one distinct eligible approver and valid pinned stage coordinates"); }
+function placeholderDefinition(): BusinessPartnerRequestWorkflowDefinition { return { code: "replay", version: 1, hash: "0".repeat(64), stageCode: "replay", stageName: "Replay", approverPrincipalIds: [] }; }
+function isHash(value: unknown): value is string { return typeof value === "string" && /^[a-f0-9]{64}$/.test(value); }
+function invalid(message: string): MasterDataError { return new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_INVALID", message); }
+async function authorize(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string, resource: Readonly<Record<string, unknown>>): Promise<void> { const decision = await authorizer.authorize({ context, permissionCode, resource }); if (!decision.allowed) throw new MasterDataError(403, "FORBIDDEN", `Permission denied: ${permissionCode}`); }
+function scope(operatingOrganizationId?: string, companyCodeId?: string): Readonly<Record<string, unknown>> { return { ...(operatingOrganizationId ? { operatingOrganizationId } : {}), ...(companyCodeId ? { companyCodeId } : {}) }; }
+function actor(context: VerifiedRequestContext) { return { tenantId: context.tenantId, principalId: context.principalId }; }
+function withoutContext(command: CreateBusinessPartnerRequestCommand): Omit<CreateBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
+function stable(value: unknown): string { if (value === null || typeof value !== "object") return JSON.stringify(value); if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`; return `{${Object.entries(value as Record<string, unknown>).filter(([, item]) => item !== undefined).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`).join(",")}}`; }
+function hash(value: unknown): string { return createHash("sha256").update(stable(value)).digest("hex"); }
+function commandFingerprint(command: CreateBusinessPartnerRequestCommand, schema: BusinessPartnerRequest["schema"]): string { return hash({ kind: command.kind, source: command.source, registrationMode:command.registrationMode??defaultRegistrationMode(command.source.kind), invitationId:command.invitationId, applicantPrincipalId:command.applicantPrincipalId, representedPartyName:command.representedPartyName, representationEvidenceId:command.representationEvidenceId, targetBusinessPartnerId: command.targetBusinessPartnerId, requestedRole: command.requestedRole, operatingOrganizationId: command.operatingOrganizationId, companyCodeId: command.companyCodeId, proposedPayload: command.proposedPayload, schema }); }
+function creationFingerprint(request: BusinessPartnerRequest): string { return hash({ kind: request.kind, source: request.source, registrationMode:request.registrationMode, invitationId:request.invitationId, applicantPrincipalId:request.applicantPrincipalId, representedPartyName:request.representedPartyName, representationEvidenceId:request.representationEvidenceId, targetBusinessPartnerId: request.targetBusinessPartnerId, requestedRole: request.requestedRole, operatingOrganizationId: request.operatingOrganizationId, companyCodeId: request.companyCodeId, proposedPayload: request.proposedPayload, schema: request.schema }); }
+function defaultRegistrationMode(sourceKind: CreateBusinessPartnerRequestCommand["source"]["kind"]): BusinessPartnerRequest["registrationMode"] { return sourceKind === "manual" ? "direct" : sourceKind === "portal" ? "self_service" : "integration"; }
+function submissionFingerprint(request: BusinessPartnerRequest, definition: BusinessPartnerRequestWorkflowDefinition): string { return hash({ requestId: request.id, rowVersion: request.rowVersion, schema: request.schema, proposedPayload: request.proposedPayload, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, changeImpact: request.changeImpact, source: request.source, workflow: { ...definition, approverPrincipalIds: [...definition.approverPrincipalIds].sort() } }); }
+function decisionFingerprint(request: BusinessPartnerRequest, command: DecideBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, workflowRequestId: command.workflowRequestId, workItemId: command.workItemId, requestFingerprint: request.decisionFingerprint, expectedRequestVersion: command.expectedRequestVersion, expectedWorkItemVersion: command.expectedWorkItemVersion, decision: command.decision, reason: command.reason, decidedBy: command.context.principalId }); }
+function applicationFingerprint(request: BusinessPartnerRequest, command: ApplyBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, expectedVersion: command.expectedVersion, applicationIdempotencyKey: command.idempotencyKey, decisionFingerprint: request.decisionFingerprint, approvedAt: request.approvedAt, approvedBy: request.approvedBy, schema: request.schema, proposedPayload: request.proposedPayload, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, source: request.source, requestedRole: request.requestedRole, operatingOrganizationId: request.operatingOrganizationId, companyCodeId: request.companyCodeId, appliedBy: command.context.principalId }); }
+function withoutDecisionContext(command: DecideBusinessPartnerRequestCommand): Omit<DecideBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
+function withoutApplyContext(command: ApplyBusinessPartnerRequestCommand): Omit<ApplyBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
+async function effects<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>, context: VerifiedRequestContext, transaction: Transaction, eventCode: string, request: BusinessPartnerRequest, metadata: Readonly<Record<string, unknown>>): Promise<void> { await options.outbox.append({ tenantId: context.tenantId, topic: "business-partner-onboarding", eventType: eventCode, entityType: "business_partner_request", entityId: request.id, actorId: context.principalId, correlationId: context.correlationId, payload: { requestId: request.id, requestNo: request.requestNo, status: request.status, rowVersion: request.rowVersion, ...metadata } }, transaction); const action=eventCode.endsWith("created")?"create":eventCode.endsWith("approved")?"approve":eventCode.endsWith("rejected")?"reject":"update"; await options.audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "business_partner_request", entityId: request.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata }, transaction); }

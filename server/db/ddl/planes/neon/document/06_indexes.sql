@@ -821,3 +821,67 @@ CREATE INDEX multipart_upload_part_upload_idx
 CREATE INDEX multipart_upload_series_idx
     ON document.multipart_upload (tenant_id, attachment_series_id)
     WHERE attachment_series_id IS NOT NULL;
+
+CREATE INDEX supplier_registration_invitation_status_idx
+    ON document.supplier_registration_invitation (tenant_id, status, expires_at);
+CREATE INDEX supplier_registration_invitation_org_idx
+    ON document.supplier_registration_invitation (tenant_id, requested_operating_organization_id, created_at DESC);
+CREATE INDEX supplier_registration_invitation_request_idx
+    ON document.supplier_registration_invitation (tenant_id, business_partner_request_id)
+    WHERE business_partner_request_id IS NOT NULL;
+
+CREATE INDEX business_partner_request_status_idx
+    ON document.business_partner_request (tenant_id, status, created_at DESC);
+CREATE INDEX business_partner_request_target_idx
+    ON document.business_partner_request (tenant_id, target_business_partner_id, created_at DESC)
+    WHERE target_business_partner_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_open_role_extension_uq
+    ON document.business_partner_request (tenant_id, target_business_partner_id, requested_role)
+    WHERE request_kind IN ('add_supplier', 'add_customer')
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE UNIQUE INDEX business_partner_request_open_org_assignment_uq
+    ON document.business_partner_request
+       (tenant_id, target_business_partner_id, requested_role, operating_organization_id)
+    WHERE request_kind = 'assign_organization'
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE UNIQUE INDEX business_partner_request_open_company_configuration_uq
+    ON document.business_partner_request
+       (tenant_id, target_business_partner_id, requested_role, operating_organization_id, company_code_id)
+    WHERE request_kind = 'configure_company'
+      AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
+CREATE INDEX business_partner_request_workflow_idx
+    ON document.business_partner_request (tenant_id, workflow_request_id)
+    WHERE workflow_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_invitation_uq
+    ON document.business_partner_request (tenant_id, invitation_id)
+    WHERE invitation_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_application_key_uq
+    ON document.business_partner_request (tenant_id, application_idempotency_key)
+    WHERE application_idempotency_key IS NOT NULL;
+CREATE INDEX business_partner_request_org_idx
+    ON document.business_partner_request (tenant_id, operating_organization_id, status, created_at DESC)
+    WHERE operating_organization_id IS NOT NULL;
+CREATE INDEX business_partner_request_company_idx
+    ON document.business_partner_request (tenant_id, company_code_id, status, created_at DESC)
+    WHERE company_code_id IS NOT NULL;
+CREATE INDEX business_partner_request_source_idx
+    ON document.business_partner_request
+       (tenant_id, source_system_code, source_entity_code, source_entity_id, source_version DESC)
+    WHERE source_system_code IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_request_one_open_source_version_uq
+    ON document.business_partner_request
+       (tenant_id, source_system_code, source_entity_code, source_entity_id, source_version, request_kind)
+    WHERE source_system_code IS NOT NULL
+      AND status NOT IN ('rejected', 'cancelled', 'superseded', 'applied');
+CREATE INDEX business_partner_request_evidence_request_idx
+    ON document.business_partner_request_evidence (tenant_id, request_id, created_at);
+CREATE INDEX business_partner_request_validation_request_idx
+    ON document.business_partner_request_validation
+       (tenant_id, request_id, evaluation_id, severity, outcome);
+CREATE INDEX mesh_business_partner_match_snapshot_idx ON document.mesh_business_partner_match (tenant_id, snapshot_id, created_at DESC);
+CREATE INDEX mesh_business_partner_match_org_idx ON document.mesh_business_partner_match (tenant_id, operating_organization_id, created_at DESC);
+CREATE INDEX mesh_business_partner_match_candidate_idx ON document.mesh_business_partner_match (tenant_id, candidate_business_partner_id, created_at DESC) WHERE candidate_business_partner_id IS NOT NULL;
+CREATE INDEX mesh_business_partner_acceptance_match_idx ON document.mesh_business_partner_acceptance (tenant_id, match_id, created_at DESC);
+CREATE UNIQUE INDEX mesh_business_partner_acceptance_event_request_global_uq ON document.mesh_business_partner_acceptance_event (tenant_id, business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_bank_verification_open_uq ON document.business_partner_bank_verification(tenant_id,bank_projection_id,supplier_company_profile_id) WHERE status IN('pending_verification','verified');
+CREATE INDEX business_partner_bank_verification_profile_idx ON document.business_partner_bank_verification(tenant_id,supplier_company_profile_id,status,created_at DESC);

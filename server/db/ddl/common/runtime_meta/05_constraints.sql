@@ -51,3 +51,9 @@ ALTER TABLE runtime_meta.entity_descriptor
         FOREIGN KEY (entity_contract_id) REFERENCES runtime_meta.entity_contract (id) ON DELETE RESTRICT,
     ADD CONSTRAINT runtime_entity_descriptor_applied_release_fk
         FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release (id) ON DELETE RESTRICT;
+
+ALTER TABLE runtime_meta.applied_release_payload
+    ADD CONSTRAINT runtime_applied_release_payload_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT runtime_applied_release_payload_release_fk
+        FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;

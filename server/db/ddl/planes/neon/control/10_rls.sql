@@ -69,6 +69,15 @@ CREATE POLICY tenant_access ON control.business_partner_qualification
 CREATE POLICY seed_write ON control.business_partner_qualification
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
+ALTER TABLE control.supplier_preference_designation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.supplier_preference_designation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.supplier_preference_designation
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON control.supplier_preference_designation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
 ALTER TABLE control.business_partner_block ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.business_partner_block FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON control.business_partner_block
@@ -82,6 +91,8 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         CREATE POLICY admin_access ON control.business_partner_qualification
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        CREATE POLICY admin_access ON control.supplier_preference_designation
             FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
         CREATE POLICY admin_access ON control.business_partner_block
             FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
@@ -396,3 +407,31 @@ CREATE POLICY company_fiscal_calendar_assignment_tenant_access
 CREATE POLICY company_fiscal_calendar_assignment_admin_access
     ON control.company_fiscal_calendar_assignment FOR ALL TO CURRENT_USER
     USING (true) WITH CHECK (true);
+
+DO $$
+DECLARE v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
+        'mesh_business_partner_profile_inbox',
+        'mesh_business_partner_profile_processing_attempt',
+        'mesh_business_partner_profile_projection'
+    ] LOOP
+        EXECUTE format('ALTER TABLE control.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE control.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('CREATE POLICY %I ON control.%I FOR ALL USING (tenant_id = shared.current_tenant_id_soft()) WITH CHECK (tenant_id = shared.current_tenant_id())', v_table || '_tenant_access', v_table);
+        EXECUTE format('CREATE POLICY %I ON control.%I FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true)', v_table || '_owner_access', v_table);
+    END LOOP;
+END;
+$$;
+ALTER TABLE control.mesh_business_partner_account_link ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.mesh_business_partner_account_link FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.mesh_business_partner_account_link USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON control.mesh_business_partner_account_link FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE control.mesh_bank_account_disclosure_inbox ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.mesh_bank_account_disclosure_inbox FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.mesh_bank_account_disclosure_inbox USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON control.mesh_bank_account_disclosure_inbox FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE control.mesh_bank_account_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.mesh_bank_account_projection FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.mesh_bank_account_projection USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON control.mesh_bank_account_projection FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

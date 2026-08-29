@@ -46,6 +46,39 @@ export interface EntityRuntimeProjection {
   readonly entityDescriptor: EntityDescriptorProjection;
 }
 
+export const BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 =
+  "athyper.business-partner-definition-bundle.v1" as const;
+
+export interface BusinessPartnerDefinitionBundleV1 {
+  readonly schema: typeof BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1;
+  readonly bundleCode: string;
+  readonly semanticVersion: string;
+  readonly requestSchemas: Readonly<Record<string, unknown>>;
+  readonly validationDeclarations: readonly Readonly<Record<string, unknown>>[];
+  readonly formDescriptors: Readonly<Record<string, unknown>>;
+  readonly viewDescriptors: Readonly<Record<string, unknown>>;
+  readonly mappingContracts: Readonly<Record<string, unknown>>;
+  readonly workflowDefinitions: Readonly<Record<string, unknown>>;
+  readonly compatibilityRules: Readonly<Record<string, unknown>>;
+  readonly sourceContractHashes: Readonly<Record<string, string>>;
+}
+
+export interface BusinessPartnerDefinitionProjection {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly revisionId: string;
+  readonly releaseId: string;
+  readonly releaseNo: number;
+  readonly publicationKey: string;
+  readonly plane: PublicationPlane;
+  readonly bundleCode: string;
+  readonly semanticVersion: string;
+  readonly bundleSchemaVersion: string;
+  readonly bundleHash: string;
+  readonly bundle: BusinessPartnerDefinitionBundleV1;
+  readonly generatedAt: string;
+}
+
 export type AppliedReleaseStatus = "staged" | "verified" | "active" | "rejected" | "superseded";
 
 export interface AppliedReleaseProjection {
@@ -91,6 +124,7 @@ export interface LocalProjectionRepository {
   findByDeployment(deploymentId: string): Promise<AppliedReleaseProjection | null>;
   findActive(publicationKey: string): Promise<ActiveReleaseProjection | null>;
   findActiveEntity(publicationKey: string): Promise<ActiveEntityProjection | null>;
+  findActiveBusinessPartnerDefinition?(publicationKey: string): Promise<BusinessPartnerDefinitionProjection | null>;
   rollback(input: RollbackReleaseInput): Promise<ActiveReleaseProjection>;
 }
 
@@ -110,10 +144,12 @@ export interface PublicationVerificationEvidence {
   readonly manifestValid: boolean;
   readonly runtimeCompatible: boolean;
   readonly targetPlane: PublicationPlane;
-  readonly contractHash: string;
-  readonly descriptorSourceHash: string;
-  readonly contractSchemaVersion: string;
-  readonly descriptorSchemaVersion: string;
+  readonly contractHash?: string;
+  readonly descriptorSourceHash?: string;
+  readonly contractSchemaVersion?: string;
+  readonly descriptorSchemaVersion?: string;
+  readonly definitionBundleHash?: string;
+  readonly definitionBundleSchemaVersion?: string;
   readonly signatureAlgorithm?: string;
   readonly signingKeyId?: string;
 }

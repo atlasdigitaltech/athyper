@@ -8,7 +8,7 @@
   "sideEffects": ["./src/styles.css"],
   "exports": { ".": "./src/index.tsx", "./styles.css": "./src/styles.css" },
   "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/platform-api-client": "workspace:*", "@athyper/platform-i18n": "workspace:*", "@athyper/platform-shell": "workspace:*", "@athyper/platform-shell-activity-center-data": "workspace:*", "@athyper/platform-shell-app-foundation": "workspace:*", "@athyper/product-neon-navigation": "workspace:*" },
+  "dependencies": { "@athyper/platform-api-client": "workspace:*", "@athyper/platform-i18n": "workspace:*", "@athyper/platform-icons": "workspace:*", "@athyper/platform-shell": "workspace:*", "@athyper/platform-shell-activity-center-data": "workspace:*", "@athyper/platform-shell-app-foundation": "workspace:*", "@athyper/product-neon-navigation": "workspace:*" },
   "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": {
     "@athyper/config": "workspace:*",

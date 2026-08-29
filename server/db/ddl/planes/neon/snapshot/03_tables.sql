@@ -180,3 +180,57 @@ COMMENT ON TABLE snapshot.bom IS
 
 COMMENT ON TABLE snapshot.bom_component IS
   'Immutable component expansion belonging to one released BOM snapshot.';
+
+CREATE TABLE snapshot.mesh_business_partner_profile_received (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    inbox_event_id              uuid        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    publication_id              uuid        NOT NULL,
+    publication_version         integer     NOT NULL,
+    schema_code                 text        NOT NULL,
+    schema_version              integer     NOT NULL,
+    field_set_code              text        NOT NULL,
+    payload_json                jsonb       NOT NULL,
+    payload_hash                text        NOT NULL,
+    received_at                 timestamptz NOT NULL DEFAULT clock_timestamp(),
+    received_by                 uuid        NOT NULL,
+
+    CONSTRAINT mesh_bp_profile_received_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_bp_profile_received_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_bp_profile_received_inbox_uq UNIQUE (tenant_id, inbox_event_id),
+    CONSTRAINT mesh_bp_profile_received_publication_uq UNIQUE (tenant_id, publication_id),
+    CONSTRAINT mesh_bp_profile_received_participants_chk CHECK (tenant_id <> source_tenant_id),
+    CONSTRAINT mesh_bp_profile_received_version_chk CHECK (publication_version >= 1 AND schema_version = 1),
+    CONSTRAINT mesh_bp_profile_received_schema_chk CHECK (schema_code = 'mesh.business_partner_profile' AND field_set_code = 'recipient_safe_v1'),
+    CONSTRAINT mesh_bp_profile_received_payload_chk CHECK (jsonb_typeof(payload_json) = 'object' AND pg_column_size(payload_json) <= 262144),
+    CONSTRAINT mesh_bp_profile_received_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$')
+);
+
+CREATE TABLE snapshot.mesh_bank_account_disclosure_received (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id             uuid        NOT NULL,
+    inbox_event_id        uuid        NOT NULL,
+    source_tenant_id      uuid        NOT NULL,
+    network_relationship_id uuid      NOT NULL,
+    disclosure_id         uuid        NOT NULL,
+    disclosure_version    integer     NOT NULL,
+    lifecycle_version     integer     NOT NULL,
+    payload_json          jsonb       NOT NULL,
+    payload_hash          text        NOT NULL,
+    received_at           timestamptz NOT NULL DEFAULT clock_timestamp(),
+    received_by           uuid        NOT NULL,
+    CONSTRAINT mesh_bank_disclosure_received_pkey PRIMARY KEY(id),
+    CONSTRAINT mesh_bank_disclosure_received_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT mesh_bank_disclosure_received_inbox_uq UNIQUE(tenant_id,inbox_event_id),
+    CONSTRAINT mesh_bank_disclosure_received_version_chk CHECK(disclosure_version>=1 AND lifecycle_version>=1),
+    CONSTRAINT mesh_bank_disclosure_received_payload_chk CHECK(jsonb_typeof(payload_json)='object' AND pg_column_size(payload_json)<=32768),
+    CONSTRAINT mesh_bank_disclosure_received_safe_chk CHECK(lower(payload_json::text) !~ '"(account.?id.?value|account.?number|iban|routing.?number|raw.?account)[^"]*"[[:space:]]*:'),
+    CONSTRAINT mesh_bank_disclosure_received_hash_chk CHECK(payload_hash ~ '^[a-f0-9]{64}$')
+);
+
+COMMENT ON TABLE snapshot.mesh_business_partner_profile_received IS
+  'Immutable recipient-local copy of one verified MESH Business Partner publication. It is deliberately not a Business Partner master row.';

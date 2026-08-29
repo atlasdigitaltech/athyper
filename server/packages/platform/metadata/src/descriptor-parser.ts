@@ -32,6 +32,7 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   return Object.freeze({
     schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: row.entity_code,
+    ...(value["detailRouteTemplate"] === undefined ? {} : { detailRouteTemplate: routeTemplate(value["detailRouteTemplate"]) }),
     planeKey,
     releaseId: row.release_id,
     releaseNo,
@@ -55,6 +56,8 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
     ...(listPresentation ? { listPresentation } : {}),
   });
 }
+
+function routeTemplate(value:unknown):string{const route=boundedString(value,"detailRouteTemplate",512);if(!route.startsWith("/")||route.includes("..")||!route.includes(":recordId"))throw new Error("detailRouteTemplate must be a safe route containing :recordId");return route;}
 
 function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
   const item = object(raw, "listPresentation");
@@ -80,6 +83,14 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(searchItem["profileKey"] === undefined ? {} : { profileKey: code(searchItem["profileKey"], "listPresentation.search.profileKey") }),
     ...(searchItem["minimumQueryLength"] === undefined ? {} : { minimumQueryLength: boundedInteger(searchItem["minimumQueryLength"], "listPresentation.search.minimumQueryLength", 1, 64) }),
   } : undefined;
+  const filterPresentationItem = item["filterPresentation"] === undefined ? undefined : object(item["filterPresentation"], "listPresentation.filterPresentation");
+  const filterPresentation = filterPresentationItem ? {
+    ...(filterPresentationItem["quickFields"] === undefined ? {} : { quickFields: array(filterPresentationItem["quickFields"], "listPresentation.filterPresentation.quickFields").map((candidate, index) => {
+      const quick = object(candidate, `listPresentation.filterPresentation.quickFields[${index}]`);
+      return { field: identifier(quick["field"], `listPresentation.filterPresentation.quickFields[${index}].field`), ...(quick["defaultOperator"] === undefined ? {} : { defaultOperator: filterOperator(quick["defaultOperator"], `listPresentation.filterPresentation.quickFields[${index}].defaultOperator`) }) };
+    }) }),
+    ...(typeof filterPresentationItem["allowUserPinning"] === "boolean" ? { allowUserPinning: filterPresentationItem["allowUserPinning"] } : {}),
+  } : undefined;
   const limitsItem = item["limits"] === undefined ? undefined : object(item["limits"], "listPresentation.limits");
   const limits = limitsItem ? {
     ...(limitsItem["defaultPageSize"] === undefined ? {} : { defaultPageSize: boundedInteger(limitsItem["defaultPageSize"], "listPresentation.limits.defaultPageSize", 1, 100) }),
@@ -103,6 +114,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(operations["importAdapterKey"] === undefined ? {} : { importAdapterKey: code(operations["importAdapterKey"], "listPresentation.dataOperations.importAdapterKey") }),
     ...(operations["importOperations"] === undefined ? {} : { importOperations: array(operations["importOperations"], "listPresentation.dataOperations.importOperations").map(value => oneOf(value, ["create", "update", "upsert", "delete", "replace"] as const, "listPresentation.dataOperations.importOperations")) }),
     ...(operations["importOperationPermissions"] === undefined ? {} : { importOperationPermissions: importPermissionMap(operations["importOperationPermissions"]) }),
+    ...(operations["importFields"] === undefined ? {} : { importFields: array(operations["importFields"], "listPresentation.dataOperations.importFields").map((value,index) => { const field=object(value,`listPresentation.dataOperations.importFields[${index}]`);return {key:identifier(field["key"],`listPresentation.dataOperations.importFields[${index}].key`),type:oneOf(field["type"],["string","text","integer","decimal","money","boolean","date","datetime","uuid","enum","reference","json"]as const,`listPresentation.dataOperations.importFields[${index}].type`),required:field["required"]===true,...(field["label"]===undefined?{}:{label:string(field["label"],`listPresentation.dataOperations.importFields[${index}].label`)})};}) }),
   } : undefined;
   return {
     ...(schemaVersion ? { schemaVersion } : {}),
@@ -110,7 +122,7 @@ function parseListPresentation(raw: unknown): EntityListPresentationDescriptor {
     ...(item["description"] === undefined ? {} : { description: string(item["description"], "listPresentation.description") }),
     ...(item["identityField"] === undefined ? {} : { identityField: identifier(item["identityField"], "listPresentation.identityField") }),
     ...(item["defaultColumns"] === undefined ? {} : { defaultColumns: array(item["defaultColumns"], "listPresentation.defaultColumns").map((value) => identifier(value, "listPresentation.defaultColumns item")) }),
-    ...(defaultState ? { defaultState } : {}), ...(search ? { search } : {}), ...(limits ? { limits } : {}),
+    ...(defaultState ? { defaultState } : {}), ...(search ? { search } : {}), ...(filterPresentation ? { filterPresentation } : {}), ...(limits ? { limits } : {}),
     ...(defaultSort ? { defaultSort } : {}), ...(density ? { defaultDensity: density } : {}), ...(modes ? { supportedModes: modes } : {}),
     ...(defaultPageSize !== undefined ? { defaultPageSize } : {}), ...(allowedPageSizes ? { allowedPageSizes } : {}),
     ...(item["countMode"] === undefined ? {} : { countMode: oneOf(item["countMode"], ["none", "cached", "approximate", "exact"] as const, "listPresentation.countMode") }),
@@ -163,6 +175,15 @@ function validateListPresentation(presentation: EntityListPresentationDescriptor
     if (!field.filterable) throw new Error(`listPresentation default filter field is not filterable: ${item.field}`);
     const allowed = field.list?.filterOperators ?? entityFieldFilterOperators(field.type);
     if (!allowed.includes(item.operator)) throw new Error(`listPresentation default filter operator is not allowed for ${item.field}: ${item.operator}`);
+  }
+  const quickFields = presentation.filterPresentation?.quickFields ?? [];
+  if (quickFields.length > 4) throw new Error("listPresentation quick filters must not exceed four fields");
+  if (new Set(quickFields.map((item) => item.field)).size !== quickFields.length) throw new Error("listPresentation quick filter fields must be unique");
+  for (const item of quickFields) {
+    const field = requireField(item.field, "listPresentation quick filters");
+    if (!field.filterable) throw new Error(`listPresentation quick filter field is not filterable: ${item.field}`);
+    const allowed = field.list?.filterOperators ?? entityFieldFilterOperators(field.type);
+    if (item.defaultOperator && !allowed.includes(item.defaultOperator)) throw new Error(`listPresentation quick filter operator is not allowed for ${item.field}: ${item.defaultOperator}`);
   }
   if (presentation.defaultState?.group && !requireField(presentation.defaultState.group, "listPresentation.defaultState.group").list?.groupable) throw new Error(`listPresentation default group field is not groupable: ${presentation.defaultState.group}`);
   if (presentation.defaultState?.mode && presentation.supportedModes && !presentation.supportedModes.includes(presentation.defaultState.mode)) throw new Error("listPresentation default mode must be supported");

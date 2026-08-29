@@ -80,6 +80,21 @@ CREATE TRIGGER trg_business_partner_qualification_40_updated
 BEFORE UPDATE ON control.business_partner_qualification
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER trg_supplier_preference_designation_10_scope
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, supplier_id,
+    operating_organization_id, company_code_id, commodity_category_id,
+    effective_from, effective_until
+ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_business_partner_control_scope();
+
+CREATE TRIGGER trg_supplier_preference_designation_20_guard
+BEFORE INSERT OR UPDATE ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_supplier_preference_designation();
+
+CREATE TRIGGER trg_supplier_preference_designation_30_updated
+BEFORE UPDATE ON control.supplier_preference_designation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER trg_business_partner_block_10_operation_lookup
 BEFORE INSERT OR UPDATE OF operation_code
 ON control.business_partner_block
@@ -546,3 +561,17 @@ EXECUTE FUNCTION control.trg_guard_company_fiscal_calendar_assignment();
 CREATE TRIGGER trg_company_fiscal_calendar_assignment_90_updated
 BEFORE UPDATE ON control.company_fiscal_calendar_assignment
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_mesh_bp_profile_inbox_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_inbox
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_mesh_bp_profile_attempt_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_processing_attempt
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_mesh_bp_profile_projection_guard
+BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_projection
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_projection();
+CREATE TRIGGER trg_mesh_bp_account_link_guard BEFORE UPDATE OR DELETE ON control.mesh_business_partner_account_link FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_account_link();
+CREATE TRIGGER trg_mesh_bp_account_link_updated BEFORE UPDATE ON control.mesh_business_partner_account_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+CREATE TRIGGER trg_mesh_bank_disclosure_inbox_immutable BEFORE UPDATE OR DELETE ON control.mesh_bank_account_disclosure_inbox FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_bank_disclosure_inbox_mutation();
+CREATE TRIGGER trg_mesh_bank_account_projection_guard BEFORE UPDATE OR DELETE ON control.mesh_bank_account_projection FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_bank_account_projection();

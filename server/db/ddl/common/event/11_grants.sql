@@ -65,6 +65,7 @@ REVOKE ALL ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, intege
 REVOKE ALL ON FUNCTION event.trg_mirror_whatsapp_consent_event() FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.current_plane_key() FROM PUBLIC;
 REVOKE ALL ON FUNCTION event.fn_notification_work_tenants(text, text, integer) FROM PUBLIC;
+REVOKE ALL ON FUNCTION event.fn_notification_worker_principal(uuid) FROM PUBLIC;
 
 DO $$
 BEGIN
@@ -76,6 +77,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, integer, integer) TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.current_plane_key() TO athyperapp;
         GRANT EXECUTE ON FUNCTION event.fn_notification_work_tenants(text, text, integer) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION event.fn_notification_worker_principal(uuid) TO athyperapp;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON event.notification_delivery_claim, event.digest_staging,
@@ -83,6 +85,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION event.fn_notification_claim_deliveries(uuid, text, integer, integer) TO athyperadmin;
         GRANT EXECUTE ON FUNCTION event.current_plane_key() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION event.fn_notification_work_tenants(text, text, integer) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION event.fn_notification_worker_principal(uuid) TO athyperadmin;
     END IF;
 END;
 $$;

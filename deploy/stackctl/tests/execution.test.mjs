@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -76,6 +76,11 @@ test("up starts platform before instance and writes an ownership receipt", () =>
   assert.equal(platform.spec.project, "athyper-platform");
   const migration = JSON.parse(readFileSync(join(context.root, "instances/dev/receipts/migration.json"), "utf8"));
   assert.match(migration.spec.ddlSha256, /^[a-f0-9]{64}$/u);
+  const targets=JSON.parse(readFileSync(join(context.root,"operations/prometheus-targets/dev.json"),"utf8"));
+  assert.deepEqual(targets.map(item=>item.targets[0]),["worker-dev:9464","scheduler-dev:9464"]);
+  assert.ok(targets.every(item=>item.labels.environment==="development"&&item.labels.source_revision==="1".repeat(40)));
+  assert.equal(statSync(join(context.root,"operations/prometheus-targets")).mode&0o777,0o755);
+  assert.equal(statSync(join(context.root,"operations/prometheus-targets/dev.json")).mode&0o777,0o644);
 });
 
 test("up failure rolls the instance back without stopping the platform", () => {
@@ -187,6 +192,7 @@ test("down is receipt-owned and retains Docker volumes", () => {
   assert.ok(!command.includes("--volumes"));
   const active = JSON.parse(readFileSync(join(context.root, "instances/dev/receipts/active.json"), "utf8"));
   assert.equal(active.spec.state, "stopped");
+  assert.equal(existsSync(join(context.root,"operations/prometheus-targets/dev.json")),false);
 });
 
 test("backup is checksummed and restore targets a new retained volume", () => {

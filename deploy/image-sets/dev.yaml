@@ -7,12 +7,12 @@ spec:
   sourceRevision: working-tree
   images:
     - id: neon-web
-      reference: athyper/neon-web:governed-import-20260828
+      reference: athyper/neon-web:transfer-production-20260828-r7
     - id: mesh-web
-      reference: athyper/mesh-web:governed-import-20260828
+      reference: athyper/mesh-web:transfer-production-20260828-r7
     - id: studio-web
-      reference: athyper/studio-web:governed-import-20260828
+      reference: athyper/studio-web:business-partner-wp12-20260828
     - id: runtime-server
-      reference: athyper/runtime-server:governed-import-20260828
+      reference: athyper/runtime-server:transfer-operations-20260828-r16
     - id: iam
       reference: athyper/keycloak:canonical-svg-favicon

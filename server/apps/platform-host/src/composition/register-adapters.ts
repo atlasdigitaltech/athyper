@@ -68,7 +68,9 @@ import type { PdfRenderer } from "@athyper/server-contract-rendering";
 import { createPreviewRendererAdapter, type PreviewRendererConfig } from "@athyper/server-adapter-preview-renderer";
 import type { DerivativeRenderer } from "@athyper/server-contract-derivatives";
 import {
+  createOpenTelemetryMetricsRegistry,
   createOpenTelemetryAdapter,
+  createPrometheusMetricsRegistry,
   type OpenTelemetryAdapter,
   type OpenTelemetryAdapterConfig,
 } from "@athyper/server-adapter-telemetry-otel";
@@ -160,6 +162,7 @@ export function registerAdapters(
     container.adapters.openTelemetry = openTelemetry;
     lifecycle.onReady(() => openTelemetry!.start());
   }
+  container.adapters.processMetrics=openTelemetry?.prometheus??createPrometheusMetricsRegistry(createOpenTelemetryMetricsRegistry(`${config.openTelemetry.serviceName}-${config.mode}`,config.openTelemetry.serviceVersion));
 
   if (config.keycloak.issuerUrl && config.keycloak.audience) {
     const keycloakAuth = dependencies.createKeycloakAuth({
@@ -311,6 +314,9 @@ export function registerAdapters(
       presignedTtlSeconds: config.objectStorage.presignedTtlSeconds,
       ...(config.objectStorage.endpoint
         ? { endpoint: config.objectStorage.endpoint }
+        : {}),
+      ...(config.objectStorage.publicEndpoint
+        ? { publicEndpoint: config.objectStorage.publicEndpoint }
         : {}),
       ...(config.objectStorage.accessKeyId
         ? { accessKeyId: config.objectStorage.accessKeyId }

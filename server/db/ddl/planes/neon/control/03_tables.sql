@@ -212,6 +212,7 @@ CREATE TABLE control.business_partner_qualification (
     company_code_id           uuid,
     commodity_capability_id   uuid,
     qualification_type_code   text                             NOT NULL,
+    idempotency_key           text                             NOT NULL,
     decision                  control.qualification_decision_d NOT NULL DEFAULT 'pending',
     decision_reason           text,
     risk_assessment_id        uuid,
@@ -222,6 +223,9 @@ CREATE TABLE control.business_partner_qualification (
     approved_at               timestamptz,
     approved_by               uuid,
     next_review_at            date,
+    decision_idempotency_key  text,
+    decision_fingerprint      text,
+    row_version               bigint                           NOT NULL DEFAULT 1,
     metadata                  jsonb                            NOT NULL DEFAULT '{}'::jsonb,
     created_at                timestamptz                      NOT NULL DEFAULT now(),
     created_by                uuid                             NOT NULL,
@@ -232,6 +236,20 @@ CREATE TABLE control.business_partner_qualification (
     CONSTRAINT business_partner_qualification_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT business_partner_qualification_type_chk
         CHECK (qualification_type_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT business_partner_qualification_idempotency_chk
+        CHECK (btrim(idempotency_key) = idempotency_key
+               AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT business_partner_qualification_decision_key_chk
+        CHECK (decision_idempotency_key IS NULL OR
+               (btrim(decision_idempotency_key) = decision_idempotency_key
+                AND length(decision_idempotency_key) BETWEEN 8 AND 200)),
+    CONSTRAINT business_partner_qualification_fingerprint_chk
+        CHECK (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_qualification_decision_evidence_chk
+        CHECK ((decision = 'pending') =
+               (decision_idempotency_key IS NULL AND decision_fingerprint IS NULL)),
+    CONSTRAINT business_partner_qualification_row_version_chk
+        CHECK (row_version >= 1),
     CONSTRAINT business_partner_qualification_reason_chk
         CHECK (decision_reason IS NULL OR length(decision_reason) <= 4000),
     CONSTRAINT business_partner_qualification_range_chk
@@ -249,6 +267,75 @@ CREATE TABLE control.business_partner_qualification (
     CONSTRAINT business_partner_qualification_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+CREATE TABLE control.supplier_preference_designation (
+    id                          uuid                                 NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid                                 NOT NULL,
+    business_partner_id         uuid                                 NOT NULL,
+    supplier_id                 uuid                                 NOT NULL,
+    operating_organization_id   uuid                                 NOT NULL,
+    company_code_id             uuid,
+    commodity_category_id       uuid,
+    effective_from              date                                 NOT NULL,
+    effective_until             date,
+    rationale                   text                                 NOT NULL,
+    status                      control.supplier_preference_status_d NOT NULL DEFAULT 'pending',
+    idempotency_key             text                                 NOT NULL,
+    decision_reason             text,
+    reviewed_at                 timestamptz,
+    reviewed_by                 uuid,
+    approved_at                 timestamptz,
+    approved_by                 uuid,
+    decision_idempotency_key    text,
+    decision_fingerprint        text,
+    revocation_reason           text,
+    revoked_at                  timestamptz,
+    revoked_by                  uuid,
+    revocation_idempotency_key  text,
+    revocation_fingerprint      text,
+    row_version                 bigint                               NOT NULL DEFAULT 1,
+    metadata                    jsonb                                NOT NULL DEFAULT '{}'::jsonb,
+    created_at                  timestamptz                          NOT NULL DEFAULT now(),
+    created_by                  uuid                                 NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT supplier_preference_designation_pkey PRIMARY KEY (id),
+    CONSTRAINT supplier_preference_designation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT supplier_preference_designation_idempotency_chk CHECK (
+        btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT supplier_preference_designation_decision_key_chk CHECK (
+        decision_idempotency_key IS NULL OR
+        (btrim(decision_idempotency_key) = decision_idempotency_key AND length(decision_idempotency_key) BETWEEN 8 AND 200)),
+    CONSTRAINT supplier_preference_designation_revocation_key_chk CHECK (
+        revocation_idempotency_key IS NULL OR
+        (btrim(revocation_idempotency_key) = revocation_idempotency_key AND length(revocation_idempotency_key) BETWEEN 8 AND 200)),
+    CONSTRAINT supplier_preference_designation_fingerprint_chk CHECK (
+        (decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$') AND
+        (revocation_fingerprint IS NULL OR revocation_fingerprint ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT supplier_preference_designation_range_chk CHECK (
+        effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT supplier_preference_designation_reason_chk CHECK (
+        length(rationale) BETWEEN 1 AND 4000 AND
+        (decision_reason IS NULL OR length(decision_reason) BETWEEN 1 AND 4000) AND
+        (revocation_reason IS NULL OR length(revocation_reason) BETWEEN 1 AND 4000)),
+    CONSTRAINT supplier_preference_designation_review_pair_chk CHECK ((reviewed_at IS NULL) = (reviewed_by IS NULL)),
+    CONSTRAINT supplier_preference_designation_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT supplier_preference_designation_revoke_pair_chk CHECK ((revoked_at IS NULL) = (revoked_by IS NULL)),
+    CONSTRAINT supplier_preference_designation_state_evidence_chk CHECK (
+        (status = 'pending' AND reviewed_at IS NULL AND approved_at IS NULL AND decision_idempotency_key IS NULL AND decision_fingerprint IS NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'approved' AND reviewed_at IS NOT NULL AND approved_at IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'rejected' AND reviewed_at IS NOT NULL AND approved_at IS NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'revoked' AND reviewed_at IS NOT NULL AND approved_at IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NOT NULL AND revocation_idempotency_key IS NOT NULL AND revocation_fingerprint IS NOT NULL)),
+    CONSTRAINT supplier_preference_designation_no_self_approval_chk CHECK (
+        reviewed_by IS NULL OR reviewed_by <> created_by),
+    CONSTRAINT supplier_preference_designation_row_version_chk CHECK (row_version >= 1),
+    CONSTRAINT supplier_preference_designation_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT supplier_preference_designation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE control.supplier_preference_designation IS
+  'Governed effective-dated preferred-supplier designation by operating organization, optional company code, and optional commodity category. Preference ranks an eligible supplier; it never replaces readiness controls.';
 
 CREATE TABLE control.business_partner_block (
     id                        uuid                           NOT NULL DEFAULT shared.uuidv7(),
@@ -1904,6 +1991,191 @@ CREATE TABLE control.fiscal_calendar_period_rule (
 
 COMMENT ON TABLE control.fiscal_calendar_period_rule IS
   'Composition child containing the ordered construction rules of one fiscal-calendar version. Membership is mutable only while the parent is draft.';
+
+CREATE TABLE control.mesh_business_partner_profile_inbox (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    event_id                    uuid        NOT NULL,
+    event_type                  text        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    publication_id              uuid        NOT NULL,
+    publication_version         integer     NOT NULL,
+    lifecycle_version           integer     NOT NULL,
+    schema_code                 text        NOT NULL,
+    schema_version              integer     NOT NULL,
+    field_set_code              text        NOT NULL,
+    payload_hash                text        NOT NULL,
+    envelope_json               jsonb       NOT NULL,
+    envelope_hash               text        NOT NULL,
+    occurred_at                 timestamptz NOT NULL,
+    received_at                 timestamptz NOT NULL DEFAULT clock_timestamp(),
+    received_by                 uuid        NOT NULL,
+
+    CONSTRAINT mesh_bp_profile_inbox_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_bp_profile_inbox_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_bp_profile_inbox_event_uq UNIQUE (tenant_id, event_id),
+    CONSTRAINT mesh_bp_profile_inbox_participants_chk CHECK (tenant_id <> source_tenant_id),
+    CONSTRAINT mesh_bp_profile_inbox_event_type_chk CHECK (event_type IN ('business_partner.profile_publication.published','business_partner.profile_publication.withdrawn')),
+    CONSTRAINT mesh_bp_profile_inbox_version_chk CHECK (publication_version >= 1 AND lifecycle_version >= 1 AND schema_version >= 1),
+    CONSTRAINT mesh_bp_profile_inbox_field_set_chk CHECK (field_set_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT mesh_bp_profile_inbox_payload_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_bp_profile_inbox_envelope_chk CHECK (jsonb_typeof(envelope_json) = 'object' AND pg_column_size(envelope_json) <= 524288),
+    CONSTRAINT mesh_bp_profile_inbox_envelope_hash_chk CHECK (envelope_hash ~ '^[a-f0-9]{64}$')
+);
+
+CREATE TABLE control.mesh_business_partner_profile_processing_attempt (
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+    inbox_event_id  uuid        NOT NULL,
+    attempt_no      integer     NOT NULL,
+    trigger_kind    text        NOT NULL,
+    disposition     text        NOT NULL,
+    reason_code     text,
+    details         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    processed_at    timestamptz NOT NULL DEFAULT clock_timestamp(),
+    processed_by    uuid        NOT NULL,
+
+    CONSTRAINT mesh_bp_profile_attempt_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_bp_profile_attempt_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_bp_profile_attempt_number_uq UNIQUE (tenant_id, inbox_event_id, attempt_no),
+    CONSTRAINT mesh_bp_profile_attempt_number_chk CHECK (attempt_no >= 1),
+    CONSTRAINT mesh_bp_profile_attempt_trigger_chk CHECK (trigger_kind IN ('delivery','replay')),
+    CONSTRAINT mesh_bp_profile_attempt_disposition_chk CHECK (disposition IN ('applied','duplicate','stale','quarantined')),
+    CONSTRAINT mesh_bp_profile_attempt_reason_chk CHECK ((disposition = 'applied' AND reason_code IS NULL) OR (disposition <> 'applied' AND reason_code ~ '^[A-Z][A-Z0-9_]{2,95}$')),
+    CONSTRAINT mesh_bp_profile_attempt_details_chk CHECK (jsonb_typeof(details) = 'object' AND pg_column_size(details) <= 32768)
+);
+
+CREATE TABLE control.mesh_business_partner_profile_projection (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    current_publication_id      uuid        NOT NULL,
+    current_publication_version integer     NOT NULL,
+    current_lifecycle_version   integer     NOT NULL,
+    current_snapshot_id         uuid        NOT NULL,
+    last_inbox_event_id         uuid        NOT NULL,
+    projection_status           text        NOT NULL,
+    updated_at                  timestamptz NOT NULL DEFAULT clock_timestamp(),
+    updated_by                  uuid        NOT NULL,
+
+    CONSTRAINT mesh_bp_profile_projection_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_bp_profile_projection_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_bp_profile_projection_relationship_uq UNIQUE (tenant_id, network_relationship_id),
+    CONSTRAINT mesh_bp_profile_projection_participants_chk CHECK (tenant_id <> source_tenant_id),
+    CONSTRAINT mesh_bp_profile_projection_version_chk CHECK (current_publication_version >= 1 AND current_lifecycle_version >= 1),
+    CONSTRAINT mesh_bp_profile_projection_status_chk CHECK (projection_status IN ('active','withdrawn'))
+);
+
+COMMENT ON TABLE control.mesh_business_partner_profile_inbox IS
+  'Immutable NEON receipt of a MESH publication envelope; event_id provides delivery deduplication.';
+COMMENT ON TABLE control.mesh_business_partner_profile_processing_attempt IS
+  'Append-only delivery and replay results. Quarantine is evidence, never a destructive queue move.';
+COMMENT ON TABLE control.mesh_business_partner_profile_projection IS
+  'Tenant-local current pointer over verified immutable MESH snapshots. It does not materialize or update master.business_partner.';
+
+CREATE TABLE control.mesh_business_partner_account_link (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    profile_projection_id       uuid        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    business_partner_id         uuid        NOT NULL,
+    proposed_role               master.partner_role_d NOT NULL,
+    external_reference_id       uuid,
+    onboarding_request_id       uuid,
+    idempotency_key             text        NOT NULL,
+    decision_fingerprint        text,
+    status                      text        NOT NULL DEFAULT 'pending_approval',
+    reviewed_at                 timestamptz,
+    reviewed_by                 uuid,
+    approved_at                 timestamptz,
+    approved_by                 uuid,
+    terminated_at               timestamptz,
+    terminated_by               uuid,
+    termination_reason          text,
+    row_version                 bigint      NOT NULL DEFAULT 1,
+    created_at                  timestamptz NOT NULL DEFAULT now(),
+    created_by                  uuid        NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+    CONSTRAINT mesh_bp_account_link_pkey PRIMARY KEY(id),
+    CONSTRAINT mesh_bp_account_link_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT mesh_bp_account_link_idempotency_uq UNIQUE(tenant_id,idempotency_key),
+    CONSTRAINT mesh_bp_account_link_coordinate_uq UNIQUE(tenant_id,source_tenant_id,source_network_account_id),
+    CONSTRAINT mesh_bp_account_link_status_chk CHECK(status IN('pending_approval','active','rejected','terminated','corrected')),
+    CONSTRAINT mesh_bp_account_link_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT mesh_bp_account_link_decision_chk CHECK((status='pending_approval' AND decision_fingerprint IS NULL AND reviewed_at IS NULL AND reviewed_by IS NULL AND approved_at IS NULL AND approved_by IS NULL AND external_reference_id IS NULL) OR (status='rejected' AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND approved_at IS NULL AND approved_by IS NULL AND external_reference_id IS NULL) OR (status IN('active','terminated','corrected') AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND approved_at IS NOT NULL AND approved_by IS NOT NULL AND external_reference_id IS NOT NULL)),
+    CONSTRAINT mesh_bp_account_link_sod_chk CHECK(approved_by IS NULL OR approved_by IS DISTINCT FROM created_by),
+    CONSTRAINT mesh_bp_account_link_termination_chk CHECK((terminated_at IS NULL AND terminated_by IS NULL AND termination_reason IS NULL) OR (terminated_at IS NOT NULL AND terminated_by IS NOT NULL AND nullif(btrim(termination_reason),'') IS NOT NULL)),
+    CONSTRAINT mesh_bp_account_link_version_chk CHECK(row_version>=1),
+    CONSTRAINT mesh_bp_account_link_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
+);
+
+CREATE TABLE control.mesh_bank_account_disclosure_inbox (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    event_id                    uuid        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    disclosure_id               uuid        NOT NULL,
+    disclosure_version          integer     NOT NULL,
+    lifecycle_version           integer     NOT NULL,
+    event_type                  text        NOT NULL,
+    payload_hash                text        NOT NULL,
+    envelope_json               jsonb       NOT NULL,
+    envelope_hash               text        NOT NULL,
+    occurred_at                 timestamptz NOT NULL,
+    received_at                 timestamptz NOT NULL DEFAULT clock_timestamp(),
+    received_by                 uuid        NOT NULL,
+    CONSTRAINT mesh_bank_disclosure_inbox_pkey PRIMARY KEY(id),
+    CONSTRAINT mesh_bank_disclosure_inbox_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT mesh_bank_disclosure_inbox_event_uq UNIQUE(tenant_id,event_id),
+    CONSTRAINT mesh_bank_disclosure_inbox_parties_chk CHECK(tenant_id<>source_tenant_id),
+    CONSTRAINT mesh_bank_disclosure_inbox_type_chk CHECK(event_type IN('mesh.bank_account.disclosed','mesh.bank_account.changed','mesh.bank_account.revoked')),
+    CONSTRAINT mesh_bank_disclosure_inbox_version_chk CHECK(disclosure_version>=1 AND lifecycle_version>=1),
+    CONSTRAINT mesh_bank_disclosure_inbox_hash_chk CHECK(payload_hash ~ '^[a-f0-9]{64}$' AND envelope_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_bank_disclosure_inbox_payload_chk CHECK(jsonb_typeof(envelope_json)='object' AND pg_column_size(envelope_json)<=65536)
+    ,CONSTRAINT mesh_bank_disclosure_inbox_safe_chk CHECK(lower(envelope_json::text) !~ '"(account.?id.?value|account.?number|iban|routing.?number|raw.?account)[^"]*"[[:space:]]*:')
+);
+
+CREATE TABLE control.mesh_bank_account_projection (
+    id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid        NOT NULL,
+    account_link_id             uuid        NOT NULL,
+    source_tenant_id            uuid        NOT NULL,
+    source_network_account_id   uuid        NOT NULL,
+    recipient_network_account_id uuid       NOT NULL,
+    network_relationship_id     uuid        NOT NULL,
+    current_disclosure_id       uuid        NOT NULL,
+    current_disclosure_version  integer     NOT NULL,
+    current_lifecycle_version   integer     NOT NULL,
+    current_snapshot_id         uuid        NOT NULL,
+    last_inbox_event_id         uuid        NOT NULL,
+    account_fingerprint         text        NOT NULL,
+    projection_status           text        NOT NULL DEFAULT 'available',
+    updated_at                  timestamptz NOT NULL DEFAULT clock_timestamp(),
+    updated_by                  uuid        NOT NULL,
+    CONSTRAINT mesh_bank_account_projection_pkey PRIMARY KEY(id),
+    CONSTRAINT mesh_bank_account_projection_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT mesh_bank_account_projection_relationship_uq UNIQUE(tenant_id,network_relationship_id),
+    CONSTRAINT mesh_bank_account_projection_version_chk CHECK(current_disclosure_version>=1 AND current_lifecycle_version>=1),
+    CONSTRAINT mesh_bank_account_projection_fingerprint_chk CHECK(account_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_bank_account_projection_status_chk CHECK(projection_status IN('available','change_pending','verified','linked','revoked','expired','quarantined'))
+);
+
+COMMENT ON TABLE control.mesh_business_partner_account_link IS 'Approved directional mapping from one recipient-visible MESH account to one NEON Business Partner and explicit supplier/customer role.';
+COMMENT ON TABLE control.mesh_bank_account_disclosure_inbox IS 'Immutable recipient receipt for a masked, separately governed MESH bank disclosure event.';
+COMMENT ON TABLE control.mesh_bank_account_projection IS 'Masked recipient-local bank disclosure head. It contains no raw account identifier and cannot directly update NEON bank master data.';
 
 CREATE TABLE control.company_fiscal_calendar_assignment (
     id                          uuid        NOT NULL DEFAULT shared.uuidv7(),

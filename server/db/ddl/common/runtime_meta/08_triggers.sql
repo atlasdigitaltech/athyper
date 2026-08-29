@@ -86,3 +86,12 @@ FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_entity_contract();
 CREATE TRIGGER runtime_entity_descriptor_immutable
 BEFORE UPDATE OR DELETE ON runtime_meta.entity_descriptor
 FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_entity_descriptor();
+
+CREATE OR REPLACE FUNCTION runtime_meta.trg_guard_applied_release_payload()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog AS $$
+BEGIN
+  RAISE EXCEPTION 'Applied release payloads are immutable' USING ERRCODE='restrict_violation';
+END; $$;
+CREATE TRIGGER runtime_applied_release_payload_immutable
+BEFORE UPDATE OR DELETE ON runtime_meta.applied_release_payload
+FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_applied_release_payload();

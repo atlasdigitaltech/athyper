@@ -12,8 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
+    "@athyper/server-contract-events": "workspace:*",
+    "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
+    "@athyper/server-runtime-http": "workspace:*",
     "kysely": "^0.28.17"
   },
   "devDependencies": {

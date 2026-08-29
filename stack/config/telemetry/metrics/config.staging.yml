@@ -9,6 +9,8 @@ rule_files:
   - redis-alerts.yml
   - document-registry-alerts.yml
   - api-alerts.yml
+  - record-transfer-alerts.yml
+  - business-partner-alerts.yml
   # NOTE: document-registry-slo.yml is a specification document, not Prometheus-native.
   # It uses a custom recording_rules/slos YAML format. Do not add it to rule_files.
 

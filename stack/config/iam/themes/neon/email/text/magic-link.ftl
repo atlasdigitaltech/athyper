@@ -1,7 +1,7 @@
 <#-- ============================================================
      Athyper Neon Email Theme — magic-link.ftl (Plain Text)
      ============================================================ -->
-⚡ ATHYPER ADMIN — YOUR SIGN-IN LINK
+ATHYPER ADMIN — YOUR SIGN-IN LINK
 ─────────────────────────────────────────────
 
 Hi ${user.firstName!""} ${user.lastName!""},
@@ -21,9 +21,9 @@ No password required.
 ─────────────────────────────────────────────
 IMPORTANT — PLEASE READ
 
-  ⏱  This link expires in ${linkExpiration} minutes.
-  🔒  Single-use only — it becomes invalid after one click.
-  👤  Only valid for the device/browser used to request it.
+  Expiry: This link expires in ${linkExpiration} minutes.
+  Security: Single-use only — it becomes invalid after one click.
+  Device: Only valid for the device/browser used to request it.
 
 NEVER share this link with anyone, including Athyper support.
 We will never ask for your sign-in link.

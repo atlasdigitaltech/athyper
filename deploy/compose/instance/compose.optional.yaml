@@ -21,6 +21,7 @@ services:
     volumes:
       - metrics-data:/prometheus
       - ./config/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
+      - ./config/prometheus/business-partner-rules.yaml:/etc/prometheus/business-partner-rules.yaml:ro
     networks: [ops]
     security_opt: [no-new-privileges:true]
     read_only: true

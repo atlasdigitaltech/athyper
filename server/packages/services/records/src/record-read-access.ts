@@ -10,10 +10,14 @@ export async function authorizeRecordListRead(
 ): Promise<Extract<AuthorizationDecision, { readonly allowed: true }>> {
   const permissionCode = descriptor.operations["read"]?.permissionCode;
   if (!permissionCode) throw new RecordServiceError(409, "ENTITY_OPERATION_UNAVAILABLE", "Entity read operation is not published");
+  const permissionOnly = descriptor.operations["read"]?.authorizationMode === "permission_only";
   const effective = await authorizer.authorize({
     context,
     permissionCode,
-    resource: {
+    resource: permissionOnly ? {
+      tenantId: context.tenantId,
+      ...scopeResource,
+    } : {
       tenantId: context.tenantId,
       entityCode: descriptor.entityCode,
       operationKey: "read",
@@ -22,7 +26,7 @@ export async function authorizeRecordListRead(
     },
   });
   if (effective.allowed) return effective;
-  if (effective.reason === "scope_coordinate_missing") {
+  if (!permissionOnly && effective.reason === "scope_coordinate_missing") {
     const base = await authorizer.authorize({ context, permissionCode });
     if (base.allowed && base.scope && !base.scope.tenantWide) return base;
   }

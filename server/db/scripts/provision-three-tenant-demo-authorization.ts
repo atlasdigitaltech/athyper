@@ -11,7 +11,7 @@ const SOURCE_REF = "local-demo:three-tenant-authorization:v1";
 export const DEMO_PLANE_PERMISSIONS = {
   neon: ["neon.context.catalog.read", "workflow.work_item.read"],
   mesh: ["mesh.catalog.network_account.read", "mesh.catalog.network_relationship.read","mesh.catalog.network_relationship.request"],
-  studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage","studio.metadata.contract.view","studio.metadata.contract.import"],
+  studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage","studio.metadata.contract.view","studio.metadata.contract.import","studio.metadata.contract_draft.create"],
 } as const;
 const PRIMARY_TENANT_ADMINS: Record<string, string> = {
   athyper: "athyper.admin",
@@ -180,6 +180,8 @@ async function ensureRole(client: QueryClient, plane: ProvisionPlane, tenantId: 
   const actual = await one<{ id: string; sourceRef: string; status: string }>(client, "SELECT id::text AS id,source_ref AS \"sourceRef\",status FROM authz.role WHERE tenant_id=$1::uuid AND code=$2", [tenantId, code]);
   if (actual.id !== id || actual.sourceRef !== SOURCE_REF) throw new Error(`conflicting demo role ${tenantId}/${code}`);
   if (actual.status === "active") await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid", [tenantId, id, actorId]);
+  await client.query("DELETE FROM authz.role_permission WHERE tenant_id=$1::uuid AND role_id=$2::uuid AND NOT (permission_id=ANY($3::uuid[]))",
+    [tenantId, id, permissions.map((permission) => permission.id)]);
   for (const permission of permissions) {
     await client.query("INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid) ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING",
       [deterministicUuid("demo-auth", plane, tenantId, "role-permission", permission.code), tenantId, id, permission.id, actorId]);

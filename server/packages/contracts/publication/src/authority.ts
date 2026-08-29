@@ -19,7 +19,8 @@ export interface PublicationRelease {
 export interface CreatePublicationReleaseInput {
   readonly id: string;
   readonly tenantId: string;
-  readonly entityReleaseId: string;
+  readonly entityReleaseId?: string;
+  readonly businessPartnerDefinitionRevisionId?: string;
   readonly publicationKey: string;
   readonly releaseNo: number;
   readonly releaseKind: "publish" | "rollback";
@@ -35,7 +36,7 @@ export interface CreatePublicationArtifactInput {
   readonly id: string;
   readonly releaseId: string;
   readonly plane: import("./projection.js").PublicationPlane;
-  readonly artifactKind: "entity_runtime";
+  readonly artifactKind: import("./artifact.js").PublicationArtifactKind;
   readonly artifactUri: string;
   readonly contentHash: string;
   readonly actorId: string;

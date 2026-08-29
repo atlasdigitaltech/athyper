@@ -3,7 +3,7 @@
   "main": "./src/index.tsx", "types": "./src/index.tsx", "sideEffects": ["./src/styles.css"],
   "exports": { ".": "./src/index.tsx", "./public-identity-surface": "./src/public-identity-surface.tsx", "./stack-rules": "./src/stack-rules.ts", "./styles.css": "./src/styles.css" },
   "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/platform-ui": "workspace:*" },
+  "dependencies": { "@athyper/platform-icons": "workspace:*", "@athyper/platform-ui": "workspace:*" },
   "peerDependencies": { "react": "^19.2.5" },
   "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
 }

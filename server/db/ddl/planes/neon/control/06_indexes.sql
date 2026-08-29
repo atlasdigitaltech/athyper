@@ -1,6 +1,11 @@
 CREATE INDEX business_partner_qualification_partner_idx
     ON control.business_partner_qualification
        (tenant_id, business_partner_id, partner_role, decision);
+CREATE UNIQUE INDEX business_partner_qualification_idempotency_uq
+    ON control.business_partner_qualification (tenant_id, idempotency_key);
+CREATE UNIQUE INDEX business_partner_qualification_decision_idempotency_uq
+    ON control.business_partner_qualification (tenant_id, decision_idempotency_key)
+    WHERE decision_idempotency_key IS NOT NULL;
 CREATE INDEX business_partner_qualification_org_idx
     ON control.business_partner_qualification
        (tenant_id, operating_organization_id)
@@ -18,6 +23,27 @@ CREATE INDEX business_partner_qualification_review_due_idx
        (tenant_id, next_review_at)
     WHERE decision IN ('approved', 'conditional')
       AND next_review_at IS NOT NULL;
+CREATE INDEX business_partner_qualification_readiness_idx
+    ON control.business_partner_qualification
+       (tenant_id, business_partner_id, partner_role,
+        operating_organization_id, company_code_id,
+        qualification_type_code, decision, effective_from, effective_until);
+
+CREATE UNIQUE INDEX supplier_preference_designation_idempotency_uq
+    ON control.supplier_preference_designation (tenant_id, idempotency_key);
+CREATE UNIQUE INDEX supplier_preference_designation_decision_idempotency_uq
+    ON control.supplier_preference_designation (tenant_id, decision_idempotency_key)
+    WHERE decision_idempotency_key IS NOT NULL;
+CREATE UNIQUE INDEX supplier_preference_designation_revocation_idempotency_uq
+    ON control.supplier_preference_designation (tenant_id, revocation_idempotency_key)
+    WHERE revocation_idempotency_key IS NOT NULL;
+CREATE INDEX supplier_preference_designation_resolution_idx
+    ON control.supplier_preference_designation
+       (tenant_id, business_partner_id, operating_organization_id,
+        company_code_id, commodity_category_id, status, effective_from, effective_until);
+CREATE INDEX supplier_preference_designation_supplier_idx
+    ON control.supplier_preference_designation
+       (tenant_id, supplier_id, operating_organization_id, status);
 
 CREATE INDEX business_partner_block_partner_idx
     ON control.business_partner_block
@@ -418,3 +444,22 @@ CREATE INDEX company_fiscal_calendar_assignment_config_idx
     ON control.company_fiscal_calendar_assignment (
         tenant_id, fiscal_calendar_config_id, status
     );
+
+CREATE INDEX mesh_bp_profile_inbox_coordinate_idx
+    ON control.mesh_business_partner_profile_inbox
+    (tenant_id, network_relationship_id, publication_version DESC, lifecycle_version DESC);
+CREATE INDEX mesh_bp_profile_inbox_publication_idx
+    ON control.mesh_business_partner_profile_inbox
+    (tenant_id, publication_id, lifecycle_version DESC);
+CREATE INDEX mesh_bp_profile_attempt_quarantine_idx
+    ON control.mesh_business_partner_profile_processing_attempt
+    (tenant_id, processed_at DESC, inbox_event_id)
+    WHERE disposition = 'quarantined';
+CREATE INDEX mesh_bp_profile_projection_source_idx
+    ON control.mesh_business_partner_profile_projection
+    (tenant_id, source_tenant_id, source_network_account_id, projection_status);
+CREATE INDEX mesh_bp_account_link_partner_idx ON control.mesh_business_partner_account_link(tenant_id,business_partner_id,status);
+CREATE INDEX mesh_bp_account_link_relationship_idx ON control.mesh_business_partner_account_link(tenant_id,network_relationship_id,status);
+CREATE UNIQUE INDEX mesh_bp_account_link_active_partner_role_uq ON control.mesh_business_partner_account_link(tenant_id,business_partner_id,source_network_account_id,proposed_role) WHERE status='active';
+CREATE INDEX mesh_bank_disclosure_inbox_relationship_idx ON control.mesh_bank_account_disclosure_inbox(tenant_id,network_relationship_id,received_at DESC);
+CREATE INDEX mesh_bank_account_projection_partner_idx ON control.mesh_bank_account_projection(tenant_id,account_link_id,projection_status);

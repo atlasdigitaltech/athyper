@@ -40,7 +40,7 @@
                   <td align="right">
                     <!-- Zap badge -->
                     <span style="display:inline-block;font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:0.06em;text-transform:uppercase;">
-                      &#9889; Magic Link
+                      Magic Link
                     </span>
                   </td>
                 </tr>
@@ -103,7 +103,7 @@
                     <!--[if !mso]><!-->
                     <a href="${link}" target="_blank"
                       style="display:inline-block;padding:13px 36px;background-color:#1c1c1c;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:6px;letter-spacing:0.01em;">
-                      &#9889;&nbsp; Sign in to Athyper
+                      Sign in to Athyper
                     </a>
                     <!--<![endif]-->
                   </td>
@@ -117,17 +117,17 @@
                     <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#555555;line-height:1.7;">
-                          &#9201;&nbsp; <strong>Expires in ${linkExpiration} minutes</strong> from when this email was sent.
+                          <strong>Expiry:</strong> ${linkExpiration} minutes from when this email was sent.
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#555555;line-height:1.7;">
-                          &#128274;&nbsp; <strong>Single-use only</strong> — the link becomes invalid after one click.
+                          <strong>Security:</strong> Single-use only — the link becomes invalid after one click.
                         </td>
                       </tr>
                       <tr>
                         <td style="padding:4px 0;font-size:12px;color:#555555;line-height:1.7;">
-                          &#128100;&nbsp; Only valid for the device and browser you used to request it.
+                          <strong>Device:</strong> Only valid for the device and browser you used to request it.
                         </td>
                       </tr>
                     </table>
@@ -174,7 +174,7 @@
           <tr>
             <td style="border-top:1px solid #f0f0f0;padding:16px 40px;background-color:#fffbf0;">
               <p style="margin:0;font-size:12px;color:#9b9b9b;line-height:1.7;">
-                <strong style="color:#6b6b6b;">&#9888; Didn't request this?</strong><br/>
+                <strong style="color:#6b6b6b;">Didn't request this?</strong><br/>
                 If you didn't ask to sign in, someone may have entered your email address by mistake.
                 Your account remains secure — this link will expire on its own.
                 If you're concerned, contact us at

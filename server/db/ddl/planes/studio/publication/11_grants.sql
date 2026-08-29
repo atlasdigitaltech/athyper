@@ -6,7 +6,7 @@ DO $$
 BEGIN
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_publication_service') THEN
     GRANT USAGE ON SCHEMA publication TO athyper_publication_service;
-    GRANT SELECT,INSERT ON publication.release,publication.entity_release_link,publication.artifact,publication.artifact_compilation TO athyper_publication_service;
+    GRANT SELECT,INSERT ON publication.release,publication.entity_release_link,publication.business_partner_definition_release_link,publication.artifact,publication.artifact_compilation TO athyper_publication_service;
     GRANT SELECT ON publication.deployment,publication.deployment_event,publication.deployment_acknowledgement TO athyper_publication_service;
     GRANT EXECUTE ON FUNCTION publication.fn_transition_release(uuid,publication.release_status_d,uuid,uuid,jsonb),
       publication.fn_transition_artifact(uuid,publication.artifact_status_d,text,text,text),
@@ -26,3 +26,4 @@ BEGIN
     GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA publication TO athyperadmin;
   END IF;
 END; $$;
+REVOKE ALL ON FUNCTION publication.trg_validate_business_partner_definition_release_link() FROM PUBLIC;

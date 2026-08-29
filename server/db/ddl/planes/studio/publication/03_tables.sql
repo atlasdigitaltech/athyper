@@ -39,6 +39,18 @@ CREATE TABLE publication.entity_release_link (
     CONSTRAINT publication_entity_release_link_entity_uq UNIQUE (entity_release_id)
 );
 
+CREATE TABLE publication.business_partner_definition_release_link (
+    publication_release_id uuid NOT NULL,
+    definition_revision_id uuid NOT NULL,
+    publish_idempotency_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by uuid NOT NULL,
+    CONSTRAINT publication_bp_definition_release_link_pkey PRIMARY KEY (publication_release_id),
+    CONSTRAINT publication_bp_definition_release_link_revision_uq UNIQUE (definition_revision_id),
+    CONSTRAINT publication_bp_definition_release_link_idempotency_uq UNIQUE (publish_idempotency_key),
+    CONSTRAINT publication_bp_definition_release_link_key_chk CHECK (btrim(publish_idempotency_key)<>'')
+);
+
 CREATE TABLE publication.artifact (
     id uuid NOT NULL DEFAULT shared.uuidv7(),
     publication_release_id uuid NOT NULL,
@@ -149,5 +161,6 @@ CREATE TABLE publication.deployment_acknowledgement (
 COMMENT ON TABLE publication.release IS 'Generic append-only release coordinate independent of metadata, policy, workflow, or future publisher type.';
 COMMENT ON TABLE publication.artifact_compilation IS 'Immutable canonical unsigned envelope/manifest evidence used to resume compile-to-sign after crashes.';
 COMMENT ON TABLE publication.entity_release_link IS 'Strict one-to-one connection between the generic publication ledger and metadata.entity_release.';
+COMMENT ON TABLE publication.business_partner_definition_release_link IS 'Immutable link from the generic signed publication ledger to a STUDIO Business Partner definition revision.';
 COMMENT ON TABLE publication.deployment IS 'Per-target delivery head. Every state change is retained in deployment_event.';
 COMMENT ON TABLE publication.deployment_acknowledgement IS 'Plane acknowledgement of the exact locally active release; it is not required for the plane to keep serving its prior active release.';

@@ -15,6 +15,7 @@ export function createMeshRelationshipRequestImportAdapter(): GovernedImportAdap
       const errors:string[]=[];
       const actor=actorAccount(scope);
       for(const key of ["buyer_tenant_id","buyer_account_id","supplier_tenant_id","supplier_account_id"]) if(!UUID.test(String(row[key]??"")))errors.push(`IMPORT_FIELD_INVALID:${key}:${key} must be a UUID`);
+      if(row["buyer_tenant_id"]===row["supplier_tenant_id"])errors.push("MESH_TENANTS_EQUAL:scope:Buyer and supplier tenants must differ");
       if(actor && row["buyer_account_id"]!==actor && row["supplier_account_id"]!==actor)errors.push("MESH_ACTOR_NOT_PARTICIPANT:scope:The acting account must be a relationship participant");
       if(row["buyer_tenant_id"]!==context.tenantId && row["supplier_tenant_id"]!==context.tenantId)errors.push("MESH_TENANT_NOT_PARTICIPANT:scope:The current tenant must be a relationship participant");
       if(row["buyer_account_id"]===row["supplier_account_id"])errors.push("MESH_PARTICIPANTS_EQUAL:scope:Buyer and supplier accounts must differ");
@@ -41,7 +42,7 @@ export function createMeshRelationshipRequestImportAdapter(): GovernedImportAdap
 }
 function actorAccount(scope:Scope){const value=scope.constraints.find(item=>item.kind==="mesh.network_relationship.actor_account.v1");return value?.kind==="mesh.network_relationship.actor_account.v1"?value.networkAccountId:undefined;}
 function requiredActorAccount(scope:Scope){const value=actorAccount(scope);if(!value)throw new Error("Mesh acting-account scope is unavailable");return value;}
-function conflict(policy:"reject"|"skip",message:string){if(policy==="skip")return{outcome:"skipped"as const};throw new Error(message);}
+function conflict(policy:"reject"|"skip",message:string){if(policy==="skip")return{outcome:"skipped"as const};throw Object.assign(new Error(message),{code:"IMPORT_CONFLICT",retryable:false as const});}
 function text(row:Row,key:string){const value=row[key];if(typeof value!=="string"||!value)throw new Error(`IMPORT_FIELD_REQUIRED:${key}`);return value;}
 function optionalText(row:Row,key:string){const value=row[key];return typeof value==="string"&&value?value:null;}
 function object(row:Row,key:string):Readonly<Record<string,unknown>>{const value=row[key];return value&&typeof value==="object"&&!Array.isArray(value)?value as Readonly<Record<string,unknown>>:{};}

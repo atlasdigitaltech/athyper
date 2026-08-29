@@ -63,6 +63,12 @@ export interface EntityListSearchPolicyDescriptor {
   readonly minimumQueryLength?: number;
 }
 
+export interface EntityListFilterPresentationDescriptor {
+  /** Ordered, surface-specific fields shown without opening the advanced builder. */
+  readonly quickFields?: readonly Readonly<{ readonly field: string; readonly defaultOperator?: EntityListFilterOperator }>[];
+  readonly allowUserPinning?: boolean;
+}
+
 export interface EntityListLimitsDescriptor {
   readonly defaultPageSize?: number;
   readonly allowedPageSizes?: readonly number[];
@@ -78,6 +84,7 @@ export interface EntityListPresentationDescriptor {
   /** Canonical defaults. Legacy default* properties remain readable during migration. */
   readonly defaultState?: EntityListDefaultStateDescriptor;
   readonly search?: EntityListSearchPolicyDescriptor;
+  readonly filterPresentation?: EntityListFilterPresentationDescriptor;
   readonly limits?: EntityListLimitsDescriptor;
   /** @deprecated Use defaultState.columns. */
   readonly defaultColumns?: readonly string[];
@@ -106,6 +113,8 @@ export interface EntityListPresentationDescriptor {
     readonly importAdapterKey?: string;
     readonly importOperations?: readonly ("create" | "update" | "upsert" | "delete" | "replace")[];
     readonly importOperationPermissions?: Readonly<Partial<Record<"create" | "update" | "upsert" | "delete" | "replace", readonly string[]>>>;
+    /** Adapter-owned input fields that are not list/storage columns (for example Studio draft graph coordinates). */
+    readonly importFields?: readonly Readonly<{ readonly key: string; readonly type: EntityFieldType; readonly required: boolean; readonly label?: string }>[];
   };
 }
 
@@ -126,6 +135,9 @@ export interface EntityRegisteredActionDescriptor {
 export interface EntityOperationDescriptor {
   readonly code: string;
   readonly permissionCode: string;
+  /** System-action backed catalog projections have no entity-operation binding.
+   * They must opt in explicitly; governed entity operations remain bound by default. */
+  readonly authorizationMode?: "bound_operation" | "permission_only";
 }
 
 export interface EntityLifecycleTransitionDescriptor {
@@ -154,6 +166,7 @@ export interface EntityPolicyBindingDescriptor {
 export interface EntityRuntimeDescriptor {
   readonly schema: "athyper.entity-runtime-descriptor/1.0";
   readonly entityCode: string;
+  readonly detailRouteTemplate?: string;
   readonly planeKey: PlaneKey;
   readonly releaseId: string;
   readonly releaseNo: number;

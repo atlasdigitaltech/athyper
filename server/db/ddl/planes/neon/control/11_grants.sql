@@ -40,6 +40,31 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON
+    control.mesh_business_partner_profile_inbox,
+    control.mesh_business_partner_profile_processing_attempt,
+    control.mesh_business_partner_profile_projection
+FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION
+    control.trg_guard_mesh_business_partner_profile_evidence(),
+    control.trg_guard_mesh_business_partner_profile_projection()
+FROM PUBLIC;
+
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT ON control.mesh_business_partner_profile_inbox,
+            control.mesh_business_partner_profile_processing_attempt TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_projection TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL PRIVILEGES ON control.mesh_business_partner_profile_inbox,
+            control.mesh_business_partner_profile_processing_attempt,
+            control.mesh_business_partner_profile_projection TO athyperadmin;
+    END IF;
+END;
+$$;
+
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
@@ -124,6 +149,7 @@ $$;
 
 REVOKE ALL ON
     control.business_partner_qualification,
+    control.supplier_preference_designation,
     control.business_partner_block
 FROM PUBLIC;
 
@@ -132,6 +158,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT, UPDATE ON
             control.business_partner_qualification,
+            control.supplier_preference_designation,
             control.business_partner_block
         TO athyperapp;
     END IF;
@@ -139,6 +166,7 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
             control.business_partner_qualification,
+            control.supplier_preference_designation,
             control.business_partner_block
         TO athyperadmin;
     END IF;
@@ -453,3 +481,4 @@ BEGIN
     END IF;
 END;
 $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperadmin; END IF; END $$;

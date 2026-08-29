@@ -4,6 +4,8 @@
 
 **Reviewed against repository state:** 2026-08-28
 
+**Finalized architecture:** [Business Partner foundation: final three-plane design and build plan](./business-partner-three-plane-final-design.md). That decision record closes the category/ownership model, workforce-person onboarding, Keycloak organization boundary, and complete three-plane wiring plan. This document remains the detailed commercial onboarding and MESH synchronization reference.
+
 **Scope:** NEON Business Partner create, edit, view, approval, MESH intake and synchronization, STUDIO applicability, supplier/customer extension, company-code and operating-organization assignment, and MESH buyer/supplier account linkage
 
 **Primary decision:** NEON owns the approved commercial master. A source-neutral onboarding/change request owns work in progress. MESH may publish evidence and propose changes, while STUDIO authors governed metadata and policy; neither system writes approved NEON partner master data directly.

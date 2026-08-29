@@ -6,16 +6,10 @@ import { fileURLToPath } from "node:url";
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const faviconSource = join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg");
 const blueMarkSource = join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/mark-blue-transparent-2048.png");
-const whiteMarkSource = join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/mark-white-transparent-2048.png");
-const neonWordmarkSource = join(repoRoot, "packages/platform/foundation/brand/assets/master-wordmarks/neon.svg");
-const neonReverseWordmarkSource = join(repoRoot, "packages/platform/foundation/brand/assets/master-wordmarks/neon-reverse.svg");
 const blueMarkTargets = [
   "apps/neon/public/brand/neon/app-icon.png",
-  "apps/neon/public/brand/neon/icon.png",
   "apps/mesh/public/brand/mesh/app-icon.png",
-  "apps/mesh/public/brand/mesh/icon.png",
   "apps/studio/public/brand/studio/app-icon.png",
-  "apps/studio/public/brand/studio/icon.png",
 ];
 const faviconTargets = [
   "apps/neon/public/brand/neon/athyper-favicon.svg",
@@ -23,15 +17,6 @@ const faviconTargets = [
   "apps/studio/public/brand/studio/athyper-favicon.svg",
   "stack/config/iam/themes/neon/login/resources/img/athyper-favicon.svg",
   "stack/config/gateway/fallback/brand/athyper-favicon.svg",
-];
-const whiteMarkTargets = [
-  "apps/neon/public/brand/neon/app-icon-inverse.png",
-  "apps/mesh/public/brand/mesh/app-icon-inverse.png",
-  "apps/studio/public/brand/studio/app-icon-inverse.png",
-];
-const directAssets = [
-  [neonWordmarkSource, "apps/neon/public/brand/neon/wordmark.svg"],
-  [neonReverseWordmarkSource, "apps/neon/public/brand/neon/wordmark-inverse.svg"],
 ];
 const embeddedPages = [
   "deploy/compose/instance/config/nginx/status.html",
@@ -54,19 +39,6 @@ for (const relative of blueMarkTargets) {
   const actual = await readFile(target);
   if (!actual.equals(blueMark)) throw new Error(`Universal blue mark is stale: ${relative}`);
 }
-const inverse = await readFile(whiteMarkSource);
-for (const relative of whiteMarkTargets) {
-  const target = join(repoRoot, relative);
-  if (!check) await copyFile(whiteMarkSource, target);
-  const actual = await readFile(target);
-  if (!actual.equals(inverse)) throw new Error(`Universal inverse mark is stale: ${relative}`);
-}
-for (const [source, relative] of directAssets) {
-  const target = join(repoRoot, relative);
-  if (!check) await copyFile(source, target);
-  if (!(await readFile(target)).equals(await readFile(source))) throw new Error(`Master wordmark is stale: ${relative}`);
-}
-
 const dataUri = `data:image/svg+xml;base64,${canonical.toString("base64")}`;
 for (const relative of embeddedPages) {
   const target = join(repoRoot, relative);
@@ -91,4 +63,4 @@ if (!legacyGateway.includes('href="/brand/athyper-favicon.svg"')) {
   throw new Error("Legacy gateway does not use the universal favicon");
 }
 
-console.log(`${check ? "Verified" : "Synchronized"} master marks and Neon wordmarks across IAM, gateway, and applications.`);
+console.log(`${check ? "Verified" : "Synchronized"} active master marks across IAM, gateway, and applications.`);

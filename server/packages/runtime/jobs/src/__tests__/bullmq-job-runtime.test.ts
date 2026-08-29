@@ -139,6 +139,45 @@ describe("BullMQ job runtime", () => {
     await runtime.close();
   });
 
+  it("classifies explicitly non-retryable domain failures as permanent", async () => {
+    const failed = vi.fn(async () => undefined);
+    let processor: ((job: any) => Promise<unknown>) | undefined;
+    const runtime = createBullMqJobRuntime({
+      redisUrl: "redis://localhost:6379/2",
+      lifecycle: {
+        enqueued: async () => undefined,
+        started: async () => undefined,
+        completed: async () => undefined,
+        failed,
+      },
+      createWorker: (_queue, value) => {
+        processor = value;
+        return { close: async () => undefined };
+      },
+    });
+    runtime.register("records", "export", { handle: async () => {
+      throw Object.assign(new Error("Unsupported export format"), {
+        code: "EXPORT_FORMAT_UNSUPPORTED",
+        retryable: false,
+      });
+    } });
+    await runtime.start();
+    await expect(processor?.({
+      id: "job-8",
+      name: "export",
+      data: {},
+      attemptsMade: 0,
+      timestamp: Date.parse("2026-08-09T00:00:00.000Z"),
+      opts: { attempts: 5 },
+      updateProgress: async () => undefined,
+    })).rejects.toThrow("Unsupported export format");
+    expect(failed).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      code: "EXPORT_FORMAT_UNSUPPORTED",
+      disposition: "permanent",
+    }));
+    await runtime.close();
+  });
+
   it("exposes governed cancellation and failed-job retry controls", async () => {
     const remove = vi.fn(async () => undefined);
     const retry = vi.fn(async () => undefined);

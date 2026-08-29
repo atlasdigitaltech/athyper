@@ -124,6 +124,7 @@ test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   assert.equal(plan.sources.compose.length, 2);
   assert.ok(plan.domains.includes("mail.dev.athyper.test"));
   assert.ok(plan.domains.includes("minio.dev.athyper.test"));
+  assert.ok(plan.domains.includes("objects.dev.athyper.test"));
   for (const id of [
     "api", "worker", "scheduler", "neon-web", "mesh-web", "studio-web",
     "virusscan", "docrender", "docparser", "searchcore", "mailtrap",

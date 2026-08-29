@@ -120,3 +120,11 @@ BEGIN
     END IF;
 END
 $$;
+ALTER TABLE snapshot.business_partner_definition_revision ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.business_partner_definition_revision FORCE ROW LEVEL SECURITY;
+CREATE POLICY business_partner_definition_revision_tenant_read ON snapshot.business_partner_definition_revision
+  FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY business_partner_definition_revision_service_write ON snapshot.business_partner_definition_revision
+  FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
+CREATE POLICY business_partner_definition_revision_seed_owner ON snapshot.business_partner_definition_revision
+  FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

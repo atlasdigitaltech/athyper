@@ -28,7 +28,7 @@ const ddlSources = [
   "ddl/planes/neon/document/03_tables.sql",
 ] as const;
 const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"] as const;
-const expectedTableCount = 260;
+const expectedTableCount = 269;
 
 type DiscoveredTable = {
   readonly table: string;

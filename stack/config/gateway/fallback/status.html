@@ -41,8 +41,9 @@
     .route.to-app { --route-color: var(--accent); }
     .route-dot { position: absolute; top: 50%; left: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--route-color); box-shadow: 0 0 0 6px color-mix(in srgb, var(--route-color) 16%, transparent); transform: translate(-50%,-50%); animation: travel 2.4s linear infinite; }
     .route.to-app .route-dot { animation-delay: 1.2s; }
-    body[data-mode="outage"] .route.to-app::after { content: "×"; position: absolute; z-index: 3; top: 50%; left: 50%; width: 25px; height: 25px; display: grid; place-items: center; transform: translate(-50%,-50%); border: 1px solid var(--accent); border-radius: 50%; color: var(--accent-dark); background: #fff; font-size: 19px; line-height: 1; }
-    body[data-mode="maintenance"] .route.to-app::after { content: "‖"; position: absolute; z-index: 3; top: 50%; left: 50%; width: 25px; height: 25px; display: grid; place-items: center; transform: translate(-50%,-50%); border: 1px solid var(--accent); border-radius: 50%; color: var(--accent-dark); background: #fff; font-size: 14px; font-weight: 800; line-height: 1; }
+    body[data-mode="outage"] .route.to-app::after, body[data-mode="maintenance"] .route.to-app::after { content: ""; position: absolute; z-index: 3; top: 50%; left: 50%; width: 25px; height: 25px; transform: translate(-50%,-50%); border: 1px solid var(--accent); border-radius: 50%; background-color: #fff; background-position: center; background-repeat: no-repeat; background-size: 15px; }
+    body[data-mode="outage"] .route.to-app::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b376d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18M6 6l12 12'/%3E%3C/svg%3E"); }
+    body[data-mode="maintenance"] .route.to-app::after { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230b376d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5v14M16 5v14'/%3E%3C/svg%3E"); }
     body[data-mode="outage"] .route.to-app .route-dot { animation: outage-travel 2.4s ease-in-out infinite; }
     body[data-mode="maintenance"] .route.to-app .route-dot { animation: maintenance-travel 2.8s ease-in-out infinite; }
     .node.device { animation: device-breathe 2.8s ease-in-out infinite; }
@@ -84,7 +85,7 @@
       <img id="wordmark" class="wordmark" alt="Application">
       <div class="flow" id="flow" aria-label="Connection status">
         <div class="node device">
-          <svg class="device-icon" viewBox="0 0 36 36" aria-hidden="true"><rect x="7" y="5" width="22" height="15" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4.5 24.5h27M13 24.5l-1.4 3h12.8l-1.4-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="15" y="10" width="6" height="7" rx="1" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
+          <svg class="device-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           <span>You</span>
         </div>
         <div class="route"><span class="route-dot"></span></div>

@@ -12,20 +12,22 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-malware-scanning": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-object-storage": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
+    "exceljs": "^4.4.0",
     "express": "^5.0.0",
     "kysely": "^0.28.17"
   },
   "devDependencies": {
+    "@athyper/contract-platform-entity-list": "workspace:*",
     "@types/express": "^5.0.1",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.15.5",

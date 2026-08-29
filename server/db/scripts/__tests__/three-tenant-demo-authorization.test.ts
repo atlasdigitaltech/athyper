@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { buildThreeTenantDemoAuthorization, DEMO_PLANE_PERMISSIONS } from "../provision-three-tenant-demo-authorization.js";
+
+test("managed demo roles converge by removing stale permission links", async () => {
+  const source = await readFile(new URL("../provision-three-tenant-demo-authorization.ts", import.meta.url), "utf8");
+  assert.match(source, /DELETE FROM authz\.role_permission[\s\S]*NOT \(permission_id=ANY\(\$3::uuid\[\]\)\)/);
+});
 
 test("builds explicit cross-plane demo scopes without member-company propagation", async () => {
   const model = await buildThreeTenantDemoAuthorization();
@@ -14,6 +20,7 @@ test("builds explicit cross-plane demo scopes without member-company propagation
     "studio.platform.catalog.manage",
     "studio.metadata.contract.view",
     "studio.metadata.contract.import",
+    "studio.metadata.contract_draft.create",
   ]);
 
   const catlFinance = model.neon.find((grant) => grant.username === "catl.finance")!;

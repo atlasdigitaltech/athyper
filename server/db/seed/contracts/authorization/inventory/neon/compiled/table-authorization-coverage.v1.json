@@ -21,11 +21,11 @@
     "studioNeonOrganizationBoundary": "seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json"
   },
   "counts": {
-    "tables": 260,
-    "masterTables": 140,
-    "documentTables": 120,
-    "reviewedTables": 45,
-    "pendingReviewTables": 215,
+    "tables": 269,
+    "masterTables": 141,
+    "documentTables": 128,
+    "reviewedTables": 50,
+    "pendingReviewTables": 219,
     "operations": 43,
     "lifecycles": 6,
     "crossPlaneOrganizationResources": 3,
@@ -459,6 +459,107 @@
       "externallyWritable": null,
       "sensitivity": null,
       "requiredScopeKinds": []
+    },
+    {
+      "table": "document.business_partner_bank_verification",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.business_partner_request",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner_onboarding",
+      "businessDomain": "relationship",
+      "classification": "aggregate_root",
+      "aggregateRoot": "document.business_partner_request",
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-neon",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "operating_organization"
+      ],
+      "notes": "Manual, governed import, API, portal, and MESH proposals converge here. Writes require the dedicated request and workflow service; generic CRUD is prohibited."
+    },
+    {
+      "table": "document.business_partner_request_evidence",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner_onboarding",
+      "businessDomain": "relationship",
+      "classification": "sensitive_overlay",
+      "aggregateRoot": "document.business_partner_request",
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-neon",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "restricted",
+      "requiredScopeKinds": [
+        "operating_organization"
+      ],
+      "notes": "Append-only evidence manifest. Attachment and snapshot payload access remains separately authorized."
+    },
+    {
+      "table": "document.business_partner_request_validation",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner_onboarding",
+      "businessDomain": "relationship",
+      "classification": "aggregate_child",
+      "aggregateRoot": "document.business_partner_request",
+      "writerKind": "worker",
+      "writerOwner": "@athyper/server-plane-neon",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "confidential",
+      "requiredScopeKinds": [
+        "operating_organization"
+      ],
+      "notes": "Append-only deterministic validation evidence written only by the validation service."
     },
     {
       "table": "document.catalog_import",
@@ -1281,6 +1382,78 @@
       "hasVersion": false,
       "repositoryReferences": [],
       "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.mesh_business_partner_acceptance",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.mesh_business_partner_acceptance_event",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.mesh_business_partner_match",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-profile-match.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -2366,6 +2539,33 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "document.supplier_registration_invitation",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-supplier-registration-invitation-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-supplier-registration-invitation-repository.ts"
+      ],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner_onboarding",
+      "businessDomain": "supplier",
+      "classification": "aggregate_root",
+      "aggregateRoot": "document.supplier_registration_invitation",
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-service-master-data",
+      "externallyReadable": false,
+      "externallyWritable": false,
+      "sensitivity": "restricted",
+      "requiredScopeKinds": [
+        "operating_organization"
+      ],
+      "notes": "Single-use invitation authority. External acceptance is available only through the restricted token-verifying facade; hashes and lifecycle state are never exposed through generic records."
+    },
+    {
       "table": "document.time_punch",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": false,
@@ -2428,12 +2628,15 @@
       "hasStatus": true,
       "hasVersion": true,
       "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -2453,9 +2656,13 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/platform/workflow/src/kysely-workflow-repository.ts"
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/platform/workflow/src/kysely-workflow-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -2474,9 +2681,13 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/platform/workflow/src/kysely-workflow-repository.ts"
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/platform/workflow/src/kysely-workflow-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -2648,7 +2859,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -2686,7 +2899,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -2800,8 +3015,19 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/records/src/kysely-record-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "relationship",
@@ -2880,12 +3106,43 @@
       ]
     },
     {
-      "table": "master.business_partner_operating_organization_assignment",
+      "table": "master.business_partner_industry_classification",
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [],
       "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner",
+      "businessDomain": "relationship",
+      "classification": "aggregate_child",
+      "aggregateRoot": "master.business_partner",
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/svc-records",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "standard",
+      "requiredScopeKinds": [
+        "operating_organization"
+      ],
+      "notes": "Industry sector assignments are separate from supply and buy commodity capabilities."
+    },
+    {
+      "table": "master.business_partner_operating_organization_assignment",
+      "ddlSource": "ddl/planes/neon/master/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/records/src/kysely-record-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "relationship",
@@ -3141,7 +3398,11 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/finance/src/shared/kysely-finance-foundation.ts"
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/finance/src/shared/kysely-finance-foundation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -3204,8 +3465,13 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "customer",
@@ -3263,8 +3529,15 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "supplier",
@@ -3461,8 +3734,18 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "customer",
@@ -3653,8 +3936,12 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3947,7 +4234,8 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../apps/platform-host/src/composition/register-platform.ts"
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../packages/adapters/experience-postgres/src/index.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -4032,7 +4320,10 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../apps/platform-host/src/composition/register-platform.ts"
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -4055,7 +4346,11 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "organization_topology",
@@ -4135,7 +4430,10 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": true,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4478,11 +4776,13 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
         "../packages/platform/iam/src/kysely-permission-resolver.ts",
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/notification-planner.ts",
+        "../packages/platform/notifications/src/outbox-planning.ts",
         "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
       ],
       "writerReferences": [],
@@ -4548,7 +4848,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4593,7 +4895,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -4632,7 +4936,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "organization_topology",
@@ -4749,8 +5055,12 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -4863,7 +5173,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "organization_topology",
@@ -4965,8 +5277,17 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "supplier",
@@ -5132,7 +5453,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -6384,6 +6707,7 @@
     "pending table review: document.bank_statement_line",
     "pending table review: document.budget_allocation",
     "pending table review: document.budget_profile",
+    "pending table review: document.business_partner_bank_verification",
     "pending table review: document.catalog_import",
     "pending table review: document.catalog_import_line",
     "pending table review: document.commitment",
@@ -6411,6 +6735,9 @@
     "pending table review: document.leave_balance_entry",
     "pending table review: document.leave_request",
     "pending table review: document.match_exception",
+    "pending table review: document.mesh_business_partner_acceptance",
+    "pending table review: document.mesh_business_partner_acceptance_event",
+    "pending table review: document.mesh_business_partner_match",
     "pending table review: document.netting_batch",
     "pending table review: document.obligation_horizon",
     "pending table review: document.offboarding_case",
@@ -6590,5 +6917,5 @@
     "pending table review: master.work_pattern_day",
     "pending table review: master.workspace"
   ],
-  "sha256": "9e607a215d5af131bc5ce6d353637d7d6a0c6c5746d94b0af65ea8a89244de14"
+  "sha256": "2a722a45081ebb82897d25cedb4c047d7e4e3f9d96d4dacec47827e0f85bba00"
 }

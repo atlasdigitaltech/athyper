@@ -47,10 +47,20 @@ for name in \
 done
 openssl rand -hex 10 > "$staging/objectstorage-app-access-key"
 random_base64_32 > "$staging/session-token-encryption-key"
+node - "$staging" <<'NODE'
+const { generateKeyPairSync } = require("node:crypto");
+const { writeFileSync } = require("node:fs");
+const root = process.argv[2];
+const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+const { x, y, d } = privateKey.export({ format: "jwk" });
+writeFileSync(`${root}/vapid-subject`, "mailto:notifications@dev.athyper.test\n", { mode: 0o600 });
+writeFileSync(`${root}/vapid-public-key`, `${Buffer.concat([Buffer.from([4]), Buffer.from(x, "base64url"), Buffer.from(y, "base64url")]).toString("base64url")}\n`, { mode: 0o600 });
+writeFileSync(`${root}/vapid-private-key`, `${d}\n`, { mode: 0o600 });
+NODE
 
 chmod 600 "$staging"/*
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
-[[ "$count" == "15" ]] || { echo "Expected 15 secrets, generated $count" >&2; exit 1; }
+[[ "$count" == "18" ]] || { echo "Expected 18 secrets, generated $count" >&2; exit 1; }
 mv "$staging" "$secret_root"
 trap - EXIT INT TERM
 
@@ -62,7 +72,7 @@ cat > "$receipt" <<EOF
   "kind": "DevSecretsReceipt",
   "generatedAt": "$generated_at",
   "instance": "dev",
-  "secretCount": 15,
+  "secretCount": 18,
   "directoryMode": "0700",
   "fileMode": "0600",
   "source": "cryptographic-random-clean-slate",
@@ -70,4 +80,4 @@ cat > "$receipt" <<EOF
 }
 EOF
 chmod 600 "$receipt"
-echo "Generated 15 owner-only DEV secrets under $secret_root; values were not printed."
+echo "Generated 18 owner-only DEV secrets under $secret_root; values were not printed."

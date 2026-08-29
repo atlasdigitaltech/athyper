@@ -30,7 +30,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
     const manifest = document.manifest;
     if (envelope.targetPlane !== deployment.targetPlane) throw failure("TARGET_PLANE_MISMATCH");
     if (envelope.publicationKey !== deployment.publicationKey || envelope.releaseId !== deployment.sourceReleaseId || envelope.releaseNo !== deployment.sourceReleaseNo) throw failure("ARTIFACT_COORDINATES_INVALID");
-    if (manifest.targetPlane !== deployment.targetPlane || manifest.publicationKey !== deployment.publicationKey || manifest.releaseId !== deployment.sourceReleaseId || manifest.releaseNo !== deployment.sourceReleaseNo) throw failure("ARTIFACT_MANIFEST_INVALID");
+    if (manifest.targetPlane !== deployment.targetPlane || manifest.publicationKey !== deployment.publicationKey || manifest.releaseId !== deployment.sourceReleaseId || manifest.releaseNo !== deployment.sourceReleaseNo || manifest.artifactKind !== envelope.artifactKind) throw failure("ARTIFACT_MANIFEST_INVALID");
     if (manifest.signatureAlgorithm !== deployment.signatureAlgorithm || manifest.signingKeyId !== deployment.signingKeyId || document.signature !== deployment.signature) throw failure("ARTIFACT_SIGNATURE_INVALID");
     const payloadSha256 = this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(envelope.payload));
     if (payloadSha256 !== manifest.payloadSha256) throw failure("ARTIFACT_HASH_MISMATCH");
@@ -43,6 +43,17 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
     if (!signatureVerified) throw failure("ARTIFACT_SIGNATURE_INVALID");
     const runtimeCompatible = compatible(this.options.runtimeVersion, envelope.minimumRuntimeVersion);
     if (!runtimeCompatible) throw failure("RUNTIME_INCOMPATIBLE");
+    const projectionEvidence = envelope.artifactKind === "entity_runtime"
+      ? {
+          contractHash: envelope.payload.entityContract.contractHash,
+          descriptorSourceHash: envelope.payload.entityDescriptor.sourceContractHash,
+          contractSchemaVersion: envelope.payload.entityContract.contractSchemaVersion,
+          descriptorSchemaVersion: envelope.payload.entityDescriptor.descriptorSchemaVersion,
+        }
+      : {
+          definitionBundleHash: envelope.payload.bundleHash,
+          definitionBundleSchemaVersion: envelope.payload.bundleSchemaVersion,
+        };
     return {
       document,
       computedArtifactHash,
@@ -51,10 +62,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
         manifestValid: true,
         runtimeCompatible,
         targetPlane: envelope.targetPlane,
-        contractHash: envelope.payload.entityContract.contractHash,
-        descriptorSourceHash: envelope.payload.entityDescriptor.sourceContractHash,
-        contractSchemaVersion: envelope.payload.entityContract.contractSchemaVersion,
-        descriptorSchemaVersion: envelope.payload.entityDescriptor.descriptorSchemaVersion,
+        ...projectionEvidence,
         signatureAlgorithm: manifest.signatureAlgorithm,
         signingKeyId: manifest.signingKeyId,
       },

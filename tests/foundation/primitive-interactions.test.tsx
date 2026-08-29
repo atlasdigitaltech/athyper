@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, it } from "node:test";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { JSDOM } from "jsdom";
-import { Checkbox, Dialog, DialogContent, DialogTrigger, DrawerContent, Menu, MenuContent, MenuItem, MenuTrigger, Tabs, TabsContent, TabsList, TabsTrigger } from "../../packages/platform/foundation/ui/src/index";
+import { Checkbox, Dialog, DialogContent, DialogTrigger, Drawer, DrawerContent, Menu, MenuContent, MenuItem, MenuTrigger, Tabs, TabsContent, TabsList, TabsTrigger } from "../../packages/platform/foundation/ui/src/index";
 
 let dom: JSDOM;
 let root: Root;
@@ -97,5 +97,21 @@ describe("primitive interactions", () => {
     assert.match(drawer.textContent ?? "", /Filters.*Refine records.*Apply/);
     await click(document.body.querySelector<HTMLButtonElement>(".a-dialog-scrim")!);
     assert.equal(document.body.querySelector(".a-drawer"), null);
+  });
+
+  it("composes a tabbed framework drawer with fixed regions and lazy panels", async () => {
+    await act(async () => root.render(<Drawer.Root defaultOpen><Drawer.Panel size="wide" variant="detail" mobilePresentation="bottom-sheet"><Drawer.Header icon={<span>LI</span>} title="Line item 0010" description="Purchase order PO-1042"/><Drawer.Tabs defaultValue="overview"><Drawer.Navigation aria-label="Line item sections"><Drawer.TabList><Drawer.Tab value="overview">Overview</Drawer.Tab><Drawer.Tab value="history">History</Drawer.Tab></Drawer.TabList></Drawer.Navigation><Drawer.Toolbar>Line actions</Drawer.Toolbar><Drawer.Body><Drawer.TabPanel value="overview">Overview content</Drawer.TabPanel><Drawer.TabPanel value="history" mount="lazy">History content</Drawer.TabPanel></Drawer.Body><Drawer.Footer><button type="button">Save item</button></Drawer.Footer></Drawer.Tabs></Drawer.Panel></Drawer.Root>));
+    const drawer = document.body.querySelector<HTMLElement>('.a-drawer--framework')!;
+    assert.equal(drawer.dataset["size"], "wide");
+    assert.equal(drawer.dataset["variant"], "detail");
+    assert.equal(drawer.getAttribute("aria-modal"), "true");
+    assert.match(drawer.textContent ?? "", /Line item 0010.*Purchase order PO-1042.*Overview content.*Save item/);
+    assert.doesNotMatch(drawer.textContent ?? "", /History content/);
+    assert.equal(document.activeElement?.getAttribute("aria-label"), "Close panel");
+    const tabs = drawer.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    tabs[0]?.focus();
+    await act(async () => tabs[0]?.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })));
+    assert.equal(tabs[1]?.getAttribute("aria-selected"), "true");
+    assert.match(drawer.textContent ?? "", /History content/);
   });
 });

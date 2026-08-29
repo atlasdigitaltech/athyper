@@ -928,6 +928,30 @@ ALTER TABLE control.business_partner_qualification
     FOREIGN KEY (tenant_id, updated_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE control.supplier_preference_designation
+    ADD CONSTRAINT supplier_preference_designation_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_supplier_fk
+    FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_commodity_fk
+    FOREIGN KEY (tenant_id, commodity_category_id) REFERENCES master.commodity_category (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_reviewed_by_fk
+    FOREIGN KEY (tenant_id, reviewed_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_approved_by_fk
+    FOREIGN KEY (tenant_id, approved_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_revoked_by_fk
+    FOREIGN KEY (tenant_id, revoked_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_created_by_fk
+    FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT supplier_preference_designation_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE control.business_partner_block
     ADD CONSTRAINT business_partner_block_tenant_fk
     FOREIGN KEY (tenant_id)
@@ -953,3 +977,44 @@ ALTER TABLE control.business_partner_block
     ADD CONSTRAINT business_partner_block_updated_by_fk
     FOREIGN KEY (tenant_id, updated_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_business_partner_profile_inbox
+    ADD CONSTRAINT mesh_bp_profile_inbox_tenant_fk FOREIGN KEY (tenant_id)
+    REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bp_profile_inbox_received_by_fk FOREIGN KEY (tenant_id, received_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_business_partner_profile_processing_attempt
+    ADD CONSTRAINT mesh_bp_profile_attempt_inbox_fk FOREIGN KEY (tenant_id, inbox_event_id)
+    REFERENCES control.mesh_business_partner_profile_inbox (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bp_profile_attempt_processed_by_fk FOREIGN KEY (tenant_id, processed_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_business_partner_profile_projection
+    ADD CONSTRAINT mesh_bp_profile_projection_snapshot_fk FOREIGN KEY (tenant_id, current_snapshot_id)
+    REFERENCES snapshot.mesh_business_partner_profile_received (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bp_profile_projection_event_fk FOREIGN KEY (tenant_id, last_inbox_event_id)
+    REFERENCES control.mesh_business_partner_profile_inbox (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bp_profile_projection_updated_by_fk FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+ALTER TABLE control.mesh_business_partner_account_link
+  ADD CONSTRAINT mesh_bp_account_link_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_projection_fk FOREIGN KEY(tenant_id,profile_projection_id) REFERENCES control.mesh_business_partner_profile_projection(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_external_fk FOREIGN KEY(tenant_id,external_reference_id) REFERENCES master.external_reference(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_request_fk FOREIGN KEY(tenant_id,onboarding_request_id) REFERENCES document.business_partner_request(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_reviewed_by_fk FOREIGN KEY(tenant_id,reviewed_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_approved_by_fk FOREIGN KEY(tenant_id,approved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bp_account_link_terminated_by_fk FOREIGN KEY(tenant_id,terminated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_bank_account_disclosure_inbox
+  ADD CONSTRAINT mesh_bank_disclosure_inbox_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bank_disclosure_inbox_actor_fk FOREIGN KEY(tenant_id,received_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_bank_account_projection
+  ADD CONSTRAINT mesh_bank_account_projection_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bank_account_projection_link_fk FOREIGN KEY(tenant_id,account_link_id) REFERENCES control.mesh_business_partner_account_link(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bank_account_projection_snapshot_fk FOREIGN KEY(tenant_id,current_snapshot_id) REFERENCES snapshot.mesh_bank_account_disclosure_received(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bank_account_projection_inbox_fk FOREIGN KEY(tenant_id,last_inbox_event_id) REFERENCES control.mesh_bank_account_disclosure_inbox(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT mesh_bank_account_projection_actor_fk FOREIGN KEY(tenant_id,updated_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;

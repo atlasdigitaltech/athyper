@@ -9,7 +9,7 @@ const PUBLICATION_KEY = "metadata.entity.business_partner";
 const PERMISSION_CODE = "neon.relationship.business_partner.read";
 const IMPORT_PERMISSION_CODE = "neon.relationship.business_partner.create";
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
-const SOURCE_VERSION = "development-v4";
+const SOURCE_VERSION = "development-v8";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
 
 type QueryClient = Pick<Client, "query">;
@@ -26,15 +26,16 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   const scopeBindingId = deterministicUuid(`scope:${bindingId}:operating_organization`);
   const contract = {
     schema: "athyper.meta-entity-contract/2.1",
-    entity: { entityCode: "business_partner", entityClass: "business" },
+    entity: { entityCode: "business_partner", entityClass: "business", detailRouteTemplate: "/app/business_partner/:recordId" },
     runtime: { plane: "neon", backingKind: "table", readMode: "cursor", writeMode: "governed_adapter" },
     storage: { schema: "master", object: "business_partner" },
-    operations: [{ code: "read", permissionCode: PERMISSION_CODE },{code:"import",permissionCode:PERMISSION_CODE}],
+    operations: [{ code: "read", permissionCode: PERMISSION_CODE },{code:"export",permissionCode:PERMISSION_CODE},{code:"import",permissionCode:PERMISSION_CODE}],
   };
   const contractHash = sha256(contract);
   const descriptor = {
     schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: "business_partner",
+    detailRouteTemplate: "/app/business_partner/:recordId",
     planeKey: "neon",
     storage: { schema: "master", object: "business_partner", idField: "id", tenantField: "tenant_id", statusField: "status" },
     fields: [
@@ -63,10 +64,11 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
       },
       supportedModes: ["table", "compact"],
       search: { minimumQueryLength: 1 },
+      filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }, { field: "partner_category", defaultOperator: "eq" }, { field: "registration_country_code", defaultOperator: "contains" }, { field: "updated_at", defaultOperator: "relative" }], allowUserPinning: true },
       limits: { defaultPageSize: 10, allowedPageSizes: [10, 25, 50, 100], maxSortLevels: 3, countMode: "exact" },
-      dataOperations:{importAdapterKey:"neon.business_partner.operating_organization.v1",importOperations:["create","update","upsert","delete","replace"],importOperationPermissions:{create:[IMPORT_PERMISSION_CODE],update:["neon.relationship.business_partner.update"],upsert:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"],delete:["neon.relationship.business_partner.update"],replace:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"]},importFormats:["csv","json"],importMaxRows:50000,importMaxFileBytes:26214400,allowTemplateDownload:true},
+      dataOperations:{exportFormats:["xlsx","csv","json","ndjson"],importAdapterKey:"neon.business_partner.operating_organization.v1",importOperations:["create","update","upsert","delete","replace"],importOperationPermissions:{create:[IMPORT_PERMISSION_CODE],update:["neon.relationship.business_partner.update"],upsert:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"],delete:["neon.relationship.business_partner.update"],replace:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"]},importFormats:["xlsx","csv","json"],importMaxRows:50000,importMaxFileBytes:26214400,allowTemplateDownload:true},
     },
-    operations: { read: { code: "read", permissionCode: PERMISSION_CODE },import:{code:"import",permissionCode:PERMISSION_CODE} },
+    operations: { read: { code: "read", permissionCode: PERMISSION_CODE },export:{code:"export",permissionCode:PERMISSION_CODE},import:{code:"import",permissionCode:PERMISSION_CODE} },
     source: { entity_id: entityId, release_hash: contractHash },
     operation_scope_bindings: [{
       bindingId,
@@ -90,7 +92,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     sourceVersion: SOURCE_VERSION,
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 4,
+    releaseNo: 8,
     targetPlane: "neon",
     contractHash,
     compiledHash,
@@ -99,7 +101,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   return {
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 4,
+    releaseNo: 8,
     deploymentId,
     artifactHash,
     manifest,
@@ -111,7 +113,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
         entity_code: "business_partner",
         release_id: releaseId,
         revision_id: revisionId,
-        release_no: 4,
+        release_no: 8,
         contract_schema_code: "athyper.meta-entity-contract",
         contract_schema_version: "2.1",
         contract_hash: contractHash,
@@ -160,6 +162,7 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
     const permission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND permission_kind='entity_operation' AND status='published'", [PERMISSION_CODE]);
     const importPermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND permission_kind='entity_operation' AND status='published'", [IMPORT_PERMISSION_CODE]);
     const updatePermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code='neon.relationship.business_partner.update' AND permission_kind='entity_operation' AND status='published'");
+    const requestReadPermission = await one<{ id: string }>(client, "SELECT id::text AS id FROM authz.permission WHERE canonical_code='neon.relationship.business_partner_request.read' AND permission_kind='entity_operation' AND status='published'");
     const artifact = buildDevelopmentBusinessPartnerProjection(permission.id);
     if (options.dryRun) return { mode: "planned", publicationKey: artifact.publicationKey, releaseId: artifact.releaseId, artifactHash: artifact.artifactHash, compiledHash: artifact.projection.descriptor.compiled_hash };
     await client.query("BEGIN");
@@ -171,7 +174,7 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
       if (verified.status !== "verified") throw new Error(`runtime verification failed: ${verified.failure_code ?? verified.status}`);
       await client.query("SELECT runtime_meta.fn_activate_release($1::uuid,$2::jsonb)", [staged.id, JSON.stringify({ source: "local-development-bootstrap", sourceVersion: SOURCE_VERSION })]);
     }
-    await provisionDevelopmentReaders(client, [permission,importPermission,updatePermission]);
+    await provisionDevelopmentReaders(client, [permission,importPermission,updatePermission,requestReadPermission]);
     await client.query("COMMIT");
     return { mode: "applied", publicationKey: artifact.publicationKey, releaseId: artifact.releaseId, appliedReleaseId: staged.id, artifactHash: artifact.artifactHash, compiledHash: artifact.projection.descriptor.compiled_hash };
   } catch (error) {

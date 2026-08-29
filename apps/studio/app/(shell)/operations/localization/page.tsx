@@ -10,6 +10,7 @@ import {
 import { useApiClient, useHasPermission } from "@athyper/platform-shell-app-foundation";
 import { ContentHeader } from "@athyper/platform-shell";
 import type { SupportedLocale } from "@athyper/platform-i18n";
+import { CheckIcon, CloseIcon, SearchIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useState } from "react";
 
 const PLANES = ["studio", "neon", "mesh"] as const;
@@ -100,7 +101,7 @@ export default function LocalizationAdministrationPage() {
         description="Govern catalog readiness and activation independently for each plane. English remains the non-removable emergency fallback."
       />
       <div className="studio-localization__legend" aria-label="Qualification requirements">
-        <strong>Qualification requires</strong><span>100% coverage</span><span>Linguistic review</span><span>RTL/layout review</span><span>Automated tests</span>
+        <strong>Qualification requires</strong>{["100% coverage", "Linguistic review", "RTL/layout review", "Automated tests"].map((requirement) => <span key={requirement}><CheckIcon size={14}/>{requirement}</span>)}
       </div>
       <nav className="studio-localization__plane-tabs" aria-label="Plane locale policies">
         {PLANES.map((plane) => <button key={plane} type="button" aria-pressed={activePlane === plane} onClick={() => setActivePlane(plane)}><span>{title(plane)}</span><small>{policies[plane]?.enabledLocales.length ?? 0} active</small></button>)}
@@ -171,7 +172,7 @@ function LanguagePortfolio({ plane, policy, saveState, onCatalogChange, onActiva
         <dl><Summary label="Active" value={activeCount}/><Summary label="Qualified" value={qualifiedCount}/><Summary label="Attention" value={attentionCount} tone={attentionCount ? "warning" : "success"}/><Summary label="Default" value={policy.defaultLocale.toUpperCase()}/></dl>
       </header>
       <div className="studio-localization__toolbar">
-        <label className="studio-localization__search"><span className="a-visually-hidden">Search languages</span><span aria-hidden="true">⌕</span><input type="search" value={query} placeholder="Search language or locale code" onChange={(event) => changeQuery(event.currentTarget.value)}/></label>
+        <label className="studio-localization__search"><span className="a-visually-hidden">Search languages</span><SearchIcon size={16}/><input type="search" value={query} placeholder="Search language or locale code" onChange={(event) => changeQuery(event.currentTarget.value)}/></label>
         <div className="studio-localization__views" aria-label="Language portfolio views">{(["all","active","qualified","attention","rtl"] as const).map((value) => <button key={value} type="button" aria-pressed={view === value} onClick={() => chooseView(value)}>{viewLabel(value)}<small>{viewCount(value, policy)}</small></button>)}</div>
       </div>
       {selectedLocales.length ? <div className="studio-localization__bulk" role="region" aria-label="Bulk language actions"><strong>{selectedLocales.length} selected</strong><button type="button" onClick={() => selectedLocales.forEach((locale) => { const catalog = policy.catalogs.find((item) => item.localeCode === locale); if (catalog?.qualified) onActivationChange(locale, true); })}>Activate qualified</button><button type="button" onClick={() => selectedLocales.forEach((locale) => onActivationChange(locale, false))}>Deactivate</button><button type="button" onClick={() => setSelectedLocales([])}>Clear selection</button></div> : null}
@@ -186,7 +187,7 @@ function LanguagePortfolio({ plane, policy, saveState, onCatalogChange, onActiva
               <th scope="row"><span className="studio-localization__language-mark" data-direction={catalog.direction}>{catalog.localeCode.toUpperCase()}</span><span><strong lang={catalog.localeCode}>{catalog.nativeName}</strong><small>{catalog.englishName} · {catalog.direction.toUpperCase()}</small></span></th>
               <td><span className={`studio-localization__wave studio-localization__wave--${catalog.rolloutWave}`}>{catalog.rolloutWave === 0 ? "Base" : `Wave ${catalog.rolloutWave}`}</span><small>{title(catalog.status)}</small></td>
               <td><div className="studio-localization__readiness"><span><strong>{catalog.coveragePct}%</strong><em className={catalog.qualified ? "studio-localization__qualified" : "studio-localization__pending"}>{catalog.qualified ? "Qualified" : "In progress"}</em></span><progress max="100" value={catalog.coveragePct}>{catalog.coveragePct}%</progress></div></td>
-              <td>{catalogBlockers.length ? <div className="studio-localization__blockers">{catalogBlockers.slice(0,2).map((item) => <span key={item}>{item}</span>)}{catalogBlockers.length > 2 ? <small>+{catalogBlockers.length - 2} more</small> : null}</div> : <span className="studio-localization__clear">✓ Ready</span>}</td>
+              <td>{catalogBlockers.length ? <div className="studio-localization__blockers">{catalogBlockers.slice(0,2).map((item) => <span key={item}>{item}</span>)}{catalogBlockers.length > 2 ? <small>+{catalogBlockers.length - 2} more</small> : null}</div> : <span className="studio-localization__clear"><CheckIcon size={14}/>Ready</span>}</td>
               <td><label className="studio-localization__activation"><input type="checkbox" checked={active} disabled={catalog.localeCode === "en" || !catalog.qualified} onChange={(event) => onActivationChange(catalog.localeCode, event.currentTarget.checked)}/><span>{active ? policy.defaultLocale === catalog.localeCode ? "Default" : "Active" : "Inactive"}</span></label></td>
               <td><button className="studio-localization__manage" type="button" onClick={() => setSelectedLocale(catalog.localeCode)} aria-label={`Manage ${catalog.englishName}`}>Manage</button></td>
             </tr>;
@@ -210,7 +211,7 @@ function CatalogDrawer({ catalog, plane, active, isDefault, onChange, onActivati
   const english = catalog.localeCode === "en";
   const gatesPass = catalogGatesPass(catalog);
   return <div className="studio-localization__drawer-layer" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><aside className="studio-localization__drawer" role="dialog" aria-modal="true" aria-labelledby="catalog-drawer-title">
-    <header><div><span className="studio-localization__language-mark" data-direction={catalog.direction}>{catalog.localeCode.toUpperCase()}</span><span><small>{title(plane)} catalog</small><h2 id="catalog-drawer-title" lang={catalog.localeCode}>{catalog.nativeName}</h2><p>{catalog.englishName} · {catalog.direction.toUpperCase()} · {catalog.rolloutWave === 0 ? "Base" : `Wave ${catalog.rolloutWave}`}</p></span></div><button type="button" autoFocus onClick={onClose} aria-label="Close language details">×</button></header>
+    <header><div><span className="studio-localization__language-mark" data-direction={catalog.direction}>{catalog.localeCode.toUpperCase()}</span><span><small>{title(plane)} catalog</small><h2 id="catalog-drawer-title" lang={catalog.localeCode}>{catalog.nativeName}</h2><p>{catalog.englishName} · {catalog.direction.toUpperCase()} · {catalog.rolloutWave === 0 ? "Base" : `Wave ${catalog.rolloutWave}`}</p></span></div><button type="button" autoFocus onClick={onClose} aria-label="Close language details"><CloseIcon/></button></header>
     <div className="studio-localization__drawer-status"><span className={catalog.qualified ? "studio-localization__qualified" : "studio-localization__pending"}>{catalog.qualified ? "Qualified" : "Qualification required"}</span><strong>{catalog.coveragePct}% complete</strong></div>
     <div className="studio-localization__drawer-form">
       <label>Catalog status<select value={catalog.status} disabled={english} onChange={(event) => onChange({ status: event.currentTarget.value as LocaleCatalogStatus })}>{STATUSES.map((status) => <option key={status} value={status} disabled={status === "qualified" && !gatesPass}>{title(status)}</option>)}</select></label>

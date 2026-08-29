@@ -7,7 +7,7 @@
 .athyper-activity-page__toolbar{min-height:3.6rem;display:flex;align-items:center;justify-content:space-between;gap:var(--a-space-3);padding:.6rem 0}
 .athyper-activity-page__toolbar>div{display:flex;gap:var(--a-space-2)}
 .athyper-activity-page__toolbar-actions{align-items:center;justify-content:flex-end}
-.athyper-activity-page__push-status{color:var(--a-muted-foreground);font-size:.72rem;font-weight:650}
+.athyper-activity-page__push-status,.athyper-activity-page__toolbar-actions button{display:inline-flex;align-items:center;gap:.4rem}.athyper-activity-page__push-status{color:var(--a-muted-foreground);font-size:.72rem;font-weight:650}
 .athyper-activity-page button[data-state=enabled]{border-color:var(--a-success);background:color-mix(in srgb,var(--a-success) 10%,var(--a-surface));color:var(--a-success)}
 .athyper-activity-page button{min-height:2.25rem;padding:0 .75rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);color:var(--a-muted-foreground);font:650 .72rem var(--a-font-sans);cursor:pointer}
 .athyper-activity-page button:hover,.athyper-activity-page button[aria-pressed=true]{border-color:var(--a-brand);background:var(--a-brand-soft);color:var(--a-brand)}

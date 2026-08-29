@@ -255,6 +255,9 @@ networks:
   platform-ingress:
     external: true
     name: athyper-platform-ingress
+  platform-observability:
+    external: true
+    name: athyper-platform-observability
 
 volumes:
   db-data: {}

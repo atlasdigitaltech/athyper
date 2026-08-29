@@ -18,7 +18,7 @@ describe("record bookmark service", () => {
     const execute = vi.fn(async () => ({ descriptor: { storage: { idField: "id" } }, result: { data: [{ id: ID_A }] } }));
     const run = vi.fn();
     const service = createRecordBookmarkService({ transactions: { run } as never, listExecutor: { execute } as never });
-    await expect(service.add(context, "business_partner", [{ id: ID_A }, { id: ID_B }])).rejects.toMatchObject<RecordServiceError>({ statusCode: 403, code: "BOOKMARK_RECORD_FORBIDDEN" });
+    await expect(service.add(context, "business_partner", [{ id: ID_A }, { id: ID_B }])).rejects.toMatchObject({ statusCode: 403, code: "BOOKMARK_RECORD_FORBIDDEN" } satisfies Partial<RecordServiceError>);
     expect(execute).toHaveBeenCalledWith(expect.objectContaining({ recordIds: [ID_A, ID_B], limit: 2 }));
     expect(run).not.toHaveBeenCalled();
   });

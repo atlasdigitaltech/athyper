@@ -2,12 +2,16 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   decodeListLocationState,
+  ENTITY_LIST_MAX_FILTERS,
+  ENTITY_LIST_MAX_URL_LENGTH,
+  ENTITY_LIST_MAX_VISIBLE_COLUMNS,
   encodeListLocationState,
   parseEntityListDescriptor,
   parseEntityListResult,
+  parseListLocationState,
   toSaveableListState,
 } from "../../packages/contracts/platform/entity-list/src/index";
-import { describeFilter, nextPrimarySort, visibleListFields, withoutNavigation } from "../../packages/platform/entity/runtime/list-view/src/state";
+import { describeFilter, filterInputValue, filterValueFromInput, nextPrimarySort, visibleListFields, withoutNavigation } from "../../packages/platform/entity/runtime/list-view/src/state";
 
 const digest = "a".repeat(64);
 const descriptorPayload = {
@@ -20,6 +24,7 @@ const descriptorPayload = {
     title: "Business partners",
     defaultState: { filters: [], sort: [{ field: "name", direction: "asc" }], columns: ["code", "name"], density: "comfortable", mode: "table" },
     supportedModes: ["table", "compact"],
+    filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }], source: "metadata", allowUserPinning: true },
   },
   fields: [
     { key: "code", label: "Code", columnGroup: "Identification", valueKind: "string", defaultVisible: true, defaultOrder: 0, filterOperators: ["eq", "contains"], sortable: true, groupable: false, aggregations: [] },
@@ -46,6 +51,8 @@ describe("entity list browser contract", () => {
     assert.equal(descriptor.entity.identityField, "code");
     assert.equal(descriptor.fields[0]?.columnGroup, "Identification");
     assert.equal(Object.isFrozen(descriptor.fields), true);
+    assert.deepEqual(descriptor.surface.filterPresentation.quickFields, [{ field: "status", defaultOperator: "eq" }]);
+    assert.equal(descriptor.surface.filterPresentation.source, "metadata");
     assert.equal("storage" in descriptor, false);
     assert.equal("storagePath" in descriptor.fields[0]!, false);
   });
@@ -70,6 +77,67 @@ describe("entity list browser contract", () => {
     const roundTrip = decodeListLocationState(encodeListLocationState(state, descriptor), descriptor);
     assert.deepEqual(roundTrip, state);
     assert.deepEqual(toSaveableListState(state), { query: "acme", filters: [], sort: [{ field: "status", direction: "desc", nulls: "last" }], columns: ["code", "status"], density: "compact", mode: "compact" });
+  });
+
+  it("omits metadata defaults and page zero from canonical URLs while accepting legacy explicit state", () => {
+    const descriptor = parseEntityListDescriptor(descriptorPayload);
+    const defaults = decodeListLocationState("?sort=name:asc&cols=code,name&density=comfortable&view=table&page=0", descriptor);
+    assert.equal(encodeListLocationState(defaults, descriptor).toString(), "");
+    assert.deepEqual(defaults.sort, descriptor.surface.defaultState.sort);
+    assert.deepEqual(defaults.columns, descriptor.surface.defaultState.columns);
+  });
+
+  it("round-trips persisted UTC datetime filters through local datetime controls", () => {
+    const firstLocal = "2026-08-14T15:30";
+    const secondLocal = "2026-08-28T18:45";
+    const firstUtc = new Date(firstLocal).toISOString();
+    const secondUtc = new Date(secondLocal).toISOString();
+
+    assert.equal(filterInputValue({ field: "updated_at", operator: "gt", value: firstUtc }, "datetime"), firstLocal);
+    assert.equal(filterValueFromInput("gt", firstLocal, "datetime"), firstUtc);
+
+    const betweenInput = filterInputValue({ field: "updated_at", operator: "between", value: [firstUtc, secondUtc] }, "datetime");
+    assert.equal(betweenInput, `${firstLocal}, ${secondLocal}`);
+    assert.deepEqual(filterValueFromInput("between", betweenInput, "datetime"), [firstUtc, secondUtc]);
+  });
+
+  it("keeps date-only filters independent of timezone conversion", () => {
+    assert.equal(filterInputValue({ field: "effective_date", operator: "eq", value: "2026-08-14T00:00:00.000Z" }, "date"), "2026-08-14");
+  });
+
+  it("round-trips explicit clearing of inherited query, filters, sort, group, and spreadsheet state", () => {
+    const withDefaults = parseEntityListDescriptor({ ...descriptorPayload, surface: { ...descriptorPayload.surface, defaultState: { query: "acme", filters: [{ field: "status", operator: "eq", value: "active" }], sort: [{ field: "name", direction: "asc" }], group: "status", columns: ["code", "name"], density: "comfortable", mode: "table", spreadsheet: { pinned: ["code"], widths: { code: 160 } } } } });
+    const cleared = decodeListLocationState("?q=&filters=none&sort=none&group.clear=1&sheet=none", withDefaults);
+    assert.equal(cleared.query, undefined);
+    assert.deepEqual(cleared.filters, []);
+    assert.deepEqual(cleared.sort, []);
+    assert.equal(cleared.group, undefined);
+    assert.equal(cleared.spreadsheet, undefined);
+    assert.deepEqual(decodeListLocationState(encodeListLocationState(cleared, withDefaults), withDefaults), cleared);
+  });
+
+  it("encodes saved-view overrides against their base and creates portable links without local IDs", () => {
+    const descriptor = parseEntityListDescriptor(descriptorPayload);
+    const base = { ...descriptor.surface.defaultState, columns: ["code", "status"] };
+    const state = decodeListLocationState("?vid=local-view&q=acme", descriptor, { baseState: base });
+    const compact = encodeListLocationState(state, descriptor, { baseState: base });
+    assert.equal(compact.get("vid"), "local-view");
+    assert.equal(compact.has("cols"), false);
+    assert.deepEqual(decodeListLocationState(compact, descriptor, { baseState: base }), state);
+    const portable = encodeListLocationState(state, descriptor, { includeViewIds: false });
+    assert.equal(portable.has("vid"), false);
+    assert.deepEqual(decodeListLocationState(portable, descriptor).columns, ["code", "status"]);
+  });
+
+  it("bounds rich entity state to the browser and service contract limits", () => {
+    const extraFields = Array.from({ length: 130 }, (_, index) => ({ key: `field_${index}`, label: `Field ${index}`, valueKind: "string", defaultVisible: false, defaultOrder: index + 3, filterOperators: ["eq"], sortable: true, groupable: false, aggregations: [] }));
+    const descriptor = parseEntityListDescriptor({ ...descriptorPayload, fields: [...descriptorPayload.fields, ...extraFields] });
+    const columns = ["code", ...extraFields.map((field) => field.key)];
+    const filters = extraFields.map((field) => ({ field: field.key, operator: "eq", value: field.key }));
+    const bounded = parseListLocationState({ ...descriptor.surface.defaultState, columns, filters }, descriptor);
+    assert.equal(bounded.columns.length, ENTITY_LIST_MAX_VISIBLE_COLUMNS);
+    assert.equal(bounded.filters.length, ENTITY_LIST_MAX_FILTERS);
+    assert.deepEqual(decodeListLocationState(`?q=${"x".repeat(ENTITY_LIST_MAX_URL_LENGTH)}`, descriptor).columns, descriptor.surface.defaultState.columns);
   });
 
   it("parses bounded list results and rejects totals reported as count mode none", () => {

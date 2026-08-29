@@ -101,11 +101,12 @@ export function checkPolicy(repoRoot) {
       }
     }
   }
+  const controllerOwnedNetworks=new Map([["platform-ingress","athyper-platform-ingress"],["platform-observability","athyper-platform-observability"]]);
   for (const [id, network] of Object.entries(composeModel.networks ?? {})) {
-    if (network?.external === true && !(id === "platform-ingress" && network.name === "athyper-platform-ingress")) {
+    if (network?.external === true && controllerOwnedNetworks.get(id) !== network.name) {
       errors.push(`${composePath}: ${id} is an undocumented external network`);
     }
-    if (network?.name && id !== "platform-ingress") {
+    if (network?.name && !controllerOwnedNetworks.has(id)) {
       errors.push(`${composePath}: ${id} explicitly names a normal instance network`);
     }
   }
@@ -122,6 +123,12 @@ export function checkPolicy(repoRoot) {
   if (!platformIngress) errors.push(`${platformPath}: missing outer ingress service`);
   if (platformModel.networks?.["platform-ingress"]?.name !== "athyper-platform-ingress") {
     errors.push(`${platformPath}: shared ingress network name is not canonical`);
+  }
+  if (platformModel.networks?.["platform-observability"]?.name !== "athyper-platform-observability") {
+    errors.push(`${platformPath}: shared observability network name is not canonical`);
+  }
+  if (operationsModel.networks?.["platform-observability"]?.name !== "athyper-platform-observability" || operationsModel.networks?.["platform-observability"]?.external !== true) {
+    errors.push(`${operationsPath}: shared observability network is not controller-owned`);
   }
   const platformPorts = (platformIngress?.ports ?? []).map(String).sort();
   if (JSON.stringify(platformPorts) !== JSON.stringify(["127.0.0.1:443:8443", "127.0.0.1:80:8080"])) {

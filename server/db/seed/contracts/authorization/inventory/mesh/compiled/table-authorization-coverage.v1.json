@@ -23,17 +23,17 @@
     "rlsSource": "ddl/planes/mesh/mesh/10_rls.sql"
   },
   "counts": {
-    "tables": 78,
+    "tables": 82,
     "masterTables": 28,
     "documentTables": 24,
-    "meshTables": 26,
-    "reviewedTables": 8,
-    "pendingReviewTables": 70,
+    "meshTables": 30,
+    "reviewedTables": 9,
+    "pendingReviewTables": 73,
     "operations": 18,
     "lifecycles": 2,
     "crossPlaneNetworkResources": 1,
     "broadParticipantMutationPolicies": 1,
-    "currentUserBroadWritePolicies": 8,
+    "currentUserBroadWritePolicies": 9,
     "roles": 0,
     "grants": 0
   },
@@ -573,12 +573,15 @@
       "hasStatus": true,
       "hasVersion": true,
       "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/platform/workflow/src/sla-automation.ts"
+        "../packages/platform/workflow/src/sla-automation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -755,8 +758,12 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -815,11 +822,13 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
         "../packages/platform/iam/src/kysely-permission-resolver.ts",
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/notification-planner.ts",
+        "../packages/platform/notifications/src/outbox-planning.ts",
         "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
       ],
       "writerReferences": [],
@@ -885,7 +894,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -930,7 +941,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -969,8 +982,12 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/records/src/bookmarks/record-bookmark-service.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1117,7 +1134,9 @@
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1173,7 +1192,12 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts",
+        "../packages/planes/mesh/src/business-partner-delivery.ts",
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1192,8 +1216,37 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.bank_account_disclosure_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
       "businessDomain": null,
@@ -1211,7 +1264,9 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1230,7 +1285,9 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1249,7 +1306,12 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../../apps/mesh/.next/server/chunks/ssr/packages_0hv8b3x._.js",
+        "../../apps/mesh/.next/standalone/apps/mesh/.next/server/chunks/ssr/packages_0hv8b3x._.js",
+        "../../apps/mesh/.next/static/chunks/25qzufw74t8pi.js",
+        "../../packages/planes/mesh/shell/src/navigation.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "mesh_backlog",
@@ -1516,7 +1578,11 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../apps/platform-host/src/composition/register-platform.ts"
+        "../apps/platform-host/src/composition/register-platform.ts",
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -1541,7 +1607,9 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1585,11 +1653,40 @@
       "notes": "Mutated through explicit network-account identifier operations, never generic child CRUD."
     },
     {
+      "table": "mesh.network_account_industry_classification",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "reviewed",
+      "slice": "network_topology",
+      "businessDomain": "network",
+      "classification": "aggregate_child",
+      "aggregateRoots": [
+        "mesh.network_account"
+      ],
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-plane-mesh",
+      "externallyReadable": true,
+      "externallyWritable": false,
+      "sensitivity": "standard",
+      "requiredScopeKinds": [
+        "network_account"
+      ],
+      "notes": "Industry sector assignments remain distinct from catalog and trade-role commodity capabilities."
+    },
+    {
       "table": "mesh.network_account_profile",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1609,11 +1706,61 @@
       "notes": "Mutated only through the network-account configure-profile operation."
     },
     {
+      "table": "mesh.network_account_profile_publication",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "mesh.network_account_profile_publication_event",
+      "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "mesh_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoots": [],
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "mesh.network_account_reference",
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/adapters/experience-postgres/src/index.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
@@ -1687,8 +1834,18 @@
       "ddlSource": "ddl/planes/mesh/mesh/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/contracts/records/src/ports.ts",
+        "../packages/planes/mesh/src/business-partner-bank-disclosure.ts",
+        "../packages/planes/mesh/src/business-partner-profile-publication.ts",
+        "../packages/planes/mesh/src/network-relationship-import.ts",
+        "../packages/planes/mesh/src/record-collection-scope.ts",
+        "../packages/services/records/src/in-memory-record-repository.ts",
+        "../packages/services/records/src/kysely-record-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/planes/mesh/src/network-relationship-import.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "network_topology",
       "businessDomain": "network",
@@ -2482,6 +2639,7 @@
       "mesh.network_account",
       "mesh.network_account_commodity_capability",
       "mesh.network_account_identifier",
+      "mesh.network_account_industry_classification",
       "mesh.network_account_profile",
       "mesh.network_account_reference",
       "mesh.network_account_tax_registration",
@@ -2490,7 +2648,7 @@
     ]
   },
   "releaseBlockers": [
-    "CURRENT_USER broad-write RLS on reviewed tables: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship",
+    "CURRENT_USER broad-write RLS on reviewed tables: mesh.network_account, mesh.network_account_commodity_capability, mesh.network_account_identifier, mesh.network_account_industry_classification, mesh.network_account_profile, mesh.network_account_reference, mesh.network_account_tax_registration, mesh.network_lifecycle_event, mesh.network_relationship",
     "broad participant FOR ALL mutation RLS: mesh.network_relationship",
     "cross-plane applier not implemented: @athyper/server-plane-mesh",
     "pending table review: document.attachment",
@@ -2547,6 +2705,7 @@
     "pending table review: master.workspace",
     "pending table review: mesh.bank_account",
     "pending table review: mesh.bank_account_disclosure",
+    "pending table review: mesh.bank_account_disclosure_event",
     "pending table review: mesh.bank_account_link",
     "pending table review: mesh.bank_party",
     "pending table review: mesh.catalog",
@@ -2562,7 +2721,9 @@
     "pending table review: mesh.document_acknowledgement",
     "pending table review: mesh.document_envelope",
     "pending table review: mesh.document_event",
-    "pending table review: mesh.document_payload"
+    "pending table review: mesh.document_payload",
+    "pending table review: mesh.network_account_profile_publication",
+    "pending table review: mesh.network_account_profile_publication_event"
   ],
-  "sha256": "c21255c1435608c4d146afe5c352989a46578b22bf73bed24ac2b99ff4475429"
+  "sha256": "8c88647ea2112659b40d8ef4de7dab465c07e00fb8ee3d2a00a1d9b7c045efdf"
 }

@@ -159,6 +159,8 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER commitment_line_parent_guard BEFORE INSERT OR UPDATE OR DELETE ON document.commitment_line
 FOR EACH ROW EXECUTE FUNCTION document.trg_validate_commitment_line();
+CREATE TRIGGER commitment_line_address_snapshot BEFORE INSERT OR UPDATE OF ship_to_address_id, bill_to_address_id, bill_from_address_id, ship_from_address_id, remit_to_address_id, address_snapshot, address_snapshot_hash, address_snapshot_captured_at, address_snapshot_captured_by ON document.commitment_line
+FOR EACH ROW EXECUTE FUNCTION document.trg_capture_line_address_snapshot();
 CREATE TRIGGER commitment_line_identity_guard BEFORE UPDATE ON document.commitment_line
 FOR EACH ROW EXECUTE FUNCTION document.trg_guard_creation_evidence();
 CREATE TRIGGER commitment_line_status_stamp BEFORE UPDATE OF status ON document.commitment_line
@@ -188,6 +190,8 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER purchase_invoice_line_parent_guard BEFORE INSERT OR UPDATE OR DELETE ON document.purchase_invoice_line
 FOR EACH ROW EXECUTE FUNCTION document.trg_validate_purchase_invoice_line();
+CREATE TRIGGER purchase_invoice_line_address_snapshot BEFORE INSERT OR UPDATE OF ship_to_address_id, bill_to_address_id, bill_from_address_id, ship_from_address_id, remit_to_address_id, address_snapshot, address_snapshot_hash, address_snapshot_captured_at, address_snapshot_captured_by ON document.purchase_invoice_line
+FOR EACH ROW EXECUTE FUNCTION document.trg_capture_line_address_snapshot();
 CREATE TRIGGER purchase_invoice_line_identity_guard BEFORE UPDATE ON document.purchase_invoice_line
 FOR EACH ROW EXECUTE FUNCTION document.trg_guard_creation_evidence();
 CREATE TRIGGER purchase_invoice_line_row_version BEFORE UPDATE ON document.purchase_invoice_line
@@ -938,3 +942,42 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_multipart_upload_part_10_immutable
 BEFORE UPDATE OR DELETE ON document.multipart_upload_part
 FOR EACH ROW EXECUTE FUNCTION document.trg_multipart_upload_part_immutable();
+
+CREATE TRIGGER trg_supplier_registration_invitation_10_guard
+BEFORE UPDATE OR DELETE ON document.supplier_registration_invitation
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_supplier_registration_invitation();
+CREATE TRIGGER trg_supplier_registration_invitation_80_version
+BEFORE UPDATE ON document.supplier_registration_invitation
+FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
+CREATE TRIGGER trg_supplier_registration_invitation_90_updated
+BEFORE UPDATE ON document.supplier_registration_invitation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_business_partner_request_10_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request();
+CREATE TRIGGER trg_business_partner_request_15_registration_guard
+BEFORE INSERT OR UPDATE ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_registration();
+CREATE TRIGGER trg_business_partner_request_20_status
+BEFORE UPDATE OF status, status_changed_at, status_changed_by
+ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_stamp_status_evidence();
+CREATE TRIGGER trg_business_partner_request_80_version
+BEFORE UPDATE ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
+CREATE TRIGGER trg_business_partner_request_90_updated
+BEFORE UPDATE ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
+CREATE TRIGGER trg_business_partner_request_evidence_immutable
+BEFORE UPDATE OR DELETE ON document.business_partner_request_evidence
+FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+CREATE TRIGGER trg_business_partner_request_validation_immutable
+BEFORE UPDATE OR DELETE ON document.business_partner_request_validation
+FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+CREATE TRIGGER trg_mesh_business_partner_match_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_match FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+CREATE TRIGGER trg_mesh_business_partner_acceptance_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+CREATE TRIGGER trg_mesh_business_partner_acceptance_event_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance_event FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+CREATE TRIGGER trg_business_partner_bank_verification_guard BEFORE UPDATE OR DELETE ON document.business_partner_bank_verification FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_bank_verification();
+CREATE TRIGGER trg_business_partner_bank_verification_updated BEFORE UPDATE ON document.business_partner_bank_verification FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();

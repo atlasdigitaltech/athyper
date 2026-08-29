@@ -94,6 +94,39 @@ SELECT id AS purchase_invoice_id,
 
 COMMENT ON VIEW "document"."v_ap_invoice_summary" IS 'One row per purchase_invoice. Safe for SUM/AVG aggregation over PI columns.';
 
+CREATE OR REPLACE VIEW document.v_purchase_order_header
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT c.*,
+       COALESCE((SELECT jsonb_agg(jsonb_build_object(
+           'line_id', cl.id, 'line_no', cl.line_no,
+           'address_snapshot', cl.address_snapshot,
+           'address_snapshot_hash', cl.address_snapshot_hash,
+           'captured_at', cl.address_snapshot_captured_at
+       ) ORDER BY cl.line_no)
+       FROM document.commitment_line cl
+       WHERE cl.tenant_id = c.tenant_id AND cl.commitment_id = c.id), '[]'::jsonb) AS line_address_snapshots
+  FROM document.commitment c
+ WHERE c.commitment_type = 'purchase_order';
+
+COMMENT ON VIEW document.v_purchase_order_header IS
+  'Join-light purchase-order header. Historical address display reads immutable line snapshots and never joins master.address.';
+
+CREATE OR REPLACE VIEW document.v_purchase_invoice_header
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT i.*,
+       COALESCE((SELECT jsonb_agg(jsonb_build_object(
+           'line_id', il.id, 'line_no', il.line_no,
+           'address_snapshot', il.address_snapshot,
+           'address_snapshot_hash', il.address_snapshot_hash,
+           'captured_at', il.address_snapshot_captured_at
+       ) ORDER BY il.line_no)
+       FROM document.purchase_invoice_line il
+       WHERE il.tenant_id = i.tenant_id AND il.purchase_invoice_id = i.id), '[]'::jsonb) AS line_address_snapshots
+  FROM document.purchase_invoice i;
+
+COMMENT ON VIEW document.v_purchase_invoice_header IS
+  'Join-light purchase-invoice header. Historical address display reads immutable line snapshots and never joins master.address.';
+
 CREATE OR REPLACE VIEW "document"."v_ap_settlement_graph"
 WITH (security_invoker = true, security_barrier = true) AS
 SELECT pi.id AS purchase_invoice_id,

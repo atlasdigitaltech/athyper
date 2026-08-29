@@ -3,7 +3,7 @@ import type { ImportStagingStore, StoredImport } from "./transfer-service.js";
 
 type Row = Readonly<Record<string, unknown>>;
 interface MutableImport { session: RecordImportSession; rows: Row[]; validation?: readonly ImportValidationRow[]; summary?: ImportValidationSummary; chunks: Map<number, { chunkChecksum: string; cumulativeChecksum: string; rowCount: number }>; }
-interface ExportState { tenantId: string; entityCode: string; exactFilter: Readonly<Record<string, unknown>>; actorPrincipalId: string; status: "queued" | "cancelled"; }
+interface ExportState { tenantId: string; entityCode: string; exactFilter: Readonly<Record<string, unknown>>; actorPrincipalId: string; status: "queued" | "cancelled" | "failed"; }
 
 /** Deterministic reference store for tests and single-process development. Production hosts should provide a transactional durable store. */
 export function createInMemoryRecordTransferStore<Transaction = unknown>(): ImportStagingStore<Transaction> {
@@ -62,6 +62,7 @@ export function createInMemoryRecordTransferStore<Transaction = unknown>(): Impo
       value.session = { ...value.session, status: "cancelled", cancelledAt };
       return "cancelled";
     },
+    async failQueuedImport(tenantId,sessionId,errorCode,errorDetail,failedAt){const value=imports.get(importKey(tenantId,sessionId));if(!value||value.session.status!=="commit_queued")return false;value.session={...value.session,status:"failed",errorCode,errorMessage:errorDetail,completedAt:failedAt,progress:{stage:"failed",completed:0,updatedAt:failedAt}};return true;},
     async saveExportRequest(input) {
       const key = exportKey(input.tenantId, input.id), existing = exports.get(key);
       const state: ExportState = { tenantId: input.tenantId, entityCode: input.entityCode, exactFilter: structuredClone(input.exactFilter), actorPrincipalId: input.actorPrincipalId, status: "queued" };
@@ -76,6 +77,7 @@ export function createInMemoryRecordTransferStore<Transaction = unknown>(): Impo
       exports.set(key, { ...value, status: "cancelled" });
       return "cancelled";
     },
+    async failQueuedExport(tenantId,exportRequestId){const key=exportKey(tenantId,exportRequestId),value=exports.get(key);if(!value||value.status!=="queued")return false;exports.set(key,{...value,status:"failed"});return true;},
   };
 }
 

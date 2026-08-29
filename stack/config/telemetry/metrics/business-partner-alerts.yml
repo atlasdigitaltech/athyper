@@ -1,0 +1,18 @@
+groups:
+  - name: athyper-business-partner-delivery
+    rules:
+      - alert: AthyperBusinessPartnerDeliveryFailures
+        expr: sum(rate(athyper_business_partner_mesh_delivery_total{operation="delivery",outcome=~"retry|dead_letter|quarantined"}[5m])) > 0.05
+        for: 10m
+        labels: { severity: warning, service: business-partner }
+        annotations: { summary: "MESH to NEON Business Partner delivery is failing", runbook: "docs/runbooks/business-partner-production-rollout.md" }
+      - alert: AthyperBusinessPartnerDeliveryDeadLetter
+        expr: increase(athyper_business_partner_mesh_delivery_total{operation="delivery",outcome=~"dead_letter|quarantined"}[5m]) > 0
+        for: 1m
+        labels: { severity: critical, service: business-partner }
+        annotations: { summary: "Business Partner event entered dead letter or quarantine", runbook: "docs/runbooks/business-partner-production-rollout.md" }
+      - alert: AthyperBusinessPartnerReconciliationDrift
+        expr: increase(athyper_business_partner_mesh_delivery_total{operation="reconciliation",outcome="reopened"}[15m]) > 0
+        for: 1m
+        labels: { severity: warning, service: business-partner }
+        annotations: { summary: "Reconciliation found a missing NEON recipient receipt", runbook: "docs/runbooks/business-partner-production-rollout.md" }

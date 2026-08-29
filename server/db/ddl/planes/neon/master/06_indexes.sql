@@ -23,6 +23,18 @@ CREATE INDEX address_country_idx
     ON master.address (tenant_id, country_code)
     WHERE country_code IS NOT NULL;
 
+CREATE INDEX address_kind_idx
+    ON master.address (tenant_id, address_kind)
+    WHERE address_kind IS NOT NULL;
+
+CREATE INDEX address_state_region_idx
+    ON master.address (tenant_id, state_region_code)
+    WHERE state_region_code IS NOT NULL;
+
+CREATE INDEX address_timezone_idx
+    ON master.address (tenant_id, timezone_code)
+    WHERE timezone_code IS NOT NULL;
+
 CREATE INDEX address_duplicate_candidate_idx
     ON master.address
        (tenant_id, country_code, postal_code, lower(line1), lower(city))
@@ -31,6 +43,9 @@ CREATE INDEX address_duplicate_candidate_idx
 CREATE UNIQUE INDEX address_normalized_hash_uq
     ON master.address (tenant_id, normalized_hash)
     WHERE status = 'active';
+
+CREATE INDEX address_link_usage_status_idx
+    ON master.address_link (tenant_id, usage_status, purpose, role_qualifier);
 
 CREATE INDEX address_link_owner_idx
     ON master.address_link
@@ -1084,6 +1099,18 @@ CREATE UNIQUE INDEX business_partner_commodity_capability_current_uq
 CREATE INDEX business_partner_commodity_capability_category_idx
     ON master.business_partner_commodity_capability
        (tenant_id, commodity_category_id, partner_role, status);
+
+CREATE UNIQUE INDEX business_partner_industry_classification_current_uq
+    ON master.business_partner_industry_classification
+       (tenant_id, business_partner_id, industry_domain_code, industry_code_id)
+    WHERE effective_until IS NULL AND status = 'active';
+CREATE UNIQUE INDEX business_partner_industry_classification_primary_uq
+    ON master.business_partner_industry_classification
+       (tenant_id, business_partner_id, industry_domain_code)
+    WHERE is_primary AND effective_until IS NULL AND status = 'active';
+CREATE INDEX business_partner_industry_classification_code_idx
+    ON master.business_partner_industry_classification
+       (industry_domain_code, industry_code_id, status);
 
 CREATE UNIQUE INDEX business_partner_operating_org_assignment_current_uq
     ON master.business_partner_operating_organization_assignment

@@ -404,6 +404,8 @@ CREATE TABLE ops.record_import_session (
     valid_row_count integer NOT NULL DEFAULT 0, invalid_row_count integer NOT NULL DEFAULT 0,
     checksum text NOT NULL, next_chunk_index integer NOT NULL DEFAULT 0,
     validation_rows jsonb, validation_summary jsonb, error_report_key text,
+    progress jsonb NOT NULL DEFAULT '{}'::jsonb, receipt jsonb NOT NULL DEFAULT '{}'::jsonb,
+    error_code text, error_detail text, started_at timestamptz,
     created_at timestamptz NOT NULL, created_by uuid NOT NULL,
     cancelled_at timestamptz, completed_at timestamptz, updated_at timestamptz,
     CONSTRAINT record_import_session_pkey PRIMARY KEY (tenant_id,id),
@@ -416,7 +418,9 @@ CREATE TABLE ops.record_import_session (
     CONSTRAINT record_import_session_status_chk CHECK(status IN('uploading','staged','validated','previewed','commit_queued','running','committed','cancelled','failed')),
     CONSTRAINT record_import_session_count_chk CHECK(staged_row_count>=0 AND valid_row_count>=0 AND invalid_row_count>=0 AND next_chunk_index>=0),
     CONSTRAINT record_import_session_checksum_chk CHECK(checksum~'^[a-f0-9]{64}$'),
-    CONSTRAINT record_import_session_validation_chk CHECK((validation_rows IS NULL OR jsonb_typeof(validation_rows)='array') AND (validation_summary IS NULL OR jsonb_typeof(validation_summary)='object'))
+    CONSTRAINT record_import_session_validation_chk CHECK((validation_rows IS NULL OR jsonb_typeof(validation_rows)='array') AND (validation_summary IS NULL OR jsonb_typeof(validation_summary)='object')),
+    CONSTRAINT record_import_session_runtime_json_chk CHECK(jsonb_typeof(progress)='object' AND jsonb_typeof(receipt)='object'),
+    CONSTRAINT record_import_session_error_chk CHECK((error_code IS NULL OR length(error_code)<=200) AND (error_detail IS NULL OR length(error_detail)<=2000))
 );
 
 ALTER TABLE ops.record_import_session ADD COLUMN IF NOT EXISTS import_operation text NOT NULL DEFAULT 'create';
@@ -439,15 +443,42 @@ CREATE TABLE ops.record_import_chunk (
 CREATE TABLE ops.record_export_request (
     id uuid NOT NULL, tenant_id uuid NOT NULL, entity_code text NOT NULL,
     exact_filter jsonb NOT NULL, actor_principal_id uuid NOT NULL, status text NOT NULL,
-    artifact_key text, row_count integer, error_code text,
+    artifact_key text, row_count integer, error_code text, error_detail text,
+    progress jsonb NOT NULL DEFAULT '{}'::jsonb, receipt jsonb NOT NULL DEFAULT '{}'::jsonb,
     requested_at timestamptz NOT NULL DEFAULT now(), started_at timestamptz,
     completed_at timestamptz, cancelled_at timestamptz,
     CONSTRAINT record_export_request_pkey PRIMARY KEY(tenant_id,id),
     CONSTRAINT record_export_request_entity_chk CHECK(entity_code~'^[a-z][a-z0-9_.-]{1,126}$'),
     CONSTRAINT record_export_request_filter_chk CHECK(jsonb_typeof(exact_filter)='object'),
     CONSTRAINT record_export_request_status_chk CHECK(status IN('queued','running','completed','cancelled','failed')),
-    CONSTRAINT record_export_request_count_chk CHECK(row_count IS NULL OR row_count>=0)
+    CONSTRAINT record_export_request_count_chk CHECK(row_count IS NULL OR row_count>=0),
+    CONSTRAINT record_export_request_runtime_json_chk CHECK(jsonb_typeof(progress)='object' AND jsonb_typeof(receipt)='object'),
+    CONSTRAINT record_export_request_error_chk CHECK((error_code IS NULL OR length(error_code)<=200) AND (error_detail IS NULL OR length(error_detail)<=2000))
 );
+
+ALTER TABLE ops.record_import_session
+  ADD COLUMN IF NOT EXISTS source_purged_at timestamptz,
+  ADD COLUMN IF NOT EXISTS chunks_purged_at timestamptz,
+  ADD COLUMN IF NOT EXISTS error_report_purged_at timestamptz;
+ALTER TABLE ops.record_export_request
+  ADD COLUMN IF NOT EXISTS artifact_purged_at timestamptz;
+
+CREATE TABLE ops.record_transfer_retention_policy (
+    tenant_id uuid NOT NULL,
+    abandoned_session_days integer NOT NULL DEFAULT 7,
+    source_file_days integer NOT NULL DEFAULT 7,
+    error_report_days integer NOT NULL DEFAULT 30,
+    export_artifact_days integer NOT NULL DEFAULT 30,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    updated_by uuid NOT NULL,
+    CONSTRAINT record_transfer_retention_policy_pkey PRIMARY KEY(tenant_id),
+    CONSTRAINT record_transfer_retention_policy_days_chk CHECK(
+      abandoned_session_days BETWEEN 1 AND 3650 AND source_file_days BETWEEN 1 AND 3650
+      AND error_report_days BETWEEN 1 AND 3650 AND export_artifact_days BETWEEN 1 AND 3650)
+);
+
+COMMENT ON TABLE ops.record_transfer_retention_policy IS
+  'Tenant overrides for transfer artifact cleanup. Summary receipts and audit evidence are retained independently.';
 CREATE TABLE ops.control_runtime_command_submission (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id           uuid        NOT NULL,

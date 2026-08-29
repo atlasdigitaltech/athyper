@@ -146,6 +146,8 @@ CREATE TABLE mesh.network_relationship (
     CONSTRAINT network_relationship_pkey PRIMARY KEY (id),
     CONSTRAINT network_relationship_participants_chk
         CHECK (buyer_account_id <> supplier_account_id),
+    CONSTRAINT network_relationship_tenants_chk
+        CHECK (buyer_tenant_id <> supplier_tenant_id),
     CONSTRAINT network_relationship_kind_chk
         CHECK (relationship_kind ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT network_relationship_creator_participant_chk CHECK (
@@ -790,6 +792,59 @@ CREATE TABLE mesh.network_account_commodity_capability (
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
+CREATE TABLE mesh.network_account_industry_classification (
+    id                   uuid                         NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id            uuid                         NOT NULL,
+    network_account_id   uuid                         NOT NULL,
+    industry_domain_code text                         NOT NULL,
+    industry_code_id     uuid                         NOT NULL,
+    assignment_kind      text                         NOT NULL DEFAULT 'declared',
+    is_primary           boolean                      NOT NULL DEFAULT false,
+    confidence           smallint,
+    effective_from       date                         NOT NULL DEFAULT CURRENT_DATE,
+    effective_until      date,
+    verified_at          timestamptz,
+    verified_by          uuid,
+    source_system        text,
+    source_reference     text,
+    metadata             jsonb                        NOT NULL DEFAULT '{}'::jsonb,
+    status               mesh.profile_record_status_d NOT NULL DEFAULT 'active',
+    is_active            boolean GENERATED ALWAYS AS (status = 'active') STORED,
+    status_changed_at    timestamptz,
+    status_changed_by    uuid,
+    created_at           timestamptz                  NOT NULL DEFAULT now(),
+    created_by           uuid                         NOT NULL,
+    updated_at           timestamptz,
+    updated_by           uuid,
+
+    CONSTRAINT network_account_industry_classification_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_industry_classification_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT network_account_industry_classification_domain_chk
+        CHECK (industry_domain_code IN ('isic', 'naics')),
+    CONSTRAINT network_account_industry_classification_kind_chk
+        CHECK (assignment_kind IN ('declared', 'verified', 'inferred', 'imported')),
+    CONSTRAINT network_account_industry_classification_confidence_chk
+        CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 100),
+    CONSTRAINT network_account_industry_classification_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT network_account_industry_classification_verification_chk
+        CHECK (
+            ((verified_at IS NULL) = (verified_by IS NULL))
+            AND (assignment_kind <> 'verified' OR verified_at IS NOT NULL)
+        ),
+    CONSTRAINT network_account_industry_classification_source_chk
+        CHECK (
+            (source_system IS NULL OR (btrim(source_system) <> '' AND length(source_system) <= 128))
+            AND (source_reference IS NULL OR (btrim(source_reference) <> '' AND length(source_reference) <= 256))
+        ),
+    CONSTRAINT network_account_industry_classification_metadata_chk
+        CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT network_account_industry_classification_status_pair_chk
+        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
+    CONSTRAINT network_account_industry_classification_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
 CREATE TABLE mesh.network_account_tax_registration (
     id                     uuid                         NOT NULL DEFAULT shared.uuidv7(),
     tenant_id              uuid                         NOT NULL,
@@ -833,6 +888,64 @@ CREATE TABLE mesh.network_account_tax_registration (
     CONSTRAINT network_account_tax_registration_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+CREATE TABLE mesh.network_account_profile_publication (
+    id                       uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id          uuid        NOT NULL,
+    owner_account_id         uuid        NOT NULL,
+    recipient_tenant_id      uuid        NOT NULL,
+    recipient_account_id     uuid        NOT NULL,
+    network_relationship_id  uuid        NOT NULL,
+    snapshot_id              uuid        NOT NULL,
+    publication_version      integer     NOT NULL,
+    schema_version           integer     NOT NULL,
+    field_set_code           text        NOT NULL,
+    payload_hash             text        NOT NULL,
+    previous_publication_id  uuid,
+    idempotency_key          text        NOT NULL,
+    published_at             timestamptz NOT NULL DEFAULT clock_timestamp(),
+    published_by             uuid        NOT NULL,
+
+    CONSTRAINT network_account_profile_publication_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_profile_publication_owner_id_uq UNIQUE (owner_tenant_id, id),
+    CONSTRAINT network_account_profile_publication_version_uq UNIQUE (owner_tenant_id, owner_account_id, recipient_account_id, publication_version),
+    CONSTRAINT network_account_profile_publication_snapshot_uq UNIQUE (owner_tenant_id, snapshot_id),
+    CONSTRAINT network_account_profile_publication_idempotency_uq UNIQUE (owner_tenant_id, idempotency_key),
+    CONSTRAINT network_account_profile_publication_participants_chk CHECK (owner_tenant_id <> recipient_tenant_id AND owner_account_id <> recipient_account_id),
+    CONSTRAINT network_account_profile_publication_version_chk CHECK (publication_version >= 1 AND schema_version >= 1),
+    CONSTRAINT network_account_profile_publication_field_set_chk CHECK (field_set_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
+    CONSTRAINT network_account_profile_publication_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT network_account_profile_publication_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+CREATE TABLE mesh.network_account_profile_publication_event (
+    id                       uuid                             NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id          uuid                             NOT NULL,
+    recipient_tenant_id      uuid                             NOT NULL,
+    publication_id           uuid                             NOT NULL,
+    lifecycle_version        integer                          NOT NULL,
+    event_kind               mesh.profile_publication_event_d NOT NULL,
+    reason                   text,
+    decision_fingerprint     text                             NOT NULL,
+    idempotency_key          text                             NOT NULL,
+    recorded_at              timestamptz                      NOT NULL DEFAULT clock_timestamp(),
+    recorded_by              uuid                             NOT NULL,
+
+    CONSTRAINT network_account_profile_publication_event_pkey PRIMARY KEY (id),
+    CONSTRAINT network_account_profile_publication_event_owner_id_uq UNIQUE (owner_tenant_id, id),
+    CONSTRAINT network_account_profile_publication_event_version_uq UNIQUE (owner_tenant_id, publication_id, lifecycle_version),
+    CONSTRAINT network_account_profile_publication_event_idempotency_uq UNIQUE (owner_tenant_id, idempotency_key),
+    CONSTRAINT network_account_profile_publication_event_participants_chk CHECK (owner_tenant_id <> recipient_tenant_id),
+    CONSTRAINT network_account_profile_publication_event_version_chk CHECK (lifecycle_version >= 1),
+    CONSTRAINT network_account_profile_publication_event_reason_chk CHECK ((event_kind = 'published' AND reason IS NULL) OR (event_kind = 'withdrawn' AND reason IS NOT NULL AND length(reason) BETWEEN 1 AND 4000)),
+    CONSTRAINT network_account_profile_publication_event_fingerprint_chk CHECK (decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT network_account_profile_publication_event_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
+);
+
+COMMENT ON TABLE mesh.network_account_profile_publication IS
+  'Immutable recipient binding for one bank-free Business Partner profile snapshot. New content creates a new version.';
+COMMENT ON TABLE mesh.network_account_profile_publication_event IS
+  'Append-only governed publication lifecycle. Withdrawal preserves the publication and snapshot.';
 
 CREATE TABLE mesh.bank_party (
     id                       uuid                         NOT NULL DEFAULT shared.uuidv7(),
@@ -989,7 +1102,15 @@ CREATE TABLE mesh.bank_account_disclosure (
     revoked_by               uuid,
     revocation_reason        text,
     metadata                 jsonb                         NOT NULL DEFAULT '{}'::jsonb,
-    status                   mesh.bank_disclosure_status_d NOT NULL DEFAULT 'active',
+    disclosure_version       integer                       NOT NULL DEFAULT 1,
+    snapshot_id              uuid,
+    payload_hash             text,
+    secure_retrieval_reference text,
+    idempotency_key          text                          NOT NULL,
+    decision_fingerprint     text,
+    approved_at              timestamptz,
+    approved_by              uuid,
+    status                   mesh.bank_disclosure_status_d NOT NULL DEFAULT 'pending_approval',
     created_at               timestamptz                   NOT NULL DEFAULT now(),
     created_by               uuid                          NOT NULL,
     updated_at               timestamptz,
@@ -1000,6 +1121,14 @@ CREATE TABLE mesh.bank_account_disclosure (
         CHECK (owner_account_id <> recipient_account_id),
     CONSTRAINT bank_account_disclosure_purpose_chk
         CHECK (purpose IN ('settlement', 'refund')),
+    CONSTRAINT bank_account_disclosure_version_chk CHECK (disclosure_version >= 1),
+    CONSTRAINT bank_account_disclosure_hash_chk CHECK (payload_hash IS NULL OR payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT bank_account_disclosure_idempotency_chk CHECK (btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT bank_account_disclosure_decision_chk CHECK (
+        (status='pending_approval' AND snapshot_id IS NULL AND payload_hash IS NULL AND secure_retrieval_reference IS NULL AND decision_fingerprint IS NULL AND approved_at IS NULL AND approved_by IS NULL)
+        OR (status='rejected' AND snapshot_id IS NULL AND payload_hash IS NULL AND secure_retrieval_reference IS NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND approved_at IS NULL AND approved_by IS NULL)
+        OR (status IN ('active','expired','revoked','superseded') AND snapshot_id IS NOT NULL AND payload_hash ~ '^[a-f0-9]{64}$' AND nullif(btrim(secure_retrieval_reference),'') IS NOT NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$' AND approved_at IS NOT NULL AND approved_by IS NOT NULL)
+    ),
     CONSTRAINT bank_account_disclosure_expiry_chk
         CHECK (expires_at IS NULL OR expires_at > disclosed_at),
     CONSTRAINT bank_account_disclosure_revocation_chk CHECK (
@@ -1012,6 +1141,28 @@ CREATE TABLE mesh.bank_account_disclosure (
         CHECK (jsonb_typeof(metadata) = 'object' AND pg_column_size(metadata) <= 4096),
     CONSTRAINT bank_account_disclosure_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+CREATE TABLE mesh.bank_account_disclosure_event (
+    id                    uuid        NOT NULL DEFAULT shared.uuidv7(),
+    owner_tenant_id       uuid        NOT NULL,
+    recipient_tenant_id   uuid        NOT NULL,
+    disclosure_id         uuid        NOT NULL,
+    lifecycle_version     integer     NOT NULL,
+    event_kind            text        NOT NULL,
+    reason                text,
+    decision_fingerprint  text        NOT NULL,
+    idempotency_key       text        NOT NULL,
+    recorded_at           timestamptz NOT NULL DEFAULT clock_timestamp(),
+    recorded_by           uuid        NOT NULL,
+    CONSTRAINT bank_account_disclosure_event_pkey PRIMARY KEY(id),
+    CONSTRAINT bank_account_disclosure_event_version_uq UNIQUE(owner_tenant_id,disclosure_id,lifecycle_version),
+    CONSTRAINT bank_account_disclosure_event_idempotency_uq UNIQUE(owner_tenant_id,idempotency_key),
+    CONSTRAINT bank_account_disclosure_event_kind_chk CHECK(event_kind IN ('approved','rejected','revoked','superseded','expired')),
+    CONSTRAINT bank_account_disclosure_event_version_chk CHECK(lifecycle_version>=1),
+    CONSTRAINT bank_account_disclosure_event_reason_chk CHECK((event_kind='approved' AND reason IS NULL) OR (event_kind<>'approved' AND nullif(btrim(reason),'') IS NOT NULL)),
+    CONSTRAINT bank_account_disclosure_event_fingerprint_chk CHECK(decision_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT bank_account_disclosure_event_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
 );
 
 -- Mesh projection of the Neon-derived party finance/compliance optional pack.

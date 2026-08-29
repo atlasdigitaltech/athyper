@@ -29,7 +29,10 @@ services:
       - platform-tls-private-key
     volumes:
       - ./ingress/dynamic.yaml:/etc/traefik/dynamic.yaml:ro
-    networks: [platform-ingress]
+    # Joining the otherwise private observability network makes Compose the
+    # lifecycle owner of that cross-project network. No HTTP route targets
+    # this container through the observability network.
+    networks: [platform-ingress, platform-observability]
     healthcheck:
       test: [CMD, traefik, healthcheck, --ping, --ping.entrypoint=health, --entrypoints.health.address=:8082]
       interval: 10s
@@ -67,6 +70,10 @@ networks:
     # A fixed name is intentional only for this controller-owned cross-project
     # network. Normal instance networks remain project-scoped and unnamed.
     name: athyper-platform-ingress
+  platform-observability:
+    # Private cross-project discovery for Prometheus. No host port or edge
+    # router is attached to this network.
+    name: athyper-platform-observability
 
 secrets:
   platform-tls-certificate:

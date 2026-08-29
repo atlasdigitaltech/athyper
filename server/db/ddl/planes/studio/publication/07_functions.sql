@@ -211,6 +211,23 @@ BEGIN
   RETURN NEW;
 END; $$;
 
+CREATE OR REPLACE FUNCTION publication.trg_validate_business_partner_definition_release_link()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,publication,snapshot AS $$
+DECLARE v_publication publication.release%ROWTYPE; v_revision snapshot.business_partner_definition_revision%ROWTYPE;
+BEGIN
+  SELECT * INTO STRICT v_publication FROM publication.release WHERE id=NEW.publication_release_id;
+  SELECT * INTO STRICT v_revision FROM snapshot.business_partner_definition_revision WHERE id=NEW.definition_revision_id;
+  IF v_publication.tenant_id IS DISTINCT FROM v_revision.tenant_id
+     OR v_publication.release_hash IS DISTINCT FROM v_revision.bundle_hash
+     OR v_publication.release_key IS DISTINCT FROM ('studio.business_partner.definition.'||v_revision.bundle_code) THEN
+    RAISE EXCEPTION 'BUSINESS_PARTNER_DEFINITION_PUBLICATION_COORDINATE_MISMATCH' USING ERRCODE='foreign_key_violation';
+  END IF;
+  IF v_publication.created_by=v_revision.created_by THEN
+    RAISE EXCEPTION 'BUSINESS_PARTNER_DEFINITION_SELF_PUBLISH_FORBIDDEN' USING ERRCODE='insufficient_privilege';
+  END IF;
+  RETURN NEW;
+END; $$;
+
 CREATE OR REPLACE FUNCTION publication.trg_validate_deployment_target() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,publication AS $$
 DECLARE v_plane text;
 BEGIN SELECT plane_code INTO STRICT v_plane FROM publication.artifact WHERE id=NEW.artifact_id;

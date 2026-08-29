@@ -2184,6 +2184,32 @@ ALTER TABLE master.business_partner_commodity_capability
     FOREIGN KEY (tenant_id, commodity_category_id)
     REFERENCES master.commodity_category (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE master.business_partner_industry_classification
+    ADD CONSTRAINT business_partner_industry_classification_owner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_code_fk
+    FOREIGN KEY (industry_domain_code, industry_code_id)
+    REFERENCES shared.industry_code (domain_code, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_verified_by_fk
+    FOREIGN KEY (tenant_id, verified_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_industry_classification_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        business_partner_id WITH =,
+        industry_domain_code WITH =,
+        industry_code_id WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active'),
+    ADD CONSTRAINT business_partner_industry_classification_primary_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        business_partner_id WITH =,
+        industry_domain_code WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (is_primary AND status = 'active');
+
 ALTER TABLE master.business_partner_operating_organization_assignment
     ADD CONSTRAINT business_partner_operating_org_assignment_owner_fk
     FOREIGN KEY (tenant_id, business_partner_id)

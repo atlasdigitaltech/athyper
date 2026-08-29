@@ -12,6 +12,17 @@ export interface JsonArray extends ReadonlyArray<JsonValue> {}
 export interface JsonObject { readonly [key: string]: JsonValue; }
 export type JsonValue = JsonPrimitive | JsonArray | JsonObject;
 
+/** Browser and service limits are deliberately shared so metadata-rich entities
+ * cannot create requests that the records API will reject or URLs that proxies
+ * cannot safely carry. */
+export const ENTITY_LIST_MAX_VISIBLE_COLUMNS = 100;
+export const ENTITY_LIST_MAX_FILTERS = 20;
+export const ENTITY_LIST_MAX_SORT_LEVELS = 10;
+export const ENTITY_LIST_MAX_URL_LENGTH = 8_192;
+export type EntityListMaxVisibleColumns = 100;
+export type EntityListMaxFilters = 20;
+export type EntityListMaxSortLevels = 10;
+
 export interface ListFilterV1 {
   readonly field: string;
   readonly operator: ListFilterOperator;
@@ -156,6 +167,11 @@ export interface EntityListDescriptorV1 {
     readonly search: {
       readonly profileKey?: string;
       readonly minimumQueryLength: number;
+    };
+    readonly filterPresentation: {
+      readonly quickFields: readonly Readonly<{ readonly field: string; readonly defaultOperator: ListFilterOperator }>[];
+      readonly source: "metadata" | "fallback";
+      readonly allowUserPinning: boolean;
     };
   };
   readonly fields: readonly ListFieldDescriptorV1[];

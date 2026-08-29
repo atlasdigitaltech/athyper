@@ -320,6 +320,27 @@ BEGIN
 END;
 $$;
 
+-- Resolves the tenant-local identity used by trusted notification maintenance
+-- jobs. SECURITY DEFINER is required because discovery starts with the global
+-- scheduler identity, which intentionally has no tenant principal membership.
+CREATE OR REPLACE FUNCTION event.fn_notification_worker_principal(p_tenant_id uuid)
+RETURNS uuid
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = master, pg_catalog
+AS $$
+    SELECT principal.id
+    FROM master.principal principal
+    WHERE principal.tenant_id = p_tenant_id
+      AND p_tenant_id = nullif(current_setting('app.current_tenant_id', true), '')::uuid
+      AND principal.status = 'active'
+    ORDER BY (principal.principal_type = 'service_account') DESC,
+             principal.created_at,
+             principal.id
+    LIMIT 1
+$$;
+
 -- Atomic worker claim. The active service normally claims one message at a
 -- time; this function supports batch workers without weakening tenant RLS.
 DROP FUNCTION IF EXISTS event.fn_notification_claim_deliveries(text,integer,integer);

@@ -95,6 +95,42 @@ CREATE TABLE snapshot.content_item_version (
 COMMENT ON TABLE snapshot.content_item_version IS
   'Immutable content body snapshot. UPDATE and DELETE are rejected by trigger.';
 
+CREATE TABLE snapshot.business_partner_definition_revision (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    bundle_code text NOT NULL,
+    semantic_version text NOT NULL,
+    bundle_schema_version text NOT NULL DEFAULT '1.0.0',
+    bundle_json jsonb NOT NULL,
+    bundle_hash text NOT NULL,
+    target_planes text[] NOT NULL,
+    idempotency_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by uuid NOT NULL,
+    CONSTRAINT business_partner_definition_revision_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_definition_revision_tenant_id_uq UNIQUE (tenant_id,id),
+    CONSTRAINT business_partner_definition_revision_version_uq UNIQUE (tenant_id,bundle_code,semantic_version),
+    CONSTRAINT business_partner_definition_revision_idempotency_uq UNIQUE (tenant_id,idempotency_key),
+    CONSTRAINT business_partner_definition_revision_code_chk CHECK (bundle_code ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT business_partner_definition_revision_semver_chk CHECK (semantic_version ~ '^[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.-]+)?$'),
+    CONSTRAINT business_partner_definition_revision_schema_chk CHECK (bundle_schema_version ~ '^[0-9]+\.[0-9]+\.[0-9]+$'),
+    CONSTRAINT business_partner_definition_revision_hash_chk CHECK (bundle_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_definition_revision_bundle_chk CHECK (
+      jsonb_typeof(bundle_json)='object'
+      AND bundle_json->>'schema'='athyper.business-partner-definition-bundle.v1'
+      AND bundle_json->>'bundleCode'=bundle_code
+      AND bundle_json->>'semanticVersion'=semantic_version
+      AND bundle_json ?& ARRAY['requestSchemas','validationDeclarations','formDescriptors','viewDescriptors','mappingContracts','workflowDefinitions','compatibilityRules','sourceContractHashes']
+    ),
+    CONSTRAINT business_partner_definition_revision_targets_chk CHECK (
+      cardinality(target_planes)>0 AND target_planes <@ ARRAY['studio','neon','mesh']::text[]
+    ),
+    CONSTRAINT business_partner_definition_revision_idempotency_chk CHECK (btrim(idempotency_key)<>'')
+);
+
+COMMENT ON TABLE snapshot.business_partner_definition_revision IS
+  'Immutable STUDIO-authored schemas, mappings, UI descriptors, and workflow definitions. Contains no partner instance or approval data.';
+
 CREATE TABLE snapshot.compiled_artifact (
     id                   uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id            uuid        NOT NULL,

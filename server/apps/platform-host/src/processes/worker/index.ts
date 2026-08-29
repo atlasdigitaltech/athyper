@@ -7,6 +7,7 @@ import { registerRuntimes, startRuntimes } from "../../composition/register-runt
 import { registerServices } from "../../composition/register-services.js";
 import { startProcessHeartbeat } from "../process-heartbeat.js";
 import { registerInvalidationWorkers } from "../../composition/register-invalidation-workers.js";
+import { startProcessMetricsEndpoint } from "../process-metrics-endpoint.js";
 
 // Capability-owned BullMQ handlers are registered through the shared
 // composition root before the worker runtime starts consuming queues.
@@ -21,10 +22,12 @@ export async function start(): Promise<void> {
   registerServices(container, {}, config);
   registerInvalidationWorkers(container, config, lifecycle);
   await startRuntimes(container, config.mode);
+  const metrics=container.adapters.processMetrics?await startProcessMetricsEndpoint(container.adapters.processMetrics):undefined;
+  if(metrics)lifecycle.onShutdown(()=>metrics.stop());
   const heartbeat = await startProcessHeartbeat("worker");
   lifecycle.onShutdown(() => heartbeat.stop());
 
-  console.log(`[worker] started env=${config.env} pid=${process.pid}`);
+  console.log(`[worker] started env=${config.env} pid=${process.pid}${metrics?` metricsPort=${metrics.port}`:""}`);
   await lifecycle.signalReady();
 
   const shutdown = async (signal: string): Promise<void> => {

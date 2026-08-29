@@ -1,132 +1,42 @@
 #!/usr/bin/env tsx
-/**
- * Sync generated brand assets into each Next app's public/brand folder.
- *
- * The app folders are deployment targets only. Edit assets in:
- *   packages/planes/{product}/brand/src/products/{product}/
- *
- * Run:
- *   pnpm brand:sync:apps
- */
-
+/** Synchronize the minimal canonical browser-brand contract into every plane app. */
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import presentation from "../../packages/platform/foundation/brand/src/plane-presentation.json" with { type: "json" };
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const repoRoot = path.resolve(__dirname, "../..");
-const distRoot = path.join(repoRoot, "packages/platform/foundation/brand/dist");
-const canonicalFavicon = path.join(repoRoot, "packages/platform/foundation/brand/assets/master-marks/athyper-favicon.svg");
-
-const APP_TARGETS = {
-  neon:   "apps/neon/public/brand",
-  mesh:   "apps/mesh/public/brand",
-  studio: "apps/studio/public/brand",
-} as const;
-
-const PUBLIC_OUTPUT_FILES = {
-  wordmarkBlack: "wordmark-black.png",
-  wordmarkWhite: "wordmark-white.png",
-  wordmarkOnBlack: "wordmark-on-black.png",
-  wordmarkOnWhite: "wordmark-on-white.png",
-  icon: "icon.png",
-  appIcon: "appicon.png",
-  favicon: "athyper-favicon.svg",
-} as const;
-
-const LEGACY_PUBLIC_FILES = {
-  neon:   ["athyper-icon-white-on-black.jpg", "neon-black.svg", "neon-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  mesh:   ["athyper-icon-white-on-black.jpg", "mesh-black.svg", "mesh-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-  studio: ["athyper-icon-white-on-black.jpg", "athyper-black.svg", "athyper-white.svg", "icon.svg", "appicon.svg", "wordmark-black.svg", "wordmark-white.svg", "wordmark-on-black.svg", "wordmark-on-white.svg"],
-} as const satisfies Record<keyof typeof APP_TARGETS, readonly string[]>;
-
-type ProductCode = keyof typeof APP_TARGETS;
-type PublicAssetKey = keyof typeof PUBLIC_OUTPUT_FILES;
-
-const PRODUCT_SOURCES: Record<ProductCode, string> = {
-  neon:   "packages/planes/neon/brand/src",
-  mesh:   "packages/planes/mesh/brand/src",
-  studio: "packages/planes/studio/brand/src",
-};
-
-interface BrandManifest {
-  productCode: ProductCode;
-  productName: string;
-  descriptor: string;
-  publicAssets: Record<PublicAssetKey, string>;
-}
-
-async function ensureDir(p: string): Promise<void> {
-  await fs.mkdir(p, { recursive: true });
-}
-
-async function readManifest(product: ProductCode): Promise<BrandManifest> {
-  const manifestPath = path.join(distRoot, product, "manifest.json");
-  const manifest = JSON.parse(await fs.readFile(manifestPath, "utf8")) as BrandManifest;
-  if (manifest.productCode !== product) {
-    throw new Error(`Manifest productCode mismatch for ${product}: ${manifest.productCode}`);
-  }
-  return manifest;
-}
-
-function publicUrl(file: string): string {
-  return `/brand/${file}`;
-}
-
-async function syncProduct(product: ProductCode): Promise<void> {
-  const manifest = await readManifest(product);
-  const targetDir = path.join(repoRoot, APP_TARGETS[product]);
-  await ensureDir(targetDir);
-
-  for (const legacyFile of LEGACY_PUBLIC_FILES[product]) {
-    await fs.rm(path.join(targetDir, legacyFile), { force: true });
-  }
-
-  const publicManifest: {
-    productCode: ProductCode;
-    productName: string;
-    descriptor: string;
-    generatedFrom: string;
-    assets: Record<PublicAssetKey, string>;
-  } = {
-    productCode: product,
-    productName: manifest.productName,
-    descriptor: manifest.descriptor,
-    generatedFrom: PRODUCT_SOURCES[product],
-    assets: {} as Record<PublicAssetKey, string>,
-  };
-
-  for (const [key, outputFile] of Object.entries(PUBLIC_OUTPUT_FILES) as Array<[PublicAssetKey, string]>) {
-    const sourceFile = manifest.publicAssets[key];
-    if (!sourceFile) {
-      throw new Error(`Missing publicAssets.${key} for ${product}`);
-    }
-
-    await fs.copyFile(
-      key === "favicon" ? canonicalFavicon : path.join(distRoot, product, sourceFile),
-      path.join(targetDir, outputFile),
-    );
-    publicManifest.assets[key] = publicUrl(outputFile);
-  }
-
-  await fs.writeFile(
-    path.join(targetDir, "brand-manifest.json"),
-    `${JSON.stringify(publicManifest, null, 2)}\n`,
-    "utf8",
-  );
-
-  console.log(`  ok  ${product} -> ${APP_TARGETS[product]}`);
-}
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const planes = ["neon", "mesh", "studio"] as const;
+const canonicalRoot = path.join(repoRoot, "packages/platform/foundation/brand/assets");
+const obsoleteAssets = ["app-icon-inverse.png", "app-icon.svg", "icon.png", "wordmark-inverse.png", "wordmark-inverse.svg", "wordmark.png", "wordmark.svg"] as const;
 
 async function main(): Promise<void> {
-  for (const product of Object.keys(APP_TARGETS) as ProductCode[]) {
-    await syncProduct(product);
+  for (const plane of planes) {
+    const target = path.join(repoRoot, `apps/${plane}/public/brand/${plane}`);
+    const identity = presentation.planes[plane];
+    await fs.mkdir(target, { recursive: true });
+    await Promise.all(obsoleteAssets.map((name) => fs.rm(path.join(target, name), { force: true })));
+    await Promise.all([
+      fs.copyFile(path.join(canonicalRoot, `plane-lockups/${plane}.svg`), path.join(target, "identity-lockup.svg")),
+      fs.copyFile(path.join(canonicalRoot, "master-marks/mark-blue-transparent-2048.png"), path.join(target, "app-icon.png")),
+      fs.copyFile(path.join(canonicalRoot, "master-marks/athyper-favicon.svg"), path.join(target, "athyper-favicon.svg")),
+    ]);
+    await fs.writeFile(path.join(target, "manifest.webmanifest"), `${JSON.stringify({
+      name: identity.applicationName,
+      short_name: identity.shortName,
+      description: identity.description,
+      start_url: "/",
+      display: "standalone",
+      background_color: "#f8fafc",
+      theme_color: "#234B84",
+      icons: [{ src: `/brand/${plane}/app-icon.png`, sizes: "2048x2048", type: "image/png", purpose: "any" }],
+    })}\n`, "utf8");
+    console.log(`  ok  ${plane} -> apps/${plane}/public/brand/${plane}`);
   }
-
-  console.log("\nApp brand sync complete.");
+  console.log("\nMinimal app brand sync complete.");
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err);
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });

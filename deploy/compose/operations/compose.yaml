@@ -14,8 +14,9 @@ services:
     volumes:
       - metrics-data:/prometheus
       - ./config/prometheus.yaml:/etc/prometheus/prometheus.yaml:ro
-      - ./config/targets:/etc/prometheus/targets:ro
-    networks: [operations, host-access]
+      - ./config/business-partner-rules.yaml:/etc/prometheus/business-partner-rules.yaml:ro
+      - ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/operations/prometheus-targets:/etc/prometheus/targets:ro
+    networks: [operations, host-access, platform-observability]
     healthcheck: { test: [CMD, wget, -q, --spider, http://127.0.0.1:9090/-/ready], interval: 15s, timeout: 5s, retries: 5 }
     security_opt: [no-new-privileges:true]
     read_only: true
@@ -112,6 +113,9 @@ services:
 networks:
   operations: { internal: true }
   host-access: {}
+  platform-observability:
+    external: true
+    name: athyper-platform-observability
 
 volumes:
   metrics-data: {}

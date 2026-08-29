@@ -75,6 +75,9 @@ ALTER TABLE shared.commodity_code
     ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 
 ALTER TABLE shared.industry_code
+    ADD CONSTRAINT industry_code_domain_id_uq UNIQUE (domain_code, id);
+
+ALTER TABLE shared.industry_code
     ADD CONSTRAINT industry_code_scheme_fk
     FOREIGN KEY (domain_code)
     REFERENCES shared.classification_scheme (code)

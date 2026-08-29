@@ -493,6 +493,7 @@ BEGIN
         NEW.id IS DISTINCT FROM OLD.id
         OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
         OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.representation_evidence_id IS DISTINCT FROM OLD.representation_evidence_id
         OR NEW.payment_number IS DISTINCT FROM OLD.payment_number
         OR NEW.payment_type IS DISTINCT FROM OLD.payment_type
         OR NEW.payment_direction IS DISTINCT FROM OLD.payment_direction
@@ -616,6 +617,75 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Release allocation lines must belong to their stated headers and currency'
             USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.fn_address_snapshot(p_tenant_id uuid, p_address_id uuid)
+RETURNS jsonb
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, document, master
+AS $$
+    SELECT CASE WHEN a.id IS NULL THEN NULL::jsonb ELSE jsonb_strip_nulls(jsonb_build_object(
+        'address_id', a.id, 'address_kind', a.address_kind,
+        'line1', a.line1, 'line2', a.line2, 'line3', a.line3,
+        'dependent_locality', a.dependent_locality, 'city', a.city,
+        'state_region_code', a.state_region_code, 'region', a.region,
+        'postal_code', a.postal_code, 'country_code', a.country_code,
+        'timezone_code', a.timezone_code, 'formatted_address', a.formatted_address,
+        'normalized_hash', a.normalized_hash, 'normalization_version', a.normalization_version
+    )) END
+      FROM master.address a
+     WHERE a.tenant_id = p_tenant_id AND a.id = p_address_id;
+$$;
+
+CREATE OR REPLACE FUNCTION document.fn_build_address_snapshot(
+    p_tenant_id uuid, p_ship_to_address_id uuid, p_bill_to_address_id uuid,
+    p_bill_from_address_id uuid, p_ship_from_address_id uuid, p_remit_to_address_id uuid
+)
+RETURNS jsonb
+LANGUAGE sql STABLE
+SET search_path = pg_catalog, document, master
+AS $$
+    SELECT jsonb_build_object(
+        'ship_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_ship_to_address_id), '{}'::jsonb),
+        'bill_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_bill_to_address_id), '{}'::jsonb),
+        'bill_from', COALESCE(document.fn_address_snapshot(p_tenant_id, p_bill_from_address_id), '{}'::jsonb),
+        'ship_from', COALESCE(document.fn_address_snapshot(p_tenant_id, p_ship_from_address_id), '{}'::jsonb),
+        'remit_to', COALESCE(document.fn_address_snapshot(p_tenant_id, p_remit_to_address_id), '{}'::jsonb)
+    );
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_capture_line_address_snapshot()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document, master
+AS $$
+DECLARE v_snapshot jsonb; v_actor uuid;
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND NEW.ship_to_address_id IS NOT DISTINCT FROM OLD.ship_to_address_id
+       AND NEW.bill_to_address_id IS NOT DISTINCT FROM OLD.bill_to_address_id
+       AND NEW.bill_from_address_id IS NOT DISTINCT FROM OLD.bill_from_address_id
+       AND NEW.ship_from_address_id IS NOT DISTINCT FROM OLD.ship_from_address_id
+       AND NEW.remit_to_address_id IS NOT DISTINCT FROM OLD.remit_to_address_id
+       AND (NEW.address_snapshot IS DISTINCT FROM OLD.address_snapshot OR NEW.address_snapshot_hash IS DISTINCT FROM OLD.address_snapshot_hash OR NEW.address_snapshot_captured_at IS DISTINCT FROM OLD.address_snapshot_captured_at OR NEW.address_snapshot_captured_by IS DISTINCT FROM OLD.address_snapshot_captured_by)
+    THEN RAISE EXCEPTION 'Transaction address snapshot is immutable; change the source address reference in a draft document' USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'INSERT'
+       OR NEW.ship_to_address_id IS DISTINCT FROM OLD.ship_to_address_id
+       OR NEW.bill_to_address_id IS DISTINCT FROM OLD.bill_to_address_id
+       OR NEW.bill_from_address_id IS DISTINCT FROM OLD.bill_from_address_id
+       OR NEW.ship_from_address_id IS DISTINCT FROM OLD.ship_from_address_id
+       OR NEW.remit_to_address_id IS DISTINCT FROM OLD.remit_to_address_id
+    THEN
+        v_snapshot := document.fn_build_address_snapshot(NEW.tenant_id, NEW.ship_to_address_id, NEW.bill_to_address_id, NEW.bill_from_address_id, NEW.ship_from_address_id, NEW.remit_to_address_id);
+        v_actor := COALESCE(NULLIF(current_setting('app.current_principal_id', true), '')::uuid, NEW.created_by);
+        NEW.address_snapshot := v_snapshot;
+        NEW.address_snapshot_hash := encode(digest(v_snapshot::text, 'sha256'), 'hex')::char(64);
+        NEW.address_snapshot_captured_at := clock_timestamp();
+        NEW.address_snapshot_captured_by := v_actor;
     END IF;
     RETURN NEW;
 END;
@@ -3674,3 +3744,305 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.fn_business_partner_request_approvers(
+    p_tenant_id uuid,
+    p_operating_organization_id uuid,
+    p_company_code_id uuid,
+    p_excluded_principal_id uuid
+)
+RETURNS TABLE(principal_id uuid)
+LANGUAGE plpgsql STABLE SECURITY DEFINER
+SET search_path = pg_catalog, document, authz, master, shared
+AS $$
+BEGIN
+    IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id()
+       OR p_operating_organization_id IS NULL
+       OR NOT EXISTS (SELECT 1 FROM master.operating_organization organization WHERE organization.tenant_id=p_tenant_id AND organization.id=p_operating_organization_id)
+       OR (p_company_code_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.company_code company WHERE company.tenant_id=p_tenant_id AND company.id=p_company_code_id)) THEN
+        RAISE EXCEPTION 'Business Partner approver scope is invalid' USING ERRCODE='insufficient_privilege';
+    END IF;
+    RETURN QUERY
+    SELECT DISTINCT member.principal_id
+      FROM authz.group_member member
+      JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.status='active'
+      JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND (membership.effective_until IS NULL OR membership.effective_until>now())
+      JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.effective_from<=now() AND (grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+      JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+      JOIN authz.role_permission role_permission ON role_permission.tenant_id=role_row.tenant_id AND role_permission.role_id=role_row.id
+      JOIN authz.permission permission ON permission.id=role_permission.permission_id AND permission.canonical_code='neon.relationship.business_partner_request.decide' AND permission.status='published'
+      JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+     WHERE member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND (member.effective_until IS NULL OR member.effective_until>now())
+       AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+       AND ((target.scope_kind='tenant' AND target.target_id=p_tenant_id) OR (target.scope_kind='operating_organization' AND target.target_id=p_operating_organization_id) OR (p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id))
+       AND NOT EXISTS (SELECT 1 FROM authz.deny_rule deny WHERE deny.tenant_id=member.tenant_id AND deny.permission_id=permission.id AND deny.status='active' AND deny.effective_from<=now() AND (deny.effective_until IS NULL OR deny.effective_until>now()) AND (deny.subject_kind='tenant' OR (deny.subject_kind='principal' AND deny.principal_id=member.principal_id) OR (deny.subject_kind='group' AND deny.group_id=member.group_id)))
+     ORDER BY member.principal_id LIMIT 200;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_supplier_registration_invitation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Supplier registration invitations cannot be deleted; cancel or expire the invitation'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id, NEW.tenant_id, NEW.invitation_no,
+        NEW.requested_operating_organization_id, NEW.optional_company_code_id,
+        NEW.intended_supplier_name, NEW.invitee_email_hash, NEW.token_hash,
+        NEW.expires_at, NEW.idempotency_key, NEW.created_at, NEW.created_by
+    ) IS DISTINCT FROM (
+        OLD.id, OLD.tenant_id, OLD.invitation_no,
+        OLD.requested_operating_organization_id, OLD.optional_company_code_id,
+        OLD.intended_supplier_name, OLD.invitee_email_hash, OLD.token_hash,
+        OLD.expires_at, OLD.idempotency_key, OLD.created_at, OLD.created_by
+    ) THEN
+        RAISE EXCEPTION 'Supplier registration invitation authority and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status <> 'pending' THEN
+        RAISE EXCEPTION 'Terminal supplier registration invitations are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.status NOT IN ('accepted', 'cancelled', 'expired') THEN
+        RAISE EXCEPTION 'A pending supplier registration invitation may only be accepted, cancelled, or expired'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.status = 'accepted' AND NEW.expires_at <= statement_timestamp() THEN
+        RAISE EXCEPTION 'An expired supplier registration invitation cannot be accepted'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP = 'UPDATE' AND NEW.status = 'expired' AND NEW.expires_at > statement_timestamp() THEN
+        RAISE EXCEPTION 'A supplier registration invitation cannot expire before its expiry time'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_valid_transition boolean := false;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Business Partner requests cannot be deleted; cancel or supersede the request'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status <> 'draft'
+           OR NEW.workflow_request_id IS NOT NULL
+           OR NEW.materialized_business_partner_id IS NOT NULL
+           OR NEW.materialized_supplier_id IS NOT NULL
+           OR NEW.materialized_customer_id IS NOT NULL
+           OR NEW.materialized_supplier_company_profile_id IS NOT NULL
+           OR NEW.materialized_customer_company_profile_id IS NOT NULL
+           OR NEW.materialized_operating_organization_assignment_id IS NOT NULL
+           OR NEW.materialization_snapshot_id IS NOT NULL
+           OR NEW.application_idempotency_key IS NOT NULL
+           OR NEW.application_fingerprint IS NOT NULL
+           OR NEW.submitted_at IS NOT NULL OR NEW.submitted_by IS NOT NULL
+           OR NEW.approved_at IS NOT NULL OR NEW.approved_by IS NOT NULL
+           OR NEW.applied_at IS NOT NULL OR NEW.applied_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New Business Partner requests must start as evidence-free drafts'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.request_no IS DISTINCT FROM OLD.request_no
+       OR NEW.request_kind IS DISTINCT FROM OLD.request_kind
+       OR NEW.source_kind IS DISTINCT FROM OLD.source_kind
+       OR NEW.registration_mode IS DISTINCT FROM OLD.registration_mode
+       OR NEW.invitation_id IS DISTINCT FROM OLD.invitation_id
+       OR NEW.applicant_principal_id IS DISTINCT FROM OLD.applicant_principal_id
+       OR NEW.represented_party_name IS DISTINCT FROM OLD.represented_party_name
+       OR NEW.target_business_partner_id IS DISTINCT FROM OLD.target_business_partner_id
+       OR NEW.source_system_code IS DISTINCT FROM OLD.source_system_code
+       OR NEW.source_entity_code IS DISTINCT FROM OLD.source_entity_code
+       OR NEW.source_entity_id IS DISTINCT FROM OLD.source_entity_id
+       OR NEW.source_entity_code_value IS DISTINCT FROM OLD.source_entity_code_value
+       OR NEW.source_projection_id IS DISTINCT FROM OLD.source_projection_id
+       OR NEW.source_version IS DISTINCT FROM OLD.source_version
+       OR NEW.source_payload_hash IS DISTINCT FROM OLD.source_payload_hash
+       OR NEW.idempotency_key IS DISTINCT FROM OLD.idempotency_key
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Business Partner request identity, target, kind, and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.workflow_request_id IS NOT NULL
+       AND NEW.workflow_request_id IS DISTINCT FROM OLD.workflow_request_id THEN
+        RAISE EXCEPTION 'Business Partner request workflow binding is immutable once assigned'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.approved_at IS NOT NULL AND (
+        NEW.approved_at IS DISTINCT FROM OLD.approved_at
+        OR NEW.approved_by IS DISTINCT FROM OLD.approved_by
+    ) THEN
+        RAISE EXCEPTION 'Business Partner request approval evidence is immutable once recorded'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.applied_at IS NOT NULL AND (
+        NEW.applied_at IS DISTINCT FROM OLD.applied_at
+        OR NEW.applied_by IS DISTINCT FROM OLD.applied_by
+        OR NEW.materialized_business_partner_id IS DISTINCT FROM OLD.materialized_business_partner_id
+        OR NEW.materialized_supplier_id IS DISTINCT FROM OLD.materialized_supplier_id
+        OR NEW.materialized_customer_id IS DISTINCT FROM OLD.materialized_customer_id
+        OR NEW.materialized_supplier_company_profile_id IS DISTINCT FROM OLD.materialized_supplier_company_profile_id
+        OR NEW.materialized_customer_company_profile_id IS DISTINCT FROM OLD.materialized_customer_company_profile_id
+        OR NEW.materialized_operating_organization_assignment_id IS DISTINCT FROM OLD.materialized_operating_organization_assignment_id
+        OR NEW.materialization_snapshot_id IS DISTINCT FROM OLD.materialization_snapshot_id
+        OR NEW.application_idempotency_key IS DISTINCT FROM OLD.application_idempotency_key
+        OR NEW.application_fingerprint IS DISTINCT FROM OLD.application_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Business Partner request application evidence is immutable once recorded'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status NOT IN ('draft', 'validating', 'validation_failed', 'returned') AND (
+        NEW.base_record_version IS DISTINCT FROM OLD.base_record_version
+        OR NEW.base_snapshot_id IS DISTINCT FROM OLD.base_snapshot_id
+        OR NEW.base_payload_hash IS DISTINCT FROM OLD.base_payload_hash
+        OR NEW.requested_role IS DISTINCT FROM OLD.requested_role
+        OR NEW.operating_organization_id IS DISTINCT FROM OLD.operating_organization_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.payload_schema_code IS DISTINCT FROM OLD.payload_schema_code
+        OR NEW.payload_schema_version IS DISTINCT FROM OLD.payload_schema_version
+        OR NEW.payload_schema_hash IS DISTINCT FROM OLD.payload_schema_hash
+        OR NEW.proposed_payload IS DISTINCT FROM OLD.proposed_payload
+        OR NEW.validation_summary IS DISTINCT FROM OLD.validation_summary
+        OR NEW.duplicate_summary IS DISTINCT FROM OLD.duplicate_summary
+        OR NEW.change_impact IS DISTINCT FROM OLD.change_impact
+        OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Submitted Business Partner request review coordinates and payload are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status = OLD.status THEN
+        RETURN NEW;
+    END IF;
+
+    v_valid_transition := CASE OLD.status
+        WHEN 'draft' THEN NEW.status IN ('validating', 'cancelled')
+        WHEN 'validating' THEN NEW.status IN ('draft', 'validation_failed', 'pending_approval', 'cancelled')
+        WHEN 'validation_failed' THEN NEW.status IN ('draft', 'validating', 'cancelled')
+        WHEN 'pending_approval' THEN NEW.status IN ('returned', 'approved', 'rejected', 'cancelled')
+        WHEN 'returned' THEN NEW.status IN ('validating', 'cancelled', 'superseded')
+        WHEN 'approved' THEN NEW.status = 'applying'
+        WHEN 'applying' THEN NEW.status IN ('applied', 'failed')
+        WHEN 'failed' THEN NEW.status IN ('applying', 'superseded')
+        ELSE false
+    END;
+
+    IF NOT v_valid_transition THEN
+        RAISE EXCEPTION 'Invalid Business Partner request transition: % -> %', OLD.status, NEW.status
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN (
+        'pending_approval', 'returned', 'approved', 'rejected',
+        'applying', 'applied', 'failed'
+    ) AND (
+        NEW.submitted_at IS NULL
+        OR NEW.submitted_by IS NULL
+        OR NEW.workflow_request_id IS NULL
+        OR NEW.decision_fingerprint IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Submitted Business Partner request requires submission, workflow, and fingerprint evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'on_behalf'
+       AND NEW.representation_evidence_id IS NULL THEN
+        RAISE EXCEPTION 'Submitted on-behalf registration requires representation evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status IN ('approved', 'applying', 'applied', 'failed')
+       AND (NEW.approved_at IS NULL OR NEW.approved_by IS NULL) THEN
+        RAISE EXCEPTION 'Approved Business Partner request requires approval evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF NEW.status = 'applied' AND (
+        NEW.applied_at IS NULL
+        OR NEW.applied_by IS NULL
+        OR NEW.materialized_business_partner_id IS NULL
+        OR num_nonnulls(NEW.materialized_supplier_id, NEW.materialized_customer_id) <> 1
+        OR num_nonnulls(NEW.materialized_supplier_company_profile_id, NEW.materialized_customer_company_profile_id)
+           <> CASE WHEN NEW.request_kind = 'configure_company' THEN 1 ELSE 0 END
+        OR NEW.materialized_operating_organization_assignment_id IS NULL
+        OR NEW.materialization_snapshot_id IS NULL
+        OR NEW.application_idempotency_key IS NULL
+        OR NEW.application_fingerprint IS NULL
+    ) THEN
+        RAISE EXCEPTION 'Applied Business Partner request requires application evidence and materialized partner'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_registration()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.registration_mode, NEW.invitation_id, NEW.applicant_principal_id, NEW.represented_party_name
+    ) IS DISTINCT FROM (
+        OLD.registration_mode, OLD.invitation_id, OLD.applicant_principal_id, OLD.represented_party_name
+    ) THEN
+        RAISE EXCEPTION 'Business Partner registration channel identity is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' AND OLD.status NOT IN ('draft', 'validating', 'validation_failed', 'returned')
+       AND NEW.representation_evidence_id IS DISTINCT FROM OLD.representation_evidence_id THEN
+        RAISE EXCEPTION 'Submitted Business Partner representation evidence is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'on_behalf' AND NEW.representation_evidence_id IS NULL THEN
+        RAISE EXCEPTION 'Submitted on-behalf registration requires representation evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('pending_approval', 'returned', 'approved', 'rejected', 'applying', 'applied', 'failed')
+       AND NEW.registration_mode = 'self_service' AND NOT EXISTS (
+           SELECT 1 FROM document.supplier_registration_invitation invitation
+           WHERE invitation.tenant_id = NEW.tenant_id AND invitation.id = NEW.invitation_id
+             AND invitation.status = 'accepted'
+             AND invitation.business_partner_request_id = NEW.id
+             AND invitation.applicant_principal_id = NEW.applicant_principal_id
+       ) THEN
+        RAISE EXCEPTION 'Submitted self-service registration requires its accepted invitation binding'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_bank_verification() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$ BEGIN
+ IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner bank verification cannot be deleted' USING ERRCODE='restrict_violation'; END IF;
+ IF TG_OP='UPDATE' AND (NEW.id,NEW.tenant_id,NEW.bank_projection_id,NEW.business_partner_id,NEW.supplier_company_profile_id,NEW.company_code_id,NEW.prior_bank_account_link_id,NEW.expected_account_fingerprint,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.bank_projection_id,OLD.business_partner_id,OLD.supplier_company_profile_id,OLD.company_code_id,OLD.prior_bank_account_link_id,OLD.expected_account_fingerprint,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Business Partner bank verification coordinates are immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND OLD.decision_fingerprint IS NOT NULL AND (NEW.candidate_bank_account_link_id,NEW.verification_method,NEW.verification_evidence,NEW.decision_fingerprint,NEW.verified_at,NEW.verified_by,NEW.rejected_at,NEW.rejected_by,NEW.rejection_reason) IS DISTINCT FROM (OLD.candidate_bank_account_link_id,OLD.verification_method,OLD.verification_evidence,OLD.decision_fingerprint,OLD.verified_at,OLD.verified_by,OLD.rejected_at,OLD.rejected_by,OLD.rejection_reason) THEN RAISE EXCEPTION 'Business Partner bank verification decision evidence is immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' AND OLD.applied_at IS NOT NULL AND (NEW.application_fingerprint,NEW.applied_at,NEW.applied_by) IS DISTINCT FROM (OLD.application_fingerprint,OLD.applied_at,OLD.applied_by) THEN RAISE EXCEPTION 'Business Partner bank application evidence is immutable' USING ERRCODE='check_violation'; END IF;
+ IF TG_OP='UPDATE' THEN NEW.row_version:=OLD.row_version+1; END IF; RETURN NEW; END $$;

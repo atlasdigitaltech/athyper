@@ -41,7 +41,7 @@ export async function start(): Promise<void> {
       ...(container.adapters.redisCache ? { store: createRedisRateLimitStore(container.adapters.redisCache.client) } : {}),
       onStoreError(error) { captureOperationalError(error, { capability: "http.rate-limit" }); },
     },
-    ...(container.adapters.openTelemetry?.prometheus ? { metrics: { exporter: container.adapters.openTelemetry.prometheus } } : {}),
+    ...(container.adapters.processMetrics ? { metrics: { exporter: container.adapters.processMetrics } } : {}),
     configure(application) {
       for (const register of container.platform.httpRegistrars) register(application);
     },

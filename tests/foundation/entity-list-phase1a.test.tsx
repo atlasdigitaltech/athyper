@@ -8,7 +8,7 @@ import { entityListDescriptorOperation, recordBookmarkMembershipOperation, type 
 import { EntityListRuntime } from "../../packages/platform/entity/runtime/list-view/src/index";
 
 const digest = (value: string) => value.repeat(64).slice(0, 64);
-function descriptor(scopeFingerprint: string): EntityListDescriptorV1 { const enabled = { state: "enabled" as const, requiresPreflight: false, requiresApproval: false }; const hidden = { state: "hidden" as const, requiresPreflight: false, requiresApproval: false }; return { schemaVersion: 1, plane: "neon", entity: { code: "business_partner", label: "Business Partner", pluralLabel: "Business Partners", identityField: "code", detailRouteTemplate: "/app/business_partner/:recordId" }, revision: { release: 2, descriptorHash: digest("a"), surfaceHash: digest("b") }, surface: { key: "default_list", title: "Business Partners", description: "Scoped partners", defaultState: { filters: [], sort: [{ field: "code", direction: "asc" }], columns: ["code", "name", "status"], density: "comfortable", mode: "table" }, supportedModes: ["table", "compact"], search: { minimumQueryLength: 1 } }, fields: [{ key: "code", label: "Business Partner Code", valueKind: "string", semanticRole: "identity", defaultVisible: true, defaultOrder: 0, filterOperators: ["contains", "eq"], sortable: true, groupable: false, aggregations: [] }, { key: "name", label: "Display Name", valueKind: "string", semanticRole: "title", defaultVisible: true, defaultOrder: 1, filterOperators: ["contains"], sortable: true, groupable: false, aggregations: [] }, { key: "status", label: "Status", valueKind: "enum", semanticRole: "status", filterOptions: [{ value: "active", label: "Active" }, { value: "draft", label: "Draft" }], defaultVisible: true, defaultOrder: 2, filterOperators: ["eq", "in"], sortable: true, groupable: true, aggregations: [] }], actions: [], dataOperations: { export: { currentPage: enabled, selected: enabled, filtered: hidden, all: hidden, formats: ["csv", "json", "ndjson"], defaultFormat: "csv", exportableFields: ["code", "name", "status"], asynchronousThreshold: 5000 }, import: { create: hidden, update: hidden, upsert: hidden, downloadTemplate: hidden, formats: ["csv", "json"], defaultFormat: "csv", importableFields: [], maxFileBytes: 1024, maxRows: 100, draftOnly: false } }, scope: { status: "ready", labels: [{ key: "organization", label: "Operating organization", value: "Operations" }], fingerprint: scopeFingerprint }, limits: { defaultPageSize: 10, allowedPageSizes: [10, 25], maxSortLevels: 1, countMode: "none" } }; }
+function descriptor(scopeFingerprint: string): EntityListDescriptorV1 { const enabled = { state: "enabled" as const, requiresPreflight: false, requiresApproval: false }; const hidden = { state: "hidden" as const, requiresPreflight: false, requiresApproval: false }; return { schemaVersion: 1, plane: "neon", entity: { code: "business_partner", label: "Business Partner", pluralLabel: "Business Partners", identityField: "code", detailRouteTemplate: "/app/business_partner/:recordId" }, revision: { release: 2, descriptorHash: digest("a"), surfaceHash: digest("b") }, surface: { key: "default_list", title: "Business Partners", description: "Scoped partners", defaultState: { filters: [], sort: [{ field: "code", direction: "asc" }], columns: ["code", "name", "status"], density: "comfortable", mode: "table" }, supportedModes: ["table", "compact"], search: { minimumQueryLength: 1 }, filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }], source: "metadata", allowUserPinning: true } }, fields: [{ key: "code", label: "Business Partner Code", valueKind: "string", semanticRole: "identity", defaultVisible: true, defaultOrder: 0, filterOperators: ["contains", "eq"], sortable: true, groupable: false, aggregations: [] }, { key: "name", label: "Display Name", valueKind: "string", semanticRole: "title", defaultVisible: true, defaultOrder: 1, filterOperators: ["contains"], sortable: true, groupable: false, aggregations: [] }, { key: "status", label: "Status", valueKind: "enum", semanticRole: "status", filterOptions: [{ value: "active", label: "Active" }, { value: "draft", label: "Draft" }], defaultVisible: true, defaultOrder: 2, filterOperators: ["eq", "in"], sortable: true, groupable: true, aggregations: [] }], actions: [], dataOperations: { export: { currentPage: enabled, selected: enabled, filtered: hidden, all: hidden, formats: ["csv", "json", "ndjson"], defaultFormat: "csv", exportableFields: ["code", "name", "status"], asynchronousThreshold: 5000 }, import: { create: hidden, update: hidden, upsert: hidden, downloadTemplate: hidden, formats: ["csv", "json"], defaultFormat: "csv", importableFields: [], maxFileBytes: 1024, maxRows: 100, draftOnly: false } }, scope: { status: "ready", labels: [{ key: "organization", label: "Operating organization", value: "Operations" }], fingerprint: scopeFingerprint }, limits: { defaultPageSize: 10, allowedPageSizes: [10, 25], maxSortLevels: 1, countMode: "none" } }; }
 function page(scopeFingerprint: string, code: string): EntityListResultV1 { return { schemaVersion: 1, descriptorHash: digest("a"), scopeFingerprint, queryHash: digest("d"), rows: [{ id: `${code}-id`, values: { code, name: `${code} Partner`, status: "active" } }], pagination: { pageSize: 1, hasNext: false, hasPrevious: false, countMode: "none" } }; }
 
 test("Phase 1A restores URL state and aborts stale list authority on context change", async () => {
@@ -29,13 +29,20 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     assert.equal(firstList.signal?.aborted, true);
     assert.match(dom.window.document.body.textContent ?? "", /ORG2-BP-001/);
-    assert.ok(dom.window.document.querySelector(".a-entity-list__context-row"));
+    assert.equal(dom.window.document.querySelector(".a-entity-list__context-row"), null);
+    assert.equal(dom.window.document.querySelectorAll("h1").length, 1);
     assert.ok(dom.window.document.querySelector(".a-entity-list__query-row"));
     assert.equal(dom.window.document.querySelector("button[type='submit']"), null);
-    assert.match(dom.window.document.body.textContent ?? "", /Read-only.*Default view.*Filters.*Sort.*Columns.*More/);
+    assert.match(dom.window.document.body.textContent ?? "", /Read-only.*Filters.*Controls/);
     assert.doesNotMatch(dom.window.document.body.textContent ?? "", /Import \/ Export/);
     assert.equal([...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Actions"), undefined);
     assert.equal(dom.window.document.querySelector<HTMLAnchorElement>(".a-entity-list__record-link")?.getAttribute("href"), "/app/business_partner/ORG2-BP-001-id");
+    const rowActions = dom.window.document.querySelector<HTMLButtonElement>('button[aria-label="Actions for ORG2-BP-001"]');
+    await act(async () => rowActions?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    const rowMenu = dom.window.document.querySelector<HTMLElement>(".a-entity-list__row-menu");
+    assert.match(rowMenu?.textContent ?? "", /View.*Copy/);
+    assert.equal(rowMenu?.closest(".a-entity-list__table-wrap"), null);
+    await act(async () => rowActions?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     const activeSortHeader = dom.window.document.querySelector<HTMLButtonElement>('th[aria-sort="descending"] .a-entity-list__sort-header');
     assert.equal(activeSortHeader?.getAttribute("aria-label"), "Display Name, sorted descending. Activate to clear sorting.");
     assert.ok(activeSortHeader?.querySelector(".a-entity-list__sort-indicator--active svg"));
@@ -48,22 +55,49 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     assert.doesNotMatch(dom.window.document.body.textContent ?? "", /Unsafe injected view/);
     assert.ok(dom.window.document.querySelector<HTMLInputElement>("#entity-list-search"));
     const listRequestsBeforeRefresh = requests.filter((request) => request.kind === "list").length;
-    const refresh = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.getAttribute("aria-label") === "Refresh list");
+    const controls = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.getAttribute("aria-label") === "Controls");
+    await act(async () => controls?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    const refresh = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((button) => button.textContent?.trim() === "Refresh");
     await act(async () => refresh?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     assert.equal(requests.filter((request) => request.kind === "list").length, listRequestsBeforeRefresh + 1);
     const filtersButton = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Filters");
     await act(async () => filtersButton?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    assert.equal(dom.window.document.querySelector(".a-drawer-layer")?.getAttribute("data-mobile-presentation"), "fullscreen");
+    assert.match(dom.window.document.querySelector('[role="dialog"]')?.textContent ?? "", /Filters.*authorized business partners list.*Records.*1.*Active filters.*0.*State.*Current.*Quick filters.*All filters.*Status.*1 record matching/);
+    assert.doesNotMatch(dom.window.document.querySelector('[role="dialog"]')?.textContent ?? "", /Frequently used|Common filters/);
+    assert.ok(dom.window.document.querySelector('.a-drawer__header-icon svg'));
+    assert.ok(dom.window.document.querySelector('select[aria-label="Operator for quick Status filter"]'));
+    assert.equal([...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent === "Reset filters")?.disabled, true);
+    assert.equal([...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent === "Apply filtersShow results")?.disabled, true);
+    const allFilters = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((button) => button.textContent === "All filters");
+    await act(async () => allFilters?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    assert.equal(allFilters?.getAttribute("aria-selected"), "true");
+    assert.match(dom.window.document.querySelector('[role="tabpanel"]:not([hidden])')?.textContent ?? "", /No filters configured.*Add a filter to narrow the authorized result set.*Add filter/);
     const addFilter = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent === "Add filter");
     await act(async () => addFilter?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    assert.equal(dom.window.document.querySelector<HTMLInputElement>('input[placeholder="Search filterable fields by name or code…"]')?.value, "");
+    const filterField = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[data-field-option]')].find((button) => button.textContent?.startsWith("Business Partner Code"));
+    await act(async () => filterField?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     assert.equal(dom.window.document.querySelectorAll(".a-entity-list__filter-header").length, 1);
-    assert.ok(dom.window.document.querySelector('select[aria-label="Value for Status filter 1"]'));
+    assert.ok(dom.window.document.querySelector('button[role="combobox"][aria-label="Field for filter 1"]'));
+    assert.ok(dom.window.document.querySelector('[aria-label^="Value for "][aria-label$=" filter 1"]'));
     const filterCancel = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find((button) => button.textContent === "Cancel");
     await act(async () => filterCancel?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    const sortButton = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === "Sort");
+    await act(async () => sortButton?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
+    const sortDialog = dom.window.document.querySelector('[role="dialog"]');
+    assert.match(sortDialog?.textContent ?? "", /Sort.*business partners.*Records.*1.*Sort levels.*1.*Maximum.*1.*Display Name.*Descending.*1 active sort level/);
+    assert.ok(sortDialog?.querySelector('.a-drawer__header-icon svg'));
+    assert.ok(sortDialog?.querySelector('button[role="combobox"][aria-label="Field for sort 1"]'));
+    assert.equal([...sortDialog!.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Apply sort")?.disabled, true);
+    const sortCancel = [...sortDialog!.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent === "Cancel");
+    await act(async () => sortCancel?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     const columnsButton = dom.window.document.querySelector<HTMLButtonElement>('button[aria-label="3 visible fields"]');
     await act(async () => columnsButton?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     const columnDialog = dom.window.document.querySelector('[role="dialog"]');
-    assert.match(columnDialog?.textContent ?? "", /Columns.*3 fields.*Visible columns.*3 selected.*Available fields/);
+    assert.match(columnDialog?.textContent ?? "", /Columns.*business partners.*Fields.*3.*Visible.*3.*Maximum.*100.*Visible columns.*3 selected.*Available fields.*3 visible columns/);
+    assert.ok(columnDialog?.querySelector('.a-drawer__header-icon svg'));
     assert.equal(columnDialog?.querySelectorAll<HTMLButtonElement>('.a-entity-list__column-grip[draggable="true"]').length, 3);
     assert.equal(columnDialog?.querySelector<HTMLInputElement>('#entity-list-column-search')?.getAttribute("placeholder"), "Search fields by name or code…");
     const displayNameVisibility = columnDialog?.querySelector<HTMLInputElement>('input[aria-label="Show Display Name"]');
@@ -75,10 +109,11 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     await act(async () => moveDisplayNameUp?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     const applyColumns = [...(columnDialog?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find((button) => button.textContent === "Apply columns");
     await act(async () => applyColumns?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
-    assert.equal(new dom.window.URLSearchParams(dom.window.location.search).get("cols"), "code,name,status");
-    const more = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim().startsWith("More"));
+    assert.equal(new dom.window.URLSearchParams(dom.window.location.search).get("cols"), null);
+    const more = [...dom.window.document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.getAttribute("aria-label") === "Controls");
     await act(async () => more?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
-    assert.match(dom.window.document.querySelector('[role="menu"]')?.textContent ?? "", /Group by.*None.*Display settings.*Table · Comfortable.*Data operations.*Copy link to this view.*Reset list settings/);
+    assert.match(dom.window.document.querySelector('[role="menu"]')?.textContent ?? "", /Saved view.*Default view.*Sort.*1 level.*Fields.*3 visible.*Group by.*None.*Display settings.*Table · Comfortable.*Data operations.*Refresh.*Copy link to this view.*Reset list settings/);
+    assert.doesNotMatch(dom.window.document.querySelector('[role="menu"]')?.textContent ?? "", /Context|Refine|Organize|Appearance|Other/);
     const operations = [...dom.window.document.querySelectorAll<HTMLButtonElement>('[role="menuitem"]')].find((button) => button.textContent?.includes("Data operations"));
     await act(async () => operations?.dispatchEvent(new dom.window.MouseEvent("click", { bubbles: true })));
     assert.match(dom.window.document.querySelector('[role="dialog"]')?.textContent ?? "", /Data operations.*Export records.*Selected records.*Current page.*Jobs/);

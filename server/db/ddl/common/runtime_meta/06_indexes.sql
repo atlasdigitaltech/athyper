@@ -35,3 +35,5 @@ CREATE INDEX runtime_entity_descriptor_release_idx
 CREATE UNIQUE INDEX runtime_entity_descriptor_active_uq
     ON runtime_meta.entity_descriptor (tenant_id, entity_id, plane_code, descriptor_kind)
     NULLS NOT DISTINCT WHERE status = 'active';
+CREATE INDEX runtime_applied_release_payload_lookup_idx
+    ON runtime_meta.applied_release_payload (tenant_id, artifact_kind, generated_at DESC);

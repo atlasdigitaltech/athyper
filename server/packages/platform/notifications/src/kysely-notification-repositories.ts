@@ -41,9 +41,9 @@ export function createKyselyNotificationRepositories(
           RETURNING id`.execute(transaction);
         const deliveryId = required(delivery.rows[0], "notification delivery").id;
         await sql`INSERT INTO event.notification_inbox_state
-          (tenant_id,message_id,delivery_id,principal_id,channel_code,created_by)
+          (tenant_id,message_id,delivery_id,principal_id,channel_code)
           VALUES (${notification.tenantId}::uuid,${row.id}::uuid,${deliveryId}::uuid,
-            ${notification.principalId}::uuid,'in_app',${notification.principalId}::uuid)`.execute(transaction);
+            ${notification.principalId}::uuid,'in_app')`.execute(transaction);
         return directInApp(notification,row.id,dateTime(row.created_at));
       });
     },
@@ -89,7 +89,8 @@ export function createKyselyNotificationRepositories(
           SELECT channel.value,channel.channel_type FROM master.contact_link channel
           JOIN control.owner_type owner_type ON owner_type.id=channel.owner_type_id
           WHERE channel.tenant_id=${input.tenantId}::uuid AND channel.owner_id=${input.principalId}::uuid
-            AND owner_type.code='principal' AND channel.status='active'
+            AND owner_type.code='principal' AND channel.status='active' AND channel.is_verified
+            AND channel.effective_from<=now() AND (channel.effective_until IS NULL OR channel.effective_until>now())
             AND channel.channel_type IN ('email','phone','sms','whatsapp')
           ORDER BY channel.is_verified DESC,channel.is_primary DESC,channel.created_at ASC`.execute(transaction);
         const email=result.rows.find(row=>row["channel_type"]==="email")?.["value"];

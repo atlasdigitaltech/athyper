@@ -824,6 +824,7 @@ BEGIN
         'business_partner_identifier',
         'business_partner_tax_registration',
         'business_partner_commodity_capability',
+        'business_partner_industry_classification',
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',

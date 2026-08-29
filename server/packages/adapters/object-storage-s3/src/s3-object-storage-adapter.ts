@@ -20,6 +20,7 @@ export interface S3ObjectStorageAdapterConfig {
   readonly region: string;
   readonly bucket: string;
   readonly endpoint?: string;
+  readonly publicEndpoint?: string;
   readonly accessKeyId?: string;
   readonly secretAccessKey?: string;
   readonly forcePathStyle?: boolean;
@@ -94,13 +95,20 @@ export function createS3ObjectStorageAdapter(
     ...(resolved.credentials ? { credentials: resolved.credentials } : {}),
     forcePathStyle: resolved.forcePathStyle,
   });
-  return new S3ObjectStorageRuntime(client, resolved);
+  const signingClient = resolved.publicEndpoint ? new S3Client({
+    region: resolved.region,
+    endpoint: resolved.publicEndpoint,
+    ...(resolved.credentials ? { credentials: resolved.credentials } : {}),
+    forcePathStyle: resolved.forcePathStyle,
+  }) : client;
+  return new S3ObjectStorageRuntime(client, resolved, signingClient);
 }
 
 interface ResolvedConfig {
   readonly region: string;
   readonly bucket: string;
   readonly endpoint?: string;
+  readonly publicEndpoint?: string;
   readonly credentials?: {
     readonly accessKeyId: string;
     readonly secretAccessKey: string;
@@ -119,6 +127,7 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
   constructor(
     private readonly client: S3Client,
     private readonly config: ResolvedConfig,
+    private readonly signingClient: S3Client = client,
   ) {}
 
   async put(
@@ -411,6 +420,7 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     if (this.#closed) return;
     this.#closed = true;
     this.client.destroy();
+    if (this.signingClient !== this.client) this.signingClient.destroy();
   }
 
   #getObject(key: string, event: string) {
@@ -430,7 +440,7 @@ export class S3ObjectStorageRuntime implements S3ObjectStorageAdapter {
     if (!Number.isInteger(expiresIn) || expiresIn <= 0 || expiresIn > 604_800) {
       throw new TypeError("S3 presigned URL expiry must be between 1 and 604800 seconds");
     }
-    return getSignedUrl(this.client, command, { expiresIn });
+    return getSignedUrl(this.signingClient, command, { expiresIn });
   }
 
   #assertUploadSize(size: number): void {
@@ -515,6 +525,18 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
       throw new TypeError("S3 endpoint must use HTTP or HTTPS");
     }
   }
+  const publicEndpoint = config.publicEndpoint?.trim() || undefined;
+  if (publicEndpoint) {
+    let url: URL;
+    try {
+      url = new URL(publicEndpoint);
+    } catch {
+      throw new TypeError("S3 public endpoint is invalid");
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      throw new TypeError("S3 public endpoint must use HTTP or HTTPS");
+    }
+  }
 
   const hasAccessKey = Boolean(config.accessKeyId?.trim());
   const hasSecretKey = Boolean(config.secretAccessKey?.trim());
@@ -547,6 +569,7 @@ function validateConfig(config: S3ObjectStorageAdapterConfig): ResolvedConfig {
     region,
     bucket,
     ...(endpoint ? { endpoint } : {}),
+    ...(publicEndpoint ? { publicEndpoint } : {}),
     ...(hasAccessKey && hasSecretKey
       ? {
           credentials: {

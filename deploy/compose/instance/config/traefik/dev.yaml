@@ -9,6 +9,7 @@ http:
     studio: { rule: Host(`studio.dev.athyper.test`), entryPoints: [web], service: studio-failover }
     mail: { rule: Host(`mail.dev.athyper.test`), entryPoints: [web], service: mail }
     minio: { rule: Host(`minio.dev.athyper.test`), entryPoints: [web], service: minio }
+    objects: { rule: Host(`objects.dev.athyper.test`), entryPoints: [web], service: objects }
     fallback: { rule: PathPrefix(`/`), entryPoints: [web], service: problem, priority: 1 }
   services:
     api-failover: { failover: { healthCheck: {}, service: api, fallback: problem } }
@@ -34,6 +35,7 @@ http:
         servers: [{ url: http://studio-web:3000 }]
     mail: { loadBalancer: { servers: [{ url: http://mailtrap:8025 }] } }
     minio: { loadBalancer: { servers: [{ url: http://objectstorage:9001 }] } }
+    objects: { loadBalancer: { servers: [{ url: http://objectstorage:9000 }] } }
     outage:
       loadBalancer:
         healthCheck: { path: /healthz, interval: 10s, timeout: 3s }

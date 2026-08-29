@@ -1,5 +1,6 @@
 import * as React from "react";
 import { getPlaneBrand, type BrandPlane } from "@athyper/platform-brand";
+import { LockIcon, UserIcon, WarningIcon } from "@athyper/platform-icons";
 import { PublicIdentitySurface } from "@athyper/platform-surface-kit/public-identity-surface";
 import { ActionButton, ActionLink, Eyebrow, Heading, MetaText, Notice, ScreenReaderText, Spinner, SupportingText } from "@athyper/platform-ui/presentation";
 import { IdentityContextPicker, type IdentityContextOption } from "./context-picker";
@@ -39,7 +40,7 @@ export function LoginGatePage({ plane, reason, returnTo = "/", requestId }: Logi
     <div className="a-identity-panel">
       <Heading id="identity-title">{getGreeting()}</Heading>
       {!recovery ? <SupportingText>{`Continue to ${brand.description}. Authentication is handled securely by Athyper Identity.`}</SupportingText> : null}
-      {recovery ? <Notice title={recovery.title} icon={<StatusIcon />} role="alert">{recovery.message}</Notice> : null}
+      {recovery ? <Notice title={recovery.title} icon={<WarningIcon />} role="alert">{recovery.message}</Notice> : null}
       <ActionLink variant="primary" href={primaryHref}><LockIcon />{recovery?.action ?? "Continue securely"}</ActionLink>
       {recovery?.mode === "switch" ? <ActionLink variant="secondary" href={retryHref}>Try this account again</ActionLink> : null}
       {requestId ? <MetaText>Support reference: <code>{requestId}</code></MetaText> : null}
@@ -55,7 +56,7 @@ export function ContextGatePage({ plane, returnTo = "/", contexts = [] }: { read
       <Eyebrow>Identity verified · {brand.shortName}</Eyebrow>
       <Heading id="identity-title">Choose your {noun}</Heading>
       <SupportingText>Only active contexts authorized for this identity are shown. Your selection creates a new isolated session scope.</SupportingText>
-      {contexts.length ? <IdentityContextPicker contexts={contexts} returnTo={returnTo} /> : <Notice title="No active context is available" icon={<ContextIcon />} role="status">Your identity was verified, but no active plane membership could be resolved. Ask your administrator to review the identity binding and membership.</Notice>}
+      {contexts.length ? <IdentityContextPicker contexts={contexts} returnTo={returnTo} /> : <Notice title="No active context is available" icon={<UserIcon />} role="status">Your identity was verified, but no active plane membership could be resolved. Ask your administrator to review the identity binding and membership.</Notice>}
       <div className="a-context-actions"><ActionLink variant="secondary" href={loginHref(returnTo, "switch")}>Use a different account</ActionLink><ActionLink variant="ghost" href="/logout">Sign out securely</ActionLink></div>
     </div>
   </AuthShell>;
@@ -64,7 +65,7 @@ export function ContextGatePage({ plane, returnTo = "/", contexts = [] }: { read
 export function LogoutGatePage({ plane, csrfToken }: { readonly plane: BrandPlane; readonly csrfToken?: string }) {
   const brand = getPlaneBrand(plane);
   return <AuthShell plane={plane}><div className="a-identity-panel"><Heading id="identity-title">Choose how to sign out</Heading><SupportingText>Close only this application, or end your Athyper identity session across all participating applications.</SupportingText>
-    {!csrfToken ? <Notice title="Sign-out verification is unavailable" icon={<StatusIcon />} role="alert">Return to the application and try again. No session has been changed.</Notice> : <>
+    {!csrfToken ? <Notice title="Sign-out verification is unavailable" icon={<WarningIcon />} role="alert">Return to the application and try again. No session has been changed.</Notice> : <>
       <form action="/api/auth/logout" method="post"><input type="hidden" name="_csrf" value={csrfToken}/><input type="hidden" name="scope" value="application"/><ActionButton variant="primary" type="submit"><LockIcon />Sign out of {brand.shortName}</ActionButton></form>
       <form action="/api/auth/logout" method="post"><input type="hidden" name="_csrf" value={csrfToken}/><input type="hidden" name="scope" value="global"/><ActionButton variant="secondary" type="submit">Sign out of Athyper everywhere</ActionButton></form>
     </>}
@@ -94,9 +95,6 @@ const IDENTITY_STORIES = Object.freeze({
 
 function IdentityWave() { return <svg className="a-identity-story-art" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="athyper-app-wave" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="var(--a-story-wave)" stopOpacity="0"/><stop offset=".28" stopColor="var(--a-story-wave)" stopOpacity=".75"/><stop offset=".72" stopColor="var(--a-story-wave-bright)" stopOpacity=".95"/><stop offset="1" stopColor="var(--a-story-wave)" stopOpacity=".12"/></linearGradient></defs><g className="a-identity-story-wave-lines" fill="none" stroke="url(#athyper-app-wave)" strokeWidth="2"><path d="M-40 285 C180 285 235 120 430 270 S720 430 910 220 S1110 170 1240 280"/><path d="M-40 300 C190 300 245 145 440 282 S725 415 920 232 S1115 190 1240 292"/><path d="M-40 315 C200 315 255 170 450 294 S730 400 930 244 S1120 210 1240 304"/><path d="M-40 330 C210 330 265 195 460 306 S735 385 940 256 S1125 230 1240 316"/><path d="M-40 345 C220 345 275 220 470 318 S740 370 950 268 S1130 250 1240 328"/><path d="M-40 360 C230 360 285 245 480 330 S745 355 960 280 S1135 270 1240 340"/></g></svg>; }
 
-function LockIcon() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v7H6v-7a2 2 0 0 1 2-2Z"/></svg>; }
-function StatusIcon() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 8v5m0 3h.01M4.9 19h14.2a1 1 0 0 0 .87-1.5L12.87 5a1 1 0 0 0-1.74 0l-7.1 12.5A1 1 0 0 0 4.9 19Z"/></svg>; }
-function ContextIcon() { return <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 13a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 7a7 7 0 0 1 14 0"/></svg>; }
 function getGreeting(): string { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; }
 function normalizeReason(value: string): AuthRecoveryReason { const normalized = value.trim().replace(/;+$/, ""); return (["access", "service", "retry", "expired", "signed-out", "signed-out-everywhere", "logout-incomplete"] as const).includes(normalized as AuthRecoveryReason) ? normalized as AuthRecoveryReason : "retry"; }
 function safeReturnTo(value: string): string { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && !/^\/(?:api|sign-in|logout)(?:\/|\?|$)/.test(value) ? value : "/"; }

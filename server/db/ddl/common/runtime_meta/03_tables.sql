@@ -275,3 +275,30 @@ COMMENT ON TABLE runtime_meta.entity_contract IS
   'Immutable all-plane projection of an Athyper-authored Entity release. Status is the only mutable contract state.';
 COMMENT ON TABLE runtime_meta.entity_descriptor IS
   'Immutable plane-local compiler output. Athyper uses admin_preview descriptors; Neon and Mesh use executable descriptors.';
+
+CREATE TABLE runtime_meta.applied_release_payload (
+    id                     uuid        NOT NULL,
+    applied_release_id     uuid        NOT NULL,
+    tenant_id              uuid,
+    artifact_kind          text        NOT NULL,
+    payload_schema_version text        NOT NULL,
+    payload_hash           text        NOT NULL,
+    payload_json           jsonb       NOT NULL,
+    coordinates            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    generated_at           timestamptz NOT NULL,
+    received_at            timestamptz NOT NULL DEFAULT clock_timestamp(),
+
+    CONSTRAINT runtime_applied_release_payload_pkey PRIMARY KEY (id),
+    CONSTRAINT runtime_applied_release_payload_release_uq UNIQUE (applied_release_id),
+    CONSTRAINT runtime_applied_release_payload_kind_chk
+        CHECK (artifact_kind ~ '^[a-z][a-z0-9_.-]{1,126}$'),
+    CONSTRAINT runtime_applied_release_payload_schema_chk
+        CHECK (payload_schema_version ~ '^[0-9]+\.[0-9]+(?:\.[0-9]+)?$'),
+    CONSTRAINT runtime_applied_release_payload_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT runtime_applied_release_payload_json_chk CHECK (jsonb_typeof(payload_json) = 'object'),
+    CONSTRAINT runtime_applied_release_payload_coordinates_chk CHECK (jsonb_typeof(coordinates) = 'object'),
+    CONSTRAINT runtime_applied_release_payload_time_chk CHECK (received_at >= generated_at)
+);
+
+COMMENT ON TABLE runtime_meta.applied_release_payload IS
+  'Immutable offline-safe payload for a locally applied non-Entity publication artifact. Release lifecycle and activation are owned only by applied_release and release_activation_head.';

@@ -13,6 +13,24 @@ export type ImportStageStatus = "uploading" | "staged" | "validated" | "previewe
 export type RecordImportOperation = "create" | "update" | "upsert" | "delete" | "replace";
 export type RecordImportConflictPolicy = "reject" | "skip";
 export type RecordImportAtomicity = "all_or_nothing" | "valid_rows";
+export type RecordTransferOutcome = "created" | "updated" | "deleted" | "requested" | "drafted" | "skipped";
+export type RecordTransferOutcomeCounts = Readonly<Record<RecordTransferOutcome, number>>;
+export interface RecordTransferProgress {
+  readonly stage: "queued" | "validating" | "importing" | "exporting" | "finalizing" | "completed" | "failed" | "cancelled";
+  readonly completed: number;
+  readonly total?: number;
+  readonly percent?: number;
+  readonly updatedAt: string;
+}
+export interface RecordTransferReceipt {
+  readonly schemaVersion: 1;
+  readonly rowCount: number;
+  readonly outcomeCounts?: RecordTransferOutcomeCounts;
+  readonly artifactKey?: string;
+  readonly checksum?: string;
+  readonly descriptorHash?: string;
+  readonly completedAt: string;
+}
 export interface RecordImportSession {
   readonly id: string;
   readonly tenantId: string;
@@ -34,6 +52,12 @@ export interface RecordImportSession {
   readonly createdBy?: string;
   readonly nextChunkIndex?: number;
   readonly errorReportKey?: string;
+  readonly progress?: RecordTransferProgress;
+  readonly receipt?: RecordTransferReceipt;
+  readonly errorCode?: string;
+  readonly errorMessage?: string;
+  readonly startedAt?: string;
+  readonly completedAt?: string;
   readonly cancelledAt?: string;
 }
 export interface ImportValidationRow { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[]; }
@@ -51,6 +75,9 @@ export interface RecordTransferListItem {
   readonly createdAt: string;
   readonly completedAt?: string;
   readonly downloadable: boolean;
+  readonly progress?: RecordTransferProgress;
+  readonly receipt?: RecordTransferReceipt;
+  readonly errorCode?: string;
 }
 
 export type SnapshotCaptureKind = "create" | "version" | "publish" | "release" | "submit" | "approval" | "commitment" | "fulfillment" | "financial_post" | "amendment" | "reversal" | "withdrawal" | "reconcile" | "migration" | "manual";

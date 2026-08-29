@@ -50,6 +50,7 @@ export IAM_ISSUER_URL="https://iam.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}/re
 export KEYCLOAK_REALM=athyper
 export KEYCLOAK_JWKS_URL=http://iam:8080/realms/athyper/protocol/openid-connect/certs
 export S3_ENDPOINT=http://objectstorage:9000 S3_REGION=us-east-1 S3_BUCKET=athyper-documents S3_USE_SSL=false
+export S3_PUBLIC_ENDPOINT="${S3_PUBLIC_ENDPOINT:-https://objects.${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}}"
 export CLAMD_HOST=virusscan CLAMD_PORT=3310 CLAMD_ON_UNAVAILABLE=fail-closed
 export DOCRENDER_BASE_URL=http://docrender:3000 DOCPARSER_URL=http://docparser:9998
 export SEARCHCORE_URL=http://searchcore:7700 SEARCHCORE_DOCUMENT_INDEX=documents
@@ -69,8 +70,9 @@ for provider_secret in \
   load_optional_secret "$provider_secret"
 done
 unset provider_secret
-export PUBLICATION_API_ENABLED=false PUBLICATION_COMPILE_ENABLED=false
-export PUBLICATION_DISPATCH_ENABLED=false PUBLICATION_APPLY_ENABLED=false PUBLICATION_RECOVERY_ENABLED=false
+: "${PUBLICATION_API_ENABLED:=false}" "${PUBLICATION_COMPILE_ENABLED:=false}"
+: "${PUBLICATION_DISPATCH_ENABLED:=false}" "${PUBLICATION_APPLY_ENABLED:=false}" "${PUBLICATION_RECOVERY_ENABLED:=false}"
+export PUBLICATION_API_ENABLED PUBLICATION_COMPILE_ENABLED PUBLICATION_DISPATCH_ENABLED PUBLICATION_APPLY_ENABLED PUBLICATION_RECOVERY_ENABLED
 
 unset runtime_password worker_password redis_password
 exec node dist/main.js

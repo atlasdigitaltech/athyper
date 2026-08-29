@@ -7,6 +7,7 @@ import {
   renameSync,
   rmdirSync,
   statSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createHash } from "node:crypto";
@@ -327,6 +328,12 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
     validate(document, path);
     atomicJson(path, document);
   };
+  const metricsTargetPath=join(root,"operations","prometheus-targets",`${instanceId}.json`);
+  const writeMetricsTarget=()=>{atomicJson(metricsTargetPath,[
+    {targets:[`worker-${instanceId}:9464`],labels:{instance:instanceId,environment:model.instance.spec.mode,service:"worker",source_revision:revision}},
+    {targets:[`scheduler-${instanceId}:9464`],labels:{instance:instanceId,environment:model.instance.spec.mode,service:"scheduler",source_revision:revision}},
+  ]);chmodSync(dirname(metricsTargetPath),0o755);chmodSync(metricsTargetPath,0o644);};
+  const removeMetricsTarget=()=>{if(existsSync(metricsTargetPath))unlinkSync(metricsTargetPath);};
   const existingActive = existsSync(activePath)
     ? readActive(validate, root, instanceId, project).receipt
     : null;
@@ -408,11 +415,13 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
         throw error;
       }
       writeActive("running");
+      writeMetricsTarget();
       receiptStatus = "succeeded";
     } else if (operation === "down") {
       readActive(validate, root, instanceId, project);
       compose(["down", "--remove-orphans"]);
       writeActive("stopped");
+      removeMetricsTarget();
       receiptStatus = "succeeded";
     } else if (operation === "restart") {
       readActive(validate, root, instanceId, project, "running");

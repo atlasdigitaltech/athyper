@@ -81,6 +81,14 @@ services:
     environment:
       MODE: api
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
+      # Enabled after bearer-authenticated, exact-plane CSV/XLSX/JSON acceptance.
+      # Operators can still disable the contract explicitly per environment.
+      RECORD_TRANSFER_PUBLIC_API_ENABLED: ${RECORD_TRANSFER_PUBLIC_API_ENABLED:-true}
+      PUBLICATION_API_ENABLED: ${PUBLICATION_API_ENABLED:-true}
+      PUBLICATION_TARGET_PLANES: ${PUBLICATION_TARGET_PLANES:-studio,neon,mesh}
+      VAPID_SUBJECT_FILE: /run/secrets/vapid-subject
+      VAPID_PUBLIC_KEY_FILE: /run/secrets/vapid-public-key
+      VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid-private-key
     secrets:
       - runtime-db-password
       - worker-db-password
@@ -89,6 +97,9 @@ services:
       - objectstorage-app-access-key
       - objectstorage-app-secret-key
       - search-master-key
+      - vapid-subject
+      - vapid-public-key
+      - vapid-private-key
     healthcheck:
       test: [CMD, wget, -qO-, http://127.0.0.1:4000/livez]
       interval: 15s
@@ -103,7 +114,16 @@ services:
     <<: *runtime-common
     environment:
       MODE: worker
+      PROCESS_METRICS_PORT: "9464"
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
+      VAPID_SUBJECT_FILE: /run/secrets/vapid-subject
+      VAPID_PUBLIC_KEY_FILE: /run/secrets/vapid-public-key
+      VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid-private-key
+    networks:
+      app: {}
+      data: {}
+      platform-observability:
+        aliases: ["worker-${ATHYPER_INSTANCE:-dev}"]
     secrets:
       - runtime-db-password
       - worker-db-password
@@ -112,6 +132,9 @@ services:
       - objectstorage-app-access-key
       - objectstorage-app-secret-key
       - search-master-key
+      - vapid-subject
+      - vapid-public-key
+      - vapid-private-key
     healthcheck:
       test: [CMD, node, -e, "const fs=require('fs');const s=fs.statSync('/tmp/athyper-worker.heartbeat');if(Date.now()-s.mtimeMs>45000)process.exit(1)"]
       interval: 30s
@@ -126,7 +149,13 @@ services:
     <<: *runtime-common
     environment:
       MODE: scheduler
+      PROCESS_METRICS_PORT: "9464"
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
+    networks:
+      app: {}
+      data: {}
+      platform-observability:
+        aliases: ["scheduler-${ATHYPER_INSTANCE:-dev}"]
     secrets:
       - runtime-db-password
       - worker-db-password
@@ -324,6 +353,12 @@ volumes:
   searchcore-data: {}
 
 secrets:
+  vapid-subject:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/vapid-subject
+  vapid-public-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/vapid-public-key
+  vapid-private-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/vapid-private-key
   session-token-encryption-key:
     file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/instances/${ATHYPER_INSTANCE:-dev}/secrets/session-token-encryption-key
   neon-iam-client-secret:
