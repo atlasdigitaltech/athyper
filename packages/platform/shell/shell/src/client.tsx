@@ -108,7 +108,7 @@ function HeaderActions({ navigation, activity, active, onActiveChange }: { reado
   const actionOpener = useRef<HTMLButtonElement>(null);
   const closeAction = useCallback(() => { onActiveChange(); requestAnimationFrame(() => actionOpener.current?.focus()); }, [onActiveChange]);
   useEffect(() => {
-    const shortcut = (event: KeyboardEvent) => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") { event.preventDefault(); onActiveChange("search"); } if (event.key === "Escape" && active !== "notifications" && active !== "inbox") closeAction(); };
+    const shortcut = (event: KeyboardEvent) => { if (event.key === "Escape" && active !== "notifications" && active !== "inbox") closeAction(); };
     const outside = (event: PointerEvent) => { const target = event.target; if (!(target instanceof Element) || root.current?.contains(target) || target.closest(".athyper-activity-center") || target.closest(".athyper-activity-center__scrim")) return; if (active === "search" || active === "agent") onActiveChange(); };
     window.addEventListener("keydown", shortcut); window.addEventListener("pointerdown", outside);
     return () => { window.removeEventListener("keydown", shortcut); window.removeEventListener("pointerdown", outside); };
@@ -119,7 +119,7 @@ function HeaderActions({ navigation, activity, active, onActiveChange }: { reado
   const unreadCount = activity?.unreadNotificationCount ?? activity?.notifications?.filter((item) => item.unread).length ?? 0;
   const inboxCount = activity?.openInboxCount ?? activity?.inbox?.length ?? 0;
   return <div className="athyper-shell__actions" ref={root} aria-label={t("shell.actions.label")}>
-    <HeaderActionButton kind="search" label={t("shell.actions.search")} active={active === "search"} shortcut="⌘K" onClick={(opener) => toggle("search", opener)} />
+    <HeaderActionButton kind="search" label={t("shell.actions.search")} active={active === "search"} onClick={(opener) => toggle("search", opener)} />
     <HeaderActionButton kind="notifications" label={t("shell.actions.notifications")} active={active === "notifications"} count={unreadCount} controls="athyper-activity-center" onClick={(opener) => toggle("notifications", opener)} />
     <HeaderActionButton kind="inbox" label={t("shell.actions.inbox")} active={active === "inbox"} count={inboxCount} controls="athyper-activity-center" onClick={(opener) => toggle("inbox", opener)} />
     <HeaderActionButton kind="agent" label="Atlas" active={active === "agent"} onClick={(opener) => toggle("agent", opener)} />
@@ -130,7 +130,7 @@ function HeaderActions({ navigation, activity, active, onActiveChange }: { reado
     </section> : null}
   </div>;
 }
-function HeaderActionButton({ kind, label, active, shortcut, count = 0, controls, onClick }: { readonly kind: HeaderActionKind; readonly label: string; readonly active: boolean; readonly shortcut?: string; readonly count?: number; readonly controls?: string; readonly onClick: (opener: HTMLButtonElement) => void }) { const t=useShellI18n().message;return <button type="button" data-slot={kind} aria-label={`${label}${count ? `, ${count} ${t(kind === "notifications" ? "shell.actions.unread" : "shell.actions.open")}` : ""}`} aria-expanded={active} aria-controls={controls ?? `header-${kind}-panel`} title={label} onClick={(event) => onClick(event.currentTarget)}><HeaderGlyph kind={kind}/><span>{label}</span>{count > 0 ? <b className="athyper-shell__action-count" aria-hidden="true">{count > 99 ? "99+" : count}</b> : null}{shortcut ? <kbd>{shortcut}</kbd> : null}</button>; }
+function HeaderActionButton({ kind, label, active, count = 0, controls, onClick }: { readonly kind: HeaderActionKind; readonly label: string; readonly active: boolean; readonly count?: number; readonly controls?: string; readonly onClick: (opener: HTMLButtonElement) => void }) { const t=useShellI18n().message;return <button type="button" data-slot={kind} aria-label={`${label}${count ? `, ${count} ${t(kind === "notifications" ? "shell.actions.unread" : "shell.actions.open")}` : ""}`} aria-expanded={active} aria-controls={controls ?? `header-${kind}-panel`} title={label} onClick={(event) => onClick(event.currentTarget)}><HeaderGlyph kind={kind}/><span>{label}</span>{count > 0 ? <b className="athyper-shell__action-count" aria-hidden="true">{count > 99 ? "99+" : count}</b> : null}</button>; }
 function HeaderGlyph({ kind }: { readonly kind: HeaderActionKind }) { if (kind === "search") return <SearchIcon/>; if (kind === "notifications") return <BellIcon/>; if (kind === "inbox") return <InboxIcon/>; return <SparklesIcon/>; }
 function ActionEmpty({ title, detail }: { readonly title: string; readonly detail: string }) { return <div className="athyper-shell__action-empty"><span aria-hidden="true"><CircleCheckIcon size={18}/></span><strong>{title}</strong><p>{detail}</p></div>; }
 function actionTitle(kind: HeaderActionKind): string { return kind === "agent" ? "Atlas — AI Agent by Athyper" : kind[0]!.toUpperCase() + kind.slice(1); }

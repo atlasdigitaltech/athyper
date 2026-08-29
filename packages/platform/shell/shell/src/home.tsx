@@ -87,7 +87,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
     try { setPersonalization(parseHomePersonalization(JSON.parse(window.localStorage.getItem(scope.storageKey) ?? "{}"))); }
     catch { window.localStorage.removeItem(scope.storageKey); setPersonalization(DEFAULT_HOME_PERSONALIZATION); }
     const focus = (event: KeyboardEvent) => {
-      if ((event.key === "/" || ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k")) && !isTypingTarget(event.target)) {
+      if (event.key === "/" && !isTypingTarget(event.target)) {
         event.preventDefault(); input.current?.focus();
       }
     };
@@ -113,7 +113,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
     <header className="athyper-home__hero">
       <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1></div></div>
       <form className="athyper-home__search" role="search" onSubmit={submit}>
-        <SearchIcon size={22}/><label htmlFor="atlas-home-search">Atlas AI</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="I’m Atlas AI. I’m here to help you find answers, take action, and get work done." autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<kbd>⌘ K</kbd><button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
+        <SearchIcon size={22}/><label htmlFor="atlas-home-search">I’m Atlas AI</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="I’m here to help you find answers, take action, and get work done." autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
       </form>
       <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { setQuery(suggestion); if(configured)setSelectedAgent(configured.agentCode); input.current?.focus(); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
       {atlas.status !== "idle" ? <AtlasAnswerSurface atlas={atlas} citationRoutes={citationRoutes}/> : null}
