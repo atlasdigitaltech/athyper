@@ -42,9 +42,9 @@ describe("production identity-gate experience", () => {
 
   it("keeps public plane stories short and immediately understandable", () => {
     const stories = {
-      neon: ["Run your business.", "Manage finance, operations, and daily work in one place."],
-      mesh: ["Work better together.", "Connect with buyers, suppliers, and partners."],
-      studio: ["Build and manage Athyper.", "Manage access, settings, data, and platform operations."],
+      neon: ["Govern Business Partner data.", "Create, validate, approve, and maintain trusted partner records."],
+      mesh: ["Connect your Business Partner network.", "Manage governed partner relationships and shared profiles."],
+      studio: ["Define Business Partner governance.", "Author and publish the definitions used by Neon and Mesh."],
     } as const;
     for (const [plane, copy] of Object.entries(stories) as [keyof typeof stories, readonly [string, string]][]) {
       const html = renderToStaticMarkup(<LoginGatePage plane={plane} />);

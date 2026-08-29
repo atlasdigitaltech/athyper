@@ -21,9 +21,6 @@ if (!shell.includes("IntlProvider") || !shell.includes("fallbackMessages")) viol
 if (!messages.includes("shellArabicMessages")) violations.push("shared shell must publish an Arabic catalog");
 if (!styles.includes("[dir=rtl] .athyper-shell__rail") || !styles.includes("translateX(105%)")) violations.push("shared shell must mirror desktop and mobile RTL geometry");
 if (!shell.includes("onLocaleChange") || !read("packages/platform/shell/shell/src/client.tsx").includes("localePolicy.enabledLocales")) violations.push("shared shell must constrain user selection to the effective plane policy");
-const studioLocalization=read("apps/studio/app/(shell)/operations/localization/page.tsx");
-if (!studioLocalization.includes("studio.platform.catalog.manage") || !studioLocalization.includes("updateLocalePolicyOperation")) violations.push("Studio must own governed plane-language activation");
-for (const gate of ["coveragePct", "linguisticReviewPassed", "layoutReviewPassed", "automatedTestsPassed", "qualified"]) if (!studioLocalization.includes(gate)) violations.push(`Studio catalog governance is missing ${gate}`);
 const localeMigration=read("server/db/migrations/20260825_plane_locale_policy.sql");
 if (!localeMigration.includes("fallback_locale_code = 'en'") || !localeMigration.includes("enabled_locale_codes")) violations.push("plane policy storage must retain English as an emergency fallback");
 const governanceMigration=read("server/db/migrations/20260825_locale_catalog_governance.sql");

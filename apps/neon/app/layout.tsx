@@ -1,7 +1,6 @@
 import "@athyper/platform-theme/styles.css";
 import "@athyper/platform-iam-identity-gate/styles.css";
 import "@athyper/product-neon-shell/styles.css";
-import "@athyper/platform-verification/styles.css";
 import "@athyper/platform-shell-activity-center-data/styles.css";
 import "@athyper/platform-entity-list-view/styles.css";
 import "@athyper/product-neon-business-partner/styles.css";

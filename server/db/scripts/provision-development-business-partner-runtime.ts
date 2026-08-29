@@ -28,7 +28,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   const scopeBindingId = deterministicUuid(`scope:${bindingId}:operating_organization`);
   const contract = {
     schema: "athyper.meta-entity-contract/2.1",
-    entity: { entityCode: "business_partner", entityClass: "business", detailRouteTemplate: "/app/business_partner/:recordId" },
+    entity: { entityCode: "business_partner", entityClass: "business", detailRouteTemplate: "/mdg/business-partner/:recordId" },
     runtime: { plane: "neon", backingKind: "table", readMode: "cursor", writeMode: "governed_adapter" },
     storage: { schema: "master", object: "business_partner" },
     operations: [{ code: "read", permissionCode: PERMISSION_CODE },{code:"export",permissionCode:PERMISSION_CODE},{code:"import",permissionCode:PERMISSION_CODE}],
@@ -37,7 +37,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   const descriptor = {
     schema: "athyper.entity-runtime-descriptor/1.0",
     entityCode: "business_partner",
-    detailRouteTemplate: "/app/business_partner/:recordId",
+    detailRouteTemplate: "/mdg/business-partner/:recordId",
     planeKey: "neon",
     storage: { schema: "master", object: "business_partner", idField: "id", tenantField: "tenant_id", statusField: "status" },
     fields: [

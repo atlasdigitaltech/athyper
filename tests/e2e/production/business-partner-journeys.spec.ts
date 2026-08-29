@@ -7,7 +7,7 @@ test.beforeEach(async ({}, testInfo) => {
 });
 
 test("supplier onboarding is accessible and definition-driven", async ({ page }) => {
-  await page.goto("/app/business_partner/new");
+  await page.goto("/mdg/business-partner/new");
   await expect(page.getByRole("heading", { name: "New supplier onboarding request" })).toBeVisible();
   await expect(page.getByLabel("Registered name")).toBeVisible();
   await expect(page.getByLabel("Supplier type")).toBeVisible();
@@ -15,7 +15,7 @@ test("supplier onboarding is accessible and definition-driven", async ({ page })
 });
 
 test("customer onboarding is accessible for organization and person", async ({ page }) => {
-  await page.goto("/app/business_partner/customer/new");
+  await page.goto("/mdg/business-partner/customer/new");
   await expect(page.getByRole("heading", { name: "New customer onboarding request" })).toBeVisible();
   await assertSurfaceContract(page, "customer-onboarding-organization");
   await page.getByLabel("Customer category").selectOption("person");
@@ -24,7 +24,7 @@ test("customer onboarding is accessible for organization and person", async ({ p
 });
 
 test("workforce onboarding is accessible and does not expose commercial fields", async ({ page }) => {
-  await page.goto("/app/business_partner/person/new");
+  await page.goto("/mdg/business-partner/person/new");
   await expect(page.getByRole("heading", { name: "New workforce person onboarding" })).toBeVisible();
   await expect(page.getByLabel("Employee number")).toBeVisible();
   await expect(page.getByLabel("Supplier type")).toHaveCount(0);

@@ -83,12 +83,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
-      '@athyper/platform-verification':
+      '@athyper/product-mesh-business-partner':
         specifier: workspace:*
-        version: link:../../packages/platform/verification
-      '@athyper/product-mesh-list-view':
-        specifier: workspace:*
-        version: link:../../packages/planes/mesh/list-view
+        version: link:../../packages/planes/mesh/business-partner
       '@athyper/product-mesh-shell':
         specifier: workspace:*
         version: link:../../packages/planes/mesh/shell
@@ -165,18 +162,12 @@ importers:
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/ui
-      '@athyper/platform-verification':
-        specifier: workspace:*
-        version: link:../../packages/platform/verification
       '@athyper/product-neon-business-partner':
         specifier: workspace:*
         version: link:../../packages/planes/neon/business-partner
       '@athyper/product-neon-list-view':
         specifier: workspace:*
         version: link:../../packages/planes/neon/list-view
-      '@athyper/product-neon-procurement':
-        specifier: workspace:*
-        version: link:../../packages/planes/neon/modules/procurement
       '@athyper/product-neon-shell':
         specifier: workspace:*
         version: link:../../packages/planes/neon/shell
@@ -220,9 +211,6 @@ importers:
       '@athyper/platform-communications-notifications-client':
         specifier: workspace:*
         version: link:../../packages/platform/communications/notifications-client
-      '@athyper/platform-entity-list-view':
-        specifier: workspace:*
-        version: link:../../packages/platform/entity/runtime/list-view
       '@athyper/platform-gateway-bff-relay':
         specifier: workspace:*
         version: link:../../packages/platform/gateway/bff-relay
@@ -235,9 +223,6 @@ importers:
       '@athyper/platform-iam-identity-gate':
         specifier: workspace:*
         version: link:../../packages/platform/iam/identity-gate
-      '@athyper/platform-icons':
-        specifier: workspace:*
-        version: link:../../packages/platform/foundation/icons
       '@athyper/platform-query':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/query
@@ -253,12 +238,9 @@ importers:
       '@athyper/platform-theme':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/theme
-      '@athyper/platform-verification':
+      '@athyper/product-studio-business-partner':
         specifier: workspace:*
-        version: link:../../packages/platform/verification
-      '@athyper/product-studio-list-view':
-        specifier: workspace:*
-        version: link:../../packages/planes/studio/list-view
+        version: link:../../packages/planes/studio/business-partner
       '@athyper/product-studio-shell':
         specifier: workspace:*
         version: link:../../packages/planes/studio/shell
@@ -546,56 +528,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/planes/mesh/app:
-    dependencies:
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/mesh/dashboard:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/mesh/exchange:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/mesh/list-view:
+  packages/planes/mesh/business-partner:
     dependencies:
       '@athyper/contract-platform-entity-list':
         specifier: workspace:*
@@ -657,25 +590,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/planes/neon/app:
-    dependencies:
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
   packages/planes/neon/business-partner:
     dependencies:
       '@athyper/platform-api-client':
@@ -710,21 +624,6 @@ importers:
         specifier: ^4.1.0
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
-  packages/planes/neon/dashboard:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
   packages/planes/neon/list-view:
     dependencies:
       '@athyper/contract-platform-entity-list':
@@ -743,96 +642,6 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/finance:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/inventory:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/people:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/procurement:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/projects:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/neon/modules/sales:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
@@ -899,48 +708,7 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/planes/studio/app:
-    dependencies:
-      '@athyper/platform-ui':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/ui
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/studio/dashboard:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/studio/list-view:
-    dependencies:
-      '@athyper/platform-entity-list-view':
-        specifier: workspace:*
-        version: link:../../../platform/entity/runtime/list-view
-      '@athyper/platform-shell-app-foundation':
-        specifier: workspace:*
-        version: link:../../../platform/shell/app-foundation
+  packages/planes/studio/business-partner:
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -976,30 +744,6 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../../tooling/config
-      '@types/react':
-        specifier: ^19.2.14
-        version: 19.2.14
-      react:
-        specifier: ^19.2.5
-        version: 19.2.8
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/studio/studio/runtime:
-    devDependencies:
-      '@athyper/tsconfig':
-        specifier: workspace:*
-        version: link:../../../../../tooling/tsconfig
-      typescript:
-        specifier: ^6.0.3
-        version: 6.0.3
-
-  packages/planes/studio/studio/ui:
-    devDependencies:
-      '@athyper/config':
-        specifier: workspace:*
-        version: link:../../../../../tooling/config
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14

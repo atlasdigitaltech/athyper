@@ -129,7 +129,7 @@ function owner(path, category) {
   if (path.startsWith("packages/shared/business-domain/")) return "Business Domain";
   if (path.startsWith("packages/domain/")) return "Business Domain";
   if (path.startsWith("packages/shared/")) return "Shared Platform";
-  if (path.startsWith("tooling/") || path.startsWith("packages/tooling/") || path === "package.json") return "Build Platform";
+  if (path.startsWith("deploy/") || path.startsWith("tooling/") || path.startsWith("packages/tooling/") || path === "package.json") return "Build Platform";
   if (category === "Deprecated") return "Retirement";
   return "Unassigned";
 }
@@ -152,7 +152,7 @@ function targets(path, category) {
   if (app) return app;
   if (category === "Server-only") return "server";
   if (category === "Deprecated") return "none (retirement)";
-  if (path.startsWith("tooling/") || path === "package.json") return "CI/build";
+  if (path.startsWith("deploy/") || path.startsWith("tooling/") || path === "package.json") return "CI/build";
   return "neon, studio, mesh, server as consumed";
 }
 

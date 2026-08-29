@@ -16,7 +16,7 @@ test("development business-partner publication is deterministic and browser-safe
   assert.equal(first.projection.descriptor.compiled_json.operations.import.permissionCode, "neon.relationship.business_partner.read");
   assert.equal(first.projection.descriptor.compiled_json.listPresentation.dataOperations.importAdapterKey, "neon.business_partner.operating_organization.v1");
   assert.equal(first.releaseNo, 8);
-  assert.equal(first.projection.descriptor.compiled_json.detailRouteTemplate, "/app/business_partner/:recordId");
+  assert.equal(first.projection.descriptor.compiled_json.detailRouteTemplate, "/mdg/business-partner/:recordId");
   assert.deepEqual(first.projection.descriptor.compiled_json.listPresentation.dataOperations.importFormats,["xlsx","csv","json"]);
   assert.equal(first.projection.contract.release_no, first.releaseNo);
   assert.equal(first.projection.contract.contract_json.runtime.writeMode, "governed_adapter");

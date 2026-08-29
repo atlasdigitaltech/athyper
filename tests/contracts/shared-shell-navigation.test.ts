@@ -31,6 +31,17 @@ test("retains distinct labels for multiple capabilities under one catalog module
   assert.deepEqual(navigation.routes.map((route) => route.label), ["Platform Operations", "Languages"]);
 });
 
+test("classifies a technical entitlement as the MDG Business Partner product module", () => {
+  const navigation = deriveShellNavigation(
+    definePlaneRoutes([{ id: "neon.mdg.business-partner", moduleCode: "fnd", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "MDG", moduleName: "Business Partner" } }] as const),
+    { permissions: [], features: {}, workspaces: [{ code: "core", name: "Core Platform", sortOrder: 1, modules: [{ code: "fnd", name: "Foundation Runtime", sortOrder: 1, primary: true }] }] },
+  );
+
+  assert.deepEqual(navigation.workspaces.map(({ code, name }) => ({ code, name })), [{ code: "mdg", name: "MDG" }]);
+  assert.equal(navigation.routes[0]?.moduleName, "Business Partner");
+  assert.equal(navigation.routes[0]?.label, "Business Partner");
+});
+
 test("fails closed for missing permissions and disabled or unknown features", () => {
   const navigation = deriveShellNavigation(registry, { ...experience, permissions: [], features: { "inventory.ui": { enabled: false } } });
   assert.deepEqual(navigation.routes.map((item) => item.href), ["/inventory/internal"]);

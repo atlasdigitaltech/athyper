@@ -10,6 +10,13 @@ export interface PlaneRouteDefinition {
   readonly requiredPermissions: readonly string[];
   readonly requiredFeatures: readonly string[];
   readonly navigation: PlaneNavigationKind;
+  readonly presentation?: Readonly<{
+    workspaceCode: string;
+    workspaceName: string;
+    workspaceIconKey?: string;
+    workspaceSortOrder?: number;
+    moduleName: string;
+  }>;
 }
 export interface ShellCatalogModule { readonly code: string; readonly name: string; readonly iconKey?: string; readonly sortOrder: number; readonly primary: boolean; }
 export interface ShellCatalogWorkspace { readonly code: string; readonly name: string; readonly iconKey?: string; readonly sortOrder: number; readonly modules: readonly ShellCatalogModule[]; }
@@ -41,20 +48,32 @@ export function deriveShellNavigation(registry: readonly PlaneRouteDefinition[],
   const unknownActiveModules = activeModules.filter((code) => !registryModules.has(code)).sort();
   for (const moduleCode of unknownActiveModules) onDiagnostic?.(Object.freeze({ kind: "unknown-active-module", moduleCode }));
   const access = createAccessSnapshot({ sessionState: "authenticated", contextAvailable: true, entitledModules: activeModules, permissions: experience.permissions, features: experience.features, knownModules: [...registryModules], knownPermissions: [...new Set(registry.flatMap((route) => route.requiredPermissions))], knownFeatures: [...new Set(registry.flatMap((route) => route.requiredFeatures))] });
-  const routes: DerivedShellRoute[] = [], workspaces: DerivedShellWorkspace[] = [];
+  const routes: DerivedShellRoute[] = [];
+  const workspaceGroups = new Map<string, { name: string; iconKey: string; sortOrder: number; routes: DerivedShellRoute[] }>();
   for (const workspace of [...experience.workspaces].sort(byOrder)) {
-    const workspaceRoutes: DerivedShellRoute[] = [];
     for (const module of [...workspace.modules].sort(byOrder)) for (const route of registry) {
       if (route.moduleCode !== module.code || !decideRouteAccess(access, route).allowed) continue;
       const isModuleLandingRoute = moduleLandingRoutes.get(route.moduleCode) === route.id;
+      const presentedWorkspace = route.presentation;
+      const moduleName = cleanLabel(presentedWorkspace?.moduleName) ?? cleanLabel(module.name) ?? module.code;
       const label = isModuleLandingRoute
-        ? cleanLabel(module.name) ?? cleanLabel(route.label) ?? route.moduleCode
-        : cleanLabel(route.label) ?? cleanLabel(module.name) ?? route.moduleCode;
-      const derived = Object.freeze({ ...route, label, iconKey: module.iconKey ?? route.iconKey ?? "info", workspaceCode: workspace.code, workspaceName: cleanLabel(workspace.name) ?? workspace.code, moduleName: cleanLabel(module.name) ?? module.code, sortOrder: module.sortOrder });
-      workspaceRoutes.push(derived); routes.push(derived);
+        ? moduleName
+        : cleanLabel(route.label) ?? moduleName;
+      const workspaceCode = presentedWorkspace?.workspaceCode ?? workspace.code;
+      const workspaceName = cleanLabel(presentedWorkspace?.workspaceName) ?? cleanLabel(workspace.name) ?? workspace.code;
+      const workspaceIconKey = presentedWorkspace?.workspaceIconKey ?? workspace.iconKey ?? "info";
+      const workspaceSortOrder = presentedWorkspace?.workspaceSortOrder ?? workspace.sortOrder;
+      const derived = Object.freeze({ ...route, label, iconKey: module.iconKey ?? route.iconKey ?? "info", workspaceCode, workspaceName, moduleName, sortOrder: module.sortOrder });
+      routes.push(derived);
+      const group = workspaceGroups.get(workspaceCode) ?? { name: workspaceName, iconKey: workspaceIconKey, sortOrder: workspaceSortOrder, routes: [] };
+      group.routes.push(derived);
+      workspaceGroups.set(workspaceCode, group);
     }
-    if (workspaceRoutes.some((route) => route.navigation !== "hidden")) workspaces.push(Object.freeze({ code: workspace.code, name: cleanLabel(workspace.name) ?? workspace.code, iconKey: workspace.iconKey ?? "info", sortOrder: workspace.sortOrder, routes: Object.freeze(workspaceRoutes) }));
   }
+  const workspaces = [...workspaceGroups.entries()]
+    .filter(([, workspace]) => workspace.routes.some((route) => route.navigation !== "hidden"))
+    .map(([code, workspace]) => Object.freeze({ code, name: workspace.name, iconKey: workspace.iconKey, sortOrder: workspace.sortOrder, routes: Object.freeze(workspace.routes) }))
+    .sort(byOrder);
   const visible = routes.filter((route) => route.navigation !== "hidden");
   return Object.freeze({ workspaces: Object.freeze(workspaces), routes: Object.freeze(routes), ...(visible[0] ? { landingHref: visible[0].href } : {}), unknownActiveModules: Object.freeze(unknownActiveModules) });
 }

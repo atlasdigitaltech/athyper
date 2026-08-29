@@ -57,14 +57,14 @@ describe("safe entity list service", () => {
   it("compiles intentional list presentation without exposing the storage identity by default", async () => {
     const presented: EntityRuntimeDescriptor = {
       ...descriptor,
-      detailRouteTemplate: "/app/business_partner/:recordId",
+      detailRouteTemplate: "/mdg/business-partner/:recordId",
       fields: descriptor.fields.map((field, index) => ({ ...field, filterable: true, list: { label: field.key === "code" ? "Business Partner Code" : field.key === "name" ? "Display Name" : "Tax ID", defaultVisible: field.key !== "tax_id", defaultOrder: index, ...(field.key === "code" ? { semanticRole: "identity" } : {}) } })),
       listPresentation: { identityField: "code", title: "Business Partners", description: "Scoped partners", defaultColumns: ["code", "name"], defaultSort: [{ field: "code", direction: "asc" }], defaultPageSize: 10, allowedPageSizes: [10, 25], supportedModes: ["table", "compact"] },
     };
     const lists = createTestListService({ metadata: { getEntityDescriptor: async () => presented }, descriptor: presented, authorizer: allowReadOnly() });
     const compiled = parseEntityListDescriptor(await lists.descriptor(context, presented.entityCode));
     expect(compiled.entity.identityField).toBe("code");
-    expect(compiled.entity.detailRouteTemplate).toBe("/app/business_partner/:recordId");
+    expect(compiled.entity.detailRouteTemplate).toBe("/mdg/business-partner/:recordId");
     expect(compiled.surface.title).toBe("Business Partners");
     expect(compiled.surface.defaultState.columns).toEqual(["code", "name"]);
     expect(compiled.surface.defaultState.sort).toEqual([{ field: "code", direction: "asc" }]);

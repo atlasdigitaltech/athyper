@@ -1,0 +1,13 @@
+{
+  "name": "@athyper/product-studio-business-partner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.tsx",
+  "types": "./src/index.tsx",
+  "exports": { ".": "./src/index.tsx" },
+  "scripts": { "typecheck": "tsc --noEmit" },
+  "dependencies": {},
+  "peerDependencies": { "react": "^19.2.5" },
+  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+}
