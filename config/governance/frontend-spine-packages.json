@@ -25,7 +25,7 @@
     { "path": "packages/platform/iam/session", "name": "@athyper/platform-iam-session", "owner": "Platform Auth", "classification": "Shared platform", "dependencyBudget": { "runtime": 1, "workspace": 1 } },
     { "path": "packages/platform/iam/session-store", "name": "@athyper/platform-iam-session-store", "owner": "Platform Auth", "classification": "Shared platform", "dependencyBudget": { "runtime": 2, "workspace": 1 } },
     { "path": "packages/platform/shell/app-foundation", "name": "@athyper/platform-shell-app-foundation", "owner": "UI Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 8, "workspace": 6 } },
-    { "path": "packages/platform/shell/shell", "name": "@athyper/platform-shell", "owner": "UI Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 6, "workspace": 5 } },
+    { "path": "packages/platform/shell/shell", "name": "@athyper/platform-shell", "owner": "UI Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 7, "workspace": 6 } },
     { "path": "packages/platform/shell/shell-runtime", "name": "@athyper/platform-shell-runtime", "owner": "UI Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 2, "workspace": 3 } },
     { "path": "packages/platform/verification", "name": "@athyper/platform-verification", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 5, "workspace": 5 } },
     { "path": "packages/planes/neon/business-partner", "name": "@athyper/product-neon-business-partner", "owner": "Neon", "classification": "Product-specific", "dependencyBudget": { "runtime": 5, "workspace": 5 } },

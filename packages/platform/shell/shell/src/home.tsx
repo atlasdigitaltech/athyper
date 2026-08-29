@@ -1,7 +1,8 @@
 "use client";
 
 import { useAtlasAnswer, type AtlasActionAuditEntry, type AtlasGovernedAction, type AtlasRecordCitation } from "@athyper/platform-ai-agent-ui";
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, HistoryIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon } from "@athyper/platform-icons";
+import { convertClipboard, serializeForClipboard, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, HistoryIcon, LayoutIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon } from "@athyper/platform-icons";
 import { useAccessSnapshot } from "@athyper/platform-shell-runtime";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -59,7 +60,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   const [personalization, setPersonalization] = useState<HomePersonalization>(DEFAULT_HOME_PERSONALIZATION);
   const [personalizing, setPersonalizing] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>();
-  const input = useRef<HTMLInputElement>(null);
+  const composer = useRef<AtlasPromptComposerHandle>(null);
   const access = useAccessSnapshot();
   const scope = useShellPersonalizationScope();
   const atlas = useAtlasAnswer();
@@ -88,7 +89,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
     catch { window.localStorage.removeItem(scope.storageKey); setPersonalization(DEFAULT_HOME_PERSONALIZATION); }
     const focus = (event: KeyboardEvent) => {
       if (event.key === "/" && !isTypingTarget(event.target)) {
-        event.preventDefault(); input.current?.focus();
+        event.preventDefault(); composer.current?.focus();
       }
     };
     window.addEventListener("keydown", focus);
@@ -102,7 +103,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   };
   const visitHref = (href: string) => commit(rememberHomeInteraction(personalization, href));
   const visit = (item: PlatformHomeSearchItem) => visitHref(item.href);
-  const submit = (event: React.FormEvent) => { event.preventDefault(); if (normalized) void atlas.ask(query, selectedAgent); };
+  const submit = (question: string) => { if (question.trim()) void atlas.ask(question, selectedAgent); };
   const widgetVisible = (widget: HomeWidgetId) => !personalization.hiddenWidgets.includes(widget);
   const publishedWidgetOrder = atlas.experience?.widgets.map((item)=>item.kind);
   const userReorderedWidgets = personalization.widgetOrder.join("|") !== DEFAULT_HOME_PERSONALIZATION.widgetOrder.join("|");
@@ -112,10 +113,8 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   return <section className="athyper-home" aria-labelledby="athyper-home-title">
     <header className="athyper-home__hero">
       <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1></div></div>
-      <form className="athyper-home__search" role="search" onSubmit={submit}>
-        <SearchIcon size={22}/><label htmlFor="atlas-home-search">I’m Atlas AI</label><input ref={input} id="atlas-home-search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="I’m here to help you find answers, take action, and get work done." autoComplete="off"/>{atlas.experience?.agents.length?<select aria-label="Atlas agent" value={selectedAgent} onChange={(event)=>setSelectedAgent(event.currentTarget.value)}>{atlas.experience.agents.map((agent)=><option key={agent.code} value={agent.code}>{agent.name}</option>)}</select>:null}<button type="submit" disabled={!normalized || atlas.status === "answering"}><SparklesIcon size={16}/>{atlas.status === "answering" ? "Thinking…" : "Ask"}</button>
-      </form>
-      <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { setQuery(suggestion); if(configured)setSelectedAgent(configured.agentCode); input.current?.focus(); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
+      <AtlasPromptComposer ref={composer} draftKey={`${scope.storageKey}:atlas-prompt`} value={query} onChange={setQuery} onSubmit={submit} busy={atlas.status === "answering"} agents={atlas.experience?.agents} selectedAgent={selectedAgent} onAgentChange={setSelectedAgent}/>
+      <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { composer.current?.setText(suggestion); if(configured)setSelectedAgent(configured.agentCode); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
       {atlas.status !== "idle" ? <AtlasAnswerSurface atlas={atlas} citationRoutes={citationRoutes}/> : null}
       {atlas.historyVisible ? <AtlasHistorySurface atlas={atlas}/> : null}
       {normalized ? <section className="athyper-home__results" aria-live="polite" aria-label="Atlas search results"><header><strong>{results.length ? `${results.length} authorized destinations` : "No authorized matching destination"}</strong><small>Results reflect your current permissions</small></header>{results.length ? <ul>{results.map((item) => <li key={`${item.category}-${item.href}`}><a href={item.href} onClick={() => visit(item)}><span><small>{item.category}</small><strong>{item.title}</strong><em>{item.description}</em></span><ChevronRightIcon size={18}/></a></li>)}</ul> : <p>Try another business partner, workflow, profile, publication, or workspace term.</p>}</section> : null}
@@ -129,6 +128,95 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
       {!configuredWidgetOrder.some(widgetVisible) ? <section className="athyper-home__panel athyper-home__dashboard-empty"><strong>Your dashboard widgets are hidden.</strong><button type="button" onClick={() => setPersonalizing(true)}>Choose visible widgets</button></section> : null}
     </div>
   </section>;
+}
+
+interface AtlasPromptComposerHandle { focus(): void; setText(value: string): void; }
+interface AtlasPromptComposerProps {
+  readonly draftKey: string;
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly onSubmit: (value: string) => void;
+  readonly busy: boolean;
+  readonly agents?: readonly { readonly code: string; readonly name: string }[];
+  readonly selectedAgent?: string;
+  readonly onAgentChange: (value: string) => void;
+}
+
+const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, AtlasPromptComposerProps>(function AtlasPromptComposer(props, forwardedRef) {
+  const editor = useRef<HTMLDivElement>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [formatMessage, setFormatMessage] = useState<string>();
+  const valueRef = useRef(props.value);
+  valueRef.current = props.value;
+
+  const setDocument = React.useCallback((document: RichTextDocument, focus = false) => {
+    const serialized = serializeForClipboard(document);
+    const text = (serialized["text/plain"] ?? "").trimEnd();
+    if (editor.current) editor.current.innerHTML = serialized["text/html"] ?? "";
+    props.onChange(text);
+    try { window.localStorage.setItem(props.draftKey, serialized["text/html"] ?? ""); } catch { /* Draft persistence is best effort. */ }
+    if (focus) requestAnimationFrame(() => editor.current?.focus());
+  }, [props.draftKey, props.onChange]);
+
+  const setText = React.useCallback((value: string, focus = true) => {
+    const conversion = convertClipboard({ getData: (type) => type === "text/plain" ? value : "" });
+    if (conversion) setDocument(conversion.document, focus);
+  }, [setDocument]);
+
+  React.useImperativeHandle(forwardedRef, () => ({ focus: () => editor.current?.focus(), setText }), [setText]);
+
+  useEffect(() => {
+    if (props.value || !editor.current) return;
+    try {
+      const raw = window.localStorage.getItem(props.draftKey);
+      if (!raw) return;
+      const conversion = convertClipboard({ getData: (type) => type === "text/html" ? raw : "" });
+      if (conversion) setDocument(conversion.document);
+    } catch { window.localStorage.removeItem(props.draftKey); }
+  }, [props.draftKey, props.value, setDocument]);
+
+  const synchronize = React.useCallback(() => {
+    if (!editor.current) return;
+    const html = editor.current.innerHTML, text = editor.current.innerText;
+    const conversion = convertClipboard({ getData: (type) => type === "text/html" ? html : type === "text/plain" ? text : "" });
+    if (!conversion) { props.onChange(""); try { window.localStorage.removeItem(props.draftKey); } catch { /* best effort */ } return; }
+    const serialized = serializeForClipboard(conversion.document);
+    const plain = (serialized["text/plain"] ?? "").trimEnd();
+    props.onChange(plain);
+    try { window.localStorage.setItem(props.draftKey, serialized["text/html"] ?? ""); } catch { /* best effort */ }
+  }, [props.draftKey, props.onChange]);
+
+  const paste = React.useCallback((event: React.ClipboardEvent<HTMLDivElement>) => {
+    let conversion;
+    try { conversion = convertClipboard({ files: [], getData: (type) => event.clipboardData.getData(type) }); }
+    catch { event.preventDefault(); setFormatMessage("This formatted content could not be pasted safely."); return; }
+    if (!conversion) return;
+    event.preventDefault();
+    const html = serializeForClipboard(conversion.document)["text/html"] ?? "";
+    insertComposerHtml(editor.current, html);
+    synchronize();
+    setFormatMessage(event.clipboardData.files.length ? "Formatting was preserved. File attachments are not enabled for Atlas yet." : "Formatting preserved safely.");
+  }, [synchronize]);
+
+  const tooLong = props.value.length > 4_096;
+  const submit = () => { const question = props.value.trim(); if (!question || tooLong || props.busy) return; props.onSubmit(question); };
+
+  return <section className="athyper-home__composer" data-expanded={expanded} aria-label="Atlas AI prompt composer">
+    <header><span><SearchIcon size={22}/></span><strong>I’m Atlas AI</strong><button type="button" aria-label={expanded ? "Collapse Atlas composer" : "Expand Atlas composer"} aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <CloseIcon size={16}/> : <LayoutIcon size={16}/>}</button></header>
+    <div ref={editor} id="atlas-home-search" className="athyper-home__composer-editor" role="textbox" aria-label="Ask Atlas AI" aria-multiline="true" aria-invalid={tooLong || undefined} contentEditable={!props.busy} suppressContentEditableWarning data-placeholder="I’m here to help you find answers, take action, and get work done." onInput={synchronize} onPaste={paste}/>
+    {formatMessage || tooLong ? <p className="athyper-home__composer-message" role={tooLong ? "alert" : "status"}>{tooLong ? `Prompt is ${props.value.length - 4_096} characters over the 4,096 character limit.` : formatMessage}</p> : null}
+    <footer><div><button type="button" className="athyper-home__composer-context" disabled title="Atlas file context will be enabled after governed extraction and authorization are available.">+ Add context</button>{props.agents?.length ? <select aria-label="Atlas agent" value={props.selectedAgent} onChange={(event) => props.onAgentChange(event.currentTarget.value)}>{props.agents.map((agent) => <option key={agent.code} value={agent.code}>{agent.name}</option>)}</select> : <span>Governed work</span>}</div><div>{props.value.length >= 3_600 ? <small>{props.value.length.toLocaleString()} / 4,096</small> : null}<button type="button" className="athyper-home__composer-submit" disabled={!props.value.trim() || tooLong || props.busy} onClick={submit}><SparklesIcon size={16}/>{props.busy ? "Thinking…" : "Ask"}</button></div></footer>
+  </section>;
+});
+
+function insertComposerHtml(editor: HTMLDivElement | null, html: string): void {
+  if (!editor) return;
+  const selection = window.getSelection();
+  if (!selection?.rangeCount || !editor.contains(selection.anchorNode)) { editor.insertAdjacentHTML("beforeend", html); return; }
+  const range = selection.getRangeAt(0); range.deleteContents();
+  const template = document.createElement("template"); template.innerHTML = html;
+  const fragment = template.content; const last = fragment.lastChild; range.insertNode(fragment);
+  if (last) { range.setStartAfter(last); range.collapse(true); selection.removeAllRanges(); selection.addRange(range); }
 }
 
 function PersonalizationPanel({ personalization, onChange }: { readonly personalization: HomePersonalization; readonly onChange: (next: HomePersonalization) => void }) {

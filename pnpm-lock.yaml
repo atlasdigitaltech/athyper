@@ -1334,6 +1334,9 @@ importers:
       '@athyper/platform-ai-agent-ui':
         specifier: workspace:*
         version: link:../../ai/agent-ui
+      '@athyper/platform-communications-collaboration-ui':
+        specifier: workspace:*
+        version: link:../../communications/collaboration-ui
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../foundation/i18n
