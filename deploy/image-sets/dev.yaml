@@ -1,18 +1,18 @@
 apiVersion: athyper.io/v1alpha1
 kind: ImageSet
 metadata:
-  id: dev-working-tree
+  id: dev-98937ae6c630
   channel: development
 spec:
-  sourceRevision: working-tree
+  sourceRevision: 98937ae6c630589baacdc460e1c366002cc70ff0
   images:
     - id: neon-web
-      reference: athyper/neon-web:transfer-production-20260828-r7
+      reference: athyper/neon-web@sha256:ac913ea81f0824cdf4dfae192eb0c9f3b86ff1dbeb8aad246ba79ddcab69392c
     - id: mesh-web
-      reference: athyper/mesh-web:transfer-production-20260828-r7
+      reference: athyper/mesh-web@sha256:d8fd87da9f08bd91a5108261add17845c183c060815dd0e62cdfc8f28fba5fca
     - id: studio-web
-      reference: athyper/studio-web:business-partner-wp12-20260828
+      reference: athyper/studio-web@sha256:5eaf9994e6923f212f9f2dc7b87b63b924eb41ae2b20b1b620f75db01b125922
     - id: runtime-server
-      reference: athyper/runtime-server:transfer-operations-20260828-r16
+      reference: athyper/runtime-server@sha256:d56ab1642f8eae3b60bf0e05a9957bc1e435ef989b42ba0b9a05a9497380a0c1
     - id: iam
-      reference: athyper/keycloak:canonical-svg-favicon
+      reference: athyper/keycloak@sha256:cf5b1f31156ce5a4eee95d0cfcdfc4b233f46e6c3a7087f157c33a32151edee5
