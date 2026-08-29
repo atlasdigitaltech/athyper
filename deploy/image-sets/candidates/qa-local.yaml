@@ -4,15 +4,15 @@ metadata:
   id: qa-local-qualified-dev
   channel: candidate
 spec:
-  sourceRevision: 37008726bd85bb67cb9bf583b00e03cedbfa2851
+  sourceRevision: 2853d624ad1b0ecd53db37f28519e09ec6c4d914
   images:
     - id: neon-web
-      reference: athyper/neon-web@sha256:b02759aaf9dd379660a27f509f783197d62377282b0b65624805b0355262d29f
+      reference: athyper/neon-web@sha256:dfd768be19ccce6a7d7c881cfe9aa8942f05c0c3ee56e6171857da6ced41d4d2
     - id: mesh-web
-      reference: athyper/mesh-web@sha256:a436f882d52a8f176faa220a3936142cb48271015eea3f79e994931934aef850
+      reference: athyper/mesh-web@sha256:9e59aa709f1f86431eea72d2c4ac86b5102e4df8789bee8aa1c18cff4f0418cb
     - id: studio-web
-      reference: athyper/studio-web@sha256:63c069d231f1490248832b38c7ad0c57ce0520c9123f018ac128dd7ef07a8885
+      reference: athyper/studio-web@sha256:66cfcb68351419c257f12a7fd3a62606869ca067a1fd44ce5809bd1ea8055f11
     - id: runtime-server
-      reference: athyper/runtime-server@sha256:64a5b8e767ed59bd5091ea16d0f3d8b06e4e04448836ca7e6f80e8155fd83196
+      reference: athyper/runtime-server@sha256:6eceee4552c7b4b36096ad303d01b4259a260afe48dccc1764507635dff834a0
     - id: iam
-      reference: athyper/keycloak@sha256:22ab45da7d792f1726b2e84fe7d9fca26bd72d610c068a21b7da711511614cbe
+      reference: athyper/keycloak@sha256:0c6a5ae3654e0f872101fa2168b40bc28d37f3f96e9f647c629434f6f77c9a5b
