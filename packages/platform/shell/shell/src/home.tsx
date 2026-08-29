@@ -2,8 +2,9 @@
 
 import { useAtlasAnswer, type AtlasActionAuditEntry, type AtlasGovernedAction, type AtlasRecordCitation } from "@athyper/platform-ai-agent-ui";
 import { AttachmentApiError, createAttachmentApiClient, convertClipboard, serializeForClipboard, type AttachmentProcessingStatus, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, HistoryIcon, LayoutIcon, PanelsTopLeftIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, HistoryIcon, LayoutIcon, Maximize2Icon, PanelRightIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
 import { useAccessSnapshot } from "@athyper/platform-shell-runtime";
+import { Tooltip } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -112,7 +113,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
 
   return <section className="athyper-home" aria-labelledby="athyper-home-title">
     <header className="athyper-home__hero">
-      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1></div><nav className="athyper-home__atlas-actions" aria-label="Atlas workspace options"><button type="button" onClick={()=>window.dispatchEvent(new CustomEvent("athyper:atlas-open",{detail:{pinned:true}}))}><PanelsTopLeftIcon size={16}/>Pin Atlas</button><a href="/atlas?from=%2Fhome"><LayoutIcon size={16}/>Open full screen</a></nav></div>
+      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1></div><nav className="athyper-home__atlas-actions" aria-label="Atlas workspace options"><Tooltip label="Pin Atlas to the right side"><button type="button" aria-label="Pin Atlas to the right side" onClick={()=>window.dispatchEvent(new CustomEvent("athyper:atlas-open",{detail:{pinned:true}}))}><PanelRightIcon size={19}/></button></Tooltip><Tooltip label="Open Atlas in full screen"><a href="/atlas?from=%2Fhome" aria-label="Open Atlas in full screen"><Maximize2Icon size={19}/></a></Tooltip></nav></div>
       <AtlasPromptComposer ref={composer} draftKey={`${scope.storageKey}:atlas-prompt`} value={query} onChange={setQuery} onSubmit={submit} busy={atlas.status === "answering"} agents={atlas.experience?.agents} selectedAgent={selectedAgent} onAgentChange={setSelectedAgent}/>
       <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { composer.current?.setText(suggestion); if(configured)setSelectedAgent(configured.agentCode); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
       {atlas.status !== "idle" ? <AtlasAnswerSurface atlas={atlas} citationRoutes={citationRoutes}/> : null}

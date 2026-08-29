@@ -1,7 +1,8 @@
 "use client";
 
 import { useAtlasAnswer, type AtlasConversationMessage, type AtlasExperienceAgent, type AtlasGovernedAction } from "@athyper/platform-ai-agent-ui";
-import { CloseIcon, HistoryIcon, LayoutIcon, LockIcon, MessageSquareIcon, PanelsTopLeftIcon, SparklesIcon } from "@athyper/platform-icons";
+import { CloseIcon, HistoryIcon, LockIcon, Maximize2Icon, MessageSquareIcon, PanelRightIcon, SparklesIcon } from "@athyper/platform-icons";
+import { Tooltip } from "@athyper/platform-ui";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AtlasPromptComposer, type AtlasPromptComposerHandle } from "./home";
@@ -29,7 +30,7 @@ export function AtlasWorkspace({mode,planeName,currentPath="/home",pinned=false,
     <header className="athyper-atlas-workspace__header"><span className="athyper-atlas-workspace__mark"><SparklesIcon size={18}/></span><div><strong>Atlas AI</strong><small>{planeName} · {contextLabel}</small></div><nav aria-label="Atlas workspace controls">
       <button type="button" title="New conversation" aria-label="New Atlas conversation" onClick={()=>{atlas.newConversation();setDraft("");composer.current?.focus();}}>+</button>
       <button type="button" title="Conversation history" aria-label="Conversation history" aria-pressed={historyOpen} onClick={()=>setHistoryOpen((value)=>!value)}><HistoryIcon size={16}/></button>
-      {mode==="dock"?<><button type="button" className="athyper-atlas-workspace__labeled-control" title={pinned?"Unpin Atlas":"Pin Atlas"} aria-label={pinned?"Unpin Atlas":"Pin Atlas"} aria-pressed={pinned} onClick={()=>onPinnedChange?.(!pinned)}><PanelsTopLeftIcon size={16}/><span>{pinned?"Unpin":"Pin"}</span></button><a className="athyper-atlas-workspace__labeled-control" href={`/atlas?from=${encodeURIComponent(currentPath)}`} title="Open Atlas full screen" aria-label="Open Atlas full screen"><LayoutIcon size={16}/><span>Full screen</span></a></>:null}
+      {mode==="dock"?<><Tooltip label={pinned?"Unpin Atlas from the right side":"Pin Atlas to the right side"}><button type="button" aria-label={pinned?"Unpin Atlas from the right side":"Pin Atlas to the right side"} aria-pressed={pinned} onClick={()=>onPinnedChange?.(!pinned)}><PanelRightIcon size={17}/></button></Tooltip><Tooltip label="Open Atlas in full screen"><a href={`/atlas?from=${encodeURIComponent(currentPath)}`} aria-label="Open Atlas in full screen"><Maximize2Icon size={17}/></a></Tooltip></>:null}
       {onClose?<button type="button" title="Close Atlas" aria-label="Close Atlas" onClick={onClose}><CloseIcon size={16}/></button>:null}
       {mode==="fullscreen"?<a href="/home" title="Close full-screen Atlas" aria-label="Close full-screen Atlas"><CloseIcon size={16}/></a>:null}
     </nav></header>
