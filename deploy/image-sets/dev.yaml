@@ -1,18 +1,18 @@
 apiVersion: athyper.io/v1alpha1
 kind: ImageSet
 metadata:
-  id: dev-a5efdccc4bb4
+  id: dev-3f8f923b5a03
   channel: development
 spec:
-  sourceRevision: a5efdccc4bb401637600b22b4016330e2fe2112c
+  sourceRevision: 3f8f923b5a0308c133c13d8a07a84dc17c9f18c4
   images:
     - id: neon-web
-      reference: athyper/neon-web@sha256:d4eb3ce0d9b975d691409d4b58f9f9201c8dade41f94e20134bffe7270c68951
+      reference: athyper/neon-web@sha256:bf9a3acf383686eff47a970ad35edd057ae07bf793e01243e3fd548eccfe63a5
     - id: mesh-web
-      reference: athyper/mesh-web@sha256:92cee55d612abe9cb5f81ff7ee89005bef6ec87c551ba3d95e90cf5cdae1f673
+      reference: athyper/mesh-web@sha256:3df7c39f46cd4ff66ab90a0e1bbb2340f51b377bb8de40aaa27ae2efb0f7c3da
     - id: studio-web
-      reference: athyper/studio-web@sha256:1cc2ddfa21c1a8741f432e68d574da3ab28db7fccf54159c6075b558dbc5c034
+      reference: athyper/studio-web@sha256:bb22ad8df701ffbf7e819879d181e51b4067fc501df2c80add0de8af98fceef3
     - id: runtime-server
-      reference: athyper/runtime-server@sha256:4122586a40633dc19df56981c51ffbc0108e2a323121d0737ac75515ab97dd0b
+      reference: athyper/runtime-server@sha256:6f8489fd6f7e877c673b9fe6e33ce12d0b17e879448b38f0c12e096490a62b79
     - id: iam
       reference: athyper/keycloak@sha256:22dafd3059be6a19996cb812b82752a149dbfd952e981c8744de8b2502b69e18
