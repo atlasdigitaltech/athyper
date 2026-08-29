@@ -5,6 +5,7 @@ import type {
   AtlasRecordDataGateway,
   AtlasRegisteredTool,
   AtlasToolAuthority,
+  AtlasToolAuditEntry,
   AtlasToolPolicyDecision,
   AtlasToolPreview,
   AtlasToolProposal,
@@ -166,6 +167,12 @@ export class AtlasToolService {
     return this.cancelled(input.context, proposal, input.reason ?? "worker_cancelled");
   }
 
+  async history(input: { readonly context: VerifiedRequestContext; readonly limit?: number }): Promise<{ readonly items: readonly AtlasToolAuditEntry[] }> {
+    assertAtlasContext(input.context);
+    const proposals = await this.options.proposals.list({ context: input.context, limit: Math.min(Math.max(input.limit ?? 25, 1), 100) });
+    return Object.freeze({ items: Object.freeze(proposals.map(publicAuditEntry)) });
+  }
+
   private async cancelled(context: VerifiedRequestContext, proposal: AtlasToolProposal, reason: string): Promise<AtlasToolRunResult> {
     const terminalAt = this.now();
     const result = await this.options.proposals.cancel({ context, proposalId: proposal.proposalId, expectedStatuses: ["proposed", "confirmed", "executing"], errorClass: reason, terminalAt: terminalAt.toISOString(), durationMs: elapsed(proposal.createdAt, terminalAt) });
@@ -180,7 +187,8 @@ async function executeRead(tool: AtlasRegisteredTool, context: VerifiedRequestCo
   try { return await tool.readHandler!.execute({ context: { context, records, signal: controller.signal }, arguments: args }); }
   finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
 }
-function publicPreview(proposal: AtlasToolProposal, replayed: boolean, token?: string): AtlasToolPreview { const { tenantId: _t, planeKey: _p, principalId: _u, actionCode: _a, operationClass: _o, permissionSnapshot: _ps, policySnapshot: _pol, profileSnapshot: _prof, confirmationTokenHash: _h, createdAt: _c, executionAuthEpoch: _ea, executionPolicyRevision: _ep, downstreamIdempotencyKey: _di, terminalErrorClass: _te, resultHash: _rh, businessTransactionId: _bt, businessTransactionType: _btt, evidenceRefs: _er, ...preview } = proposal; return { ...preview, replayed, ...(token ? { confirmationToken: token } : {}) }; }
+function publicPreview(proposal: AtlasToolProposal, replayed: boolean, token?: string): AtlasToolPreview { const { tenantId: _t, planeKey: _p, principalId: _u, actionCode: _a, operationClass: _o, permissionSnapshot: _ps, policySnapshot: _pol, profileSnapshot: _prof, confirmationTokenHash: _h, createdAt: _c, confirmationAt: _ca, executingAt: _xa, terminalAt: _ta, durationMs: _dm, executionAuthEpoch: _ea, executionPolicyRevision: _ep, downstreamIdempotencyKey: _di, terminalErrorClass: _te, resultHash: _rh, businessTransactionId: _bt, businessTransactionType: _btt, evidenceRefs: _er, ...preview } = proposal; return { ...preview, replayed, ...(token ? { confirmationToken: token } : {}) }; }
+function publicAuditEntry(proposal: AtlasToolProposal): AtlasToolAuditEntry { return Object.freeze({ proposalId: proposal.proposalId, threadId: proposal.threadId, runId: proposal.runId, toolCode: proposal.toolCode, toolVersion: proposal.toolVersion, summary: proposal.summary, access: proposal.access, risk: proposal.risk, autonomyDecision: proposal.autonomyDecision, ...(proposal.affectedEntityType ? { affectedEntityType: proposal.affectedEntityType } : {}), ...(proposal.affectedEntityId ? { affectedEntityId: proposal.affectedEntityId } : {}), ...(proposal.expectedRowVersion === undefined ? {} : { expectedRowVersion: proposal.expectedRowVersion }), policyRevision: proposal.policyRevision, profileRevision: proposal.profileRevision, authorizationEpoch: proposal.authorizationEpoch, confirmationRequired: proposal.confirmationRequired, status: proposal.status, createdAt: proposal.createdAt, ...(proposal.confirmationAt ? { confirmationAt: proposal.confirmationAt } : {}), ...(proposal.executingAt ? { executingAt: proposal.executingAt } : {}), ...(proposal.terminalAt ? { terminalAt: proposal.terminalAt } : {}), ...(proposal.durationMs === undefined ? {} : { durationMs: proposal.durationMs }), ...(proposal.terminalErrorClass ? { terminalErrorClass: proposal.terminalErrorClass } : {}), ...(proposal.businessTransactionId ? { businessTransactionId: proposal.businessTransactionId } : {}), ...(proposal.businessTransactionType ? { businessTransactionType: proposal.businessTransactionType } : {}), evidenceRefs: proposal.evidenceRefs }); }
 function replayResult(proposal: AtlasToolProposal): AtlasToolRunResult { const commandEvidence = proposal.evidenceRefs.find((item) => item["type"] === "command"); return { proposalId: proposal.proposalId, outcome: "completed", replayed: true, sources: [], ...(proposal.businessTransactionId ? { commandId: proposal.businessTransactionId } : {}), ...(typeof commandEvidence?.["revision"] === "string" ? { resultRevision: commandEvidence["revision"] } : {}) }; }
 function requireTransition(result: AtlasToolStoreResult, message: string): AtlasToolProposal { if (result.kind === "conflict") throw new AtlasServiceError("VERSION_CONFLICT", message); return result.proposal; }
 function terminalError(proposal: AtlasToolProposal): AtlasServiceError { return new AtlasServiceError(proposal.status === "expired" ? "STALE_PROPOSAL" : proposal.status === "cancelled" ? "TOOL_CANCELLED" : "TOOL_DENIED", `Atlas tool invocation is already ${proposal.status}.`); }

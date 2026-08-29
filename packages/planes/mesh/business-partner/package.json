@@ -10,6 +10,7 @@
   "dependencies": {
     "@athyper/contract-platform-entity-list": "workspace:*",
     "@athyper/platform-entity-list-view": "workspace:*",
+    "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/product-mesh-shell": "workspace:*"
   },

@@ -21,6 +21,19 @@ const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = { json: 15
 
 export const IAM_ME_OPERATION: RelayOperation = Object.freeze({ id: "iam.me", method: "GET", path: "/api/iam/me", requestClass: "json", requiresTenant: false });
 export const EXPERIENCE_BOOTSTRAP_OPERATION: RelayOperation = Object.freeze({ id: "platform.experience.bootstrap", method: "GET", path: "/api/platform/experience/bootstrap", requestClass: "json", requiresTenant: true });
+export const ATLAS_ADMISSION_OPERATION:RelayOperation=Object.freeze({id:"atlas.admission.read",method:"GET",path:"/api/atlas/admission",requestClass:"json",requiresTenant:true});
+export const ATLAS_EXPERIENCE_OPERATION:RelayOperation=Object.freeze({id:"atlas.experience.read",method:"GET",path:"/api/atlas/experience",requestClass:"json",requiresTenant:true});
+export const ATLAS_THREAD_CREATE_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.create",method:"POST",path:"/api/atlas/threads",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
+export const ATLAS_THREAD_RUN_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.run",method:"POST",path:"/api/atlas/threads/:threadId/runs",requestClass:"stream",requiresTenant:true,idempotency:"required",maxBodyBytes:64*1024});
+export const ATLAS_TOOL_HISTORY_OPERATION:RelayOperation=Object.freeze({id:"atlas.tools.history",method:"GET",path:"/api/atlas/tools/history",requestClass:"json",requiresTenant:true});
+export const ATLAS_TOOL_RUN_OPERATION:RelayOperation=Object.freeze({id:"atlas.tools.run",method:"POST",path:"/api/atlas/tools/:proposalId/run",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:64*1024});
+export const ATLAS_TOOL_CANCEL_OPERATION:RelayOperation=Object.freeze({id:"atlas.tools.cancel",method:"POST",path:"/api/atlas/tools/:proposalId/cancel",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
+export const ATLAS_ANSWER_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([ATLAS_ADMISSION_OPERATION,ATLAS_EXPERIENCE_OPERATION,ATLAS_THREAD_CREATE_OPERATION,ATLAS_THREAD_RUN_OPERATION,ATLAS_TOOL_HISTORY_OPERATION,ATLAS_TOOL_RUN_OPERATION,ATLAS_TOOL_CANCEL_OPERATION]);
+export const ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([
+  {id:"atlas.admin.experience.draft.read",method:"GET",path:"/api/admin/atlas/experience/draft",requestClass:"json",requiresTenant:true},
+  {id:"atlas.admin.experience.draft.save",method:"PUT",path:"/api/admin/atlas/experience/draft",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:128*1024},
+  {id:"atlas.admin.experience.publish",method:"POST",path:"/api/admin/atlas/experience/publish",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096},
+]);
 export const PRINCIPAL_LOCALE_UPDATE_OPERATION:RelayOperation=Object.freeze({id:"platform.profile.locale.update",method:"PATCH",path:"/api/platform/profile/locale",requestClass:"json",requiresTenant:true,maxBodyBytes:1024});
 export const LOCALE_POLICY_READ_OPERATION:RelayOperation=Object.freeze({id:"platform.localization.policy.read",method:"GET",path:"/api/platform/localization/policies/:planeKey",requestClass:"json",requiresTenant:true});
 export const LOCALE_POLICY_UPDATE_OPERATION:RelayOperation=Object.freeze({id:"platform.localization.policy.update",method:"PUT",path:"/api/platform/localization/policies/:planeKey",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});

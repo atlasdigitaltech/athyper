@@ -31,3 +31,4 @@
 20260829_security_definer_bypass_boundary_owner_correction_v2.sql
 20260829_security_definer_deployment_owner_correction.sql
 20260829_atlas_conversation_access_grants.sql
+20260829_atlas_experience_configuration.sql

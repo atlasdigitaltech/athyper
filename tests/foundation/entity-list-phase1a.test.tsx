@@ -12,7 +12,7 @@ function descriptor(scopeFingerprint: string): EntityListDescriptorV1 { const en
 function page(scopeFingerprint: string, code: string): EntityListResultV1 { return { schemaVersion: 1, descriptorHash: digest("a"), scopeFingerprint, queryHash: digest("d"), rows: [{ id: `${code}-id`, values: { code, name: `${code} Partner`, status: "active" } }], pagination: { pageSize: 1, hasNext: false, hasPrevious: false, countMode: "none" } }; }
 
 test("Phase 1A restores URL state and aborts stale list authority on context change", async () => {
-  const dom = new JSDOM("<!doctype html><div id='root'></div>", { url: "https://neon.test/mdg/business-partner?sort=name:desc&cols=code,name,status&pageSize=10" });
+  const dom = new JSDOM("<!doctype html><div id='root'></div>", { url: "https://neon.test/mdg/business-partner/partners?sort=name:desc&cols=code,name,status&pageSize=10" });
   dom.window.localStorage.setItem("athyper.entity-list.views.neon.business_partner", JSON.stringify([{ id: "unsafe", name: "Unsafe injected view", state: { mode: "table" } }]));
   const previous = ["window", "document", "navigator", "Element", "HTMLElement", "MouseEvent", "PopStateEvent", "IS_REACT_ACT_ENVIRONMENT"].map((key) => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
   Object.defineProperties(globalThis, { window: { configurable: true, value: dom.window }, document: { configurable: true, value: dom.window.document }, navigator: { configurable: true, value: dom.window.navigator }, Element: { configurable: true, value: dom.window.Element }, HTMLElement: { configurable: true, value: dom.window.HTMLElement }, MouseEvent: { configurable: true, value: dom.window.MouseEvent }, PopStateEvent: { configurable: true, value: dom.window.PopStateEvent }, IS_REACT_ACT_ENVIRONMENT: { configurable: true, value: true } });
@@ -129,7 +129,7 @@ test("Phase 1A restores URL state and aborts stale list authority on context cha
     resolveFirstList?.(page(digest("1"), "STALE-BP"));
     await act(async () => { await Promise.resolve(); });
     assert.doesNotMatch(dom.window.document.body.textContent ?? "", /STALE-BP/);
-    dom.window.history.pushState({}, "", "/mdg/business-partner?sort=code:desc&cols=code,status&pageSize=10");
+    dom.window.history.pushState({}, "", "/mdg/business-partner/partners?sort=code:desc&cols=code,status&pageSize=10");
     await act(async () => dom.window.dispatchEvent(new dom.window.PopStateEvent("popstate")));
     await act(async () => { await Promise.resolve(); });
     assert.deepEqual(requests.at(-1)?.query?.["sort"], ["code:desc"]);

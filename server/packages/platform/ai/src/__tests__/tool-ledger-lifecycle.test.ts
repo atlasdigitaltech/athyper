@@ -32,6 +32,7 @@ describe("durable Atlas tool invocation lifecycle", () => {
     expect(first).toMatchObject({ outcome: "completed", commandId: ids.command, resultRevision: "8" }); expect(replay).toMatchObject({ outcome: "completed", replayed: true, commandId: ids.command, resultRevision: "8" }); expect(commands).toHaveBeenCalledOnce();
     const row = store.rows.get(ids.proposal)!; expect(row.status).toBe("completed"); expect(row.argumentHash).toMatch(/^[0-9a-f]{64}$/); expect(row.resultHash).toMatch(/^[0-9a-f]{64}$/);
     const persisted = JSON.stringify(row); expect(persisted).not.toContain("must-not-persist"); expect(persisted).not.toContain("server-signed-confirmation"); expect(persisted).not.toContain('"posted":true');
+    const history = await service.history({ context: context() }); expect(history.items).toHaveLength(1); expect(history.items[0]).toMatchObject({ proposalId: ids.proposal, status: "completed", businessTransactionId: ids.command, policyRevision: "policy-1", confirmationRequired: true }); expect(JSON.stringify(history)).not.toContain("must-not-persist"); expect(JSON.stringify(history)).not.toContain("server-signed-confirmation");
     await expect(store.fail({ context: context(), proposalId: row.proposalId, expectedStatuses: ["executing"], errorClass: "late_failure", terminalAt: "2026-08-11T00:01:00Z", durationMs: 60_000 })).resolves.toMatchObject({ kind: "conflict", proposal: { status: "completed" } });
   });
 

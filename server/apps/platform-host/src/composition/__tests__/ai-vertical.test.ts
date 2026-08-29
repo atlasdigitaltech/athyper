@@ -30,7 +30,7 @@ describe("Atlas host composition", () => {
   it("always composes the durable ledger but leaves routes disabled by default", () => {
     const container = createContainer(); const config = loadConfig();
     registerAtlas(container, { ...config, atlas: { enabled: false, persistenceEnabled: false, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam);
-    expect(container.platform.ai).toMatchObject({ routesEnabled: false, toolsEnabled: false }); expect(container.runtimes.health.list()).toContain("atlas.tool-invocation-ledger");
+    expect(container.platform.ai).toMatchObject({ routesEnabled: false, toolsEnabled: false }); expect(container.platform.httpRegistrars).toHaveLength(1); expect(container.runtimes.health.list()).toContain("atlas.tool-invocation-ledger");
   });
   it("fails closed when routes are enabled without the full repository/provider composition", () => {
     const container = createContainer(); const config = loadConfig();
@@ -39,6 +39,6 @@ describe("Atlas host composition", () => {
   it("composes repositories, provider registry, runtime, tools, routes, and readiness together", () => {
     const container = createContainer(); const config = loadConfig();
     registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, dependencies(), { neon: fakeDatabase }, transactions, iam);
-    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: true }); expect(container.platform.ai?.runtime).toBeDefined(); expect(container.platform.ai?.tools).toBeDefined(); expect(container.platform.ai?.operations).toBeDefined(); expect(container.platform.httpRegistrars).toHaveLength(2); expect(container.runtimes.health.list()).toEqual(expect.arrayContaining(["atlas.tool-invocation-ledger", "atlas.runtime-composition", "atlas.a2-operations"]));
+    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: true }); expect(container.platform.ai?.runtime).toBeDefined(); expect(container.platform.ai?.tools).toBeDefined(); expect(container.platform.ai?.operations).toBeDefined(); expect(container.platform.httpRegistrars).toHaveLength(3); expect(container.runtimes.health.list()).toEqual(expect.arrayContaining(["atlas.tool-invocation-ledger", "atlas.runtime-composition", "atlas.a2-operations"]));
   });
 });

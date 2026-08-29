@@ -128,6 +128,7 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
         dataClass: requiredText(body, "dataClass") as AtlasDataClass,
         userText: requiredText(body, "userText"),
         catalogPolicyRevision: requiredText(body, "catalogPolicyRevision"),
+        ...(optionalText(body.agentCode) ? { agentCode: optionalText(body.agentCode)! } : {}),
         signal: controller.signal,
       }), controller.signal);
     } catch (error) {
@@ -140,6 +141,9 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
   });
 
   if (options.tools) {
+    registerContractRoute(app, contract("get", "/api/atlas/tools/history", "atlas.listToolHistory"), options.authenticate, route(async (request, context) => ({
+      body: await options.tools!.history({ context, limit: optionalInteger(request.query.limit) }),
+    })));
     registerContractRoute(app, contract("post", "/api/atlas/tools/preview", "atlas.previewTool", 200, true), options.authenticate, route(async (request, context) => {
       const body = readBody(request);
       return {

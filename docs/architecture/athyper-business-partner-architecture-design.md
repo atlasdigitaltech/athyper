@@ -60,7 +60,7 @@ It does not make MESH an employee directory, STUDIO an operational master, Keycl
 | Party category | Immutable structural kind: `organization`, `person`, or reserved `group` |
 | Ownership class | `external` or `internal`; never encoded as a party category |
 | Commercial role | Independently governed `supplier` or `customer` role |
-| Workforce role | A person BP materialized as person, employee, employment, and work assignment |
+| Workforce role | A person BP with either an internal employment role, an external-worker role, or both over time |
 | Canonical party | Optional STUDIO reconciliation identity; never a distributed foreign key |
 | Network account | MESH participant account with buyer, supplier, or both capability |
 | IAM organization | TrustIAM desired-state projection to Keycloak for user administration |
@@ -95,8 +95,10 @@ NEON business_partner 1 ---- 0..1 supplier
 NEON business_partner 1 ---- 0..1 customer
 NEON business_partner 1 ---- 0..1 person
 NEON person           1 ---- 0..1 employee
+NEON person           1 ---- 0..1 external_worker
 NEON person           1 ---- 0..* employment
 NEON employee         1 ---- 0..* work_assignment
+NEON external_worker  1 ---- 0..* worker_engagement
 
 MESH buyer account    1 ---- * network_relationship * ---- 1 supplier account
 NEON business_partner 1 ---- 0..* approved MESH account links
@@ -177,8 +179,13 @@ Supplier/customer role creation does not imply readiness. A dual-role BP has ind
 | `master.employee` | Tenant workforce role and optional principal link |
 | `master.employment` | Legal employer, contract, employee number, hire/termination facts |
 | `master.work_assignment` | Effective organization, position, manager, cost object, site, and FTE |
+| `master.external_worker` | Reusable non-employee workforce role; never implies buyer employment or payroll |
+| `document.worker_engagement` | Supplier, buyer, work-order/SOW, dates, commercial terms, compliance and lifecycle |
+| `document.worker_operational_placement` | Effective buyer manager, organization, site and cost allocation without employee headcount |
 
 Employment and assignment use non-overlapping `[from, until)` effective ranges with at most one applicable active primary record. Company/legal-entity compatibility is checked at write time. Flattened employee compatibility fields are derived until their consumers migrate.
+
+External workforce is governed independently. A supplier-employed or independent worker creates or reuses a person BP and `master.external_worker`, but does not create `master.employee`, `master.employment`, payroll, benefits, statutory enrollment, or buyer headcount. Each commercial relationship is an effective-dated `document.worker_engagement` authorized by exactly one contingent work order or statement of work. A person may hold internal employment and external engagements concurrently when policy permits.
 
 ### 5.5 Governed request aggregate
 
@@ -264,7 +271,8 @@ recruiter / HR import / approved API / invited candidate
   -> identity, duplicate, consent, right-to-work/background evidence,
      employer, company, position, manager, dates and FTE validation
   -> HR + manager + compliance approval as policy requires
-  -> atomic BP + person + employee + employment + assignment
+  -> internal: atomic BP + person + employee + employment + assignment
+  -> external: person BP + external worker + supplier-backed engagement
   -> workforce onboarding case/checklist
   -> governed payroll, benefits, equipment, policy and training steps
   -> optional principal/Keycloak user and employer-organization membership
@@ -372,4 +380,3 @@ Current completion and remaining work are intentionally not embedded here. See t
 | NEON web journeys | `apps/neon/` |
 | Database and contract tests | `server/tests/` |
 | Cross-plane and browser acceptance | `tests/e2e/` |
-

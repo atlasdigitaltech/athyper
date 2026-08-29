@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { BusinessPartnerNetworkList } from "@athyper/product-mesh-business-partner";
+import { BusinessPartnerOverview } from "@athyper/product-mesh-business-partner";
 
-export const metadata: Metadata = { title: "Business Partner Network" };
+export const metadata: Metadata = { title: "Business Partner" };
 
-export default function BusinessPartnerNetworkPage() {
-  return <BusinessPartnerNetworkList/>;
+export default function BusinessPartnerPage() {
+  return <BusinessPartnerOverview/>;
 }

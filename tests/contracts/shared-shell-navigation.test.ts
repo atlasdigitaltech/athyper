@@ -33,11 +33,13 @@ test("retains distinct labels for multiple capabilities under one catalog module
 
 test("classifies a technical entitlement as the MDG Business Partner product module", () => {
   const navigation = deriveShellNavigation(
-    definePlaneRoutes([{ id: "neon.mdg.business-partner", moduleCode: "fnd", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "MDG", moduleName: "Business Partner" } }] as const),
+    definePlaneRoutes([{ id: "neon.mdg.business-partner", moduleCode: "fnd", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "MDG", workspaceHref: "/mdg", moduleName: "Business Partner" } }] as const),
     { permissions: [], features: {}, workspaces: [{ code: "core", name: "Core Platform", sortOrder: 1, modules: [{ code: "fnd", name: "Foundation Runtime", sortOrder: 1, primary: true }] }] },
   );
 
   assert.deepEqual(navigation.workspaces.map(({ code, name }) => ({ code, name })), [{ code: "mdg", name: "MDG" }]);
+  assert.equal(navigation.workspaces[0]?.href, "/mdg");
+  assert.equal(navigation.landingHref, "/mdg");
   assert.equal(navigation.routes[0]?.moduleName, "Business Partner");
   assert.equal(navigation.routes[0]?.label, "Business Partner");
 });
@@ -66,6 +68,13 @@ test("deep links and forbidden routes resolve without an inaccessible default", 
 test("breadcrumbs preserve workspace and permitted route ancestry", () => {
   const breadcrumbs = deriveBreadcrumbs(deriveShellNavigation(registry, experience), "/inventory/stock/42");
   assert.deepEqual(breadcrumbs.map((item) => item.label), ["Supply Chain", "Stock", "stock", "42"]);
+});
+
+test("workspace dashboards are accessible without exposing modules in the sidebar", () => {
+  const navigation = deriveShellNavigation(definePlaneRoutes([{ id: "mdg.bp", moduleCode: "fnd", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "MDG", workspaceHref: "/mdg", moduleName: "Business Partner" } }] as const), { permissions: [], features: {}, workspaces: [{ code: "core", name: "Core", sortOrder: 1, modules: [{ code: "fnd", name: "Foundation", sortOrder: 1, primary: true }] }] });
+  assert.equal(canAccessRoute(navigation, "/mdg"), true);
+  assert.equal(selectLandingRoute(navigation), "/mdg");
+  assert.deepEqual(deriveBreadcrumbs(navigation, "/mdg/business-partner/requests").map((item) => item.href), ["/mdg", "/mdg/business-partner", undefined]);
 });
 
 test("rejects unsafe, duplicate, and traversing route declarations", () => {

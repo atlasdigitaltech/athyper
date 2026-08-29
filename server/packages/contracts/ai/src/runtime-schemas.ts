@@ -9,4 +9,6 @@ export const atlasAdminSchemas = Object.freeze({
   confidenceThreshold: { type: "object", required: ["actionCode", "minForSuggest", "minForAssist", "minForAuto", "driftWindowHours"], properties: { actionCode: string, docClass: string, modelId: string, minForSuggest: number, minForAssist: number, minForAuto: number, driftAlertBelow: number, driftWindowHours: number, expectedRevision: string } },
   quotaPolicy: { type: "object", required: ["maxRequests", "maxInputTokens", "maxOutputTokens", "windowSeconds"], properties: { maxRequests: number, maxInputTokens: number, maxOutputTokens: number, windowSeconds: number } },
   dashboardQuery: { type: "object", properties: { windowHours: string } },
+  experienceDefinition: { type: "object", required: ["schema", "scope", "widgets", "searchSources", "prompts", "agents"], properties: { schema: { type: "string", enum: ["atlas-experience-definition/1"] }, scope: string, widgets: { type: "array" }, searchSources: { type: "array" }, prompts: { type: "array" }, agents: { type: "array" }, expectedRevision: number } },
+  experiencePublish: { type: "object", required: ["scope", "expectedRevision"], properties: { scope: string, expectedRevision: number } },
 } satisfies Readonly<Record<string, Schema>>);

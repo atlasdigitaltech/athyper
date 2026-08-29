@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-29T11:38:46.113Z",
+  "generatedAt": "2026-08-29T13:00:03.195Z",
   "categoryValues": [
     "Shared contract",
     "Shared platform",
@@ -298,8 +298,8 @@
         "owner": "Mesh",
         "classification": "Product-specific",
         "dependencyBudget": {
-          "runtime": 4,
-          "workspace": 4
+          "runtime": 5,
+          "workspace": 5
         }
       },
       {
@@ -1411,6 +1411,7 @@
       "packageName": "@athyper/product-mesh-business-partner",
       "physicalPath": "packages/planes/mesh/business-partner/package.json",
       "currentConsumers": [
+        "apps/mesh/.next/standalone/apps/mesh/package.json",
         "apps/mesh/package.json"
       ],
       "intendedOwner": "Mesh",
@@ -1508,6 +1509,7 @@
       "packageName": "@athyper/product-studio-business-partner",
       "physicalPath": "packages/planes/studio/business-partner/package.json",
       "currentConsumers": [
+        "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json"
       ],
       "intendedOwner": "Studio",
@@ -1657,7 +1659,6 @@
         "apps/mesh/package.json",
         "apps/neon/.next/standalone/apps/neon/package.json",
         "apps/neon/package.json",
-        "apps/studio/.next/standalone/apps/studio/package.json",
         "packages/planes/mesh/business-partner/package.json",
         "packages/planes/neon/list-view/package.json"
       ],
@@ -1775,7 +1776,6 @@
       "packageName": "@athyper/platform-icons",
       "physicalPath": "packages/platform/foundation/icons/package.json",
       "currentConsumers": [
-        "apps/studio/.next/standalone/apps/studio/package.json",
         "packages/planes/mesh/shell/package.json",
         "packages/planes/neon/shell/package.json",
         "packages/platform/entity/runtime/list-view/package.json",
@@ -2126,6 +2126,7 @@
         "apps/neon/package.json",
         "apps/studio/.next/standalone/apps/studio/package.json",
         "apps/studio/package.json",
+        "packages/planes/mesh/business-partner/package.json",
         "packages/planes/mesh/shell/package.json",
         "packages/planes/neon/navigation/package.json",
         "packages/planes/neon/shell/package.json",
@@ -2161,11 +2162,7 @@
     {
       "packageName": "@athyper/platform-verification",
       "physicalPath": "packages/platform/verification/package.json",
-      "currentConsumers": [
-        "apps/mesh/.next/standalone/apps/mesh/package.json",
-        "apps/neon/.next/standalone/apps/neon/package.json",
-        "apps/studio/.next/standalone/apps/studio/package.json"
-      ],
+      "currentConsumers": [],
       "intendedOwner": "Shared Platform",
       "runtimePlane": "Build plane",
       "deploymentTargets": "neon, studio, mesh, server as consumed",

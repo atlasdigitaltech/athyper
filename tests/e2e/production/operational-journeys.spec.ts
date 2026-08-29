@@ -41,7 +41,7 @@ test("Notifications expose unread/all filters and resolve a destination", async 
 test("Neon business-partner list restores URL state, replaces context, and denies an invalid scope", async ({ page }, testInfo) => {
   test.skip(productionContext(testInfo).plane !== "neon", "Neon list qualification applies only to the Neon plane");
 
-  await page.goto("/mdg/business-partner?q=BP&sort=code:desc&cols=code,display_name,status&pageSize=10");
+  await page.goto("/mdg/business-partner/partners?q=BP&sort=code:desc&cols=code,display_name,status&pageSize=10");
   await expect(page.getByRole("heading", { name: "Business Partners" })).toBeVisible();
   await expect(page.getByRole("searchbox", { name: /search business partners/i })).toHaveValue("BP");
   await expect(page).toHaveURL(/q=BP/);
@@ -75,7 +75,7 @@ test("Neon business-partner list restores URL state, replaces context, and denie
 
 test("Mesh network relationships replace rows when the acting account changes", async ({ page }, testInfo) => {
   test.skip(productionContext(testInfo).plane !== "mesh", "Mesh relationship qualification applies only to Mesh");
-  await page.goto("/mdg/business-partner?sort=updated_at:desc&pageSize=10");
+  await page.goto("/mdg/business-partner/relationships?sort=updated_at:desc&pageSize=10");
   await expect(page.getByRole("heading", { name: "Network Relationships" })).toBeVisible();
   const account = page.getByLabel("Acting account");
   await expect(account).toBeEnabled();

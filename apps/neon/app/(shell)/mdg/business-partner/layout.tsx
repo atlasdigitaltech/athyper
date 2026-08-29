@@ -1,0 +1,2 @@
+const links=[["/mdg/business-partner","Overview"],["/mdg/business-partner/partners","Partners"],["/mdg/business-partner/requests","Review & Approval"],["/mdg/business-partner/new","Create Business Partner"]] as const;
+export default function BusinessPartnerLayout({children}:{readonly children:React.ReactNode}){return <><nav className="athyper-module-nav" aria-label="Business Partner module">{links.map(([href,label])=><a key={href} href={href}>{label}</a>)}</nav>{children}</>;}

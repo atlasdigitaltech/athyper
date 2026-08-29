@@ -536,6 +536,9 @@ importers:
       '@athyper/platform-entity-list-view':
         specifier: workspace:*
         version: link:../../../platform/entity/runtime/list-view
+      '@athyper/platform-shell':
+        specifier: workspace:*
+        version: link:../../../platform/shell/shell
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../platform/shell/app-foundation
@@ -755,6 +758,10 @@ importers:
         version: 6.0.3
 
   packages/platform/ai/agent-runtime:
+    dependencies:
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../../foundation/api-client
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -764,6 +771,10 @@ importers:
         version: 6.0.3
 
   packages/platform/ai/agent-ui:
+    dependencies:
+      '@athyper/platform-ai-agent-runtime':
+        specifier: workspace:*
+        version: link:../agent-runtime
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1320,6 +1331,9 @@ importers:
 
   packages/platform/shell/shell:
     dependencies:
+      '@athyper/platform-ai-agent-ui':
+        specifier: workspace:*
+        version: link:../../ai/agent-ui
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../../foundation/i18n

@@ -22,7 +22,7 @@ for (const pilot of planes) test(`${pilot.plane} runs the common environment, au
   assert.equal(pilot.validate({ ...validEnvironment, RUNTIME_API_URL: "file:///internal" }).ready, false);
   const first = (pilot.routes as readonly PlaneRouteDefinition[])[0]!;
   const navigation = deriveShellNavigation(pilot.routes, { permissions: first.requiredPermissions, features: Object.fromEntries(first.requiredFeatures.map((code) => [code, { enabled: true }])), workspaces: [{ code: "pilot", name: "Pilot", sortOrder: 1, modules: [{ code: first.moduleCode, name: "Pilot landing", sortOrder: 1, primary: true }] }] });
-  assert.equal(navigation.landingHref, first.href);
+  assert.equal(navigation.landingHref, first.presentation?.workspaceHref ?? first.href);
   const authRoute = readFileSync(`apps/${pilot.plane}/app/api/auth/session/route.ts`, "utf8"), relayRoute = readFileSync(`apps/${pilot.plane}/app/api/relay/[...path]/route.ts`, "utf8"), protectedLayout = readFileSync(`apps/${pilot.plane}/app/(shell)/layout.tsx`, "utf8"), liveRoute = await import(`../../apps/${pilot.plane}/app/livez/route.ts`), readyRoute = await import(`../../apps/${pilot.plane}/app/readyz/route.ts`);
   assert.match(authRoute, /auth\.session/); assert.match(relayRoute, /platformRelay/); assert.match(protectedLayout, /loadProtectedAppBootstrap/);
   const live = liveRoute.GET(); assert.equal(live.status, 200); assert.deepEqual(await live.json(), { status: "live", plane: pilot.plane });

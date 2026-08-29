@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 const session = (plane = "neon", tenantId = "tenant-1", token = "server-token"): RelaySessionContext => ({ accessToken: token, plane, realmKey: "athyper", tenantId, principalId: "principal-1", authEpoch: 7, csrfToken: "csrf-proof" });
@@ -9,6 +9,17 @@ function authority(current = session()): RelaySessionAuthority & { invalidated: 
 function relay(input: { plane?: string; operation?: RelayOperation; authority?: RelaySessionAuthority; fetch?: typeof fetch; diagnostics?: RelayDiagnostic[]; timeout?: number } = {}) { return createRelayHandler({ plane: input.plane ?? "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [input.operation ?? IAM_ME_OPERATION], session: input.authority ?? authority(), fetch: input.fetch ?? (async () => new Response("{}", { headers: { "content-type": "application/json" } })), timeouts: input.timeout ? { json: input.timeout, stream: input.timeout, upload: input.timeout, download: input.timeout } : undefined, onDiagnostic: (value) => input.diagnostics?.push(value) }); }
 
 describe("Phase 4 hardened BFF relay", () => {
+  it("registers governed Atlas confirmation, cancellation, and audit history in every plane", async () => {
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
+      assert.match(source, /ATLAS_ANSWER_RELAY_OPERATIONS/);
+      assert.match(source, /operations:\s*\[[^\]]*\.\.\.ATLAS_ANSWER_RELAY_OPERATIONS/s);
+    }
+    const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform:4000", appOrigin: "https://neon.example", operations: ATLAS_ANSWER_RELAY_OPERATIONS, session: authority(), fetch: async () => new Response('{"proposalId":"10000000-0000-4000-8000-000000000001","outcome":"completed"}', { headers: { "content-type": "application/json" } }) });
+    assert.equal((await handler(new Request("https://neon.example/api/relay/atlas/tools/history"), context("atlas", "tools", "history"))).status, 200);
+    assert.equal((await handler(new Request("https://neon.example/api/relay/atlas/tools/10000000-0000-4000-8000-000000000001/run", { method: "POST", headers: { origin: "https://neon.example", "x-csrf-token": "csrf-proof", "content-type": "application/json" }, body: "{}" }), context("atlas", "tools", "10000000-0000-4000-8000-000000000001", "run"))).status, 428);
+  });
+  it("exposes published experience reads to every plane and Studio-only authoring relays",async()=>{assert.ok(ATLAS_ANSWER_RELAY_OPERATIONS.some((item)=>item.path==="/api/atlas/experience"));const studio=readFileSync(new URL("../../apps/studio/lib/relay.ts",import.meta.url),"utf8");assert.match(studio,/ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS/);assert.equal(ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS.filter((item)=>item.method!=="GET").every((item)=>item.idempotency==="required"),true);for(const plane of ["neon","mesh"]){const source=readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`,import.meta.url),"utf8");assert.doesNotMatch(source,/ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS/);}});
   it("registers descriptor and list reads in every plane that hosts the shared List View", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");

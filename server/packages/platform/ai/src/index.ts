@@ -18,3 +18,5 @@ export * from "./thread-service.js";
 export * from "./tool-service.js";
 export * from "./atlas-routes.js";
 export * from "./atlas-admin-routes.js";
+export * from "./experience-configuration.js";
+export * from "./atlas-experience-routes.js";

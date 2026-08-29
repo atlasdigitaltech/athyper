@@ -1,0 +1,5 @@
+import type { Metadata } from "next";
+import { ContentHeader } from "@athyper/platform-shell";
+import { businessPartnerDefinition } from "@athyper/product-studio-business-partner";
+export const metadata:Metadata={title:"Business Partner Publication"};
+export default function BusinessPartnerPublicationPage(){return <section className="athyper-landing" aria-labelledby="page-title"><ContentHeader eyebrow="Business Partner configuration" title="Publication" description="The immutable definition coordinate consumed by Neon and Mesh."/><div className="athyper-landing__status"><span aria-hidden="true"/><div><strong>Published definition</strong><p>{businessPartnerDefinition.publicationKey}</p></div></div><ul className="athyper-governance-list"><li><strong>Neon consumer</strong><span>Uses the definition for request validation, workflow pinning, and canonical materialization.</span></li><li><strong>Mesh consumer</strong><span>Uses the allowed field set for governed partner-profile publication and disclosure.</span></li></ul></section>;}

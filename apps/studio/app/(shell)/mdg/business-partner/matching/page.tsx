@@ -1,0 +1,4 @@
+import type { Metadata } from "next";
+import { ContentHeader } from "@athyper/platform-shell";
+export const metadata:Metadata={title:"Business Partner Matching"};
+export default function BusinessPartnerMatchingPage(){return <section className="athyper-landing" aria-labelledby="page-title"><ContentHeader eyebrow="Business Partner configuration" title="Matching" description="Identity resolution prevents duplicate parties while preserving reviewable evidence."/><ul className="athyper-governance-list"><li><strong>Exact identifiers</strong><span>Registration and tax identifiers produce deterministic candidate matches.</span></li><li><strong>Name and address similarity</strong><span>Normalized legal names and locations contribute scored duplicate candidates.</span></li><li><strong>Human decision</strong><span>Potential duplicates are reviewed before a new canonical party is created or linked.</span></li></ul></section>;}
