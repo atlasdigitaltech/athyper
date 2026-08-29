@@ -1,10 +1,10 @@
 # NEON, MESH, and STUDIO Business Partner production build plan
 
-**Status:** In progress
+**Status:** Historical implementation evidence; remaining work is tracked in the [active pending build plan](./athyper-business-partner-pending-build-plan.md)
 
 **Started:** 2026-08-28
 
-**Architecture:** [NEON Business Partner onboarding, integration, and extension architecture](./neon-business-partner-onboarding-and-extension-design.md)
+**Architecture:** [Athyper Business Partner architecture design](./athyper-business-partner-architecture-design.md)
 
 ## 1. Delivery rule
 

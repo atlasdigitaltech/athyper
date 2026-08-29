@@ -1,6 +1,6 @@
 # Business Partner domain-value inventory
 
-Status: Step 1 implementation inventory, 2026-08-29. Normative design: [business-partner-three-plane-final-design.md](./business-partner-three-plane-final-design.md).
+Status: Step 1 implementation inventory, 2026-08-29. Normative design: [Athyper Business Partner architecture design](./athyper-business-partner-architecture-design.md).
 
 ## Inventory result
 
