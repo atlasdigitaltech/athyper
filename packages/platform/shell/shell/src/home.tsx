@@ -1,8 +1,8 @@
 "use client";
 
 import { useAtlasAnswer, type AtlasActionAuditEntry, type AtlasGovernedAction, type AtlasRecordCitation } from "@athyper/platform-ai-agent-ui";
-import { convertClipboard, serializeForClipboard, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
-import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, HistoryIcon, LayoutIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon } from "@athyper/platform-icons";
+import { AttachmentApiError, createAttachmentApiClient, convertClipboard, serializeForClipboard, type AttachmentProcessingStatus, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
+import { ArrowDownIcon, ArrowUpIcon, ChevronRightIcon, CloseIcon, HistoryIcon, LayoutIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
 import { useAccessSnapshot } from "@athyper/platform-shell-runtime";
 import * as React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -103,7 +103,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   };
   const visitHref = (href: string) => commit(rememberHomeInteraction(personalization, href));
   const visit = (item: PlatformHomeSearchItem) => visitHref(item.href);
-  const submit = (question: string) => { if (question.trim()) void atlas.ask(question, selectedAgent); };
+  const submit = (question: string, attachmentContext?: { readonly contextId:string; readonly attachmentIds:readonly string[] }) => { if (question.trim()) void atlas.ask(question, selectedAgent, attachmentContext); };
   const widgetVisible = (widget: HomeWidgetId) => !personalization.hiddenWidgets.includes(widget);
   const publishedWidgetOrder = atlas.experience?.widgets.map((item)=>item.kind);
   const userReorderedWidgets = personalization.widgetOrder.join("|") !== DEFAULT_HOME_PERSONALIZATION.widgetOrder.join("|");
@@ -135,7 +135,7 @@ interface AtlasPromptComposerProps {
   readonly draftKey: string;
   readonly value: string;
   readonly onChange: (value: string) => void;
-  readonly onSubmit: (value: string) => void;
+  readonly onSubmit: (value: string, attachmentContext?: { readonly contextId:string; readonly attachmentIds:readonly string[] }) => void;
   readonly busy: boolean;
   readonly agents?: readonly { readonly code: string; readonly name: string }[];
   readonly selectedAgent?: string;
@@ -144,8 +144,11 @@ interface AtlasPromptComposerProps {
 
 const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, AtlasPromptComposerProps>(function AtlasPromptComposer(props, forwardedRef) {
   const editor = useRef<HTMLDivElement>(null);
+  const fileInput=useRef<HTMLInputElement>(null);
+  const attachmentContextId=useRef<string|undefined>(undefined);
   const [expanded, setExpanded] = useState(false);
   const [formatMessage, setFormatMessage] = useState<string>();
+  const [attachments,setAttachments]=useState<readonly AtlasPromptAttachment[]>([]);
   const valueRef = useRef(props.value);
   valueRef.current = props.value;
 
@@ -186,6 +189,33 @@ const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, AtlasPro
     try { window.localStorage.setItem(props.draftKey, serialized["text/html"] ?? ""); } catch { /* best effort */ }
   }, [props.draftKey, props.onChange]);
 
+  const addFiles=React.useCallback(async(files:FileList|readonly File[])=>{
+    const selected=Array.from(files);if(!selected.length)return;
+    const remaining=Math.max(0,5-attachments.length);if(!remaining){setFormatMessage("Atlas accepts up to 5 supporting files per prompt.");return;}
+    const accepted=selected.slice(0,remaining).filter((file)=>file.size>0&&file.size<=25*1024*1024);
+    if(!accepted.length){setFormatMessage("Choose a non-empty file up to 25 MB.");return;}
+    attachmentContextId.current??=globalThis.crypto.randomUUID();
+    const client=createAttachmentApiClient({entityType:"atlas.prompt",entityId:attachmentContextId.current});
+    const queued=accepted.map<AtlasPromptAttachment>((file)=>({localId:globalThis.crypto.randomUUID(),fileName:file.name||"attachment",sizeBytes:file.size,status:"uploading"}));
+    setAttachments((current)=>[...current,...queued]);
+    await Promise.all(accepted.map(async(file,index)=>{
+      const item=queued[index]!;
+      try{
+        const uploaded=await client.upload(file,{token:item.localId});
+        setAttachments((current)=>replaceAttachment(current,item.localId,{attachmentId:uploaded.attachmentId,status:"processing"}));
+        const status=await waitForAttachment(client,uploaded.attachmentId);
+        setAttachments((current)=>replaceAttachment(current,item.localId,{attachmentId:uploaded.attachmentId,status:status.extractionStatus==="extracted"?"ready":"error",...(status.extractionStatus==="extracted"?{}:{message:"Text extraction did not complete."})}));
+      }catch(error){setAttachments((current)=>replaceAttachment(current,item.localId,{status:"error",message:attachmentMessage(error)}));}
+    }));
+    if(selected.length>remaining)setFormatMessage(`Only ${remaining} additional file${remaining===1?" was":"s were"} accepted; Atlas supports 5 per prompt.`);
+  },[attachments.length]);
+
+  const removeAttachment=React.useCallback(async(item:AtlasPromptAttachment)=>{
+    setAttachments((current)=>current.filter((candidate)=>candidate.localId!==item.localId));
+    if(!item.attachmentId)return;
+    try{const contextId=attachmentContextId.current;if(contextId)await createAttachmentApiClient({entityType:"atlas.prompt",entityId:contextId}).remove(item.attachmentId);}catch{setFormatMessage("The file was removed from this prompt. Server cleanup will follow the attachment retention policy.");}
+  },[]);
+
   const paste = React.useCallback((event: React.ClipboardEvent<HTMLDivElement>) => {
     let conversion;
     try { conversion = convertClipboard({ files: [], getData: (type) => event.clipboardData.getData(type) }); }
@@ -195,19 +225,29 @@ const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, AtlasPro
     const html = serializeForClipboard(conversion.document)["text/html"] ?? "";
     insertComposerHtml(editor.current, html);
     synchronize();
-    setFormatMessage(event.clipboardData.files.length ? "Formatting was preserved. File attachments are not enabled for Atlas yet." : "Formatting preserved safely.");
-  }, [synchronize]);
+    if(event.clipboardData.files.length)void addFiles(event.clipboardData.files);
+    setFormatMessage(event.clipboardData.files.length ? "Formatting preserved; attached files are being scanned and indexed." : "Formatting preserved safely.");
+  }, [addFiles,synchronize]);
 
   const tooLong = props.value.length > 4_096;
-  const submit = () => { const question = props.value.trim(); if (!question || tooLong || props.busy) return; props.onSubmit(question); };
+  const attachmentBusy=attachments.some((item)=>item.status==="uploading"||item.status==="processing"),attachmentError=attachments.some((item)=>item.status==="error");
+  const submit = () => { const question = props.value.trim(); if (!question || tooLong || props.busy||attachmentBusy||attachmentError) return; const ready=attachments.flatMap((item)=>item.status==="ready"&&item.attachmentId?[item.attachmentId]:[]);props.onSubmit(question,ready.length&&attachmentContextId.current?{contextId:attachmentContextId.current,attachmentIds:ready}:undefined); };
 
   return <section className="athyper-home__composer" data-expanded={expanded} aria-label="Atlas AI prompt composer">
     <header><span><SearchIcon size={22}/></span><strong>I’m Atlas AI</strong><button type="button" aria-label={expanded ? "Collapse Atlas composer" : "Expand Atlas composer"} aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <CloseIcon size={16}/> : <LayoutIcon size={16}/>}</button></header>
     <div ref={editor} id="atlas-home-search" className="athyper-home__composer-editor" role="textbox" aria-label="Ask Atlas AI" aria-multiline="true" aria-invalid={tooLong || undefined} contentEditable={!props.busy} suppressContentEditableWarning data-placeholder="I’m here to help you find answers, take action, and get work done." onInput={synchronize} onPaste={paste}/>
+    {attachments.length?<ul className="athyper-home__composer-attachments" aria-label="Atlas supporting files">{attachments.map((item)=><li key={item.localId} data-status={item.status}><span><strong>{item.fileName}</strong><small>{formatBytes(item.sizeBytes)} · {attachmentStatusLabel(item)}</small></span><button type="button" aria-label={`Remove ${item.fileName}`} disabled={props.busy} onClick={()=>void removeAttachment(item)}><TrashIcon size={14}/></button></li>)}</ul>:null}
     {formatMessage || tooLong ? <p className="athyper-home__composer-message" role={tooLong ? "alert" : "status"}>{tooLong ? `Prompt is ${props.value.length - 4_096} characters over the 4,096 character limit.` : formatMessage}</p> : null}
-    <footer><div><button type="button" className="athyper-home__composer-context" disabled title="Atlas file context will be enabled after governed extraction and authorization are available.">+ Add context</button>{props.agents?.length ? <select aria-label="Atlas agent" value={props.selectedAgent} onChange={(event) => props.onAgentChange(event.currentTarget.value)}>{props.agents.map((agent) => <option key={agent.code} value={agent.code}>{agent.name}</option>)}</select> : <span>Governed work</span>}</div><div>{props.value.length >= 3_600 ? <small>{props.value.length.toLocaleString()} / 4,096</small> : null}<button type="button" className="athyper-home__composer-submit" disabled={!props.value.trim() || tooLong || props.busy} onClick={submit}><SparklesIcon size={16}/>{props.busy ? "Thinking…" : "Ask"}</button></div></footer>
+    <footer><div><input ref={fileInput} className="athyper-home__composer-file-input" type="file" multiple accept=".pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/plain,text/markdown,text/csv" onChange={(event)=>{if(event.currentTarget.files)void addFiles(event.currentTarget.files);event.currentTarget.value="";}}/><button type="button" className="athyper-home__composer-context" disabled={props.busy||attachments.length>=5} onClick={()=>fileInput.current?.click()}>+ Add context</button>{props.agents?.length ? <select aria-label="Atlas agent" value={props.selectedAgent} onChange={(event) => props.onAgentChange(event.currentTarget.value)}>{props.agents.map((agent) => <option key={agent.code} value={agent.code}>{agent.name}</option>)}</select> : <span>Governed work</span>}</div><div>{props.value.length >= 3_600 ? <small>{props.value.length.toLocaleString()} / 4,096</small> : null}<button type="button" className="athyper-home__composer-submit" disabled={!props.value.trim() || tooLong || props.busy||attachmentBusy||attachmentError} onClick={submit}><SparklesIcon size={16}/>{props.busy ? "Thinking…" : attachmentBusy?"Preparing files…":"Ask"}</button></div></footer>
   </section>;
 });
+
+interface AtlasPromptAttachment{readonly localId:string;readonly attachmentId?:string;readonly fileName:string;readonly sizeBytes:number;readonly status:"uploading"|"processing"|"ready"|"error";readonly message?:string}
+function replaceAttachment(items:readonly AtlasPromptAttachment[],localId:string,patch:Partial<AtlasPromptAttachment>):readonly AtlasPromptAttachment[]{return items.map((item)=>item.localId===localId?{...item,...patch}:item);}
+async function waitForAttachment(client:ReturnType<typeof createAttachmentApiClient>,attachmentId:string):Promise<AttachmentProcessingStatus>{for(let attempt=0;attempt<40;attempt+=1){const status=await client.status(attachmentId);if(status.extractionStatus==="extracted"||status.extractionStatus==="failed"||status.extractionStatus==="skipped")return status;await new Promise((resolve)=>setTimeout(resolve,1_500));}throw new Error("The file is still processing. Remove it or try again shortly.");}
+function attachmentMessage(error:unknown):string{if(error instanceof AttachmentApiError){if(error.status===413)return"File exceeds the configured upload limit.";if(error.status===429)return"Attachment storage quota is currently exhausted.";if(error.status===403)return"You do not have permission to attach this file.";return error.message;}return error instanceof Error?error.message:"The file could not be prepared for Atlas.";}
+function attachmentStatusLabel(item:AtlasPromptAttachment):string{return item.status==="uploading"?"Uploading and virus scanning":item.status==="processing"?"Extracting governed text":item.status==="ready"?"Ready for Atlas":item.message??"Attachment failed";}
+function formatBytes(value:number):string{return value<1024?`${value} B`:value<1024*1024?`${(value/1024).toFixed(1)} KB`:`${(value/1024/1024).toFixed(1)} MB`;}
 
 function insertComposerHtml(editor: HTMLDivElement | null, html: string): void {
   if (!editor) return;
@@ -242,7 +282,7 @@ function RecentWidget({ title, recent, onVisit }: { readonly title?:string; read
 function AtlasAnswerSurface({ atlas, citationRoutes }: { readonly atlas: ReturnType<typeof useAtlasAnswer>; readonly citationRoutes: Readonly<Record<string, string>> }) {
   const active = atlas.status === "answering";
   return <section className="athyper-home__answer" aria-live="polite" aria-busy={active} aria-labelledby="atlas-answer-title"><header><span aria-hidden="true"><SparklesIcon size={17}/></span><div><strong id="atlas-answer-title">Atlas answer</strong><small>{atlas.publicModelId ? `${atlas.publicModelId} · permission-aware` : "Permission-aware grounded assistance"}</small></div>{active ? <button type="button" onClick={atlas.cancel}>Cancel</button> : null}</header>
-    {atlas.status === "unavailable" || atlas.status === "error" ? <p className="athyper-home__answer-message">{atlas.message}</p> : <><div className="athyper-home__answer-text">{atlas.text || (atlas.actions.length ? "Atlas prepared a governed action for your review." : "Finding authorized sources and preparing an answer…")}</div>{atlas.actions.length ? <div className="athyper-home__actions-preview"><strong>Governed action previews</strong><p>Nothing runs until you review the exact proposal and confirm it.</p>{atlas.actions.map((action) => <GovernedActionPreview key={action.proposalId} action={action} busy={atlas.actionBusy === action.proposalId} onConfirm={() => atlas.confirmAction(action)} onDecline={() => atlas.declineAction(action)}/>) }{atlas.actionMessage ? <p role="status" className="athyper-home__action-message">{atlas.actionMessage}</p> : null}</div> : null}{atlas.status === "complete" ? <div className="athyper-home__citations"><strong>Sources</strong>{atlas.citations.length ? <ol>{atlas.citations.map((citation, index) => <li key={`${citation.entityCode}-${citation.recordId}-${citation.revision}`}>{citationLink(citation, citationRoutes, index)}</li>)}</ol> : <p>No record citation was returned. Verify the answer and action preview before continuing.</p>}</div> : null}</>}
+    {atlas.status === "unavailable" || atlas.status === "error" ? <p className="athyper-home__answer-message">{atlas.message}</p> : <><div className="athyper-home__answer-text">{atlas.text || (atlas.actions.length ? "Atlas prepared a governed action for your review." : "Finding authorized sources and preparing an answer…")}</div>{atlas.actions.length ? <div className="athyper-home__actions-preview"><strong>Governed action previews</strong><p>Nothing runs until you review the exact proposal and confirm it.</p>{atlas.actions.map((action) => <GovernedActionPreview key={action.proposalId} action={action} busy={atlas.actionBusy === action.proposalId} onConfirm={() => atlas.confirmAction(action)} onDecline={() => atlas.declineAction(action)}/>) }{atlas.actionMessage ? <p role="status" className="athyper-home__action-message">{atlas.actionMessage}</p> : null}</div> : null}{atlas.status === "complete" ? <div className="athyper-home__citations"><strong>Sources</strong>{atlas.attachmentCitations.length||atlas.citations.length?<ol>{atlas.attachmentCitations.map((citation,index)=><li key={citation.attachmentId}><span>{index+1}. {citation.fileName} · verified attachment</span></li>)}{atlas.citations.map((citation, index) => <li key={`${citation.entityCode}-${citation.recordId}-${citation.revision}`}>{citationLink(citation, citationRoutes, index+atlas.attachmentCitations.length)}</li>)}</ol> : <p>No source citation was returned. Verify the answer and action preview before continuing.</p>}</div> : null}</>}
   </section>;
 }
 

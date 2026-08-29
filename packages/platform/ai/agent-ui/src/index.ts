@@ -7,17 +7,19 @@ import {
   type AtlasAnswerClient,
   type AtlasGovernedAction,
   type AtlasRecordCitation,
+  type AtlasAttachmentCitation,
   type AtlasExperienceAgent,
   type AtlasExperienceProjection,
 } from "@athyper/platform-ai-agent-runtime";
 export { createAtlasExperienceAdminClient } from "@athyper/platform-ai-agent-runtime";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-export type { AtlasActionAuditEntry, AtlasGovernedAction, AtlasRecordCitation, AtlasExperienceAgent, AtlasExperienceProjection, AtlasExperienceDefinition, AtlasExperienceRelease } from "@athyper/platform-ai-agent-runtime";
+export type { AtlasActionAuditEntry, AtlasGovernedAction, AtlasRecordCitation, AtlasAttachmentCitation, AtlasExperienceAgent, AtlasExperienceProjection, AtlasExperienceDefinition, AtlasExperienceRelease } from "@athyper/platform-ai-agent-runtime";
 
 export interface AtlasAnswerState {
   readonly status: "idle" | "answering" | "complete" | "unavailable" | "error";
   readonly text: string;
   readonly citations: readonly AtlasRecordCitation[];
+  readonly attachmentCitations: readonly AtlasAttachmentCitation[];
   readonly actions: readonly AtlasGovernedAction[];
   readonly actionBusy?: string;
   readonly actionMessage?: string;
@@ -31,7 +33,7 @@ export interface AtlasAnswerState {
   readonly experience?: AtlasExperienceProjection;
 }
 export interface AtlasAnswerController extends AtlasAnswerState {
-  ask(question: string, agentCode?: string): Promise<void>;
+  ask(question: string, agentCode?: string, attachmentContext?: { readonly contextId: string; readonly attachmentIds: readonly string[] }): Promise<void>;
   cancel(): void;
   confirmAction(action: AtlasGovernedAction): Promise<void>;
   declineAction(action: AtlasGovernedAction): Promise<void>;
@@ -39,7 +41,7 @@ export interface AtlasAnswerController extends AtlasAnswerState {
   hideHistory(): void;
 }
 export interface UseAtlasAnswerOptions { readonly client?: AtlasAnswerClient; }
-const initialState: AtlasAnswerState = Object.freeze({ status: "idle", text: "", citations: Object.freeze([]), actions: Object.freeze([]), historyVisible: false, historyStatus: "idle", history: Object.freeze([]), experienceStatus: "loading" });
+const initialState: AtlasAnswerState = Object.freeze({ status: "idle", text: "", citations: Object.freeze([]), attachmentCitations:Object.freeze([]), actions: Object.freeze([]), historyVisible: false, historyStatus: "idle", history: Object.freeze([]), experienceStatus: "loading" });
 
 export function useAtlasAnswer(options: UseAtlasAnswerOptions = {}): AtlasAnswerController {
   const client = useMemo(() => options.client ?? createAtlasAnswerClient(), [options.client]);
@@ -49,19 +51,20 @@ export function useAtlasAnswer(options: UseAtlasAnswerOptions = {}): AtlasAnswer
   const cancel = useCallback(() => { active.current?.abort(); active.current = undefined; setState((current)=>({ ...initialState, experienceStatus:current.experienceStatus, ...(current.experience?{experience:current.experience}:{}) })); }, []);
   useEffect(() => { const controller=new AbortController(); void client.experience(controller.signal).then((value)=>{experience.current=value??undefined;setState((current)=>({...current,experienceStatus:value?"ready":"default",...(value?{experience:value}:{})}));}).catch(()=>setState((current)=>({...current,experienceStatus:"default"}))); return()=>{controller.abort();active.current?.abort();}; }, [client]);
 
-  const ask = useCallback(async (question: string, agentCode?: string) => {
+  const ask = useCallback(async (question: string, agentCode?: string, attachmentContext?: { readonly contextId:string; readonly attachmentIds:readonly string[] }) => {
     active.current?.abort(); const controller = new AbortController(); active.current = controller;
-    setState((current) => ({ ...current, status: "answering", text: "", citations: Object.freeze([]), actions: Object.freeze([]), message: undefined, actionMessage: undefined }));
+    setState((current) => ({ ...current, status: "answering", text: "", citations: Object.freeze([]), attachmentCitations:Object.freeze([]), actions: Object.freeze([]), message: undefined, actionMessage: undefined }));
     try {
       const agent:AtlasExperienceAgent|undefined=experience.current?.agents.find((candidate)=>candidate.code===(agentCode??experience.current?.agents[0]?.code));
-      const answer = await client.answer(question, { signal: controller.signal, ...(agent?{agent}:{}), onProgress(progress) {
+      const answer = await client.answer(question, { signal: controller.signal, ...(agent?{agent}:{}),...(attachmentContext?{attachmentContextId:attachmentContext.contextId,attachmentIds:attachmentContext.attachmentIds}:{}), onProgress(progress) {
         if (controller.signal.aborted) return;
         if (progress.kind === "started") setState((current) => ({ ...current, publicModelId: progress.publicModelId }));
         else if (progress.kind === "text") setState((current) => ({ ...current, text: current.text + progress.text }));
         else if (progress.kind === "citation") setState((current) => ({ ...current, citations: current.citations.some((item) => sameCitation(item, progress.citation)) ? current.citations : Object.freeze([...current.citations, progress.citation]) }));
+        else if(progress.kind==="attachment-citation")setState((current)=>({...current,attachmentCitations:current.attachmentCitations.some((item)=>item.attachmentId===progress.citation.attachmentId)?current.attachmentCitations:Object.freeze([...current.attachmentCitations,progress.citation])}));
         else if (progress.kind === "action") setState((current) => ({ ...current, actions: current.actions.some((item) => item.proposalId === progress.action.proposalId) ? current.actions : Object.freeze([...current.actions, progress.action]) }));
       } });
-      if (!controller.signal.aborted) setState((current) => ({ ...current, status: "complete", text: answer.text, citations: answer.citations, actions: answer.actions, publicModelId: answer.publicModelId }));
+      if (!controller.signal.aborted) setState((current) => ({ ...current, status: "complete", text: answer.text, citations: answer.citations, attachmentCitations:answer.attachmentCitations, actions: answer.actions, publicModelId: answer.publicModelId }));
     } catch (error) {
       if (controller.signal.aborted) return;
       const unavailable = isUnavailable(error);

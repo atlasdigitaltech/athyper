@@ -11,26 +11,41 @@ export interface AttachmentApiClientOptions {
   readonly entityId?: string;
 }
 export interface AttachmentProblem { readonly type?: string; readonly title?: string; readonly status?: number; readonly detail?: string; readonly code?: string; }
+export interface AttachmentProcessingStatus { readonly attachmentId: string; readonly status: string; readonly extractionStatus: string | null; readonly fileName?: string; readonly contentType?: string; readonly sizeBytes?: number; }
+export interface AttachmentApiClient extends ClipboardImageUploader {
+  upload(file: File, input: { readonly token: string; readonly signal?: AbortSignal }): Promise<{ readonly attachmentId: string }>;
+  status(attachmentId: string, signal?: AbortSignal): Promise<AttachmentProcessingStatus>;
+  remove(attachmentId: string, signal?: AbortSignal): Promise<void>;
+}
 
 export class AttachmentApiError extends Error {
   constructor(readonly status: number, readonly problem: AttachmentProblem, readonly retryAfter?: string) { super(problem.detail ?? problem.title ?? `Attachment request failed (${status})`); this.name = "AttachmentApiError"; }
 }
 
 /** Concrete browser adapter for services/attachments staged upload lifecycle. */
-export function createAttachmentApiClient(options: AttachmentApiClientOptions = {}): ClipboardImageUploader {
-  const request = options.fetch ?? globalThis.fetch.bind(globalThis); const base = (options.baseUrl ?? "/api/attachments").replace(/\/$/, "");
+export function createAttachmentApiClient(options: AttachmentApiClientOptions = {}): AttachmentApiClient {
+  const request = options.fetch ?? globalThis.fetch.bind(globalThis); const base = (options.baseUrl ?? "/api/relay/attachments").replace(/\/$/, "");
   const coordinate = attachmentCoordinate(options);
   return {
-    async upload(file) {
+    async upload(file, input) {
       const attachmentId = crypto.randomUUID();
       const staged = await json<{ attachmentId: string; uploadUrl: string }>(request, `${base}/stage`, {
-        method: "POST", headers: headers(options, true), body: JSON.stringify({ attachmentId, fileName: file.name || "pasted-image", contentType: file.type || "application/octet-stream", sizeBytes: file.size, ...coordinate }),
+        method: "POST", headers: headers(options, true), body: JSON.stringify({ attachmentId, fileName: file.name || "pasted-image", contentType: file.type || "application/octet-stream", sizeBytes: file.size, ...coordinate }), signal: input.signal,
       });
       if (!UUID.test(staged.attachmentId) || !staged.uploadUrl) throw new TypeError("Attachment stage response is invalid");
-      const uploaded = await request(staged.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
+      const uploaded = await request(staged.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file, signal: input.signal });
       if (!uploaded.ok) throw await apiError(uploaded);
-      await json(request, `${base}/${encodeURIComponent(staged.attachmentId)}/finalize`, { method: "POST", headers: headers(options, true), body: JSON.stringify({ contentType: file.type || "application/octet-stream" }) });
+      await json(request, `${base}/${encodeURIComponent(staged.attachmentId)}/finalize`, { method: "POST", headers: headers(options, true), body: JSON.stringify({ contentType: file.type || "application/octet-stream" }), signal: input.signal });
       return { attachmentId: staged.attachmentId };
+    },
+    status: (attachmentId, signal) => {
+      if (!UUID.test(attachmentId)) throw new TypeError("Attachment id is invalid");
+      return json(request, `${base}/${encodeURIComponent(attachmentId)}/status`, { method: "GET", headers: headers(options, false), signal });
+    },
+    async remove(attachmentId, signal) {
+      if (!UUID.test(attachmentId)) throw new TypeError("Attachment id is invalid");
+      const response = await request(`${base}/${encodeURIComponent(attachmentId)}`, { method: "DELETE", headers: headers(options, false), signal });
+      if (!response.ok) throw await apiError(response);
     },
   };
 }

@@ -129,6 +129,8 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
         userText: requiredText(body, "userText"),
         catalogPolicyRevision: requiredText(body, "catalogPolicyRevision"),
         ...(optionalText(body.agentCode) ? { agentCode: optionalText(body.agentCode)! } : {}),
+        ...(optionalText(body.attachmentContextId) ? { attachmentContextId: readUuid(body.attachmentContextId) } : {}),
+        ...(body.attachmentIds !== undefined ? { attachmentIds: readUuidList(body.attachmentIds, 5) } : {}),
         signal: controller.signal,
       }), controller.signal);
     } catch (error) {
@@ -204,7 +206,7 @@ function handleAtlasError(error: unknown, response: Response, next: NextFunction
     return;
   }
   const status = error.code === "THREAD_NOT_FOUND" ? 404
-    : error.code === "VERSION_CONFLICT" || error.code === "IDEMPOTENCY_CONFLICT" || error.code === "STALE_PROPOSAL" || error.code === "TOOL_IN_PROGRESS" || error.code === "TOOL_CANCELLED" ? 409
+    : error.code === "VERSION_CONFLICT" || error.code === "IDEMPOTENCY_CONFLICT" || error.code === "STALE_PROPOSAL" || error.code === "TOOL_IN_PROGRESS" || error.code === "TOOL_CANCELLED" || error.code === "ATTACHMENT_NOT_READY" ? 409
       : error.code === "QUOTA_EXCEEDED" ? 429
       : error.code === "RESULT_TOO_LARGE" ? 413
         : error.code === "ADMISSION_DENIED" || error.code === "PERMISSION_DENIED" || error.code === "TOOL_DENIED" ? 403
@@ -241,6 +243,11 @@ function readObject(value: unknown): Record<string, unknown> {
     throw new AtlasServiceError("INVALID_ARGUMENT", "JSON object required.");
   }
   return value as Record<string, unknown>;
+}
+
+function readUuidList(value: unknown, maximum: number): readonly string[] {
+  if (!Array.isArray(value) || !value.length || value.length > maximum) throw new AtlasServiceError("INVALID_ARGUMENT", "attachmentIds is invalid.");
+  return Object.freeze(value.map(readUuid));
 }
 
 function readInteger(value: unknown): number {

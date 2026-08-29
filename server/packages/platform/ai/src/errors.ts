@@ -22,6 +22,7 @@ export type AtlasServiceErrorCode =
   | "STALE_PROPOSAL"
   | "RESULT_TOO_LARGE"
   | "DOCUMENT_REJECTED"
+  | "ATTACHMENT_NOT_READY"
   | "REVIEW_REQUIRED";
 
 export class AtlasServiceError extends Error {

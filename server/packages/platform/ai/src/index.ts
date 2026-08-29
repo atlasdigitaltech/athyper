@@ -20,3 +20,4 @@ export * from "./atlas-routes.js";
 export * from "./atlas-admin-routes.js";
 export * from "./experience-configuration.js";
 export * from "./atlas-experience-routes.js";
+export * from "./attachment-context.js";

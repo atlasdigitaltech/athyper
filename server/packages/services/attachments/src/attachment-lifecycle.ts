@@ -19,6 +19,9 @@ import type { AttachmentQuotaLedger, AttachmentQuotaPolicyResolver } from "./quo
 export interface AttachmentRecord {
   readonly id: string;
   readonly status: AttachmentStatus;
+  readonly fileName?: string;
+  readonly contentType?: string;
+  readonly textExtractionStatus?: string | null;
   readonly storageKey: string;
   readonly sizeBytes?: number;
   readonly sha256?: string;
@@ -66,6 +69,7 @@ export interface AttachmentLifecycleOptions<T> {
 export interface AttachmentLifecycle {
   stage(input: AttachmentUploadIntent): Promise<StagedUpload>;
   finalize(identity: AttachmentIdentity, contentType: string): Promise<AttachmentRecord>;
+  status(identity: AttachmentIdentity): Promise<AttachmentRecord>;
   deactivate(identity: AttachmentIdentity, reason?: string): Promise<void>;
   expire(identity: AttachmentIdentity): Promise<void>;
   purge(identity: AttachmentIdentity): Promise<boolean>;
@@ -134,6 +138,12 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
       await options.storage.delete(current.storageKey).catch(() => undefined);
       await dispatchFinalization(options.scheduler, identity, integrity.sha256);
       return saved;
+    },
+
+    async status(identity) {
+      const current = await options.transactions.run(identity.planeKey, identity, (tx) => options.repository.load(identity, tx));
+      if (!current) throw new Error("Attachment not found");
+      return current;
     },
 
     async deactivate(identity, reason = "deactivated") {
