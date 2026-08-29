@@ -3845,6 +3845,11 @@ BEGIN
            OR NEW.materialized_business_partner_id IS NOT NULL
            OR NEW.materialized_supplier_id IS NOT NULL
            OR NEW.materialized_customer_id IS NOT NULL
+           OR NEW.materialized_person_id IS NOT NULL
+           OR NEW.materialized_employee_id IS NOT NULL
+           OR NEW.materialized_employment_id IS NOT NULL
+           OR NEW.materialized_work_assignment_id IS NOT NULL
+           OR NEW.materialized_principal_id IS NOT NULL
            OR NEW.materialized_supplier_company_profile_id IS NOT NULL
            OR NEW.materialized_customer_company_profile_id IS NOT NULL
            OR NEW.materialized_operating_organization_assignment_id IS NOT NULL
@@ -3904,6 +3909,11 @@ BEGIN
         OR NEW.materialized_business_partner_id IS DISTINCT FROM OLD.materialized_business_partner_id
         OR NEW.materialized_supplier_id IS DISTINCT FROM OLD.materialized_supplier_id
         OR NEW.materialized_customer_id IS DISTINCT FROM OLD.materialized_customer_id
+        OR NEW.materialized_person_id IS DISTINCT FROM OLD.materialized_person_id
+        OR NEW.materialized_employee_id IS DISTINCT FROM OLD.materialized_employee_id
+        OR NEW.materialized_employment_id IS DISTINCT FROM OLD.materialized_employment_id
+        OR NEW.materialized_work_assignment_id IS DISTINCT FROM OLD.materialized_work_assignment_id
+        OR NEW.materialized_principal_id IS DISTINCT FROM OLD.materialized_principal_id
         OR NEW.materialized_supplier_company_profile_id IS DISTINCT FROM OLD.materialized_supplier_company_profile_id
         OR NEW.materialized_customer_company_profile_id IS DISTINCT FROM OLD.materialized_customer_company_profile_id
         OR NEW.materialized_operating_organization_assignment_id IS DISTINCT FROM OLD.materialized_operating_organization_assignment_id
@@ -3922,6 +3932,9 @@ BEGIN
         OR NEW.requested_role IS DISTINCT FROM OLD.requested_role
         OR NEW.operating_organization_id IS DISTINCT FROM OLD.operating_organization_id
         OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+        OR NEW.org_unit_id IS DISTINCT FROM OLD.org_unit_id
+        OR NEW.position_id IS DISTINCT FROM OLD.position_id
         OR NEW.payload_schema_code IS DISTINCT FROM OLD.payload_schema_code
         OR NEW.payload_schema_version IS DISTINCT FROM OLD.payload_schema_version
         OR NEW.payload_schema_hash IS DISTINCT FROM OLD.payload_schema_hash
@@ -3986,13 +3999,24 @@ BEGIN
         NEW.applied_at IS NULL
         OR NEW.applied_by IS NULL
         OR NEW.materialized_business_partner_id IS NULL
-        OR num_nonnulls(NEW.materialized_supplier_id, NEW.materialized_customer_id) <> 1
-        OR num_nonnulls(NEW.materialized_supplier_company_profile_id, NEW.materialized_customer_company_profile_id)
-           <> CASE WHEN NEW.request_kind = 'configure_company' THEN 1 ELSE 0 END
-        OR NEW.materialized_operating_organization_assignment_id IS NULL
         OR NEW.materialization_snapshot_id IS NULL
         OR NEW.application_idempotency_key IS NULL
         OR NEW.application_fingerprint IS NULL
+        OR NOT (
+            (NEW.requested_role IN ('supplier','customer')
+             AND num_nonnulls(NEW.materialized_supplier_id, NEW.materialized_customer_id) = 1
+             AND num_nonnulls(NEW.materialized_supplier_company_profile_id, NEW.materialized_customer_company_profile_id)
+                 = CASE WHEN NEW.request_kind = 'configure_company' THEN 1 ELSE 0 END
+             AND NEW.materialized_operating_organization_assignment_id IS NOT NULL
+             AND num_nonnulls(NEW.materialized_person_id,NEW.materialized_employee_id,NEW.materialized_employment_id,NEW.materialized_work_assignment_id,NEW.materialized_principal_id)=0)
+            OR
+            (NEW.requested_role='workforce'
+             AND NEW.materialized_person_id IS NOT NULL
+             AND NEW.materialized_employee_id IS NOT NULL
+             AND NEW.materialized_employment_id IS NOT NULL
+             AND NEW.materialized_work_assignment_id IS NOT NULL
+             AND num_nonnulls(NEW.materialized_supplier_id,NEW.materialized_customer_id,NEW.materialized_supplier_company_profile_id,NEW.materialized_customer_company_profile_id,NEW.materialized_operating_organization_assignment_id)=0)
+        )
     ) THEN
         RAISE EXCEPTION 'Applied Business Partner request requires application evidence and materialized partner'
             USING ERRCODE = 'check_violation';

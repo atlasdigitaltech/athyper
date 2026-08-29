@@ -56,6 +56,19 @@ BEGIN
   END IF;
 END $$;
 
+CREATE DOMAIN document.business_partner_requested_role_d AS text
+  CHECK (VALUE IN ('supplier', 'customer', 'workforce'));
+
+CREATE DOMAIN document.business_partner_request_kind_d AS text
+  CHECK (VALUE IN (
+    'new_partner', 'amend_partner', 'add_supplier', 'add_customer',
+    'add_workforce', 'assign_organization', 'configure_company', 'change_bank',
+    'change_employment', 'deactivate', 'reactivate', 'archive'
+  ));
+
+COMMENT ON DOMAIN document.business_partner_requested_role_d IS
+  'Governed onboarding role. Workforce is request-only and never enters master.partner_role_d.';
+
 ALTER DOMAIN document.attachment_status_d DROP CONSTRAINT IF EXISTS attachment_status_d_check;
 ALTER DOMAIN document.attachment_status_d ADD CONSTRAINT attachment_status_d_check
     CHECK (VALUE IN (

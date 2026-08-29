@@ -1707,6 +1707,15 @@ ALTER TABLE document.business_partner_request
     ADD CONSTRAINT business_partner_request_company_fk
         FOREIGN KEY (tenant_id, company_code_id)
         REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_legal_entity_fk
+        FOREIGN KEY (tenant_id, legal_entity_id)
+        REFERENCES master.legal_entity(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_org_unit_fk
+        FOREIGN KEY (tenant_id, org_unit_id)
+        REFERENCES master.org_unit(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_position_fk
+        FOREIGN KEY (tenant_id, position_id)
+        REFERENCES master.position(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_request_workflow_fk
         FOREIGN KEY (tenant_id, workflow_request_id)
         REFERENCES document.workflow_request(tenant_id, id) ON DELETE RESTRICT,
@@ -1719,6 +1728,21 @@ ALTER TABLE document.business_partner_request
     ADD CONSTRAINT business_partner_request_materialized_customer_fk
         FOREIGN KEY (tenant_id, materialized_customer_id)
         REFERENCES master.customer(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_person_fk
+        FOREIGN KEY (tenant_id, materialized_person_id)
+        REFERENCES master.person(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_employee_fk
+        FOREIGN KEY (tenant_id, materialized_employee_id)
+        REFERENCES master.employee(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_employment_fk
+        FOREIGN KEY (tenant_id, materialized_employment_id)
+        REFERENCES master.employment(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_work_assignment_fk
+        FOREIGN KEY (tenant_id, materialized_work_assignment_id)
+        REFERENCES master.work_assignment(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_request_materialized_principal_fk
+        FOREIGN KEY (tenant_id, materialized_principal_id)
+        REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_request_materialized_supplier_company_profile_fk
         FOREIGN KEY (tenant_id, materialized_supplier_company_profile_id)
         REFERENCES master.company_code_supplier_profile(tenant_id, id) ON DELETE RESTRICT,

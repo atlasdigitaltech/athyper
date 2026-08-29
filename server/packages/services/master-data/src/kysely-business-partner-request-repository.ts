@@ -15,9 +15,9 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
 
   async create(input: Parameters<BusinessPartnerRequestRepository<Tx>["create"]>[0], transaction: Tx): Promise<BusinessPartnerRequest> {
     const command = input.command, source = command.source;
-    if(command.targetBusinessPartnerId&&(command.kind==="add_supplier"||command.kind==="add_customer")){
+    if(command.targetBusinessPartnerId&&(command.kind==="add_supplier"||command.kind==="add_customer"||command.kind==="add_workforce")){
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.tenantId}:business_partner_role:${command.targetBusinessPartnerId}:${command.requestedRole}`},0))`.execute(transaction);
-      const open=(await sql<{exists:boolean}>`SELECT EXISTS(SELECT 1 FROM document.business_partner_request WHERE tenant_id=${input.tenantId}::uuid AND target_business_partner_id=${command.targetBusinessPartnerId}::uuid AND requested_role=${command.requestedRole!}::master.partner_role_d AND request_kind=${command.kind} AND status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed')) AS exists`.execute(transaction)).rows[0]?.exists===true;
+      const open=(await sql<{exists:boolean}>`SELECT EXISTS(SELECT 1 FROM document.business_partner_request WHERE tenant_id=${input.tenantId}::uuid AND target_business_partner_id=${command.targetBusinessPartnerId}::uuid AND requested_role=${command.requestedRole!}::document.business_partner_requested_role_d AND request_kind=${command.kind} AND status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed')) AS exists`.execute(transaction)).rows[0]?.exists===true;
       if(open)throw new MasterDataError(409,"BUSINESS_PARTNER_ROLE_EXTENSION_ALREADY_OPEN","An open request already governs this Business Partner role");
     }
     if(command.targetBusinessPartnerId&&(command.kind==="assign_organization"||command.kind==="configure_company")){
@@ -25,7 +25,7 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${coordinate},0))`.execute(transaction);
       const open=(await sql<{exists:boolean}>`SELECT EXISTS(SELECT 1 FROM document.business_partner_request
         WHERE tenant_id=${input.tenantId}::uuid AND target_business_partner_id=${command.targetBusinessPartnerId}::uuid
-          AND requested_role=${command.requestedRole!}::master.partner_role_d AND request_kind=${command.kind}
+          AND requested_role=${command.requestedRole!}::document.business_partner_requested_role_d AND request_kind=${command.kind}
           AND operating_organization_id=${command.operatingOrganizationId}::uuid
           AND (${command.kind} <> 'configure_company' OR company_code_id=${command.companyCodeId??null}::uuid)
           AND status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed')) AS exists`.execute(transaction)).rows[0]?.exists===true;
@@ -34,12 +34,12 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
     const row = (await sql<Row>`INSERT INTO document.business_partner_request(
       tenant_id,request_no,request_kind,source_kind,registration_mode,invitation_id,applicant_principal_id,represented_party_name,representation_evidence_id,target_business_partner_id,
       source_system_code,source_entity_code,source_entity_id,source_entity_code_value,source_projection_id,source_version,source_payload_hash,
-      requested_role,operating_organization_id,company_code_id,payload_schema_code,payload_schema_version,payload_schema_hash,
+      requested_role,operating_organization_id,company_code_id,legal_entity_id,org_unit_id,position_id,payload_schema_code,payload_schema_version,payload_schema_hash,
       proposed_payload,idempotency_key,created_by
     ) VALUES (
       ${input.tenantId}::uuid,${input.requestNo},${command.kind},${source.kind},${command.registrationMode ?? defaultRegistrationMode(source.kind)},${command.invitationId ?? null}::uuid,${command.applicantPrincipalId ?? null}::uuid,${command.representedPartyName ?? null},${command.representationEvidenceId ?? null}::uuid,${command.targetBusinessPartnerId ?? null}::uuid,
       ${source.systemCode ?? null},${source.entityCode ?? null},${source.entityId ?? null},${source.entityCodeValue ?? null},${source.projectionId ?? null}::uuid,${source.version ?? null},${source.payloadHash ?? null},
-      ${command.requestedRole ?? null}::master.partner_role_d,${command.operatingOrganizationId}::uuid,${command.companyCodeId ?? null}::uuid,${input.schema.code},${input.schema.version},${input.schema.hash},
+      ${command.requestedRole ?? null}::document.business_partner_requested_role_d,${command.operatingOrganizationId??null}::uuid,${command.companyCodeId ?? null}::uuid,${command.legalEntityId??null}::uuid,${command.orgUnitId??null}::uuid,${command.positionId??null}::uuid,${input.schema.code},${input.schema.version},${input.schema.hash},
       ${JSON.stringify(command.proposedPayload)}::jsonb,${command.idempotencyKey},${input.createdBy}::uuid
     ) RETURNING *`.execute(transaction)).rows[0];
     if (!row) throw new Error("BUSINESS_PARTNER_REQUEST_CREATE_FAILED");
@@ -70,7 +70,15 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
   async list(query: Parameters<BusinessPartnerRequestRepository<Tx>["list"]>[0], transaction: Tx): Promise<readonly BusinessPartnerRequest[]> {
     const result = await sql<Row>`SELECT * FROM document.business_partner_request
       WHERE tenant_id=${query.tenantId}::uuid
-        AND operating_organization_id=${query.operatingOrganizationId}::uuid
+        AND (operating_organization_id=${query.operatingOrganizationId}::uuid OR (
+          requested_role='workforce' AND EXISTS(
+            SELECT 1 FROM master.operating_organization_company_assignment company_scope
+            WHERE company_scope.tenant_id=document.business_partner_request.tenant_id
+              AND company_scope.operating_organization_id=${query.operatingOrganizationId}::uuid
+              AND company_scope.company_code_id=document.business_partner_request.company_code_id
+              AND company_scope.status='active'
+              AND company_scope.effective_from<=CURRENT_DATE
+              AND (company_scope.effective_until IS NULL OR company_scope.effective_until>CURRENT_DATE))))
         AND (${query.status ?? null}::text IS NULL OR status=${query.status ?? null})
         AND (${query.beforeCreatedAt ?? null}::timestamptz IS NULL OR created_at<${query.beforeCreatedAt ?? null}::timestamptz)
       ORDER BY created_at DESC,id DESC LIMIT ${query.limit ?? 50}`.execute(transaction);
@@ -112,12 +120,15 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
   }
 
   async patch(input: Parameters<BusinessPartnerRequestRepository<Tx>["patch"]>[0], transaction: Tx): Promise<BusinessPartnerRequest | null> {
-    const hasCompany = input.companyCodeId !== undefined, hasRole = input.requestedRole !== undefined, hasRepresentationEvidence = input.representationEvidenceId !== undefined;
+    const hasCompany = input.companyCodeId !== undefined,hasLegalEntity=input.legalEntityId!==undefined,hasOrgUnit=input.orgUnitId!==undefined,hasPosition=input.positionId!==undefined, hasRole = input.requestedRole !== undefined, hasRepresentationEvidence = input.representationEvidenceId !== undefined;
     const row = (await sql<Row>`UPDATE document.business_partner_request SET
       proposed_payload=${JSON.stringify(input.proposedPayload)}::jsonb,
       operating_organization_id=COALESCE(${input.operatingOrganizationId ?? null}::uuid,operating_organization_id),
       company_code_id=CASE WHEN ${hasCompany} THEN ${input.companyCodeId ?? null}::uuid ELSE company_code_id END,
-      requested_role=CASE WHEN ${hasRole} THEN ${input.requestedRole ?? null}::master.partner_role_d ELSE requested_role END,
+      legal_entity_id=CASE WHEN ${hasLegalEntity} THEN ${input.legalEntityId??null}::uuid ELSE legal_entity_id END,
+      org_unit_id=CASE WHEN ${hasOrgUnit} THEN ${input.orgUnitId??null}::uuid ELSE org_unit_id END,
+      position_id=CASE WHEN ${hasPosition} THEN ${input.positionId??null}::uuid ELSE position_id END,
+      requested_role=CASE WHEN ${hasRole} THEN ${input.requestedRole ?? null}::document.business_partner_requested_role_d ELSE requested_role END,
       representation_evidence_id=CASE WHEN ${hasRepresentationEvidence} THEN ${input.representationEvidenceId ?? null}::uuid ELSE representation_evidence_id END,
       validation_summary='{}'::jsonb,duplicate_summary='{}'::jsonb,change_impact='{}'::jsonb,
       status=CASE WHEN status='validation_failed' THEN 'draft' ELSE status END,
@@ -255,6 +266,7 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
       WHERE tenant_id=${input.tenantId}::uuid AND id=${input.command.requestId}::uuid FOR UPDATE`.execute(transaction)).rows[0];
     if(!locked||text(locked,"status")!=="approved"||Number(locked["row_version"])!==input.command.expectedVersion)return null;
     const request=map(locked),payload=request.proposedPayload;
+    if(request.requestedRole==="workforce")return applyWorkforceOnboarding(input,request,transaction);
     if(request.kind==="assign_organization"||request.kind==="configure_company")
       return applyExistingRoleScope(input,request,transaction);
     const role=request.requestedRole;
@@ -270,11 +282,14 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
     const roleCode=materializationCode(payloadText(payload,role==="supplier"?"supplierCode":"customerCode",role==="supplier"?"supplier_code":"customer_code"),`${role==="supplier"?"SUP":"CUS"}.${request.requestNo}`,`${role}Code`);
     const name=payloadText(payload,"name","displayName","display_name")??legalName;
     const displayName=payloadText(payload,"displayName","display_name");
-    const category=isNew?payloadEnum(payload,"partnerCategory","partner_category",["organization","individual","government","nonprofit","internal"],"organization"):text(target!,"partner_category");
-    const supplierType=role==="supplier"?payloadEnum(payload,"supplierType","supplier_type",["general","strategic","intercompany","service","carrier"],category==="internal"?"intercompany":"general"):undefined;
-    const customerType=role==="customer"?payloadEnum(payload,"customerType","customer_type",["corporate","individual","government","intercompany"],category==="internal"?"intercompany":"corporate"):undefined;
-    if(role==="supplier"&&(category==="internal")!==(supplierType==="intercompany"))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","Internal Business Partners and intercompany suppliers must be paired");
-    if(role==="customer"&&(category==="internal")!==(customerType==="intercompany"))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","Internal Business Partners and intercompany customers must be paired");
+    const requestedCategory=isNew?payloadEnum(payload,"partnerCategory","partner_category",["organization","person","individual","government","nonprofit","internal"],"organization"):text(target!,"partner_category");
+    const category=requestedCategory==="individual"?"person":["government","nonprofit","internal"].includes(requestedCategory)?"organization":requestedCategory;
+    const ownershipClass=isNew?(requestedCategory==="internal"?"internal":payloadEnum(payload,"ownershipClass","ownership_class",["external","internal"],"external")):text(target!,"ownership_class");
+    const legalClassification=isNew?(["government","nonprofit"].includes(requestedCategory)?requestedCategory:payloadOptionalEnum(payload,"legalClassification","legal_classification",["government","nonprofit","sole_proprietor"])):optional(target!,"legal_classification");
+    const supplierType=role==="supplier"?payloadEnum(payload,"supplierType","supplier_type",["general","strategic","intercompany","service","carrier"],ownershipClass==="internal"?"intercompany":"general"):undefined;
+    const customerType=role==="customer"?payloadEnum(payload,"customerType","customer_type",["corporate","individual","government","intercompany"],ownershipClass==="internal"?"intercompany":"corporate"):undefined;
+    if(role==="supplier"&&(ownershipClass==="internal")!==(supplierType==="intercompany"))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","Internal Business Partners and intercompany suppliers must be paired");
+    if(role==="customer"&&(ownershipClass==="internal")!==(customerType==="intercompany"))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","Internal Business Partners and intercompany customers must be paired");
     const registrationCountryCode=payloadText(payload,"registrationCountryCode","registration_country_code")?.toUpperCase();
     if(registrationCountryCode&&!/^[A-Z]{2}$/.test(registrationCountryCode))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","Registration country must be an ISO alpha-2 code");
     await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.tenantId}:business_partner_legal_name:${legalName.trim().toLocaleLowerCase("en-US")}`},0))`.execute(transaction);
@@ -320,11 +335,11 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
       RETURNING *`.execute(transaction)).rows[0];
     if(!claimed)return null;
     const createdPartner=isNew?(await sql<Row>`INSERT INTO master.business_partner(
-      tenant_id,code,name,display_name,legal_name,partner_category,legal_form,registration_country_code,
+      tenant_id,code,name,display_name,legal_name,partner_category,ownership_class,legal_classification,legal_form,registration_country_code,
       incorporation_date,website_url,description,aliases,metadata,status,status_changed_at,status_changed_by,created_by
-    ) VALUES (${input.tenantId}::uuid,${partnerCode},${name},${displayName??null},${legalName},${category}::master.business_partner_category_d,
-      ${payloadText(payload,"legalForm","legal_form")??null},${registrationCountryCode??null},${payloadText(payload,"incorporationDate","incorporation_date")??null}::date,
-      ${payloadText(payload,"websiteUrl","website_url")??null},${payloadText(payload,"description")??null},${payloadAliases(payload)}::text[],
+    ) VALUES (${input.tenantId}::uuid,${partnerCode},${name},${displayName??null},${legalName},${category}::master.business_partner_category_d,${ownershipClass}::master.business_partner_ownership_d,${legalClassification??null}::master.business_partner_legal_classification_d,
+      ${category==="person"?null:payloadText(payload,"legalForm","legal_form")??null},${category==="person"?null:registrationCountryCode??null},${category==="person"?null:payloadText(payload,"incorporationDate","incorporation_date")??null}::date,
+      ${category==="person"?null:payloadText(payload,"websiteUrl","website_url")??null},${payloadText(payload,"description")??null},${payloadAliases(payload)}::text[],
       ${JSON.stringify({onboardingRequestId:request.id,sourceKind:request.source.kind,...(request.source.systemCode?{sourceSystemCode:request.source.systemCode}:{})})}::jsonb,
       'active',now(),${input.appliedBy}::uuid,${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0]:undefined;
     const partner=createdPartner??target;
@@ -357,6 +372,51 @@ export class KyselyBusinessPartnerRequestRepository implements BusinessPartnerRe
 }
 
 async function applicationResult(tenantId:string,requestId:string,idempotencyKey:string,fingerprint:string,transaction:Tx){const row=(await sql<Row>`SELECT * FROM document.business_partner_request WHERE tenant_id=${tenantId}::uuid AND id=${requestId}::uuid AND status='applied' AND application_idempotency_key=${idempotencyKey} AND application_fingerprint=${fingerprint} LIMIT 1`.execute(transaction)).rows[0];return row?applicationResponse(map(row),true):null;}
+async function applyWorkforceOnboarding(input:Parameters<BusinessPartnerRequestRepository<Tx>["apply"]>[0],request:BusinessPartnerRequest,transaction:Tx){
+  const payload=request.proposedPayload,isNew=request.kind==="new_partner";
+  if((!isNew&&request.kind!=="add_workforce")||(isNew&&request.targetBusinessPartnerId)||(!isNew&&!request.targetBusinessPartnerId)||!request.legalEntityId||!request.companyCodeId||!request.orgUnitId||!request.approvedAt||!request.approvedBy||!request.decisionFingerprint)return null;
+  const firstName=requiredPayloadText(payload,"firstName","first_name"),lastName=requiredPayloadText(payload,"lastName","last_name"),displayName=payloadText(payload,"displayName","display_name")??`${firstName} ${lastName}`;
+  const employeeNumber=requiredPayloadText(payload,"employeeNumber","employee_number"),hireDate=requiredPayloadText(payload,"hireDate","hire_date");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(hireDate))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","hireDate must be an ISO date");
+  const partnerCode=isNew?materializationCode(payloadText(payload,"partnerCode","partner_code"),`PER.${request.requestNo}`,"partnerCode"):"";
+  const personCode=materializationCode(payloadText(payload,"personCode","person_code"),`PER.${employeeNumber}`,"personCode");
+  const employeeCode=materializationCode(payloadText(payload,"employeeCode","employee_code"),`EMP.${employeeNumber}`,"employeeCode");
+  const employmentCode=materializationCode(payloadText(payload,"employmentCode","employment_code"),`EMT.${employeeNumber}`,"employmentCode");
+  const assignmentCode=materializationCode(payloadText(payload,"assignmentCode","assignment_code"),`ASN.${employeeNumber}`,"assignmentCode");
+  const compatible=(await sql<{compatible:boolean}>`SELECT EXISTS(SELECT 1 FROM master.company_code company JOIN master.legal_entity legal ON legal.tenant_id=company.tenant_id AND legal.id=company.legal_entity_id JOIN master.org_unit unit ON unit.tenant_id=company.tenant_id WHERE company.tenant_id=${input.tenantId}::uuid AND company.id=${request.companyCodeId}::uuid AND company.legal_entity_id=${request.legalEntityId}::uuid AND unit.id=${request.orgUnitId}::uuid AND company.status='active' AND legal.status='active' AND unit.status='active' AND (${request.positionId??null}::uuid IS NULL OR EXISTS(SELECT 1 FROM master.position position WHERE position.tenant_id=company.tenant_id AND position.id=${request.positionId??null}::uuid AND position.company_code_id=company.id AND (position.legal_entity_id IS NULL OR position.legal_entity_id=legal.id) AND (position.org_unit_id IS NULL OR position.org_unit_id=unit.id) AND position.status='active'))) AS compatible`.execute(transaction)).rows[0]?.compatible===true;
+  if(!compatible)throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_SCOPE_INCOMPATIBLE","Workforce legal entity, company, organization unit, or position is no longer compatible");
+  const validationCurrent=(await sql<{valid:boolean}>`SELECT COALESCE(${JSON.stringify(request.validationSummary)}::jsonb->>'outcome','')='passed'
+    AND COALESCE((${JSON.stringify(request.duplicateSummary)}::jsonb->>'blocking')::boolean,false)=false
+    AND NOT EXISTS(SELECT 1 FROM document.business_partner_request_validation finding
+      WHERE finding.tenant_id=${input.tenantId}::uuid AND finding.request_id=${request.id}::uuid
+        AND finding.evaluation_id=(SELECT evaluation_id FROM document.business_partner_request_validation
+          WHERE tenant_id=${input.tenantId}::uuid AND request_id=${request.id}::uuid ORDER BY evaluated_at DESC,created_at DESC LIMIT 1)
+        AND finding.severity='error' AND finding.outcome='failed') AS valid`.execute(transaction)).rows[0]?.valid===true;
+  if(!validationCurrent)return null;
+  const target=request.targetBusinessPartnerId?(await sql<Row>`SELECT * FROM master.business_partner WHERE tenant_id=${input.tenantId}::uuid AND id=${request.targetBusinessPartnerId}::uuid AND partner_category='person' AND status<>'archived' FOR UPDATE`.execute(transaction)).rows[0]:undefined;
+  if(!isNew&&!target)throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_TARGET_UNAVAILABLE","Workforce target must be an available person-category Business Partner");
+  const claimed=(await sql<Row>`UPDATE document.business_partner_request SET status='applying',updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${request.id}::uuid AND status='approved' AND row_version=${input.command.expectedVersion} RETURNING *`.execute(transaction)).rows[0];
+  if(!claimed)return null;
+  let partner=isNew?(await sql<Row>`INSERT INTO master.business_partner(tenant_id,code,name,display_name,partner_category,ownership_class,description,metadata,status,created_by) VALUES(${input.tenantId}::uuid,${partnerCode},${displayName},${displayName},'person','internal',${payloadText(payload,"description")??null},${JSON.stringify({onboardingRequestId:request.id,sourceKind:request.source.kind})}::jsonb,'draft',${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0]:target;
+  if(!partner)throw new Error("WORKFORCE_BUSINESS_PARTNER_CREATE_FAILED");
+  const existingPerson=!isNew?(await sql<Row>`SELECT * FROM master.person WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${text(partner,"id")}::uuid FOR UPDATE`.execute(transaction)).rows[0]:undefined;
+  const person=existingPerson??(await sql<Row>`INSERT INTO master.person(tenant_id,business_partner_id,code,name,person_number,first_name,middle_name,last_name,display_name,preferred_name,primary_email,primary_phone,country_code,metadata,status,created_by) VALUES(${input.tenantId}::uuid,${text(partner,"id")}::uuid,${personCode},${displayName},${payloadText(payload,"personNumber","person_number")??employeeNumber},${firstName},${payloadText(payload,"middleName","middle_name")??null},${lastName},${displayName},${payloadText(payload,"preferredName","preferred_name")??null},${payloadText(payload,"email","primaryEmail","primary_email")??null},${payloadText(payload,"phone","primaryPhone","primary_phone")??null},${payloadText(payload,"countryCode","country_code")?.toUpperCase()??null},${JSON.stringify({onboardingRequestId:request.id})}::jsonb,'active',${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0];
+  if(!person)throw new Error("WORKFORCE_PERSON_CREATE_FAILED");
+  if(isNew){const activated=(await sql<Row>`UPDATE master.business_partner SET status='active',status_changed_at=now(),status_changed_by=${input.appliedBy}::uuid,updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${text(partner,"id")}::uuid AND status='draft' RETURNING *`.execute(transaction)).rows[0];if(!activated)throw new Error("WORKFORCE_BUSINESS_PARTNER_ACTIVATION_FAILED");partner=activated;}
+  const employmentType=payloadEnum(payload,"employmentType","employment_type",["full_time","part_time","contract","casual","intern","volunteer"],"full_time");
+  const employee=(await sql<Row>`INSERT INTO master.employee(tenant_id,code,name,person_id,employee_number,first_name,last_name,display_name,email,phone,employment_type,company_code_id,hire_date,metadata,status,created_by) VALUES(${input.tenantId}::uuid,${employeeCode},${displayName},${text(person,"id")}::uuid,${employeeNumber},${firstName},${lastName},${displayName},${payloadText(payload,"email")??null},${payloadText(payload,"phone")??null},${employmentType},${request.companyCodeId}::uuid,${hireDate}::date,${JSON.stringify({onboardingRequestId:request.id})}::jsonb,'active',${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0];
+  if(!employee)throw new Error("WORKFORCE_EMPLOYEE_CREATE_FAILED");
+  const employment=(await sql<Row>`INSERT INTO master.employment(tenant_id,code,name,person_id,employee_id,legal_entity_id,company_code_id,employment_number,employment_type,is_primary,employment_status,hire_date,service_date,probation_end_date,metadata,status,created_by) VALUES(${input.tenantId}::uuid,${employmentCode},${displayName},${text(person,"id")}::uuid,${text(employee,"id")}::uuid,${request.legalEntityId}::uuid,${request.companyCodeId}::uuid,${employeeNumber},${employmentType},true,'active',${hireDate}::date,${payloadDate(payload,"serviceDate","service_date")??null}::date,${payloadDate(payload,"probationEndDate","probation_end_date")??null}::date,${JSON.stringify({onboardingRequestId:request.id})}::jsonb,'active',${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0];
+  if(!employment)throw new Error("WORKFORCE_EMPLOYMENT_CREATE_FAILED");
+  const assignment=(await sql<Row>`INSERT INTO master.work_assignment(tenant_id,code,name,employee_id,employment_id,position_id,org_unit_id,company_code_id,assignment_type,fte,effective_from,metadata,status,created_by) VALUES(${input.tenantId}::uuid,${assignmentCode},${displayName},${text(employee,"id")}::uuid,${text(employment,"id")}::uuid,${request.positionId??null}::uuid,${request.orgUnitId}::uuid,${request.companyCodeId}::uuid,'primary',${payloadNumber(payload,"fte")??1},${hireDate}::date,${JSON.stringify({onboardingRequestId:request.id})}::jsonb,'active',${input.appliedBy}::uuid) RETURNING *`.execute(transaction)).rows[0];
+  if(!assignment)throw new Error("WORKFORCE_ASSIGNMENT_CREATE_FAILED");
+  const aggregate={businessPartner:masterSnapshot(partner),person:masterSnapshot(person),employee:masterSnapshot(employee),employment:masterSnapshot(employment),workAssignment:masterSnapshot(assignment),onboarding:{requestId:request.id,requestNo:request.requestNo,workflowRequestId:request.workflowRequestId,decisionFingerprint:request.decisionFingerprint,approvedAt:request.approvedAt,approvedBy:request.approvedBy,source:request.source,schema:request.schema}};
+  const snapshot=(await sql<{snapshot_id:string}>`SELECT snapshot.fn_capture_entity('master.business_partner',${text(partner,"id")}::uuid,${text(partner,"code")},1,${request.schema.hash},${input.command.expectedVersion}::bigint,'business_partner.request.applied','approval',${JSON.stringify(aggregate)}::jsonb,${input.correlationId??null}::uuid,NULL,NULL,NULL,'permanent',${`business_partner_request:${request.source.kind}`})::text AS snapshot_id`.execute(transaction)).rows[0]?.snapshot_id;
+  if(!snapshot)throw new Error("WORKFORCE_SNAPSHOT_FAILED");
+  const applied=(await sql<Row>`UPDATE document.business_partner_request SET status='applied',materialized_business_partner_id=${text(partner,"id")}::uuid,materialized_person_id=${text(person,"id")}::uuid,materialized_employee_id=${text(employee,"id")}::uuid,materialized_employment_id=${text(employment,"id")}::uuid,materialized_work_assignment_id=${text(assignment,"id")}::uuid,materialization_snapshot_id=${snapshot}::uuid,application_idempotency_key=${input.command.idempotencyKey},application_fingerprint=${input.applicationFingerprint},applied_at=now(),applied_by=${input.appliedBy}::uuid,updated_by=${input.appliedBy}::uuid WHERE tenant_id=${input.tenantId}::uuid AND id=${request.id}::uuid AND status='applying' RETURNING *`.execute(transaction)).rows[0];
+  if(!applied)throw new Error("WORKFORCE_MATERIALIZATION_FINALIZE_FAILED");
+  return applicationResponse(map(applied),false);
+}
 async function applyExistingRoleScope(input:Parameters<BusinessPartnerRequestRepository<Tx>["apply"]>[0],request:BusinessPartnerRequest,transaction:Tx){
   const role=request.requestedRole,payload=request.proposedPayload,isConfiguration=request.kind==="configure_company";
   if(!request.targetBusinessPartnerId||!role||!request.operatingOrganizationId||!request.approvedAt||!request.approvedBy||!request.decisionFingerprint||(isConfiguration&&!request.companyCodeId))return null;
@@ -454,9 +514,11 @@ async function applyExistingRoleScope(input:Parameters<BusinessPartnerRequestRep
   if(!applied)throw new Error("BUSINESS_PARTNER_MATERIALIZATION_FINALIZE_FAILED");
   return applicationResponse(map(applied),false);
 }
-function applicationResponse(request:BusinessPartnerRequest,replayed:boolean){const partnerRole=request.materializedSupplierId?"supplier" as const:request.materializedCustomerId?"customer" as const:undefined,roleId=request.materializedSupplierId??request.materializedCustomerId,companyProfileId=request.materializedSupplierCompanyProfileId??request.materializedCustomerCompanyProfileId;if(!request.materializedBusinessPartnerId||!partnerRole||!roleId||!request.materializedOperatingOrganizationAssignmentId||!request.materializationSnapshotId||!request.applicationFingerprint)throw new Error("BUSINESS_PARTNER_REQUEST_APPLICATION_ROW_INVALID");return{request,materialization:{businessPartnerId:request.materializedBusinessPartnerId,partnerRole,roleId,...(request.materializedSupplierId?{supplierId:request.materializedSupplierId}:{}),...(request.materializedCustomerId?{customerId:request.materializedCustomerId}:{}),...(companyProfileId?{companyProfileId}:{}),operatingOrganizationAssignmentId:request.materializedOperatingOrganizationAssignmentId,snapshotId:request.materializationSnapshotId,applicationFingerprint:request.applicationFingerprint},replayed};}
+function applicationResponse(request:BusinessPartnerRequest,replayed:boolean){if(!request.materializedBusinessPartnerId||!request.materializationSnapshotId||!request.applicationFingerprint)throw new Error("BUSINESS_PARTNER_REQUEST_APPLICATION_ROW_INVALID");if(request.materializedPersonId){if(!request.materializedEmployeeId||!request.materializedEmploymentId||!request.materializedWorkAssignmentId)throw new Error("BUSINESS_PARTNER_REQUEST_WORKFORCE_APPLICATION_ROW_INVALID");return{request,materialization:{businessPartnerId:request.materializedBusinessPartnerId,partnerRole:"workforce" as const,roleId:request.materializedEmployeeId,personId:request.materializedPersonId,employeeId:request.materializedEmployeeId,employmentId:request.materializedEmploymentId,workAssignmentId:request.materializedWorkAssignmentId,...(request.materializedPrincipalId?{principalId:request.materializedPrincipalId}:{}),snapshotId:request.materializationSnapshotId,applicationFingerprint:request.applicationFingerprint},replayed};}const partnerRole=request.materializedSupplierId?"supplier" as const:request.materializedCustomerId?"customer" as const:undefined,roleId=request.materializedSupplierId??request.materializedCustomerId,companyProfileId=request.materializedSupplierCompanyProfileId??request.materializedCustomerCompanyProfileId;if(!partnerRole||!roleId||!request.materializedOperatingOrganizationAssignmentId)throw new Error("BUSINESS_PARTNER_REQUEST_APPLICATION_ROW_INVALID");return{request,materialization:{businessPartnerId:request.materializedBusinessPartnerId,partnerRole,roleId,...(request.materializedSupplierId?{supplierId:request.materializedSupplierId}:{}),...(request.materializedCustomerId?{customerId:request.materializedCustomerId}:{}),...(companyProfileId?{companyProfileId}:{}),operatingOrganizationAssignmentId:request.materializedOperatingOrganizationAssignmentId,snapshotId:request.materializationSnapshotId,applicationFingerprint:request.applicationFingerprint},replayed};}
 function payloadText(payload:Readonly<Record<string,unknown>>,...keys:string[]):string|undefined{for(const key of keys){const value=payload[key];if(typeof value==="string"&&value.trim())return value.trim();}return undefined;}
+function requiredPayloadText(payload:Readonly<Record<string,unknown>>,...keys:string[]):string{const value=payloadText(payload,...keys);if(!value)throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID",`${keys[0]} is required for workforce materialization`);return value;}
 function payloadEnum(payload:Readonly<Record<string,unknown>>,camel:string,snake:string,allowed:readonly string[],fallback:string):string{const value=payloadText(payload,camel,snake)??fallback;if(!allowed.includes(value))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID",`${camel} is not supported by Phase 1B materialization`);return value;}
+function payloadOptionalEnum(payload:Readonly<Record<string,unknown>>,camel:string,snake:string,allowed:readonly string[]):string|undefined{const value=payloadText(payload,camel,snake);if(value!==undefined&&!allowed.includes(value))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID",`${camel} is not supported by Phase 1B materialization`);return value;}
 function materializationCode(value:string|undefined,fallback:string,field:string):string{const code=(value??fallback).toUpperCase();if(!/^[A-Z][A-Z0-9_.-]{1,62}$/.test(code))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID",`${field} must be an uppercase master-data code`);return code;}
 function payloadAliases(payload:Readonly<Record<string,unknown>>):readonly string[]{const value=payload["aliases"];if(value===undefined)return[];if(!Array.isArray(value)||value.length>50||value.some(item=>typeof item!=="string"||!item.trim()))throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID","aliases must contain at most 50 non-empty strings");return value.map(item=>(item as string).trim());}
 function payloadBoolean(payload:Readonly<Record<string,unknown>>,...keys:string[]):boolean{for(const key of keys){const value=payload[key];if(value!==undefined){if(typeof value!=="boolean")throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_PAYLOAD_INVALID",`${key} must be boolean`);return value;}}return false;}
@@ -479,7 +541,7 @@ async function decisionReplay(input:Parameters<BusinessPartnerRequestRepository<
   WHERE b.tenant_id=${input.tenantId}::uuid AND b.id=${input.command.requestId}::uuid AND wr.id=${input.command.workflowRequestId}::uuid
     AND wi.outcome->>'idempotencyKey'=${input.command.idempotencyKey} AND wi.outcome->>'decisionFingerprint'=${input.decisionFingerprint} LIMIT 1`.execute(transaction)).rows[0];return row?decisionResponse(input,map(row),row,true):null;}
 function decisionResponse(input:Parameters<BusinessPartnerRequestRepository<Tx>["decide"]>[0],request:BusinessPartnerRequest,row:Row,replayed:boolean){return{request,workflow:{requestId:input.command.workflowRequestId,stageId:text(row,"stage_id"),workItemId:input.command.workItemId,definition:{code:String(row["wf_code"]??row["definition_code"]),version:Number(row["wf_version"]??row["definition_version"]),hash:String(row["wf_hash"]??row["compiled_artifact_hash"])},decisionFingerprint:request.decisionFingerprint!},decision:input.command.decision,decisionFingerprint:input.decisionFingerprint,replayed};}
-function reviewSnapshot(request:BusinessPartnerRequest){return{requestId:request.id,requestNo:request.requestNo,kind:request.kind,source:request.source,registrationMode:request.registrationMode,invitationId:request.invitationId,applicantPrincipalId:request.applicantPrincipalId,representedPartyName:request.representedPartyName,representationEvidenceId:request.representationEvidenceId,targetBusinessPartnerId:request.targetBusinessPartnerId,requestedRole:request.requestedRole,operatingOrganizationId:request.operatingOrganizationId,companyCodeId:request.companyCodeId,schema:request.schema,proposedPayload:request.proposedPayload,validationSummary:request.validationSummary,duplicateSummary:request.duplicateSummary,changeImpact:request.changeImpact,rowVersion:request.rowVersion};}
+function reviewSnapshot(request:BusinessPartnerRequest){return{requestId:request.id,requestNo:request.requestNo,kind:request.kind,source:request.source,registrationMode:request.registrationMode,invitationId:request.invitationId,applicantPrincipalId:request.applicantPrincipalId,representedPartyName:request.representedPartyName,representationEvidenceId:request.representationEvidenceId,targetBusinessPartnerId:request.targetBusinessPartnerId,requestedRole:request.requestedRole,operatingOrganizationId:request.operatingOrganizationId,companyCodeId:request.companyCodeId,legalEntityId:request.legalEntityId,orgUnitId:request.orgUnitId,positionId:request.positionId,schema:request.schema,proposedPayload:request.proposedPayload,validationSummary:request.validationSummary,duplicateSummary:request.duplicateSummary,changeImpact:request.changeImpact,rowVersion:request.rowVersion};}
 
 function map(row: Row): BusinessPartnerRequest {
   return {
@@ -504,12 +566,20 @@ function map(row: Row): BusinessPartnerRequest {
     ...(optional(row, "requested_role") ? { requestedRole: optional(row, "requested_role") as BusinessPartnerRequest["requestedRole"] } : {}),
     ...(optional(row, "operating_organization_id") ? { operatingOrganizationId: optional(row, "operating_organization_id") } : {}),
     ...(optional(row, "company_code_id") ? { companyCodeId: optional(row, "company_code_id") } : {}),
+    ...(optional(row, "legal_entity_id") ? { legalEntityId: optional(row, "legal_entity_id") } : {}),
+    ...(optional(row, "org_unit_id") ? { orgUnitId: optional(row, "org_unit_id") } : {}),
+    ...(optional(row, "position_id") ? { positionId: optional(row, "position_id") } : {}),
     schema: { code: text(row, "payload_schema_code"), version: Number(row["payload_schema_version"]), hash: text(row, "payload_schema_hash") },
     proposedPayload: object(row["proposed_payload"]), validationSummary: object(row["validation_summary"]), duplicateSummary: object(row["duplicate_summary"]), changeImpact: object(row["change_impact"]),
     ...(optional(row, "workflow_request_id") ? { workflowRequestId: optional(row, "workflow_request_id") } : {}),
     ...(optional(row, "materialized_business_partner_id") ? { materializedBusinessPartnerId: optional(row, "materialized_business_partner_id") } : {}),
     ...(optional(row, "materialized_supplier_id") ? { materializedSupplierId: optional(row, "materialized_supplier_id") } : {}),
     ...(optional(row, "materialized_customer_id") ? { materializedCustomerId: optional(row, "materialized_customer_id") } : {}),
+    ...(optional(row, "materialized_person_id") ? { materializedPersonId: optional(row, "materialized_person_id") } : {}),
+    ...(optional(row, "materialized_employee_id") ? { materializedEmployeeId: optional(row, "materialized_employee_id") } : {}),
+    ...(optional(row, "materialized_employment_id") ? { materializedEmploymentId: optional(row, "materialized_employment_id") } : {}),
+    ...(optional(row, "materialized_work_assignment_id") ? { materializedWorkAssignmentId: optional(row, "materialized_work_assignment_id") } : {}),
+    ...(optional(row, "materialized_principal_id") ? { materializedPrincipalId: optional(row, "materialized_principal_id") } : {}),
     ...(optional(row, "materialized_supplier_company_profile_id") ? { materializedSupplierCompanyProfileId: optional(row, "materialized_supplier_company_profile_id") } : {}),
     ...(optional(row, "materialized_customer_company_profile_id") ? { materializedCustomerCompanyProfileId: optional(row, "materialized_customer_company_profile_id") } : {}),
     ...(optional(row, "materialized_operating_organization_assignment_id") ? { materializedOperatingOrganizationAssignmentId: optional(row, "materialized_operating_organization_assignment_id") } : {}),

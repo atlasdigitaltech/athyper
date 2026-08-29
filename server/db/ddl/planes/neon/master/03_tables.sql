@@ -1888,6 +1888,11 @@ CREATE TABLE master.business_partner (
     display_name               text,
     legal_name                 text,
     partner_category           master.business_partner_category_d NOT NULL DEFAULT 'organization',
+    ownership_class            master.business_partner_ownership_d NOT NULL DEFAULT 'external',
+    legal_classification       master.business_partner_legal_classification_d,
+    category_locked_at         timestamptz                      NOT NULL DEFAULT now(),
+    category_locked_by         uuid                             NOT NULL,
+    record_version             bigint                           NOT NULL DEFAULT 1,
     legal_form                 text,
     registration_country_code  character(2),
     incorporation_date         date,
@@ -1913,6 +1918,17 @@ CREATE TABLE master.business_partner (
         CHECK (representation_purpose_code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT business_partner_name_nonempty_chk
         CHECK (btrim(name) <> '' AND length(name) <= 240),
+    CONSTRAINT business_partner_record_version_chk CHECK (record_version >= 1),
+    CONSTRAINT business_partner_person_facts_chk CHECK (
+        partner_category <> 'person'
+        OR (
+            legal_classification IS NULL
+            AND legal_form IS NULL
+            AND registration_country_code IS NULL
+            AND incorporation_date IS NULL
+            AND website_url IS NULL
+        )
+    ),
     CONSTRAINT business_partner_display_name_chk
         CHECK (
             display_name IS NULL
@@ -1960,7 +1976,11 @@ COMMENT ON TABLE master.business_partner IS
 COMMENT ON COLUMN master.business_partner.display_name IS
   'Optional canonical UI label for this identity. Supplier and customer do not carry role-level display-name duplicates.';
 COMMENT ON COLUMN master.business_partner.partner_category IS
-  'Stable semantic class. Internal identifies a tenant-owned or intercompany counterparty; supplier/customer are roles, not categories.';
+  'Immutable structural party kind. Ownership and supplier/customer roles are separate axes.';
+COMMENT ON COLUMN master.business_partner.ownership_class IS
+  'External or tenant-internal ownership. Internal organization roles must be intercompany.';
+COMMENT ON COLUMN master.business_partner.legal_classification IS
+  'Optional legal/business classification such as government or nonprofit; never a structural category.';
 COMMENT ON COLUMN master.business_partner.aliases IS
   'Alternate legal or trading names used for search and duplicate detection. It is not a tag or classification array.';
 COMMENT ON COLUMN master.business_partner.metadata IS
@@ -2334,6 +2354,7 @@ COMMENT ON TABLE master.business_intent IS
 CREATE TABLE master.person (
     id              uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid        NOT NULL,
+    business_partner_id uuid     NOT NULL,
     code            text        NOT NULL,
     name            text        NOT NULL,
     person_number   text,
@@ -2358,6 +2379,7 @@ CREATE TABLE master.person (
     CONSTRAINT person_pkey PRIMARY KEY (id),
     CONSTRAINT person_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT person_code_uq UNIQUE (tenant_id, code),
+    CONSTRAINT person_business_partner_uq UNIQUE (tenant_id, business_partner_id),
     CONSTRAINT person_number_uq UNIQUE NULLS NOT DISTINCT (tenant_id, person_number),
     CONSTRAINT person_code_nonempty_chk CHECK (btrim(code) <> ''),
     CONSTRAINT person_name_nonempty_chk CHECK (btrim(name) <> ''),
@@ -2373,7 +2395,7 @@ CREATE TABLE master.person (
 );
 
 COMMENT ON TABLE master.person IS
-  'Neon controlled PII root for a natural person. Employee is the workforce identity; employment and work_assignment own contractual and organizational facts.';
+  'Neon controlled PII profile for exactly one person-category Business Partner. Employee is the workforce identity; employment and work_assignment own contractual and organizational facts.';
 
 CREATE TABLE master.person_sensitive_profile (
     id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -3104,6 +3126,7 @@ CREATE TABLE master.employment (
     company_code_id     uuid        NOT NULL,
     employment_number   text        NOT NULL,
     employment_type     text        NOT NULL DEFAULT 'full_time',
+    is_primary          boolean     NOT NULL DEFAULT true,
     employment_status   text        NOT NULL DEFAULT 'active',
     hire_date           date        NOT NULL,
     service_date        date,
@@ -3135,7 +3158,7 @@ CREATE TABLE master.employment (
     CONSTRAINT employment_dates_chk CHECK (
         (service_date IS NULL OR service_date <= hire_date)
         AND (probation_end_date IS NULL OR probation_end_date >= hire_date)
-        AND (termination_date IS NULL OR termination_date >= hire_date)
+        AND (termination_date IS NULL OR termination_date > hire_date)
     ),
     CONSTRAINT employment_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT employment_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
@@ -3177,10 +3200,15 @@ CREATE TABLE master.work_assignment (
         CHECK (assignment_type IN ('primary', 'secondary', 'temporary', 'acting')),
     CONSTRAINT work_assignment_fte_chk CHECK (fte > 0 AND fte <= 1),
     CONSTRAINT work_assignment_effective_chk
-        CHECK (effective_until IS NULL OR effective_until >= effective_from),
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
     CONSTRAINT work_assignment_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
     CONSTRAINT work_assignment_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
+
+COMMENT ON COLUMN master.employment.is_primary IS
+  'Exactly one active primary employment may cover a person on an applicable [hire_date, termination_date) range.';
+COMMENT ON COLUMN master.work_assignment.effective_until IS
+  'Exclusive upper bound of the assignment effective range.';
 
 CREATE TABLE master.employee_leave_enrollment (
     id                  uuid        NOT NULL DEFAULT shared.uuidv7(),

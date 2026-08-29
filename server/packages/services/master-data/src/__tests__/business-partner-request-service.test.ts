@@ -109,14 +109,14 @@ describe("Business Partner request service", () => {
     expect(value.permissions).toEqual(["neon.relationship.business_partner_request.read"]);
   });
 
-  it("loads a review projection with latest validation and workflow coordinates",async()=>{const value=fixture(),created=(await value.service.create(command())).request;const validated=await value.service.validate({context,requestId:created.id,expectedVersion:1});const submitted=await value.service.submit({context,requestId:created.id,expectedVersion:validated.request.rowVersion,idempotencyKey:"submit-view-001"});const view=await value.service.getView({context,requestId:created.id});expect(view).toMatchObject({request:{status:"pending_approval"},workflow:{requestId:submitted.workflow.requestId,workItemVersion:1,workItemStatus:"open"}});expect(view.validationFindings).toHaveLength(9);});
+  it("loads a review projection with latest validation and workflow coordinates",async()=>{const value=fixture(),created=(await value.service.create(command())).request;const validated=await value.service.validate({context,requestId:created.id,expectedVersion:1});const submitted=await value.service.submit({context,requestId:created.id,expectedVersion:validated.request.rowVersion,idempotencyKey:"submit-view-001"});const view=await value.service.getView({context,requestId:created.id});expect(view).toMatchObject({request:{status:"pending_approval"},workflow:{requestId:submitted.workflow.requestId,workItemVersion:1,workItemStatus:"open"}});expect(view.validationFindings).toHaveLength(11);});
 
   it("persists a ruleset-pinned validation evaluation and request summaries atomically", async () => {
     const value=fixture(),created=(await value.service.create(command())).request;
     const result=await value.service.validate({context,requestId:created.id,expectedVersion:1});
     expect(result.request).toMatchObject({status:"draft",rowVersion:3,validationSummary:{outcome:"passed"}});
     expect(result.validation).toMatchObject({evaluationId:"66666666-6666-4666-8666-666666666666",valid:true,ruleset:{code:"neon.business_partner_request.phase1",version:1}});
-    expect(result.validation.findings).toHaveLength(9);
+    expect(result.validation.findings).toHaveLength(11);
     expect(value.repository.validations).toHaveLength(1);
     expect(value.permissions.at(-1)).toBe("neon.relationship.business_partner_request.validate");
     expect(value.effects.slice(-2)).toEqual(["business_partner.request.validated","business_partner.request.validated"]);

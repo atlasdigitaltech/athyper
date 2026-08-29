@@ -17,6 +17,9 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
       requiredText(row, "code", errors);
       if (session.operation === "create" || session.operation === "upsert" || session.operation === "replace") requiredText(row, "name", errors);
       optionalEnum(row, "partner_role", ["supplier", "customer"], errors);
+      optionalEnum(row, "partner_category", ["organization", "person", "individual", "government", "nonprofit", "internal"], errors);
+      optionalEnum(row, "ownership_class", ["external", "internal"], errors);
+      optionalEnum(row, "legal_classification", ["government", "nonprofit", "sole_proprietor"], errors);
       optionalEnum(row, "status", ["draft", "active"], errors);
       optionalJsonObject(row, "metadata", errors);
       return { rowNumber, valid: errors.length === 0, errors };
@@ -35,13 +38,14 @@ export function createNeonBusinessPartnerImportAdapter(): GovernedImportAdapter<
       }
       if (existing && session.operation === "create") return conflict(session.conflictPolicy, `Business partner ${code} already exists`);
       if (!existing && session.operation === "update") return conflict(session.conflictPolicy, `Business partner ${code} was not found`);
+      const structural = normalizePartnerStructure(row);
       const partnerId = existing?.id ?? (await sql<{ id: string }>`INSERT INTO master.business_partner(
-          tenant_id,code,name,display_name,legal_name,partner_category,legal_form,registration_country_code,incorporation_date,website_url,description,aliases,metadata,status,created_by
+          tenant_id,code,name,display_name,legal_name,partner_category,ownership_class,legal_classification,legal_form,registration_country_code,incorporation_date,website_url,description,aliases,metadata,status,created_by
         ) VALUES(
-          ${context.tenantId}::uuid,${code},${text(row,"name")},${nullableText(row,"display_name")},${nullableText(row,"legal_name")},${nullableText(row,"partner_category")??"organization"},${nullableText(row,"legal_form")},${nullableText(row,"registration_country_code")},${nullableText(row,"incorporation_date")}::date,${nullableText(row,"website_url")},${nullableText(row,"description")},${textArray(row,"aliases")},${JSON.stringify(object(row,"metadata"))}::jsonb,${nullableText(row,"status")??"draft"},${context.principalId}::uuid
+          ${context.tenantId}::uuid,${code},${text(row,"name")},${nullableText(row,"display_name")},${nullableText(row,"legal_name")},${structural.category}::master.business_partner_category_d,${structural.ownership}::master.business_partner_ownership_d,${structural.classification??null}::master.business_partner_legal_classification_d,${structural.category==="person"?null:nullableText(row,"legal_form")},${structural.category==="person"?null:nullableText(row,"registration_country_code")},${structural.category==="person"?null:nullableText(row,"incorporation_date")}::date,${structural.category==="person"?null:nullableText(row,"website_url")},${nullableText(row,"description")},${textArray(row,"aliases")},${JSON.stringify(object(row,"metadata"))}::jsonb,${nullableText(row,"status")??"draft"},${context.principalId}::uuid
         ) RETURNING id`.execute(transaction)).rows[0]!.id;
       if (existing) await sql`UPDATE master.business_partner SET
-          name=COALESCE(${nullableText(row,"name")},name),display_name=COALESCE(${nullableText(row,"display_name")},display_name),legal_name=COALESCE(${nullableText(row,"legal_name")},legal_name),partner_category=COALESCE(${nullableText(row,"partner_category")},partner_category),legal_form=COALESCE(${nullableText(row,"legal_form")},legal_form),registration_country_code=COALESCE(${nullableText(row,"registration_country_code")},registration_country_code),incorporation_date=COALESCE(${nullableText(row,"incorporation_date")}::date,incorporation_date),website_url=COALESCE(${nullableText(row,"website_url")},website_url),description=COALESCE(${nullableText(row,"description")},description),metadata=CASE WHEN ${has(row,"metadata")} THEN ${JSON.stringify(object(row,"metadata"))}::jsonb ELSE metadata END,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
+          name=COALESCE(${nullableText(row,"name")},name),display_name=COALESCE(${nullableText(row,"display_name")},display_name),legal_name=COALESCE(${nullableText(row,"legal_name")},legal_name),legal_form=COALESCE(${nullableText(row,"legal_form")},legal_form),registration_country_code=COALESCE(${nullableText(row,"registration_country_code")},registration_country_code),incorporation_date=COALESCE(${nullableText(row,"incorporation_date")}::date,incorporation_date),website_url=COALESCE(${nullableText(row,"website_url")},website_url),description=COALESCE(${nullableText(row,"description")},description),metadata=CASE WHEN ${has(row,"metadata")} THEN ${JSON.stringify(object(row,"metadata"))}::jsonb ELSE metadata END,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
           WHERE tenant_id=${context.tenantId}::uuid AND id=${partnerId}::uuid`.execute(transaction);
       const role = nullableText(row, "partner_role") ?? "supplier";
       if (role === "supplier") await sql`INSERT INTO master.supplier(tenant_id,business_partner_id,supplier_code,supplier_type,metadata,status,created_by)
@@ -70,3 +74,4 @@ function textArray(row: Row, key: string): readonly string[] { const value = row
 function requiredText(row: Row, key: string, errors: string[]) { if (typeof row[key] !== "string" || !String(row[key]).trim()) errors.push(`IMPORT_FIELD_REQUIRED:${key}:${key} is required`); }
 function optionalEnum(row: Row, key: string, allowed: readonly string[], errors: string[]) { if (row[key] !== undefined && (!allowed.includes(String(row[key])))) errors.push(`IMPORT_FIELD_INVALID:${key}:${key} is invalid`); }
 function optionalJsonObject(row: Row, key: string, errors: string[]) { const value=row[key];if(value!==undefined&&(!value||typeof value!=="object"||Array.isArray(value)))errors.push(`IMPORT_FIELD_INVALID:${key}:${key} must be an object`); }
+function normalizePartnerStructure(row:Row){const raw=nullableText(row,"partner_category")??"organization";const category=raw==="individual"?"person":["government","nonprofit","internal"].includes(raw)?"organization":raw;const ownership=raw==="internal"?"internal":nullableText(row,"ownership_class")??"external";const classification=["government","nonprofit"].includes(raw)?raw:nullableText(row,"legal_classification");return{category,ownership,classification};}

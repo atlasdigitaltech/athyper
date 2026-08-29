@@ -256,6 +256,8 @@ CREATE INDEX business_partner_parent_idx
 
 CREATE INDEX business_partner_status_idx
     ON master.business_partner (tenant_id, status, code);
+CREATE INDEX business_partner_category_ownership_idx
+    ON master.business_partner (tenant_id, partner_category, ownership_class, status);
 
 CREATE INDEX business_partner_registration_country_idx
     ON master.business_partner (registration_country_code)
@@ -763,18 +765,12 @@ CREATE INDEX employment_person_idx
 CREATE INDEX employment_employee_idx
     ON master.employment (tenant_id, employee_id)
     WHERE employee_id IS NOT NULL;
-CREATE UNIQUE INDEX employment_one_active_fulltime_per_company_uq
-    ON master.employment (tenant_id, person_id, company_code_id)
-    WHERE employment_status = 'active' AND employment_type = 'full_time';
 
 CREATE INDEX work_assignment_employee_idx
     ON master.work_assignment (tenant_id, employee_id, effective_from DESC);
 CREATE INDEX work_assignment_position_idx
     ON master.work_assignment (tenant_id, position_id)
     WHERE position_id IS NOT NULL;
-CREATE UNIQUE INDEX work_assignment_one_primary_active_uq
-    ON master.work_assignment (tenant_id, employee_id)
-    WHERE assignment_type = 'primary' AND status = 'active' AND effective_until IS NULL;
 
 CREATE INDEX leave_enrollment_employee_idx
     ON master.employee_leave_enrollment (tenant_id, employee_id, effective_from DESC);

@@ -14,11 +14,13 @@ export const businessPartnerPermissions = Object.freeze({ read: "neon.relationsh
 
 export type BusinessPartnerRequestKind =
   | "new_partner" | "amend_partner" | "add_supplier" | "add_customer"
+  | "add_workforce"
   | "assign_organization" | "configure_company" | "change_bank"
+  | "change_employment"
   | "deactivate" | "reactivate" | "archive";
 export type BusinessPartnerRequestSourceKind = "manual" | "portal" | "mesh" | "import" | "api";
 export type BusinessPartnerRegistrationMode = "direct" | "self_service" | "on_behalf" | "integration";
-export type BusinessPartnerRequestedRole = "supplier" | "customer" | "carrier" | "service_provider" | "other";
+export type BusinessPartnerRequestedRole = "supplier" | "customer" | "workforce";
 export type BusinessPartnerRequestStatus =
   | "draft" | "validating" | "validation_failed" | "pending_approval"
   | "returned" | "approved" | "rejected" | "applying" | "applied"
@@ -56,6 +58,9 @@ export interface BusinessPartnerRequest {
   readonly requestedRole?: BusinessPartnerRequestedRole;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
+  readonly legalEntityId?: string;
+  readonly orgUnitId?: string;
+  readonly positionId?: string;
   readonly schema: BusinessPartnerRequestSchemaReference;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
   readonly validationSummary: Readonly<Record<string, unknown>>;
@@ -65,6 +70,11 @@ export interface BusinessPartnerRequest {
   readonly materializedBusinessPartnerId?: string;
   readonly materializedSupplierId?: string;
   readonly materializedCustomerId?: string;
+  readonly materializedPersonId?: string;
+  readonly materializedEmployeeId?: string;
+  readonly materializedEmploymentId?: string;
+  readonly materializedWorkAssignmentId?: string;
+  readonly materializedPrincipalId?: string;
   readonly materializedSupplierCompanyProfileId?: string;
   readonly materializedCustomerCompanyProfileId?: string;
   readonly materializedOperatingOrganizationAssignmentId?: string;
@@ -99,8 +109,11 @@ export interface CreateBusinessPartnerRequestCommand {
   readonly representationEvidenceId?: string;
   readonly targetBusinessPartnerId?: string;
   readonly requestedRole?: BusinessPartnerRequestedRole;
-  readonly operatingOrganizationId: string;
+  readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
+  readonly legalEntityId?: string;
+  readonly orgUnitId?: string;
+  readonly positionId?: string;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
 }
 
@@ -111,6 +124,9 @@ export interface PatchBusinessPartnerRequestCommand {
   readonly proposedPayload: Readonly<Record<string, unknown>>;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string | null;
+  readonly legalEntityId?: string | null;
+  readonly orgUnitId?: string | null;
+  readonly positionId?: string | null;
   readonly requestedRole?: BusinessPartnerRequestedRole | null;
   readonly representationEvidenceId?: string | null;
 }
@@ -219,12 +235,17 @@ export interface ApplyBusinessPartnerRequestCommand {
 
 export interface BusinessPartnerRequestMaterialization {
   readonly businessPartnerId: string;
-  readonly partnerRole: "supplier" | "customer";
+  readonly partnerRole: "supplier" | "customer" | "workforce";
   readonly roleId: string;
   readonly supplierId?: string;
   readonly customerId?: string;
+  readonly personId?: string;
+  readonly employeeId?: string;
+  readonly employmentId?: string;
+  readonly workAssignmentId?: string;
+  readonly principalId?: string;
   readonly companyProfileId?: string;
-  readonly operatingOrganizationAssignmentId: string;
+  readonly operatingOrganizationAssignmentId?: string;
   readonly snapshotId: string;
   readonly applicationFingerprint: string;
 }

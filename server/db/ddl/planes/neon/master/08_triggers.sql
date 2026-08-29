@@ -1194,6 +1194,20 @@ CREATE TRIGGER trg_person_status_changed
 BEFORE UPDATE OF status ON master.person
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+CREATE TRIGGER trg_person_business_partner_guard
+BEFORE INSERT OR UPDATE ON master.person
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_person_business_partner();
+
+CREATE CONSTRAINT TRIGGER trg_business_partner_person_cardinality
+AFTER INSERT OR UPDATE ON master.business_partner
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION master.trg_assert_active_person_business_partner();
+
+CREATE CONSTRAINT TRIGGER trg_person_business_partner_cardinality
+AFTER INSERT OR UPDATE OR DELETE ON master.person
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION master.trg_assert_active_person_business_partner();
+
 CREATE TRIGGER trg_site_hierarchy
 BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, parent_site_id
 ON master.site
@@ -1210,6 +1224,11 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 CREATE TRIGGER trg_employee_status_changed
 BEFORE UPDATE OF status ON master.employee
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
+
+CREATE TRIGGER trg_employment_contract
+BEFORE INSERT OR UPDATE OF tenant_id, person_id, employee_id, legal_entity_id, company_code_id
+ON master.employment
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_employment_contract();
 
 CREATE TRIGGER trg_work_assignment_contract
 BEFORE INSERT OR UPDATE OF tenant_id, employee_id, employment_id, company_code_id

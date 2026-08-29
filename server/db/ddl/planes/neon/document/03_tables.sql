@@ -4757,7 +4757,7 @@ CREATE TABLE document.business_partner_request (
     id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                       uuid        NOT NULL,
     request_no                      text        NOT NULL,
-    request_kind                    text        NOT NULL,
+    request_kind                    document.business_partner_request_kind_d NOT NULL,
     source_kind                     text        NOT NULL,
     registration_mode               text        NOT NULL DEFAULT 'direct',
     invitation_id                   uuid,
@@ -4775,9 +4775,12 @@ CREATE TABLE document.business_partner_request (
     source_projection_id            uuid,
     source_version                  bigint,
     source_payload_hash             text,
-    requested_role                  master.partner_role_d,
+    requested_role                  document.business_partner_requested_role_d,
     operating_organization_id       uuid,
     company_code_id                 uuid,
+    legal_entity_id                 uuid,
+    org_unit_id                     uuid,
+    position_id                     uuid,
     payload_schema_code             text        NOT NULL,
     payload_schema_version          integer     NOT NULL,
     payload_schema_hash             text        NOT NULL,
@@ -4789,6 +4792,11 @@ CREATE TABLE document.business_partner_request (
     materialized_business_partner_id uuid,
     materialized_supplier_id        uuid,
     materialized_customer_id        uuid,
+    materialized_person_id          uuid,
+    materialized_employee_id        uuid,
+    materialized_employment_id      uuid,
+    materialized_work_assignment_id uuid,
+    materialized_principal_id       uuid,
     materialized_supplier_company_profile_id uuid,
     materialized_customer_company_profile_id uuid,
     materialized_operating_organization_assignment_id uuid,
@@ -4822,7 +4830,9 @@ CREATE TABLE document.business_partner_request (
     CONSTRAINT business_partner_request_no_chk CHECK (request_no ~ '^[A-Z][A-Z0-9_.-]{2,62}$'),
     CONSTRAINT business_partner_request_kind_chk CHECK (request_kind IN (
         'new_partner', 'amend_partner', 'add_supplier', 'add_customer',
+        'add_workforce',
         'assign_organization', 'configure_company', 'change_bank',
+        'change_employment',
         'deactivate', 'reactivate', 'archive'
     )),
     CONSTRAINT business_partner_request_source_chk CHECK (source_kind IN ('manual', 'portal', 'mesh', 'import', 'api')),
@@ -4891,15 +4901,31 @@ CREATE TABLE document.business_partner_request (
     CONSTRAINT business_partner_request_materialization_evidence_chk CHECK (
         (status = 'applied') = (
             materialized_business_partner_id IS NOT NULL
-            AND num_nonnulls(materialized_supplier_id, materialized_customer_id) = 1
-            AND num_nonnulls(materialized_supplier_company_profile_id, materialized_customer_company_profile_id)
-                = CASE WHEN request_kind = 'configure_company' THEN 1 ELSE 0 END
-            AND materialized_operating_organization_assignment_id IS NOT NULL
             AND materialization_snapshot_id IS NOT NULL
             AND application_idempotency_key IS NOT NULL
             AND application_fingerprint IS NOT NULL
             AND applied_at IS NOT NULL AND applied_by IS NOT NULL
+            AND (
+                (requested_role IN ('supplier', 'customer')
+                 AND num_nonnulls(materialized_supplier_id, materialized_customer_id) = 1
+                 AND num_nonnulls(materialized_supplier_company_profile_id, materialized_customer_company_profile_id)
+                     = CASE WHEN request_kind = 'configure_company' THEN 1 ELSE 0 END
+                 AND materialized_operating_organization_assignment_id IS NOT NULL
+                 AND num_nonnulls(materialized_person_id, materialized_employee_id, materialized_employment_id, materialized_work_assignment_id, materialized_principal_id) = 0)
+                OR
+                (requested_role = 'workforce'
+                 AND materialized_person_id IS NOT NULL
+                 AND materialized_employee_id IS NOT NULL
+                 AND materialized_employment_id IS NOT NULL
+                 AND materialized_work_assignment_id IS NOT NULL
+                 AND num_nonnulls(materialized_supplier_id, materialized_customer_id, materialized_supplier_company_profile_id, materialized_customer_company_profile_id, materialized_operating_organization_assignment_id) = 0)
+            )
         )
+    ),
+    CONSTRAINT business_partner_request_role_scope_chk CHECK (
+        (requested_role = 'workforce' AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL AND operating_organization_id IS NULL)
+        OR (requested_role IN ('supplier','customer') AND operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL)
+        OR requested_role IS NULL
     ),
     CONSTRAINT business_partner_request_company_profile_role_chk CHECK (
         (materialized_supplier_company_profile_id IS NULL OR (requested_role = 'supplier' AND materialized_supplier_id IS NOT NULL))

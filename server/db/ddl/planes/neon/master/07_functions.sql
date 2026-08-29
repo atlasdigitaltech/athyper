@@ -65,6 +65,11 @@ BEGIN
         NEW.created_by := v_actor;
     END IF;
 
+    IF TG_TABLE_NAME = 'business_partner' THEN
+        NEW.category_locked_by := NEW.created_by;
+        NEW.category_locked_at := COALESCE(NEW.category_locked_at, now());
+    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -3152,11 +3157,18 @@ BEGIN
 
     IF TG_TABLE_NAME = 'business_partner' THEN
         IF NEW.code IS DISTINCT FROM OLD.code
-           OR NEW.partner_category IS DISTINCT FROM OLD.partner_category THEN
+           OR NEW.partner_category IS DISTINCT FROM OLD.partner_category
+           OR NEW.ownership_class IS DISTINCT FROM OLD.ownership_class
+           OR NEW.category_locked_at IS DISTINCT FROM OLD.category_locked_at
+           OR NEW.category_locked_by IS DISTINCT FROM OLD.category_locked_by
+           OR NEW.canonical_party_id IS DISTINCT FROM OLD.canonical_party_id
+              AND OLD.status <> 'draft'
+           OR NEW.representation_purpose_code IS DISTINCT FROM OLD.representation_purpose_code THEN
             RAISE EXCEPTION
-                'Business-partner code and category are immutable'
+                'Business-partner structural identity is immutable'
                 USING ERRCODE = 'check_violation';
         END IF;
+        NEW.record_version := OLD.record_version + 1;
     ELSIF TG_TABLE_NAME = 'supplier' THEN
         IF NEW.business_partner_id IS DISTINCT FROM OLD.business_partner_id
            OR NEW.supplier_code IS DISTINCT FROM OLD.supplier_code THEN
@@ -3214,17 +3226,17 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_category master.business_partner_category_d;
+    v_ownership master.business_partner_ownership_d;
     v_partner_status master.business_partner_status_d;
     v_is_intercompany boolean;
 BEGIN
-    SELECT partner.partner_category, partner.status
-      INTO v_category, v_partner_status
+    SELECT partner.ownership_class, partner.status
+      INTO v_ownership, v_partner_status
       FROM master.business_partner AS partner
      WHERE partner.tenant_id = NEW.tenant_id
        AND partner.id = NEW.business_partner_id;
 
-    IF v_category IS NULL THEN
+    IF v_ownership IS NULL THEN
         RAISE EXCEPTION 'Business partner does not exist in tenant'
             USING ERRCODE = 'foreign_key_violation';
     END IF;
@@ -3242,7 +3254,7 @@ BEGIN
             ELSE false
         END;
 
-    IF (v_category = 'internal') IS DISTINCT FROM v_is_intercompany THEN
+    IF (v_ownership = 'internal') IS DISTINCT FROM v_is_intercompany THEN
         RAISE EXCEPTION
             'Internal business partners require an intercompany % role, and intercompany roles require an internal business partner',
             TG_TABLE_NAME
@@ -3600,15 +3612,76 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 DECLARE
-    v_category master.business_partner_category_d;
+    v_ownership master.business_partner_ownership_d;
 BEGIN
-    SELECT partner_category INTO v_category
+    SELECT ownership_class INTO v_ownership
       FROM master.business_partner
      WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
-    IF v_category IS DISTINCT FROM 'internal'::master.business_partner_category_d THEN
+    IF v_ownership IS DISTINCT FROM 'internal'::master.business_partner_ownership_d THEN
         RAISE EXCEPTION 'Legal entity self mapping requires an internal business partner'
             USING ERRCODE = 'check_violation';
     END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_person_business_partner()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_category master.business_partner_category_d;
+BEGIN
+    IF TG_OP = 'UPDATE'
+       AND (NEW.id, NEW.tenant_id, NEW.business_partner_id, NEW.created_at, NEW.created_by)
+           IS DISTINCT FROM
+           (OLD.id, OLD.tenant_id, OLD.business_partner_id, OLD.created_at, OLD.created_by) THEN
+        RAISE EXCEPTION 'Person Business Partner binding and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    SELECT partner_category INTO v_category
+      FROM master.business_partner
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
+    IF v_category IS DISTINCT FROM 'person'::master.business_partner_category_d THEN
+        RAISE EXCEPTION 'Person rows require a person-category Business Partner in the same tenant'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_assert_active_person_business_partner()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+DECLARE
+    v_partner_id uuid;
+    v_tenant_id uuid;
+    v_category master.business_partner_category_d;
+    v_status master.business_partner_status_d;
+    v_people bigint;
+BEGIN
+    IF TG_TABLE_NAME = 'business_partner' THEN
+        IF TG_OP='DELETE' THEN v_partner_id:=OLD.id; v_tenant_id:=OLD.tenant_id;
+        ELSE v_partner_id:=NEW.id; v_tenant_id:=NEW.tenant_id; END IF;
+    ELSE
+        IF TG_OP='DELETE' THEN v_partner_id:=OLD.business_partner_id; v_tenant_id:=OLD.tenant_id;
+        ELSE v_partner_id:=NEW.business_partner_id; v_tenant_id:=NEW.tenant_id; END IF;
+    END IF;
+    SELECT partner_category,status INTO v_category,v_status
+      FROM master.business_partner WHERE tenant_id=v_tenant_id AND id=v_partner_id;
+    IF FOUND AND v_category='person' AND v_status='active' THEN
+        SELECT count(*) INTO v_people FROM master.person
+         WHERE tenant_id=v_tenant_id AND business_partner_id=v_partner_id;
+        IF v_people<>1 THEN
+            RAISE EXCEPTION 'Active person-category Business Partner requires exactly one Person profile'
+                USING ERRCODE='check_violation';
+        END IF;
+    END IF;
+    IF TG_OP='DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
 END;
 $$;
@@ -3783,6 +3856,37 @@ $$;
 
 COMMENT ON FUNCTION master.trg_validate_work_assignment_contract() IS
   'Requires an assignment employment, employee, and company code to describe the same workforce contract.';
+
+CREATE OR REPLACE FUNCTION master.trg_validate_employment_contract()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM master.company_code company
+         WHERE company.tenant_id = NEW.tenant_id
+           AND company.id = NEW.company_code_id
+           AND company.legal_entity_id = NEW.legal_entity_id
+    ) THEN
+        RAISE EXCEPTION 'Employment company code does not belong to its legal entity'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NEW.employee_id IS NOT NULL AND NOT EXISTS (
+        SELECT 1 FROM master.employee employee
+         WHERE employee.tenant_id = NEW.tenant_id
+           AND employee.id = NEW.employee_id
+           AND employee.person_id = NEW.person_id
+    ) THEN
+        RAISE EXCEPTION 'Employment employee does not belong to its person'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION master.trg_validate_employment_contract() IS
+  'Requires employment person, optional employee, legal entity, and company code to resolve to one tenant-local workforce contract.';
 
 CREATE OR REPLACE FUNCTION master.trg_guard_warehouse_identity()
 RETURNS trigger

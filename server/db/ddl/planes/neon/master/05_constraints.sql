@@ -1077,6 +1077,12 @@ ALTER TABLE master.business_partner
     ON DELETE RESTRICT
     DEFERRABLE INITIALLY DEFERRED;
 
+ALTER TABLE master.business_partner
+    ADD CONSTRAINT business_partner_category_locked_by_fk
+    FOREIGN KEY (tenant_id, category_locked_by)
+    REFERENCES master.principal (tenant_id, id)
+    ON DELETE RESTRICT;
+
 ALTER TABLE master.supplier
     ADD CONSTRAINT supplier_tenant_fk
     FOREIGN KEY (tenant_id)
@@ -1345,6 +1351,9 @@ ALTER TABLE master.bank_account
 ALTER TABLE master.person
     ADD CONSTRAINT person_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE,
+    ADD CONSTRAINT person_business_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT person_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
 
@@ -1604,6 +1613,10 @@ ALTER TABLE master.employee
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE master.employee
+    ADD CONSTRAINT employee_contract_identity_uq
+    UNIQUE (tenant_id, id, person_id);
+
 ALTER TABLE master.employment
     ADD CONSTRAINT employment_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE,
@@ -1619,6 +1632,22 @@ ALTER TABLE master.employment
     ADD CONSTRAINT employment_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.employment
+    ADD CONSTRAINT employment_assignment_identity_uq
+    UNIQUE (tenant_id, id, employee_id, company_code_id),
+    ADD CONSTRAINT employment_employee_person_fk
+    FOREIGN KEY (tenant_id, employee_id, person_id)
+    REFERENCES master.employee (tenant_id, id, person_id) ON DELETE RESTRICT,
+    ADD CONSTRAINT employment_company_legal_entity_fk
+    FOREIGN KEY (tenant_id, company_code_id, legal_entity_id)
+    REFERENCES master.company_code (tenant_id, id, legal_entity_id) ON DELETE RESTRICT,
+    ADD CONSTRAINT employment_primary_effective_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        person_id WITH =,
+        daterange(hire_date, COALESCE(termination_date, 'infinity'::date), '[)') WITH &&
+    ) WHERE (is_primary AND status = 'active' AND employment_status IN ('active', 'suspended'));
 
 ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_tenant_fk
@@ -1644,6 +1673,9 @@ ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_company_fk
     FOREIGN KEY (tenant_id, company_code_id)
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT work_assignment_employment_contract_fk
+    FOREIGN KEY (tenant_id, employment_id, employee_id, company_code_id)
+    REFERENCES master.employment (tenant_id, id, employee_id, company_code_id) ON DELETE RESTRICT,
     ADD CONSTRAINT work_assignment_cost_center_fk
     FOREIGN KEY (tenant_id, company_code_id, cost_center_id)
     REFERENCES master.cost_center (tenant_id, company_code_id, id) ON DELETE RESTRICT,
@@ -1653,6 +1685,14 @@ ALTER TABLE master.work_assignment
     ADD CONSTRAINT work_assignment_site_fk
     FOREIGN KEY (tenant_id, company_code_id, site_id)
     REFERENCES master.site (tenant_id, company_code_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.work_assignment
+    ADD CONSTRAINT work_assignment_primary_effective_no_overlap
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        employee_id WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (assignment_type = 'primary' AND status = 'active');
 
 ALTER TABLE master.employee_leave_enrollment
     ADD CONSTRAINT employee_leave_enrollment_tenant_fk

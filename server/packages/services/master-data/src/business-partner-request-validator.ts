@@ -33,6 +33,8 @@ const ruleDefinitions = Object.freeze([
   { code: "role.request_kind.compatible", severity: "error", fieldPath: "$.requestKind" },
   { code: "role.target.required", severity: "error", fieldPath: "$.targetBusinessPartnerId" },
   { code: "organization.operating.required", severity: "error", fieldPath: "$.operatingOrganizationId" },
+  { code: "workforce.scope.required", severity: "error", fieldPath: "$.legalEntityId" },
+  { code: "workforce.identity.required", severity: "error", fieldPath: "$.firstName" },
   { code: "source.mesh.pin.required", severity: "error", fieldPath: "$.source" },
   { code: "identity.registration_country.format", severity: "error", fieldPath: "$.registrationCountryCode" },
   { code: "identity.legal_name.duplicate", severity: "warning", fieldPath: "$.legalName" },
@@ -52,7 +54,10 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
       const legalName = stringValue(request.proposedPayload, "legalName", "legal_name", "name");
       const registrationCountryCode = stringValue(request.proposedPayload, "registrationCountryCode", "registration_country_code");
       const isNew = request.kind === "new_partner";
+      const workforce=request.requestedRole==="workforce";
       const roleKindCompatible = (isNew && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
+        || (isNew && workforce)
+        || (request.kind === "add_workforce" && workforce)
         || (request.kind === "add_supplier" && request.requestedRole === "supplier")
         || (request.kind === "add_customer" && request.requestedRole === "customer")
         || ((request.kind === "assign_organization" || request.kind === "configure_company") && (request.requestedRole === "supplier" || request.requestedRole === "customer"));
@@ -70,11 +75,13 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
           }, transaction)
         : [];
       const findings: BusinessPartnerRequestValidationFinding[] = [
-        isNew ? finding("identity.legal_name.required", "error", "$.legalName", Boolean(legalName), "LEGAL_NAME_REQUIRED", { valuePresent: Boolean(legalName) }) : skipped("identity.legal_name.required", "error", "$.legalName", "EXISTING_IDENTITY_REUSED"),
+        isNew ? finding("identity.legal_name.required", "error", "$.legalName", workforce?Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")):Boolean(legalName), workforce?"PERSON_NAME_REQUIRED":"LEGAL_NAME_REQUIRED", { valuePresent: workforce?Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")):Boolean(legalName) }) : skipped("identity.legal_name.required", "error", "$.legalName", "EXISTING_IDENTITY_REUSED"),
         finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),
         finding("role.request_kind.compatible", "error", "$.requestKind", roleKindCompatible, "REQUEST_KIND_ROLE_MISMATCH", { requestKind: request.kind, requestedRole: request.requestedRole ?? null }),
         finding("role.target.required", "error", "$.targetBusinessPartnerId", isNew ? !request.targetBusinessPartnerId : Boolean(request.targetBusinessPartnerId), "TARGET_BUSINESS_PARTNER_REQUIRED", { requestKind: request.kind, targetBusinessPartnerId: request.targetBusinessPartnerId ?? null }),
-        finding("organization.operating.required", "error", "$.operatingOrganizationId", Boolean(request.operatingOrganizationId), "OPERATING_ORGANIZATION_REQUIRED", { operatingOrganizationId: request.operatingOrganizationId ?? null }),
+        workforce ? skipped("organization.operating.required", "error", "$.operatingOrganizationId", "COMMERCIAL_ORGANIZATION_NOT_REQUIRED") : finding("organization.operating.required", "error", "$.operatingOrganizationId", Boolean(request.operatingOrganizationId), "OPERATING_ORGANIZATION_REQUIRED", { operatingOrganizationId: request.operatingOrganizationId ?? null }),
+        workforce ? finding("workforce.scope.required","error","$.legalEntityId",Boolean(request.legalEntityId&&request.companyCodeId&&request.orgUnitId),"WORKFORCE_SCOPE_REQUIRED",{legalEntityId:request.legalEntityId??null,companyCodeId:request.companyCodeId??null,orgUnitId:request.orgUnitId??null}) : skipped("workforce.scope.required","error","$.legalEntityId","WORKFORCE_SCOPE_NOT_APPLICABLE"),
+        workforce ? finding("workforce.identity.required","error","$.firstName",Boolean(stringValue(request.proposedPayload,"firstName","first_name")&&stringValue(request.proposedPayload,"lastName","last_name")&&stringValue(request.proposedPayload,"employeeNumber","employee_number")&&stringValue(request.proposedPayload,"hireDate","hire_date")),"WORKFORCE_IDENTITY_REQUIRED",{}) : skipped("workforce.identity.required","error","$.firstName","WORKFORCE_IDENTITY_NOT_APPLICABLE"),
         request.kind === "configure_company" ? finding("company.code.required", "error", "$.companyCodeId", Boolean(request.companyCodeId), "COMPANY_CODE_REQUIRED", { companyCodeId: request.companyCodeId ?? null }) : skipped("company.code.required", "error", "$.companyCodeId", "COMPANY_CODE_NOT_REQUIRED"),
         finding("source.mesh.pin.required", "error", "$.source", meshPinned, "MESH_SOURCE_PIN_REQUIRED", { sourceKind: request.source.kind, sourceVersion: request.source.version ?? null }),
         registrationCountryCode

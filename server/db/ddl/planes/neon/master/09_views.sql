@@ -350,6 +350,8 @@ WITH supplier_role AS (
     bp.name,
     bp.display_name,
     bp.partner_category,
+    bp.ownership_class,
+    bp.legal_classification,
     bp.legal_name,
     bp.legal_form,
     NULL::text AS registration_no,
@@ -402,13 +404,13 @@ WITH supplier_role AS (
             WHEN sr.supplier_id IS NOT NULL AND cr.customer_id IS NOT NULL THEN 'Supplier + Customer'::text
             WHEN sr.supplier_id IS NOT NULL THEN 'Supplier'::text
             WHEN cr.customer_id IS NOT NULL THEN 'Customer'::text
-            WHEN bp.partner_category = 'internal'::text THEN 'Internal'::text
+            WHEN bp.ownership_class = 'internal'::text THEN 'Internal'::text
             ELSE 'Identity'::text
         END AS role_summary,
     COALESCE(sr.supplier_company_scope_count, 0) + COALESCE(cr.customer_company_scope_count, 0) AS company_scope_count,
     COALESCE(sr.supplier_active_scope_count, 0) + COALESCE(cr.customer_active_scope_count, 0) AS active_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) + COALESCE(cr.customer_blocked_scope_count, 0) AS blocked_scope_count,
-    COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR (sr.supplier_status::text = ANY (ARRAY['on_hold'::text, 'suspended'::text])) OR (cr.customer_status::text = ANY (ARRAY['on_hold'::text, 'credit_hold'::text])) OR (bp.status::text = ANY (ARRAY['on_hold'::text, 'blocked'::text])) AS is_blocked,
+    COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR sr.supplier_status::text = 'suspended' OR cr.customer_status::text = 'suspended' AS is_blocked,
     lower(concat_ws(' '::text, bp.code, bp.name, bp.display_name, bp.legal_name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(bp.aliases, ' '::text))) AS search_text,
     bp.created_at,
     bp.created_by,

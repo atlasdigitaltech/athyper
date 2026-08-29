@@ -837,7 +837,7 @@ CREATE INDEX business_partner_request_target_idx
     WHERE target_business_partner_id IS NOT NULL;
 CREATE UNIQUE INDEX business_partner_request_open_role_extension_uq
     ON document.business_partner_request (tenant_id, target_business_partner_id, requested_role)
-    WHERE request_kind IN ('add_supplier', 'add_customer')
+    WHERE request_kind IN ('add_supplier', 'add_customer', 'add_workforce')
       AND status IN ('draft', 'validating', 'validation_failed', 'pending_approval', 'returned', 'approved', 'applying', 'failed');
 CREATE UNIQUE INDEX business_partner_request_open_org_assignment_uq
     ON document.business_partner_request

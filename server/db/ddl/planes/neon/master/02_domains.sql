@@ -241,6 +241,45 @@ BEGIN
   END LOOP;
 END $$;
 
+-- Business Partner structural domains are deliberately sealed. Supplier and
+-- customer are roles; ownership and legal classification are independent axes.
+ALTER DOMAIN master.business_partner_category_d
+    DROP CONSTRAINT IF EXISTS business_partner_category_d_check;
+ALTER DOMAIN master.business_partner_category_d
+    ADD CONSTRAINT business_partner_category_d_check
+    CHECK (VALUE IN ('organization', 'person', 'group'));
+
+ALTER DOMAIN master.business_partner_status_d
+    DROP CONSTRAINT IF EXISTS business_partner_status_d_check;
+ALTER DOMAIN master.business_partner_status_d
+    ADD CONSTRAINT business_partner_status_d_check
+    CHECK (VALUE IN ('draft', 'active', 'inactive', 'archived'));
+
+ALTER DOMAIN master.supplier_status_d
+    DROP CONSTRAINT IF EXISTS supplier_status_d_check;
+ALTER DOMAIN master.supplier_status_d
+    ADD CONSTRAINT supplier_status_d_check
+    CHECK (VALUE IN ('onboarding', 'active', 'suspended', 'inactive', 'archived'));
+
+ALTER DOMAIN master.customer_status_d
+    DROP CONSTRAINT IF EXISTS customer_status_d_check;
+ALTER DOMAIN master.customer_status_d
+    ADD CONSTRAINT customer_status_d_check
+    CHECK (VALUE IN ('prospect', 'active', 'suspended', 'inactive', 'archived'));
+
+CREATE DOMAIN master.business_partner_ownership_d AS text
+    CHECK (VALUE IN ('external', 'internal'));
+
+CREATE DOMAIN master.business_partner_legal_classification_d AS text
+    CHECK (VALUE IN ('government', 'nonprofit', 'sole_proprietor'));
+
+COMMENT ON DOMAIN master.business_partner_category_d IS
+  'Structural party kind only: organization, person, or reserved group.';
+COMMENT ON DOMAIN master.business_partner_ownership_d IS
+  'Tenant ownership axis, independent of structural party kind and commercial role.';
+COMMENT ON DOMAIN master.business_partner_legal_classification_d IS
+  'Optional legal/business classification retained independently of structural party kind.';
+
 ALTER DOMAIN master.principal_type_d DROP CONSTRAINT IF EXISTS principal_type_d_check;
 ALTER DOMAIN master.principal_type_d ADD CONSTRAINT principal_type_d_check
     CHECK (VALUE IN (
