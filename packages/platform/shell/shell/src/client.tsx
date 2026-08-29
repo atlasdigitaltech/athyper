@@ -9,6 +9,7 @@ import { canAccessRoute, deriveBreadcrumbs, type DerivedShellNavigation } from "
 import { ShellActivityCenter, type ShellActivityDataSource, type ShellActivityTab } from "./activity-center";
 import { ShellQuickAccess, type ShellQuickAccessDataSource, type ShellQuickAccessTab } from "./quick-access";
 import { shellEnglishMessages } from "./messages";
+import { AtlasWorkspace } from "./atlas-workspace";
 
 const FALLBACK_I18N=createIntlRuntime({localization:createEffectiveLocalization({uiLocale:"en",formatLocale:"en-US"}),messages:shellEnglishMessages});
 function useShellI18n(){return useOptionalI18n()??FALLBACK_I18N;}
@@ -23,11 +24,11 @@ export interface ShellChromeProps { readonly currentLocale?:string;readonly loca
 export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,applicationName, planeDescriptor = "Business workspace", planeIconSrc, planeWordmarkSrc, homeHref = "/home", initialCollapsed = false, tenantId, tenantLabel, tenantSecondaryLabel, tenantCountryCode, tenantLogoAssetRef, contextLabel = "Business context", showOrganizationContext = true, accountLabel, accountInitials, accountLoginId, accountEmail, accountSecondaryLabel, transactionContext, workContextControl, navigation, experienceState = "ready", contexts, quickAccess, activity, children }: ShellChromeProps) {
   const t=useShellI18n().message;
   const [drawerOpen, setDrawerOpen] = useState(false), [collapsed, setCollapsed] = useState(initialCollapsed), [path, setPath] = useState("/");
-  const [dayGreeting, setDayGreeting] = useState("Good Evening");
+  const [dayGreeting, setDayGreeting] = useState("Good Evening"),[atlasOpen,setAtlasOpen]=useState(false),[atlasPinned,setAtlasPinned]=useState(false);
   const [navigationPeek, setNavigationPeek] = useState<ShellNavigationPeek>(), [quickAccessTab, setQuickAccessTab] = useState<ShellQuickAccessTab>(), [headerAction, setHeaderAction] = useState<HeaderActionKind>();
   const menuButton = useRef<HTMLButtonElement>(null), firstLink = useRef<HTMLAnchorElement>(null);
   const quickAccessOpener = useRef<HTMLButtonElement>(null);
-  useEffect(() => { setPath(window.location.pathname); setDayGreeting(greetingForHour(new Date().getHours())); const stored = localStorage.getItem("athyper.shell.collapsed"); if (stored !== null) { setCollapsed(stored === "true"); document.cookie = `athyper_shell_collapsed=${stored}; Path=/; Max-Age=31536000; SameSite=Lax`; return; } if (window.matchMedia("(min-width: 761px) and (max-width: 1100px)").matches) { setCollapsed(true); localStorage.setItem("athyper.shell.collapsed", "true"); document.cookie = "athyper_shell_collapsed=true; Path=/; Max-Age=31536000; SameSite=Lax"; } }, []);
+  useEffect(() => { setPath(window.location.pathname); setDayGreeting(greetingForHour(new Date().getHours()));const pinned=localStorage.getItem("athyper.atlas.pinned")==="true";setAtlasPinned(pinned);setAtlasOpen(pinned); const stored = localStorage.getItem("athyper.shell.collapsed"); if (stored !== null) { setCollapsed(stored === "true"); document.cookie = `athyper_shell_collapsed=${stored}; Path=/; Max-Age=31536000; SameSite=Lax`; return; } if (window.matchMedia("(min-width: 761px) and (max-width: 1100px)").matches) { setCollapsed(true); localStorage.setItem("athyper.shell.collapsed", "true"); document.cookie = "athyper_shell_collapsed=true; Path=/; Max-Age=31536000; SameSite=Lax"; } }, []);
   useEffect(() => { if (!drawerOpen) return; firstLink.current?.focus(); const close = (event: KeyboardEvent) => { if (event.key === "Escape") { setDrawerOpen(false); requestAnimationFrame(() => menuButton.current?.focus()); } }; window.addEventListener("keydown", close); return () => window.removeEventListener("keydown", close); }, [drawerOpen]);
   const toggleCollapsed = () => setCollapsed((value) => { const next = !value; setNavigationPeek(undefined); localStorage.setItem("athyper.shell.collapsed", String(next)); document.cookie = `athyper_shell_collapsed=${next}; Path=/; Max-Age=31536000; SameSite=Lax`; return next; });
   const closeDrawer = () => { setDrawerOpen(false); requestAnimationFrame(() => menuButton.current?.focus()); };
@@ -36,16 +37,18 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
   const openQuickAccess = (tab: ShellQuickAccessTab, opener: HTMLButtonElement) => { quickAccessOpener.current = opener; setNavigationPeek(undefined); setDrawerOpen(false); setHeaderAction(undefined); setQuickAccessTab((current) => current === tab ? undefined : tab); };
   const openNavigation = () => { setQuickAccessTab(undefined); setHeaderAction(undefined); setDrawerOpen(true); };
   const crumbs = deriveBreadcrumbs(navigation, path);
-  const homeRoute = path === "/" || path === homeHref;
-  const systemRoute = homeRoute || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
+  const homeRoute = path === "/" || path === homeHref,atlasRoute=path==="/atlas"||path.startsWith("/atlas/");
+  const systemRoute = homeRoute || atlasRoute || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
   const greetingName = accountLabel.trim().split(/\s+/u)[0] || accountLabel;
-  return <div className="athyper-shell" data-collapsed={collapsed} data-drawer-open={drawerOpen} data-quick-access-open={Boolean(quickAccessTab)}>
+  const changeAtlasPin=(next:boolean)=>{setAtlasPinned(next);localStorage.setItem("athyper.atlas.pinned",String(next));};
+  const atlasVisible=atlasOpen&&!path.startsWith("/atlas");
+  return <div className="athyper-shell" data-collapsed={collapsed} data-drawer-open={drawerOpen} data-quick-access-open={Boolean(quickAccessTab)} data-atlas-open={atlasVisible} data-atlas-pinned={atlasVisible&&atlasPinned}>
     <a className="athyper-shell__skip" href="#main-content">{t("shell.skip")}</a>
     <header className="athyper-shell__topbar">
       <button ref={menuButton} className="athyper-shell__menu-button" type="button" aria-label={t("shell.navigation.open")} aria-expanded={drawerOpen} aria-controls="plane-navigation" onClick={openNavigation}><MenuIcon size={20} /></button>
       <PlaneHomeLink className="athyper-shell__mobile-brand" applicationName={applicationName} planeDescriptor={planeDescriptor} planeIconSrc={planeIconSrc} planeWordmarkSrc={planeWordmarkSrc} landingHref={homeHref} />
       <BusinessContext tenantId={tenantId} tenantLabel={tenantLabel} tenantSecondaryLabel={tenantSecondaryLabel} tenantCountryCode={tenantCountryCode} tenantLogoAssetRef={tenantLogoAssetRef} contextLabel={contextLabel} showOrganizationContext={showOrganizationContext} workContextControl={workContextControl} contexts={contexts} landingHref={homeHref} />
-      <HeaderActions navigation={navigation} activity={activity} active={headerAction} onActiveChange={changeHeaderAction} />
+      <HeaderActions navigation={navigation} activity={activity} active={headerAction} atlasOpen={atlasVisible} onAtlasToggle={()=>{setHeaderAction(undefined);setAtlasOpen((value)=>!value);}} onActiveChange={changeHeaderAction} />
     </header>
     {drawerOpen ? <button type="button" className="athyper-shell__scrim" aria-label={t("shell.navigation.close")} onClick={closeDrawer} /> : null}
     <aside id="plane-navigation" className="athyper-shell__rail" aria-label={t("shell.navigation.application")} aria-modal={drawerOpen || undefined}>
@@ -58,8 +61,10 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
       <SidebarProfile accountLabel={accountLabel} accountInitials={accountInitials} loginId={accountLoginId ?? accountSecondaryLabel} email={accountEmail ?? (accountSecondaryLabel?.includes("@") ? accountSecondaryLabel : undefined)} tenantLabel={tenantLabel} tenantSecondaryLabel={tenantSecondaryLabel} transactionContext={transactionContext} currentLocale={currentLocale} localePolicy={localePolicy} onLocaleChange={onLocaleChange}/>
     </aside>
     {quickAccessTab ? <ShellQuickAccess activeTab={quickAccessTab} tenantId={tenantId} accountScope={accountLoginId ?? accountSecondaryLabel ?? accountLabel} path={path} navigation={navigation} dataSource={quickAccess} onTabChange={setQuickAccessTab} onClose={closeQuickAccess} /> : null}
+    {atlasVisible&&!atlasPinned?<button type="button" className="athyper-atlas-workspace__scrim" aria-label="Close Atlas" onClick={()=>setAtlasOpen(false)}/>:null}
+    {atlasVisible?<AtlasWorkspace mode="dock" planeName={applicationName} currentPath={path} pinned={atlasPinned} onPinnedChange={changeAtlasPin} onClose={()=>setAtlasOpen(false)}/>:null}
     <div className="athyper-shell__body">
-      {homeRoute ? <div className="athyper-shell__breadcrumbs athyper-shell__breadcrumbs--greeting"><strong>{dayGreeting}, {greetingName}</strong></div> : <nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}>{crumbs.length ? <ol>{crumbs.map((crumb, index) => <li key={`${crumb.label}-${index}`}>{crumb.href && index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb.label}</span>}</li>)}</ol> : null}</nav>}
+      {homeRoute ? <div className="athyper-shell__breadcrumbs athyper-shell__breadcrumbs--greeting"><strong>{dayGreeting}, {greetingName}</strong></div> : atlasRoute?<nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}><ol><li><a href={homeHref}>Home</a></li><li><span aria-current="page">Atlas AI</span></li></ol></nav>: <nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}>{crumbs.length ? <ol>{crumbs.map((crumb, index) => <li key={`${crumb.label}-${index}`}>{crumb.href && index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb.label}</span>}</li>)}</ol> : null}</nav>}
       <main id="main-content" tabIndex={-1} className="athyper-shell__main">{experienceState === "context_not_ready" ? <ContextNotReady /> : !navigation.routes.length ? <EmptyEntitlement /> : routeAllowed ? children : <ForbiddenRoute />}</main>
       <footer className="athyper-shell__footer"><span>© 2026 Atlas Digital Technology Solutions</span></footer>
     </div>
@@ -101,7 +106,7 @@ function SwitchBadge(){return <span className="athyper-context-identity__switch"
 function safeAssetRef(value:string){return /^\/[A-Za-z0-9][A-Za-z0-9_./-]{0,1022}$/.test(value)&&!/(^|\/)\.\.(\/|$)/.test(value);}
 
 type HeaderActionKind = "search" | ShellActivityTab | "agent";
-function HeaderActions({ navigation, activity, active, onActiveChange }: { readonly navigation: DerivedShellNavigation; readonly activity?: ShellActivityDataSource; readonly active?: HeaderActionKind; readonly onActiveChange: (next?: HeaderActionKind) => void }) {
+function HeaderActions({ navigation, activity, active,atlasOpen,onAtlasToggle, onActiveChange }: { readonly navigation: DerivedShellNavigation; readonly activity?: ShellActivityDataSource; readonly active?: HeaderActionKind;readonly atlasOpen:boolean;readonly onAtlasToggle:()=>void; readonly onActiveChange: (next?: HeaderActionKind) => void }) {
   const t=useShellI18n().message;
   const [query, setQuery] = useState("");
   const root = useRef<HTMLDivElement>(null), search = useRef<HTMLInputElement>(null);
@@ -122,15 +127,14 @@ function HeaderActions({ navigation, activity, active, onActiveChange }: { reado
     <HeaderActionButton kind="search" label={t("shell.actions.search")} active={active === "search"} onClick={(opener) => toggle("search", opener)} />
     <HeaderActionButton kind="notifications" label={t("shell.actions.notifications")} active={active === "notifications"} count={unreadCount} controls="athyper-activity-center" onClick={(opener) => toggle("notifications", opener)} />
     <HeaderActionButton kind="inbox" label={t("shell.actions.inbox")} active={active === "inbox"} count={inboxCount} controls="athyper-activity-center" onClick={(opener) => toggle("inbox", opener)} />
-    <HeaderActionButton kind="agent" label="Atlas" active={active === "agent"} onClick={(opener) => toggle("agent", opener)} />
+    <HeaderActionButton kind="agent" label="Atlas" active={atlasOpen} onClick={onAtlasToggle} />
     {active === "notifications" || active === "inbox" ? <ShellActivityCenter activeTab={active} dataSource={activity} onTabChange={onActiveChange} onClose={closeAction}/> : null}
-    {active === "search" || active === "agent" ? <section id={`header-${active}-panel`} className={`athyper-shell__action-panel athyper-shell__action-panel--${active}`} role="dialog" aria-label={actionTitle(active)}>
+    {active === "search" ? <section id={`header-${active}-panel`} className={`athyper-shell__action-panel athyper-shell__action-panel--${active}`} role="dialog" aria-label={actionTitle(active)}>
       {active === "search" ? <><header><div><strong>{t("shell.search.title")}</strong><small>{t("shell.search.help")}</small></div><kbd>Esc</kbd></header><label className="athyper-shell__search-field"><SearchIcon/><input ref={search} type="search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder={t("shell.search.placeholder")} autoComplete="off"/></label><nav aria-label={t("shell.search.results")}>{results.length ? results.map((route) => { const Icon=resolveIcon(route.iconKey);return <a key={route.id} href={route.href} onClick={() => onActiveChange()}><span className="athyper-shell__search-result"><Icon size={18}/><span><strong>{route.label}</strong><small>{route.workspaceName}</small></span></span><ChevronRightIcon size={16}/></a>;}) : <ActionEmpty title={t("shell.search.empty")} detail={t("shell.search.emptyHelp")}/>}</nav></> : null}
-      {active === "agent" ? <><header><div><strong className="athyper-shell__atlas-wordmark">ATLAS</strong><small>AI Agent by Athyper</small></div></header><ActionEmpty title="Atlas workspace ready" detail="Context-aware assistance will appear here when an agent capability is enabled."/></> : null}
     </section> : null}
   </div>;
 }
-function HeaderActionButton({ kind, label, active, count = 0, controls, onClick }: { readonly kind: HeaderActionKind; readonly label: string; readonly active: boolean; readonly count?: number; readonly controls?: string; readonly onClick: (opener: HTMLButtonElement) => void }) { const t=useShellI18n().message;return <button type="button" data-slot={kind} aria-label={`${label}${count ? `, ${count} ${t(kind === "notifications" ? "shell.actions.unread" : "shell.actions.open")}` : ""}`} aria-expanded={active} aria-controls={controls ?? `header-${kind}-panel`} title={label} onClick={(event) => onClick(event.currentTarget)}><HeaderGlyph kind={kind}/><span>{label}</span>{count > 0 ? <b className="athyper-shell__action-count" aria-hidden="true">{count > 99 ? "99+" : count}</b> : null}</button>; }
+function HeaderActionButton({ kind, label, active, count = 0, controls, onClick }: { readonly kind: HeaderActionKind; readonly label: string; readonly active: boolean; readonly count?: number; readonly controls?: string; readonly onClick: (opener: HTMLButtonElement) => void }) { const t=useShellI18n().message;return <button type="button" data-slot={kind} aria-label={`${label}${count ? `, ${count} ${t(kind === "notifications" ? "shell.actions.unread" : "shell.actions.open")}` : ""}`} aria-expanded={active} aria-controls={controls ?? (kind==="agent"?undefined:`header-${kind}-panel`)} title={label} onClick={(event) => onClick(event.currentTarget)}><HeaderGlyph kind={kind}/><span>{label}</span>{count > 0 ? <b className="athyper-shell__action-count" aria-hidden="true">{count > 99 ? "99+" : count}</b> : null}</button>; }
 function HeaderGlyph({ kind }: { readonly kind: HeaderActionKind }) { if (kind === "search") return <SearchIcon/>; if (kind === "notifications") return <BellIcon/>; if (kind === "inbox") return <InboxIcon/>; return <SparklesIcon/>; }
 function ActionEmpty({ title, detail }: { readonly title: string; readonly detail: string }) { return <div className="athyper-shell__action-empty"><span aria-hidden="true"><CircleCheckIcon size={18}/></span><strong>{title}</strong><p>{detail}</p></div>; }
 function actionTitle(kind: HeaderActionKind): string { return kind === "agent" ? "Atlas — AI Agent by Athyper" : kind[0]!.toUpperCase() + kind.slice(1); }
