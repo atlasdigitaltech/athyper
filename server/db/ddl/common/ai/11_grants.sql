@@ -4,6 +4,9 @@
 REVOKE ALL ON SCHEMA ai FROM PUBLIC;
 GRANT USAGE ON SCHEMA ai TO athyperapp, athyperadmin;
 
+REVOKE ALL ON FUNCTION ai.fn_atlas_conversation_access(uuid, uuid, boolean) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION ai.fn_atlas_conversation_access(uuid, uuid, boolean) TO athyperapp, athyperadmin;
+
 GRANT DELETE ON TABLE "ai"."ai_action_policy" TO athyperadmin;
 
 GRANT INSERT ON TABLE "ai"."ai_action_policy" TO athyperadmin;
