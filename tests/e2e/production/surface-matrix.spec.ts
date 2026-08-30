@@ -60,6 +60,9 @@ test("Atlas Add menu remains usable from desktop through compact mobile widths",
   await expect(menu.getByRole("menuitem", { name: /Business record/ })).toBeDisabled();
   await expect(menu).toContainText("Coming soon");
   await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
+  const desktopTriggerBounds = await add.boundingBox();
+  const desktopMenuBounds = await menu.boundingBox();
+  expect(Math.abs((desktopMenuBounds?.x ?? 0) - (desktopTriggerBounds?.x ?? 0))).toBeLessThanOrEqual(2);
   await page.keyboard.press("End");
   await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
 

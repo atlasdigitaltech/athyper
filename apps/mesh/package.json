@@ -17,6 +17,7 @@
     "@athyper/platform-iam-auth-bff": "workspace:*",
     "@athyper/platform-api-client": "workspace:*",
     "@athyper/platform-i18n": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-query": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",

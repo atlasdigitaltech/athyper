@@ -88,9 +88,10 @@ export function deriveBreadcrumbs(navigation: DerivedShellNavigation, pathname: 
   if (!route) return Object.freeze([]);
   const workspace = navigation.workspaces.find((item) => item.code === route.workspaceCode);
   const crumbs: Readonly<{ label: string; href?: string }>[] = [{ label: route.workspaceName, ...(workspace ? { href: workspace.href } : {}) }, { label: route.label, href: route.href }];
-  const suffix = pathname.slice(route.href === "/" ? 1 : route.href.length + 1).split("/").filter(Boolean).map((part) => decodeURIComponent(part).replace(/[-_]+/g, " "));
+  const suffix = pathname.slice(route.href === "/" ? 1 : route.href.length + 1).split("/").filter(Boolean).map(humanizePathSegment);
   for (const label of suffix) crumbs.push({ label });
   return Object.freeze(crumbs);
 }
 function byOrder<T extends { readonly sortOrder: number; readonly code: string }>(left: T, right: T): number { return left.sortOrder - right.sortOrder || left.code.localeCompare(right.code); }
 function cleanLabel(value: string | undefined): string | undefined { const result = value?.trim(); return result ? result.slice(0, 100) : undefined; }
+function humanizePathSegment(value: string): string { const decoded = decodeURIComponent(value).replace(/[-_]+/g, " "); return /\d/u.test(decoded) ? decoded : decoded.replace(/\b\p{L}/gu, (character) => character.toLocaleUpperCase()); }

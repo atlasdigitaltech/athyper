@@ -68,6 +68,9 @@ importers:
       '@athyper/platform-iam-identity-gate':
         specifier: workspace:*
         version: link:../../packages/platform/iam/identity-gate
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../packages/platform/foundation/icons
       '@athyper/platform-query':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/query
@@ -144,6 +147,9 @@ importers:
       '@athyper/platform-iam-identity-gate':
         specifier: workspace:*
         version: link:../../packages/platform/iam/identity-gate
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../packages/platform/foundation/icons
       '@athyper/platform-query':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/query
@@ -223,6 +229,9 @@ importers:
       '@athyper/platform-iam-identity-gate':
         specifier: workspace:*
         version: link:../../packages/platform/iam/identity-gate
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../packages/platform/foundation/icons
       '@athyper/platform-query':
         specifier: workspace:*
         version: link:../../packages/platform/foundation/query
@@ -536,6 +545,9 @@ importers:
       '@athyper/platform-entity-list-view':
         specifier: workspace:*
         version: link:../../../platform/entity/runtime/list-view
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/icons
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../platform/shell/shell

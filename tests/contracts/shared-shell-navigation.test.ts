@@ -67,7 +67,7 @@ test("deep links and forbidden routes resolve without an inaccessible default", 
 
 test("breadcrumbs preserve workspace and permitted route ancestry", () => {
   const breadcrumbs = deriveBreadcrumbs(deriveShellNavigation(registry, experience), "/inventory/stock/42");
-  assert.deepEqual(breadcrumbs.map((item) => item.label), ["Supply Chain", "Stock", "stock", "42"]);
+  assert.deepEqual(breadcrumbs.map((item) => item.label), ["Supply Chain", "Stock", "Stock", "42"]);
 });
 
 test("workspace dashboards are accessible without exposing modules in the sidebar", () => {

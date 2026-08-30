@@ -118,7 +118,7 @@ export function MenuContent({ className, portal = false, style, ...props }: HTML
       const trigger = c.root.current?.querySelector<HTMLElement>('[aria-haspopup="menu"]'), menu = c.content.current;
       if (!trigger || !menu) return;
       const anchor = trigger.getBoundingClientRect(), bounds = menu.getBoundingClientRect(), margin = 8, gap = 4;
-      const preferredLeft = window.getComputedStyle(trigger).direction === "rtl" ? anchor.left : anchor.right - bounds.width;
+      const preferredLeft = window.getComputedStyle(trigger).direction === "rtl" ? anchor.right - bounds.width : anchor.left;
       const left = Math.min(Math.max(margin, preferredLeft), window.innerWidth - bounds.width - margin);
       const below = anchor.bottom + gap, top = below + bounds.height <= window.innerHeight - margin ? below : Math.max(margin, anchor.top - bounds.height - gap);
       setPosition({ left, top });

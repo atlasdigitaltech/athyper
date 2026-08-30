@@ -7,11 +7,11 @@ spec:
   sourceRevision: 3c069069673c67494c39017695c1564ff6ae72d6
   images:
     - id: neon-web
-      reference: athyper/neon-web@sha256:d9d73c9356f6fcda80370381869ffcac49da538d99502ab7b610db793f619f3f
+      reference: athyper/neon-web@sha256:407f03b64046fcd8cff4e8b37f5fab81e1dc33fc18d7f8b4fa0fc2dba17b63f0
     - id: mesh-web
-      reference: athyper/mesh-web@sha256:49b4c09d70ffb4434d4adf055e68067387d86cc0cd7473f03d3ee3ec9a2cab23
+      reference: athyper/mesh-web@sha256:9da5706e93c46f741b813feb894dcdaa2b4cab8bb073bfea1aeed2d07cce5325
     - id: studio-web
-      reference: athyper/studio-web@sha256:bb06017fe0082d14fbc5210a4f2efb54371539cc75b47a8132b6562d1408db8c
+      reference: athyper/studio-web@sha256:05605bc2935e5a43d93c87d4e9064e0d292fcdddf724460519c5a71a9194abf2
     - id: runtime-server
       reference: athyper/runtime-server@sha256:9269fd9a16d98bba7e56fa84a3e8942c59e293d01b95c036e58bfc04c2b387aa
     - id: iam
