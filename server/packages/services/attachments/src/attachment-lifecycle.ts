@@ -38,6 +38,8 @@ export interface AttachmentRecord {
 }
 
 export interface AttachmentRepository<T> {
+  /** Serializes staging retries for one tenant-scoped attachment identity when supported. */
+  lockForStaging?(identity: AttachmentIdentity, tx: T): Promise<void>;
   createStaged(input: AttachmentUploadIntent & { storageKey: string; expiresAt: string }, tx: T): Promise<AttachmentRecord>;
   load(identity: AttachmentIdentity, tx: T): Promise<AttachmentRecord | null>;
   /** Privileged maintenance path; implementations must authorize a service principal and remain tenant-scoped. */
@@ -88,11 +90,16 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
       const key = stagingKey(input);
       const expiresAt = new Date(now().getTime() + policy.reservationTtlSeconds * 1000).toISOString();
       await options.transactions.run(input.planeKey, input, async (tx) => {
+        await options.repository.lockForStaging?.(input, tx);
+        if (await options.repository.load(input, tx)) return;
+
+        // The quota reservation has a database foreign key to this resource. Keep both
+        // writes in one transaction, but persist the parent attachment first so the FK
+        // is valid. A quota failure rolls the staged row back with the transaction.
+        await options.repository.createStaged({ ...input, provenance: provenance(input), storageKey: key, expiresAt }, tx);
         const reserved = await options.quota.reserve({ ...input, bytes: input.sizeBytes!, policy, expiresAt }, tx);
-        if (reserved === "created") {
-          await options.repository.createStaged({ ...input, provenance: provenance(input), storageKey: key, expiresAt }, tx);
-          await appendLifecycleEvent(options.outbox, input, "attachments.staged", `attachment:${input.attachmentId}:staged`, { storageKey: key, expiresAt, provenance: provenance(input) }, tx);
-        }
+        if (reserved !== "created") throw new Error("Attachment quota reservation already exists without a staged resource");
+        await appendLifecycleEvent(options.outbox, input, "attachments.staged", `attachment:${input.attachmentId}:staged`, { storageKey: key, expiresAt, provenance: provenance(input) }, tx);
       });
       const current = await options.transactions.run(input.planeKey, input, (tx) => options.repository.load(input, tx));
       if (!current) throw new Error("Attachment reservation exists without staged resource");

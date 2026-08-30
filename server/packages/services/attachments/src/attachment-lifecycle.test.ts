@@ -5,8 +5,9 @@ import { createAttachmentLifecycle } from "./attachment-lifecycle.js";
 
 describe("attachment lifecycle", () => {
   it("stages an upload in quarantine with a bounded URL", async () => {
+    const writes: string[] = [];
     let saved: { id:string;status:"uploading";storageKey:string;isCurrent:boolean;isActive:boolean;hasLegalHold:boolean;expiresAt:string } | null = null;
-    const createStaged = vi.fn(async (input: { attachmentId: string; storageKey: string; expiresAt: string }) => (saved = ({
+    const createStaged = vi.fn(async (input: { attachmentId: string; storageKey: string; expiresAt: string }) => { writes.push("attachment"); return (saved = ({
       id: input.attachmentId,
       status: "uploading" as const,
       storageKey: input.storageKey,
@@ -14,7 +15,7 @@ describe("attachment lifecycle", () => {
       isActive: true,
       hasLegalHold: false,
       expiresAt: input.expiresAt,
-    })));
+    })); });
     const createUploadUrl = vi.fn(async () => "https://objects.example/upload");
     const lifecycle = createAttachmentLifecycle({
       transactions: { run: async (_plane, _actor, work) => work({}) },
@@ -37,7 +38,7 @@ describe("attachment lifecycle", () => {
         copy: async () => undefined,
       },
       scanner: { scan: async () => ({ status: "clean", scanner: "fixture", scannedAt: new Date().toISOString(), durationMs: 1 }) },
-      quota: { reserve: async () => "created", commit: async () => undefined, release: async () => false, expire: async () => [] },
+      quota: { reserve: async () => { writes.push("quota"); return "created"; }, commit: async () => undefined, release: async () => false, expire: async () => [] },
       quotaPolicies: { resolve: async () => ({ kind:"attachment.storage",limitBytes:1_000_000,limitItems:100,reservationTtlSeconds:1800,retryAfterSeconds:900 }) },
       outbox: { append: async () => undefined },
       uploadUrlTtlSeconds: 300,
@@ -55,7 +56,27 @@ describe("attachment lifecycle", () => {
 
     expect(result.storageKey).toContain("quarantine/studio/11111111-1111-4111-8111-111111111111");
     expect(createStaged).toHaveBeenCalledOnce();
+    expect(writes).toEqual(["attachment", "quota"]);
     expect(createUploadUrl).toHaveBeenCalledWith(result.storageKey, 300);
+  });
+
+  it("reuses an existing staged upload without reserving quota again", async () => {
+    const existing = { id: "22222222-2222-4222-8222-222222222222", status: "uploading" as const, storageKey: "quarantine/neon/existing", isCurrent: true, isActive: true, hasLegalHold: false, expiresAt: "2026-08-30T04:00:00.000Z" };
+    const reserve = vi.fn(async () => "created" as const);
+    const createStaged = vi.fn(async () => existing);
+    const lifecycle = createAttachmentLifecycle({
+      transactions: { run: async (_plane, _actor, work) => work({}) },
+      repository: { lockForStaging: async () => undefined, createStaged, load: async () => existing, finalizeClean: async () => { throw new Error("unused"); }, quarantine: async () => undefined, deactivate: async () => undefined, expire: async () => undefined, markPurged: async () => undefined },
+      storage: { get: async () => new Uint8Array(), put: async () => undefined, delete: async () => undefined, exists: async () => true, createDownloadUrl: async () => "", createUploadUrl: async () => "https://objects.example/existing", copy: async () => undefined },
+      scanner: { scan: async () => ({ status: "clean", scanner: "fixture", scannedAt: new Date().toISOString(), durationMs: 1 }) },
+      quota: { reserve, commit: async () => undefined, release: async () => false, expire: async () => [] },
+      quotaPolicies: { resolve: async () => ({ kind: "attachment.storage", limitBytes: 1_000, limitItems: 10, reservationTtlSeconds: 60, retryAfterSeconds: 60 }) },
+      outbox: { append: async () => undefined },
+    });
+
+    await expect(lifecycle.stage({ planeKey: "neon", tenantId: "11111111-1111-4111-8111-111111111111", attachmentId: existing.id, principalId: "33333333-3333-4333-8333-333333333333", fileName: "invoice.pdf", contentType: "application/pdf", sizeBytes: 1024 })).resolves.toMatchObject({ storageKey: existing.storageKey });
+    expect(createStaged).not.toHaveBeenCalled();
+    expect(reserve).not.toHaveBeenCalled();
   });
 
   it("schedules derivatives with the finalized source hash", async () => {
