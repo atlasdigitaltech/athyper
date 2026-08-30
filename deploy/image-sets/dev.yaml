@@ -1,10 +1,10 @@
 apiVersion: athyper.io/v1alpha1
 kind: ImageSet
 metadata:
-  id: dev-eb10fd75664c
+  id: dev-3c069069673c
   channel: development
 spec:
-  sourceRevision: eb10fd75664c7d537c3938d83f10f6ac61ebfbfb
+  sourceRevision: 3c069069673c67494c39017695c1564ff6ae72d6
   images:
     - id: neon-web
       reference: athyper/neon-web@sha256:d9d73c9356f6fcda80370381869ffcac49da538d99502ab7b610db793f619f3f
@@ -13,6 +13,6 @@ spec:
     - id: studio-web
       reference: athyper/studio-web@sha256:bb06017fe0082d14fbc5210a4f2efb54371539cc75b47a8132b6562d1408db8c
     - id: runtime-server
-      reference: athyper/runtime-server@sha256:581a86660ab0765bf2e39b9b9858ce5bb03e22f7eef4f9c647b253a53dd12780
+      reference: athyper/runtime-server@sha256:9269fd9a16d98bba7e56fa84a3e8942c59e293d01b95c036e58bfc04c2b387aa
     - id: iam
       reference: athyper/keycloak@sha256:22dafd3059be6a19996cb812b82752a149dbfd952e981c8744de8b2502b69e18
