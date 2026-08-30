@@ -2,11 +2,13 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { buildThreeTenantDemoAuthorization, DEMO_PLANE_PERMISSIONS } from "../provision-three-tenant-demo-authorization.js";
+import { buildThreeTenantDemoAuthorization, DEMO_BASELINE_ASSURANCE_PERMISSIONS, DEMO_PLANE_PERMISSIONS } from "../provision-three-tenant-demo-authorization.js";
 
 test("managed demo roles converge by removing stale permission links", async () => {
   const source = await readFile(new URL("../provision-three-tenant-demo-authorization.ts", import.meta.url), "utf8");
   assert.match(source, /DELETE FROM authz\.role_permission[\s\S]*NOT \(permission_id=ANY\(\$3::uuid\[\]\)\)/);
+  assert.match(source, /localDemoBaselineAssurance/);
+  assert.deepEqual(DEMO_BASELINE_ASSURANCE_PERMISSIONS, { neon: ["neon.ai.agent.use"], mesh: [], studio: [] });
 });
 
 test("builds explicit cross-plane demo scopes without member-company propagation", async () => {

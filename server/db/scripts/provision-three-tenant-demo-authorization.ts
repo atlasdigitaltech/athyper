@@ -13,6 +13,11 @@ export const DEMO_PLANE_PERMISSIONS = {
   mesh: ["mesh.catalog.network_account.read", "mesh.catalog.network_relationship.read","mesh.catalog.network_relationship.request"],
   studio: ["studio.platform.catalog.view", "studio.platform.catalog.manage","studio.metadata.contract.view","studio.metadata.contract.import","studio.metadata.contract_draft.create"],
 } as const;
+export const DEMO_BASELINE_ASSURANCE_PERMISSIONS: Readonly<Record<ProvisionPlane, readonly string[]>> = {
+  neon: ["neon.ai.agent.use"],
+  mesh: [],
+  studio: [],
+};
 const PRIMARY_TENANT_ADMINS: Record<string, string> = {
   athyper: "athyper.admin",
   technostat: "tksa.admin",
@@ -118,6 +123,15 @@ async function applyPlane(urlValue: string, plane: ProvisionPlane, inputs: Provi
   try {
     await client.query("BEGIN");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [`${SOURCE_REF}:${plane}`]);
+    for (const permissionCode of DEMO_BASELINE_ASSURANCE_PERMISSIONS[plane]) {
+      const permission = await one<{ id: string; status: string }>(client,
+        "SELECT id::text AS id,status FROM authz.permission WHERE canonical_code=$1", [permissionCode]);
+      if (permission.status !== "published") throw new Error(`local demo baseline-assurance permission is not published ${plane}/${permissionCode}`);
+      await client.query("UPDATE authz.permission SET status='suspended' WHERE id=$1::uuid", [permission.id]);
+      await client.query(`UPDATE authz.permission SET requires_mfa=false,metadata=metadata||$2::jsonb WHERE id=$1::uuid`,
+        [permission.id, JSON.stringify({ localDemoBaselineAssurance: true, managedBy: SOURCE_REF })]);
+      await client.query("UPDATE authz.permission SET status='published' WHERE id=$1::uuid", [permission.id]);
+    }
     const permissions: { code: string; id: string }[] = [];
     for (const permissionCode of DEMO_PLANE_PERMISSIONS[plane]) {
       const permission = await one<{ id: string }>(client,
