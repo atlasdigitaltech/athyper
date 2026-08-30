@@ -41,6 +41,7 @@ common/master/03_platform_tables.sql
 planes/neon/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
+common/document/03_foundation_tables.sql
 planes/neon/document/03_tables.sql
 planes/neon/snapshot/03_tables.sql
 planes/neon/control/03_tables.sql
@@ -189,8 +190,11 @@ planes/neon/authz/19_business_partner_activation_permission_reference_seed.sql
 planes/neon/authz/19_supplier_registration_permission_reference_seed.sql
 planes/neon/authz/20_customer_onboarding_permission_reference_seed.sql
 planes/neon/authz/21_business_partner_invitation_permission_reference_seed.sql
+planes/neon/authz/22_business_partner_360_permission_reference_seed.sql
+planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
+common/authz/16_content_record_acl_reference_seed.sql
 common/shared/12_reference_seed.sql
 common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql

@@ -235,6 +235,7 @@ export function createRecordTransferService<Transaction>(options: {
     },
 
     async requestExport(context: VerifiedRequestContext, entityCode: string, filter: Readonly<Record<string, unknown>>, requestId?: string) {
+      assertBusinessPartnerExportPrivacy(entityCode,filter);
       const exportRequestId = requestId ?? createId(), jobId = `records:export:${exportRequestId}`, exactFilter = structuredClone(filter);
       const descriptor = await descriptorFor(options.metadata, context, entityCode);
       const scope = await resolveTransferScope(options.collectionScopes, context, descriptor, "export", scopeCoordinate(exactFilter));
@@ -266,7 +267,7 @@ export function createRecordTransferService<Transaction>(options: {
     async restartExport(context:VerifiedRequestContext,exportRequestId:string){
       if(!options.staging.restartExport||!options.staging.getExport)throw new RecordServiceError(409,"EXPORT_RESTART_UNAVAILABLE","Export restart is not supported by the staging store");
       const retryId=createId(),jobId=`records:export-retry:${retryId}`;
-      const request=await options.transactions.run(context.planeKey,context,async tx=>{const current=await options.staging.getExport!(context.tenantId,exportRequestId,tx);if(!current)throw new RecordServiceError(404,"EXPORT_NOT_FOUND","Export request is unavailable");if(current.actorPrincipalId!==context.principalId)throw new RecordServiceError(403,"FORBIDDEN","Record transfer belongs to another principal");if(current.status!=="failed"||!current.exactFilter)throw new RecordServiceError(409,"EXPORT_RESTART_INVALID_STATE","Only failed exports can be restarted");const descriptor=await descriptorFor(options.metadata,context,current.entityCode),scope=await resolveTransferScope(options.collectionScopes,context,descriptor,"export",scopeCoordinate(current.exactFilter));await authorizeDescriptorOperation(options.authorizer,context,descriptor,"export",scope.authorizationResource);const state=await options.staging.restartExport!(context.tenantId,exportRequestId,tx);if(state!=="restarted")throw new RecordServiceError(409,"EXPORT_RESTART_INVALID_STATE","The export is no longer restartable");await recordTransferAudit(options.audit,context,"records.export.restart_requested","export",current.entityCode,{exportRequestId,jobId,retryId},tx);await appendEvent(options.outbox,context,"records.export.dispatch_requested",jobId,current.entityCode,exportRequestId,{tenantId:context.tenantId,entityCode:current.entityCode,exactFilter:current.exactFilter,actorPrincipalId:context.principalId,exportRequestId,jobId,retry:true},tx);return current;});
+      const request=await options.transactions.run(context.planeKey,context,async tx=>{const current=await options.staging.getExport!(context.tenantId,exportRequestId,tx);if(!current)throw new RecordServiceError(404,"EXPORT_NOT_FOUND","Export request is unavailable");if(current.actorPrincipalId!==context.principalId)throw new RecordServiceError(403,"FORBIDDEN","Record transfer belongs to another principal");if(current.status!=="failed"||!current.exactFilter)throw new RecordServiceError(409,"EXPORT_RESTART_INVALID_STATE","Only failed exports can be restarted");assertBusinessPartnerExportPrivacy(current.entityCode,current.exactFilter);const descriptor=await descriptorFor(options.metadata,context,current.entityCode),scope=await resolveTransferScope(options.collectionScopes,context,descriptor,"export",scopeCoordinate(current.exactFilter));await authorizeDescriptorOperation(options.authorizer,context,descriptor,"export",scope.authorizationResource);const state=await options.staging.restartExport!(context.tenantId,exportRequestId,tx);if(state!=="restarted")throw new RecordServiceError(409,"EXPORT_RESTART_INVALID_STATE","The export is no longer restartable");await recordTransferAudit(options.audit,context,"records.export.restart_requested","export",current.entityCode,{exportRequestId,jobId,retryId},tx);await appendEvent(options.outbox,context,"records.export.dispatch_requested",jobId,current.entityCode,exportRequestId,{tenantId:context.tenantId,entityCode:current.entityCode,exactFilter:current.exactFilter,actorPrincipalId:context.principalId,exportRequestId,jobId,retry:true},tx);return current;});
       await dispatchOrFail("export",context,request.entityCode,exportRequestId,jobId,()=>options.jobs.enqueue("export",{planeKey:context.planeKey,tenantId:context.tenantId,entityCode:request.entityCode,exactFilter:request.exactFilter!,actorPrincipalId:context.principalId,exportRequestId,context},{jobId}));
       return{exportRequestId,jobId,status:"queued"as const};
     },
@@ -290,6 +291,16 @@ export function createRecordTransferService<Transaction>(options: {
       throw new RecordServiceError(503,errorCode,errorDetail);
     }
   }
+}
+
+export function assertBusinessPartnerExportPrivacy(entityCode:string,filter:Readonly<Record<string,unknown>>):void{
+  if(entityCode!=="business_partner")return;
+  const transfer=filter["_transfer"];
+  if(!transfer||typeof transfer!=="object"||Array.isArray(transfer))return;
+  const fields=(transfer as Readonly<Record<string,unknown>>)["fields"];
+  if(!Array.isArray(fields))return;
+  const forbidden=fields.find(field=>typeof field==="string"&&/^(?:person|personal|employee|employment|work_assignment|workforce|external_worker|worker_engagement|engagement|placement|onboarding|offboarding|date_of_birth|national_id|compensation)(?:[._]|$)/i.test(field));
+  if(forbidden)throw new RecordServiceError(403,"BUSINESS_PARTNER_EXPORT_WORKFORCE_FORBIDDEN","Generic Business Partner exports cannot contain person or workforce fields");
 }
 
 function requireChunkStore<T>(store: ImportStagingStore<T>): asserts store is ImportStagingStore<T> & Required<Pick<ImportStagingStore<T>, "getChunk" | "appendChunk" | "seal">> { if (!store.getChunk || !store.appendChunk || !store.seal) throw new Error("Resumable imports are not supported by the staging store"); }

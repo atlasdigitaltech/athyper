@@ -12,17 +12,12 @@ BEGIN
         TO athyperapp;
         GRANT SELECT, INSERT, UPDATE, DELETE ON
             document.attachment,
-            document.attachment_quota_usage,
-            document.attachment_quota_reservation,
             document.attachment_folder,
             document.attachment_link,
             document.comment,
             document.comment_draft,
             document.comment_feed_cursor,
             document.content_item,
-            document.content_item_access_grant,
-            document.content_quota_usage,
-            document.content_quota_reservation,
             document.conversation,
             document.conversation_participant,
             document.multipart_upload
@@ -50,7 +45,6 @@ BEGIN
         GRANT SELECT ON document.supplier_registration_invitation TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON
             document.business_partner_invitation,
-            document.business_partner_invitation_applicant_policy,
             document.business_partner_invitation_recovery,
             document.business_partner_request
         TO athyperapp;
@@ -60,14 +54,12 @@ BEGIN
         TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperapp;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_supplier_registration_invitation() TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperapp;
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
             document.business_partner_invitation,
-            document.business_partner_invitation_applicant_policy,
             document.business_partner_invitation_recovery,
             document.business_partner_request,
             document.business_partner_request_evidence,
@@ -76,7 +68,6 @@ BEGIN
         GRANT SELECT ON document.supplier_registration_invitation TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
-        GRANT EXECUTE ON FUNCTION document.trg_guard_supplier_registration_invitation() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperadmin;
     END IF;
 END;
@@ -479,10 +470,9 @@ DO $$ BEGIN
     END IF;
 END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON document.business_partner_bank_verification TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON document.business_partner_bank_verification TO athyperadmin; END IF; END $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.business_partner_duplicate_resolution TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.business_partner_duplicate_resolution TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT ON document.business_partner_duplicate_resolution TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_resolve_business_partner_duplicate(uuid,uuid,uuid,text,text,jsonb,jsonb,uuid,uuid) TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_registration_recovery TO athyperadmin; END IF; END $$;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT SELECT,INSERT ON document.supplier_activation_evidence TO athyperadmin; END IF; END $$;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
@@ -491,16 +481,21 @@ DO $$ BEGIN
      document.contingent_work_order,document.contingent_work_order_revision,document.statement_of_work,
      document.statement_of_work_revision,document.statement_of_work_item,document.worker_engagement,
      document.worker_operational_placement,document.worker_compliance_item,document.engagement_onboarding_case,
-     document.external_time_sheet,document.external_time_entry,document.external_expense_sheet,document.external_expense_item,
-     document.external_service_entry,document.external_service_entry_line
+     document.external_time_sheet,document.external_time_entry,document.external_expense_sheet,document.external_expense_item
    TO athyperapp;
-   GRANT SELECT,INSERT ON document.external_candidate_evaluation,document.external_workforce_invoice_allocation TO athyperapp;
+   GRANT SELECT,INSERT ON document.external_candidate_evaluation,document.service_sheet_source_allocation TO athyperapp;
+   GRANT SELECT ON document.external_service_entry,document.external_service_entry_line,
+     document.external_workforce_invoice_allocation,document.external_claim_reconciliation_v TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_reject_external_workforce_history_mutation() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_candidate_submission() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_contingent_work_order() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_engagement() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_revision() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_compliance_item() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_header() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_line() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_guard_service_sheet_source_allocation() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.trg_reject_deprecated_external_acceptance_write() TO athyperapp;
  END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
    GRANT ALL PRIVILEGES ON
@@ -510,7 +505,9 @@ DO $$ BEGIN
      document.worker_engagement,document.worker_operational_placement,document.worker_compliance_item,
      document.engagement_onboarding_case,document.external_time_sheet,document.external_time_entry,
      document.external_expense_sheet,document.external_expense_item,document.external_service_entry,
-     document.external_service_entry_line,document.external_workforce_invoice_allocation
+     document.external_service_entry_line,document.external_workforce_invoice_allocation,
+     document.service_sheet_source_allocation
    TO athyperadmin;
+   GRANT SELECT ON document.external_claim_reconciliation_v TO athyperadmin;
  END IF;
 END $$;

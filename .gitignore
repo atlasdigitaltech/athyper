@@ -34,6 +34,7 @@ pids/
 # ARE committed (they're the regression baseline).
 tests/e2e/.auth/
 tests/e2e/.playwright-output/
+tests/e2e/.playwright-bp360-output/
 playwright-report/
 
 # =========================

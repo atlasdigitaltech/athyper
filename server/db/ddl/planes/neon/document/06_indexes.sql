@@ -12,17 +12,15 @@ CREATE INDEX attachment_expiry_idx
 CREATE INDEX attachment_processing_idx
     ON document.attachment (tenant_id, text_extraction_status, created_at)
     WHERE text_extraction_status IN ('pending', 'failed');
-CREATE INDEX attachment_quota_reservation_expiry_idx ON document.attachment_quota_reservation (tenant_id, expires_at) WHERE status='reserved';
-CREATE INDEX attachment_quota_reservation_resource_idx ON document.attachment_quota_reservation (tenant_id, resource_id);
-
 CREATE INDEX attachment_folder_owner_idx
     ON document.attachment_folder
     (tenant_id, entity_type, entity_id, parent_id, display_order);
 CREATE INDEX attachment_link_owner_idx
     ON document.attachment_link
     (tenant_id, entity_type, entity_id, display_order);
-CREATE INDEX attachment_link_attachment_idx
-    ON document.attachment_link (tenant_id, attachment_id);
+CREATE INDEX attachment_link_pinned_attachment_idx
+    ON document.attachment_link (tenant_id, pinned_attachment_id)
+    WHERE pinned_attachment_id IS NOT NULL;
 CREATE INDEX attachment_link_folder_idx
     ON document.attachment_link (tenant_id, folder_id)
     WHERE folder_id IS NOT NULL;
@@ -57,9 +55,6 @@ CREATE INDEX content_item_link_target_idx
 CREATE INDEX content_item_version_item_idx
     ON snapshot.content_item_version
     (tenant_id, content_item_id, version DESC);
-CREATE INDEX content_item_acl_subject_idx ON document.content_item_access_grant(tenant_id,subject_type,subject_id,content_item_id);
-CREATE INDEX content_quota_reservation_expiry_idx ON document.content_quota_reservation(tenant_id,expires_at) WHERE status='reserved';
-
 CREATE INDEX conversation_owner_idx
     ON document.conversation (tenant_id, entity_type, entity_id)
     WHERE entity_type IS NOT NULL;
@@ -786,8 +781,7 @@ CREATE INDEX attachment_series_id_idx
 
 -- attachment_link: series lookup
 CREATE INDEX attachment_link_series_idx
-    ON document.attachment_link (tenant_id, attachment_series_id)
-    WHERE attachment_series_id IS NOT NULL;
+    ON document.attachment_link (tenant_id, attachment_series_id);
 
 -- attachment_legal_hold indexes
 CREATE INDEX attachment_legal_hold_series_active_idx
@@ -822,13 +816,6 @@ CREATE INDEX multipart_upload_series_idx
     ON document.multipart_upload (tenant_id, attachment_series_id)
     WHERE attachment_series_id IS NOT NULL;
 
-CREATE INDEX supplier_registration_invitation_status_idx
-    ON document.supplier_registration_invitation_legacy (tenant_id, status, expires_at);
-CREATE INDEX supplier_registration_invitation_org_idx
-    ON document.supplier_registration_invitation_legacy (tenant_id, requested_operating_organization_id, created_at DESC);
-CREATE INDEX supplier_registration_invitation_request_idx
-    ON document.supplier_registration_invitation_legacy (tenant_id, business_partner_request_id)
-    WHERE business_partner_request_id IS NOT NULL;
 CREATE INDEX business_partner_invitation_status_idx ON document.business_partner_invitation(tenant_id,status,expires_at);
 CREATE INDEX business_partner_invitation_journey_scope_idx ON document.business_partner_invitation(tenant_id,journey_kind,scope_kind,created_at DESC);
 CREATE UNIQUE INDEX business_partner_invitation_request_uq ON document.business_partner_invitation(tenant_id,business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
@@ -838,6 +825,9 @@ CREATE INDEX business_partner_request_status_idx
 CREATE INDEX business_partner_request_target_idx
     ON document.business_partner_request (tenant_id, target_business_partner_id, created_at DESC)
     WHERE target_business_partner_id IS NOT NULL;
+CREATE INDEX business_partner_request_materialized_partner_idx
+    ON document.business_partner_request (tenant_id, materialized_business_partner_id, created_at DESC, id DESC)
+    WHERE materialized_business_partner_id IS NOT NULL;
 CREATE UNIQUE INDEX business_partner_request_open_role_extension_uq
     ON document.business_partner_request (tenant_id, target_business_partner_id, requested_role)
     WHERE request_kind IN ('add_supplier', 'add_customer', 'add_workforce')
@@ -888,8 +878,8 @@ CREATE INDEX mesh_business_partner_acceptance_match_idx ON document.mesh_busines
 CREATE UNIQUE INDEX mesh_business_partner_acceptance_event_request_global_uq ON document.mesh_business_partner_acceptance_event (tenant_id, business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
 CREATE UNIQUE INDEX business_partner_bank_verification_open_uq ON document.business_partner_bank_verification(tenant_id,bank_projection_id,supplier_company_profile_id) WHERE status IN('pending_verification','verified');
 CREATE INDEX business_partner_bank_verification_profile_idx ON document.business_partner_bank_verification(tenant_id,supplier_company_profile_id,status,created_at DESC);
+CREATE INDEX business_partner_bank_verification_partner_idx ON document.business_partner_bank_verification(tenant_id,business_partner_id,company_code_id,status,created_at DESC);
 CREATE INDEX supplier_activation_evidence_partner_idx ON document.supplier_activation_evidence(tenant_id,business_partner_id,activated_at DESC);
-CREATE INDEX supplier_registration_recovery_request_idx ON document.supplier_registration_recovery(tenant_id,request_id,requested_at DESC);
 CREATE INDEX workforce_requisition_status_idx ON document.workforce_requisition (tenant_id, company_code_id, status, expected_start_date);
 CREATE INDEX workforce_requisition_supplier_supplier_idx ON document.workforce_requisition_supplier (tenant_id, supplier_id, status, response_due_at);
 CREATE INDEX external_candidate_submission_review_idx ON document.external_candidate_submission (tenant_id, workforce_requisition_id, status, submitted_at);
@@ -906,6 +896,13 @@ CREATE INDEX worker_operational_placement_effective_idx ON document.worker_opera
 CREATE UNIQUE INDEX worker_operational_placement_primary_open_uq ON document.worker_operational_placement (tenant_id, worker_engagement_id) WHERE is_primary AND effective_until IS NULL AND status = 'active';
 CREATE INDEX worker_compliance_item_readiness_idx ON document.worker_compliance_item (tenant_id, worker_engagement_id, required_before, decision, valid_until);
 CREATE INDEX external_time_sheet_approval_idx ON document.external_time_sheet (tenant_id, status, period_end, worker_engagement_id);
+CREATE INDEX external_time_sheet_source_inbox_idx ON document.external_time_sheet (tenant_id, source_inbox_id) WHERE source_inbox_id IS NOT NULL;
 CREATE INDEX external_expense_sheet_approval_idx ON document.external_expense_sheet (tenant_id, status, period_end, worker_engagement_id);
+CREATE INDEX external_expense_sheet_source_inbox_idx ON document.external_expense_sheet (tenant_id, source_inbox_id) WHERE source_inbox_id IS NOT NULL;
 CREATE INDEX external_service_entry_approval_idx ON document.external_service_entry (tenant_id, company_code_id, supplier_id, status, service_period_end);
 CREATE INDEX external_workforce_invoice_allocation_source_idx ON document.external_workforce_invoice_allocation (tenant_id, service_entry_line_id, allocation_kind);
+CREATE INDEX service_sheet_source_allocation_line_idx ON document.service_sheet_source_allocation (tenant_id, service_sheet_line_id, allocation_kind);
+CREATE INDEX service_sheet_source_allocation_time_idx ON document.service_sheet_source_allocation (tenant_id, external_time_sheet_id, allocation_kind) WHERE external_time_sheet_id IS NOT NULL;
+CREATE INDEX service_sheet_source_allocation_expense_idx ON document.service_sheet_source_allocation (tenant_id, external_expense_sheet_id, allocation_kind) WHERE external_expense_sheet_id IS NOT NULL;
+CREATE INDEX service_sheet_source_allocation_sow_idx ON document.service_sheet_source_allocation (tenant_id, statement_of_work_item_id, allocation_kind) WHERE statement_of_work_item_id IS NOT NULL;
+CREATE UNIQUE INDEX service_sheet_source_allocation_reversal_once_uq ON document.service_sheet_source_allocation (tenant_id, reverses_allocation_id) WHERE reverses_allocation_id IS NOT NULL;

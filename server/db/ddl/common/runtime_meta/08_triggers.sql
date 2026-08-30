@@ -2,6 +2,10 @@ CREATE TRIGGER tenant_usage_counter_updated_at
 BEFORE UPDATE ON runtime_meta.tenant_usage_counter
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
+CREATE TRIGGER usage_reservation_updated_at
+BEFORE UPDATE ON runtime_meta.usage_reservation
+FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
+
 CREATE TRIGGER entity_number_counter_20_validate
 BEFORE INSERT OR UPDATE ON runtime_meta.entity_number_counter
 FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_validate_entity_number_counter();

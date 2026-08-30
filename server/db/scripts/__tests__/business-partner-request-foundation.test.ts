@@ -24,7 +24,7 @@ test("Business Partner requests are source-neutral, bounded, and idempotent", as
   assert.doesNotMatch(tables, /raw_bank|account_id_value/);
 });
 
-test("Business Partner request relations are tenant-safe and append-only", async () => {
+test("Business Partner request relations are tenant-safe with immutable validation and guarded evidence decisions", async () => {
   const [constraints, triggers, rls, grants] = await Promise.all([
     ddl("05_constraints.sql"),
     ddl("08_triggers.sql"),
@@ -36,7 +36,7 @@ test("Business Partner request relations are tenant-safe and append-only", async
   assert.match(constraints, /business_partner_request_workflow_fk[\s\S]*REFERENCES document\.workflow_request\(tenant_id, id\)/);
   assert.match(constraints, /business_partner_request_evidence_request_fk[\s\S]*FOREIGN KEY \(tenant_id, request_id\)/);
   assert.match(triggers, /trg_business_partner_request_10_guard/);
-  assert.match(triggers, /trg_business_partner_request_evidence_immutable/);
+  assert.match(triggers, /trg_business_partner_request_evidence_guard/);
   assert.match(triggers, /trg_business_partner_request_validation_immutable/);
   for (const table of [
     "business_partner_request",

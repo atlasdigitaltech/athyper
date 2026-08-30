@@ -170,6 +170,10 @@ CREATE INDEX document_payload_created_by_idx
 
 CREATE INDEX document_event_envelope_time_idx
     ON mesh.document_event (envelope_id, occurred_at, id);
+CREATE INDEX document_business_status_projection_envelope_idx
+    ON mesh.document_business_status_projection (source_envelope_id, lifecycle_version DESC);
+CREATE INDEX document_business_status_projection_relationship_idx
+    ON mesh.document_business_status_projection (network_relationship_id, resource_kind, business_status, updated_at DESC);
 
 CREATE INDEX document_event_actor_account_idx
     ON mesh.document_event (actor_tenant_id, actor_account_id)

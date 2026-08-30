@@ -990,6 +990,18 @@ ALTER TABLE control.mesh_business_partner_profile_processing_attempt
     ADD CONSTRAINT mesh_bp_profile_attempt_processed_by_fk FOREIGN KEY (tenant_id, processed_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE control.mesh_workforce_claim_inbox
+    ADD CONSTRAINT mesh_workforce_claim_inbox_tenant_fk FOREIGN KEY (tenant_id)
+    REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_workforce_claim_inbox_received_by_fk FOREIGN KEY (tenant_id, received_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE control.mesh_workforce_claim_processing_attempt
+    ADD CONSTRAINT mesh_workforce_claim_attempt_inbox_fk FOREIGN KEY (tenant_id, inbox_id)
+    REFERENCES control.mesh_workforce_claim_inbox (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_workforce_claim_attempt_processed_by_fk FOREIGN KEY (tenant_id, processed_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE control.mesh_business_partner_profile_projection
     ADD CONSTRAINT mesh_bp_profile_projection_snapshot_fk FOREIGN KEY (tenant_id, current_snapshot_id)
     REFERENCES snapshot.mesh_business_partner_profile_received (tenant_id, id) ON DELETE RESTRICT,

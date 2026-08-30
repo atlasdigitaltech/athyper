@@ -23,6 +23,49 @@ CREATE TABLE runtime_meta.tenant_usage_counter (
 COMMENT ON TABLE runtime_meta.tenant_usage_counter IS
   'Plane-local current usage and short-lived reservations. It is not the commercial entitlement source of truth.';
 
+CREATE TABLE runtime_meta.usage_reservation (
+    id              uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id       uuid        NOT NULL,
+    usage_metric_id uuid        NOT NULL,
+    dimension_code  text        NOT NULL DEFAULT '*',
+    resource_type   text        NOT NULL,
+    resource_id     uuid        NOT NULL,
+    reserved_value  bigint      NOT NULL,
+    actual_value    bigint,
+    status          text        NOT NULL DEFAULT 'reserved',
+    expires_at      timestamptz NOT NULL,
+    committed_at    timestamptz,
+    released_at     timestamptz,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    created_by      uuid        NOT NULL,
+    updated_at      timestamptz,
+    updated_by      uuid,
+
+    CONSTRAINT usage_reservation_pkey PRIMARY KEY (id),
+    CONSTRAINT usage_reservation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT usage_reservation_resource_uq
+        UNIQUE (tenant_id, usage_metric_id, dimension_code, resource_type, resource_id),
+    CONSTRAINT usage_reservation_dimension_chk
+        CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
+    CONSTRAINT usage_reservation_resource_type_chk
+        CHECK (resource_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$'),
+    CONSTRAINT usage_reservation_values_chk
+        CHECK (reserved_value >= 0 AND (actual_value IS NULL OR actual_value >= 0)),
+    CONSTRAINT usage_reservation_status_chk
+        CHECK (status IN ('reserved', 'committed', 'released', 'expired')),
+    CONSTRAINT usage_reservation_terminal_chk CHECK (
+        (status = 'reserved' AND committed_at IS NULL AND released_at IS NULL)
+        OR (status = 'committed' AND committed_at IS NOT NULL AND released_at IS NULL)
+        OR (status IN ('released', 'expired') AND released_at IS NOT NULL)
+    ),
+    CONSTRAINT usage_reservation_expiry_chk CHECK (expires_at > created_at),
+    CONSTRAINT usage_reservation_audit_pair_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE runtime_meta.usage_reservation IS
+  'Idempotent plane-local resource reservations. One resource may reserve multiple metrics atomically through one row per metric.';
+
 -- Local cache-version coordinates for the authorization evaluator.
 CREATE TABLE runtime_meta.authorization_epoch (
     id          uuid        NOT NULL DEFAULT shared.uuidv7(),

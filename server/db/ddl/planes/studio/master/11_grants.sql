@@ -39,6 +39,7 @@ BEGIN
                master.contact_phone,
                master.external_reference
             TO athyperapp;
+        GRANT SELECT, INSERT ON master.address_event TO athyperapp;
 
         GRANT SELECT ON master.principal, master.principal_identity_binding TO athyperapp;
         GRANT SELECT ON

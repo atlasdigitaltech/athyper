@@ -1,6 +1,12 @@
 CREATE INDEX tenant_usage_counter_metric_idx
     ON runtime_meta.tenant_usage_counter (usage_metric_id, tenant_id);
 
+CREATE INDEX usage_reservation_expiry_idx
+    ON runtime_meta.usage_reservation (tenant_id, expires_at, id)
+    WHERE status = 'reserved';
+CREATE INDEX usage_reservation_resource_idx
+    ON runtime_meta.usage_reservation (tenant_id, resource_type, resource_id);
+
 CREATE UNIQUE INDEX authorization_epoch_global_uq
     ON runtime_meta.authorization_epoch (scope_kind) WHERE scope_kind = 'global';
 CREATE UNIQUE INDEX authorization_epoch_tenant_uq

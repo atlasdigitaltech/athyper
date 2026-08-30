@@ -34,7 +34,7 @@ import type { ContentServices } from "@athyper/server-service-content";
 import type {CollaborationService}from"@athyper/server-contract-collaboration";
 import type { DocumentSearchService } from "@athyper/server-contract-search";
 import type { NumberingService } from "@athyper/server-contract-numbering";
-import type { BusinessPartnerEligibilityService, BusinessPartnerInvitationService, BusinessPartnerRequestService, SupplierRegistrationInvitationService, WorkforceService } from "@athyper/server-contract-master-data";
+import type { BusinessPartnerEligibilityService, BusinessPartnerInvitationService, BusinessPartnerRequestService, WorkforceService } from "@athyper/server-contract-master-data";
 import type { BookPeriodService, FinancePostingGuard, RoundingResolver } from "@athyper/server-service-finance";
 import type { BusinessPartnerAccountBankLinkageService, BusinessPartnerProfileMatchService, BusinessPartnerProfileProjectionService, NeonFinanceRegistration } from "@athyper/server-plane-neon";
 import type { BusinessPartnerBankDisclosureService, BusinessPartnerProfilePublicationService } from "@athyper/server-plane-mesh";
@@ -132,7 +132,6 @@ export interface Container {
     numbering?: NumberingService;
     businessPartnerRequests?: BusinessPartnerRequestService;
     workforce?: WorkforceService;
-    supplierRegistrationInvitations?: SupplierRegistrationInvitationService;
     businessPartnerInvitations?: BusinessPartnerInvitationService;
     businessPartnerEligibility?: BusinessPartnerEligibilityService;
     businessPartnerProfilePublications?: BusinessPartnerProfilePublicationService;

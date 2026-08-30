@@ -17,11 +17,11 @@ test("P5 generalizes invitation authority without supplier-only leakage",async()
  assert.match(migration,/ALTER TABLE document\.supplier_registration_invitation RENAME TO supplier_registration_invitation_legacy/);
  assert.match(migration,/Controlled writes go through the business-partner invitation service/);
  assert.match(repository,/FOR UPDATE/);assert.match(repository,/status='pending' AND row_version=/);assert.match(repository,/ON CONFLICT\(tenant_id,idempotency_key\) DO NOTHING/);
- assert.match(repository,/business_partner_invitation_applicant_policy/);assert.match(repository,/requests\.findByIdempotencyKey/);assert.match(repository,/requests\.create/);
+ assert.doesNotMatch(repository,/business_partner_invitation_applicant_policy|approved_fields|approved_actions/);assert.match(repository,/applicant_access_revoked_at IS NULL/);assert.match(repository,/requests\.findByIdempotencyKey/);assert.match(repository,/requests\.create/);
  assert.match(service,/randomBytes\(32\)/);assert.match(service,/token: rawToken/);assert.match(service,/assertApprovedFields/);assert.match(service,/restrictedSessionRequired: true/);
  assert.match(routes,/business-partner-invitations\/:invitationId\/resend/);assert.match(routes,/path: "candidate"/);assert.match(routes,/\$\{config\.path\}-registrations\/accept/);assert.match(routes,/path: "supplier"/);assert.match(routes,/path: "customer"/);
  assert.match(triggers,/trg_business_partner_invitation_10_guard/);assert.match(functions,/Resend must atomically rotate the token hash/);
- for(const source of[rls,migration])for(const table of["business_partner_invitation","business_partner_invitation_applicant_policy","business_partner_invitation_recovery"])assert.match(source,new RegExp(`${table} FORCE ROW LEVEL SECURITY`));
+ for(const table of["business_partner_invitation","business_partner_invitation_recovery"])assert.match(rls,new RegExp(`${table} FORCE ROW LEVEL SECURITY`));
  assert.match(migration,/current_setting\('app\.database_plane',\s*true\)\s*(?:<>|IS DISTINCT FROM)\s*'neon'/);
  assert.doesNotMatch(`${migration}\n${rls}`,/shared\.(?:raise_wrong_database|current_principal_id)/);
  assert.match(`${migration}\n${rls}`,/master\.current_principal_id_soft\(\)/);

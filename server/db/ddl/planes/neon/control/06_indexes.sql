@@ -455,6 +455,17 @@ CREATE INDEX mesh_bp_profile_attempt_quarantine_idx
     ON control.mesh_business_partner_profile_processing_attempt
     (tenant_id, processed_at DESC, inbox_event_id)
     WHERE disposition = 'quarantined';
+CREATE INDEX mesh_workforce_claim_inbox_relationship_idx
+    ON control.mesh_workforce_claim_inbox
+    (tenant_id, network_relationship_id, received_at DESC);
+CREATE INDEX mesh_workforce_claim_inbox_business_key_idx
+    ON control.mesh_workforce_claim_inbox
+    (tenant_id, document_kind, business_key)
+    WHERE business_key IS NOT NULL;
+CREATE INDEX mesh_workforce_claim_attempt_retry_idx
+    ON control.mesh_workforce_claim_processing_attempt
+    (tenant_id, processed_at DESC, inbox_id)
+    WHERE disposition IN ('quarantined','failed');
 CREATE INDEX mesh_bp_profile_projection_source_idx
     ON control.mesh_business_partner_profile_projection
     (tenant_id, source_tenant_id, source_network_account_id, projection_status);

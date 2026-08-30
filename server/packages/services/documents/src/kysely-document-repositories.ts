@@ -46,20 +46,25 @@ export function createKyselyDocumentTemplateRepository(): DocumentTemplateReposi
 export function createKyselyDocumentArtifactRepository(): DocumentArtifactRepository<DocumentTransaction> {
   return {
     async save(input, transaction) {
+      await sql`INSERT INTO document.attachment_series(id,tenant_id,created_by)
+        VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.principalId}::uuid)`.execute(transaction);
       const created = await sql<{ created_at: Date | string }>`
         INSERT INTO document.attachment
           (id,tenant_id,file_name,original_filename,content_type,size_bytes,sha256,kind,
-           storage_bucket,storage_key,version_no,reference_count,is_current,is_active,
+           storage_bucket,storage_key,version_no,reference_count,series_id,is_active,
            is_virus_scanned,text_extraction_status,metadata,status,uploaded_by,created_by)
         VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.fileName},${input.fileName},
           'application/pdf',${input.sizeBytes},${input.sha256},'generated_document',
-          ${input.storageBucket},${input.storageKey},1,1,true,true,true,'pending',
+          ${input.storageBucket},${input.storageKey},1,1,${input.id}::uuid,true,true,'pending',
           ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}) })}::jsonb,
           'active',${input.principalId}::uuid,${input.principalId}::uuid)
         RETURNING created_at
       `.execute(transaction);
+      await sql`UPDATE document.attachment_series SET current_attachment_id=${input.id}::uuid,
+        updated_at=clock_timestamp(),updated_by=${input.principalId}::uuid
+        WHERE tenant_id=${input.tenantId}::uuid AND id=${input.id}::uuid`.execute(transaction);
       await sql`INSERT INTO document.attachment_link
-          (tenant_id,entity_type,entity_id,attachment_id,link_kind,display_order,metadata,created_by)
+          (tenant_id,entity_type,entity_id,attachment_series_id,link_kind,display_order,metadata,created_by)
         VALUES (${input.tenantId}::uuid,${input.entityType},${input.entityId},${input.id}::uuid,
           'rendered',0,${JSON.stringify({ operation_code: input.operationCode, binding_id: input.template.bindingId })}::jsonb,${input.principalId}::uuid)`.execute(transaction);
       return generated(input, dateTime(created.rows[0]?.created_at));
@@ -71,7 +76,7 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
                attachment.storage_key, attachment.metadata, attachment.created_at
           FROM document.attachment AS attachment
           JOIN document.attachment_link AS link
-            ON link.tenant_id = attachment.tenant_id AND link.attachment_id = attachment.id
+            ON link.tenant_id = attachment.tenant_id AND link.attachment_series_id = attachment.series_id
          WHERE attachment.tenant_id = ${context.tenantId}::uuid AND attachment.id = ${documentId}::uuid
            AND attachment.kind = 'generated_document' AND attachment.status = 'active' AND attachment.is_virus_scanned
          LIMIT 1
@@ -87,7 +92,7 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
                attachment.metadata, attachment.created_at
           FROM document.attachment AS attachment
           JOIN document.attachment_link AS link
-            ON link.tenant_id=attachment.tenant_id AND link.attachment_id=attachment.id
+            ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
          WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.kind='generated_document' AND attachment.is_virus_scanned
            AND attachment.status='active' AND attachment.metadata->>'idempotency_key'=${idempotencyKey}
          LIMIT 1`.execute(transaction);
@@ -121,7 +126,8 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
                link.entity_type,link.entity_id
         FROM selected
         LEFT JOIN document.attachment_link link
-          ON link.tenant_id=selected.tenant_id AND link.attachment_id=selected.id
+          ON link.tenant_id=selected.tenant_id AND link.attachment_series_id=selected.series_id
+         AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=selected.id)
         ORDER BY link.display_order,link.created_at
       `.execute(transaction);
       const first = result.rows[0];

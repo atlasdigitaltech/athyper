@@ -24,6 +24,15 @@ describe("C2 control services", () => {
     await expect(service.evaluate(context, "ui.new")).rejects.toMatchObject({ code: "CONTROL_ADMIN_EXACT_PLANE_REPOSITORY_UNAVAILABLE", planeKey: "neon" });
   });
 
+  it("keeps a zero-percent experiment disabled even when its catalog default is enabled", async () => {
+    const repository = {
+      ...featureRepository(true),
+      getDefinition: vi.fn(async () => ({ id: "flag-360", code: "neon.business_partner.view_360", defaultEnabled: true, rolloutPct: 0, effectiveFrom: "2026-01-01T00:00:00Z", status: "active" as const })),
+    } satisfies FeatureFlagRepository;
+    const service = createFeatureFlagService({ authorizer: allow, repositories: provider(repository), cache: cache(), now: () => new Date("2026-08-30T00:00:00Z") });
+    await expect(service.evaluate(context, "neon.business_partner.view_360")).resolves.toMatchObject({ enabled: false });
+  });
+
   it("keeps platform catalog publication Studio-owned", async () => {
     const studio = { list: vi.fn(async () => []), get: vi.fn(), publish: vi.fn(async (rule: BankValidationRule) => rule) };
     const service = createBankValidationService({ authorizer: allow, repositories: createExactPlaneRepositoryProvider({ studio }) });

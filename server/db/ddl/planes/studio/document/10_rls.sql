@@ -1,9 +1,5 @@
 ALTER TABLE document.attachment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link ENABLE ROW LEVEL SECURITY;
@@ -34,12 +30,6 @@ ALTER TABLE document.multipart_upload ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.multipart_upload FORCE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_access ON document.attachment
     FOR ALL
@@ -47,10 +37,6 @@ CREATE POLICY tenant_access ON document.attachment
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON document.attachment
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_usage FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_reservation FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.attachment_folder
     FOR ALL
@@ -361,6 +347,3 @@ BEGIN
     END IF;
 END;
 $$;
-CREATE POLICY tenant_access ON document.content_item_access_grant FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());

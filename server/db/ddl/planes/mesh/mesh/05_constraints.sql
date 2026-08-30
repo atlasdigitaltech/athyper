@@ -289,6 +289,14 @@ ALTER TABLE mesh.document_acknowledgement
     FOREIGN KEY (responder_tenant_id, responder_principal_id)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE mesh.document_business_status_projection
+    ADD CONSTRAINT document_business_status_projection_envelope_fk
+    FOREIGN KEY (source_envelope_id) REFERENCES mesh.document_envelope(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT document_business_status_projection_relationship_fk
+    FOREIGN KEY (network_relationship_id) REFERENCES mesh.network_relationship(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT document_business_status_projection_event_fk
+    FOREIGN KEY (last_event_id) REFERENCES mesh.document_event(id) ON DELETE RESTRICT;
+
 ALTER TABLE mesh.document_acknowledgement
     ADD CONSTRAINT document_acknowledgement_created_by_fk
     FOREIGN KEY (responder_tenant_id, created_by)

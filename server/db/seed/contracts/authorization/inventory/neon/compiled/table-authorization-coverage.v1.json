@@ -8,6 +8,7 @@
       "ddl/common/master/03_tables.sql",
       "ddl/planes/neon/master/03_tables.sql",
       "ddl/common/document/03_tables.sql",
+      "ddl/common/document/03_foundation_tables.sql",
       "ddl/planes/neon/document/03_tables.sql"
     ],
     "repositoryRoots": [
@@ -21,11 +22,11 @@
     "studioNeonOrganizationBoundary": "seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json"
   },
   "counts": {
-    "tables": 269,
-    "masterTables": 141,
-    "documentTables": 128,
-    "reviewedTables": 50,
-    "pendingReviewTables": 219,
+    "tables": 290,
+    "masterTables": 143,
+    "documentTables": 147,
+    "reviewedTables": 45,
+    "pendingReviewTables": 245,
     "operations": 43,
     "lifecycles": 6,
     "crossPlaneOrganizationResources": 3,
@@ -73,11 +74,12 @@
     },
     {
       "table": "document.attachment",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/adapters/search-meilisearch/src/meilisearch-index.ts",
+        "../packages/platform/ai/src/attachment-context.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
         "../packages/services/attachments/src/attachment-lifecycle.ts",
         "../packages/services/attachments/src/attachment-routes.ts",
@@ -87,7 +89,8 @@
         "../packages/services/document-derivatives/src/document-derivatives.ts",
         "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
         "../packages/services/documents/src/document-service.ts",
-        "../packages/services/documents/src/kysely-document-repositories.ts"
+        "../packages/services/documents/src/kysely-document-repositories.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts"
       ],
       "writerReferences": [
         "../packages/services/attachments/src/kysely-attachment-repository.ts",
@@ -110,7 +113,7 @@
     },
     {
       "table": "document.attachment_derivative",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
@@ -135,7 +138,7 @@
     },
     {
       "table": "document.attachment_folder",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [],
@@ -157,7 +160,7 @@
     },
     {
       "table": "document.attachment_legal_hold",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -181,7 +184,7 @@
     },
     {
       "table": "document.attachment_legal_hold_event",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [],
@@ -202,10 +205,11 @@
     },
     {
       "table": "document.attachment_link",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
+        "../packages/platform/ai/src/attachment-context.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
         "../packages/services/attachments/src/kysely-attachment-repository.ts",
         "../packages/services/content/src/kysely-content-resources.ts",
@@ -233,66 +237,22 @@
       ]
     },
     {
-      "table": "document.attachment_quota_reservation",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "reviewStatus": "reviewed",
-      "slice": "attachment_content",
-      "businessDomain": "collaboration",
-      "classification": "technical_work_state",
-      "aggregateRoot": "document.attachment",
-      "writerKind": "worker",
-      "writerOwner": "@athyper/svc-attachments",
-      "externallyReadable": false,
-      "externallyWritable": false,
-      "sensitivity": "standard",
-      "requiredScopeKinds": [
-        "tenant"
-      ]
-    },
-    {
-      "table": "document.attachment_quota_usage",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-quota-ledger.ts"
-      ],
-      "reviewStatus": "reviewed",
-      "slice": "attachment_content",
-      "businessDomain": "collaboration",
-      "classification": "projection_derived_state",
-      "aggregateRoot": "document.attachment",
-      "writerKind": "worker",
-      "writerOwner": "@athyper/svc-attachments",
-      "externallyReadable": false,
-      "externallyWritable": false,
-      "sensitivity": "standard",
-      "requiredScopeKinds": [
-        "tenant"
-      ]
-    },
-    {
       "table": "document.attachment_series",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../packages/platform/ai/src/attachment-context.ts",
+        "../packages/services/attachments/src/kysely-attachment-repository.ts",
+        "../packages/services/content/src/kysely-content-resources.ts",
+        "../packages/services/document-derivatives/src/document-derivatives.ts",
+        "../packages/services/document-processing/src/kysely-document-processing-repository.ts",
+        "../packages/services/documents/src/kysely-document-repositories.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts"
+      ],
+      "writerReferences": [
         "../packages/services/attachments/src/kysely-attachment-repository.ts",
         "../packages/services/documents/src/kysely-document-repositories.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/attachments/src/kysely-attachment-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "attachment_content",
@@ -467,10 +427,84 @@
       "hasVersion": true,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [
-        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.business_partner_duplicate_resolution",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.business_partner_invitation",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
+      ],
+      "reviewStatus": "reviewed",
+      "slice": "business_partner_onboarding",
+      "businessDomain": "relationship",
+      "classification": "aggregate_root",
+      "aggregateRoot": "document.business_partner_invitation",
+      "writerKind": "user_service",
+      "writerOwner": "@athyper/server-service-master-data",
+      "externallyReadable": false,
+      "externallyWritable": false,
+      "sensitivity": "restricted",
+      "requiredScopeKinds": [
+        "tenant"
+      ],
+      "notes": "Generalized single-use supplier, customer, and candidate invitation authority. External acceptance is available only through the restricted token-verifying facade; hashes and lifecycle state are never exposed through generic records."
+    },
+    {
+      "table": "document.business_partner_invitation_recovery",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../apps/platform-host/src/composition/register-services.ts",
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -492,9 +526,14 @@
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
       ],
       "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "reviewStatus": "reviewed",
@@ -517,8 +556,13 @@
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner_onboarding",
       "businessDomain": "relationship",
@@ -601,11 +645,10 @@
     },
     {
       "table": "document.comment",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../../packages/platform/communications/collaboration-ui/src/attachment-client.ts",
         "../packages/platform/collaboration/src/collaboration-service.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts"
       ],
@@ -629,7 +672,7 @@
     },
     {
       "table": "document.comment_draft",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -654,7 +697,7 @@
     },
     {
       "table": "document.comment_feed_cursor",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -679,7 +722,7 @@
     },
     {
       "table": "document.comment_mention",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -704,7 +747,7 @@
     },
     {
       "table": "document.comment_reaction",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -807,7 +850,7 @@
     },
     {
       "table": "document.content_item",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": true,
       "hasVersion": true,
       "repositoryReferences": [
@@ -835,34 +878,8 @@
       ]
     },
     {
-      "table": "document.content_item_access_grant",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-acl.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-acl.ts"
-      ],
-      "reviewStatus": "reviewed",
-      "slice": "attachment_content",
-      "businessDomain": "content",
-      "classification": "sensitive_overlay",
-      "aggregateRoot": "document.content_item",
-      "writerKind": "user_service",
-      "writerOwner": "@athyper/svc-content",
-      "externallyReadable": true,
-      "externallyWritable": false,
-      "sensitivity": "restricted",
-      "requiredScopeKinds": [
-        "resource"
-      ],
-      "notes": "Access grants are changed only through content-item grant/revoke operations."
-    },
-    {
       "table": "document.content_item_link",
-      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "ddlSource": "ddl/common/document/03_foundation_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
@@ -886,54 +903,42 @@
       ]
     },
     {
-      "table": "document.content_quota_reservation",
+      "table": "document.contingent_work_order",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
-      "hasStatus": false,
-      "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "reviewStatus": "reviewed",
-      "slice": "attachment_content",
-      "businessDomain": "content",
-      "classification": "technical_work_state",
-      "aggregateRoot": "document.content_item",
-      "writerKind": "worker",
-      "writerOwner": "@athyper/svc-content",
-      "externallyReadable": false,
-      "externallyWritable": false,
-      "sensitivity": "standard",
-      "requiredScopeKinds": [
-        "tenant"
-      ]
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
     },
     {
-      "table": "document.content_quota_usage",
+      "table": "document.contingent_work_order_revision",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "writerReferences": [
-        "../packages/services/content/src/kysely-content-quota.ts"
-      ],
-      "reviewStatus": "reviewed",
-      "slice": "attachment_content",
-      "businessDomain": "content",
-      "classification": "projection_derived_state",
-      "aggregateRoot": "document.content_item",
-      "writerKind": "worker",
-      "writerOwner": "@athyper/svc-content",
-      "externallyReadable": true,
-      "externallyWritable": false,
-      "sensitivity": "standard",
-      "requiredScopeKinds": [
-        "tenant"
-      ]
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
     },
     {
       "table": "document.conversation",
@@ -1094,6 +1099,198 @@
     },
     {
       "table": "document.employee_tax_declaration_line",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.engagement_onboarding_case",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_candidate_evaluation",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_candidate_submission",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_expense_item",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_expense_sheet",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_service_entry",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": true,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_service_entry_line",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_time_entry",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_time_sheet",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.external_workforce_invoice_allocation",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
@@ -1401,7 +1598,8 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/planes/neon/src/business-partner-profile-match.ts"
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-network.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-profile-match.ts"
@@ -1425,7 +1623,8 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/planes/neon/src/business-partner-profile-match.ts"
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-network.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-profile-match.ts"
@@ -1449,7 +1648,8 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/planes/neon/src/business-partner-profile-match.ts"
+        "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-network.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-profile-match.ts"
@@ -1551,8 +1751,13 @@
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -1570,8 +1775,15 @@
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -2368,6 +2580,25 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "document.service_sheet_source_allocation",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "document.shift_assignment",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": true,
@@ -2501,6 +2732,63 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "document.statement_of_work",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.statement_of_work_item",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.statement_of_work_revision",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "document.stocktake",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": true,
@@ -2539,31 +2827,28 @@
       "requiredScopeKinds": []
     },
     {
-      "table": "document.supplier_registration_invitation",
+      "table": "document.supplier_activation_evidence",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
-      "hasStatus": true,
-      "hasVersion": true,
+      "hasStatus": false,
+      "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/services/master-data/src/kysely-supplier-registration-invitation-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-supplier-registration-invitation-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
       ],
-      "reviewStatus": "reviewed",
-      "slice": "business_partner_onboarding",
-      "businessDomain": "supplier",
-      "classification": "aggregate_root",
-      "aggregateRoot": "document.supplier_registration_invitation",
-      "writerKind": "user_service",
-      "writerOwner": "@athyper/server-service-master-data",
-      "externallyReadable": false,
-      "externallyWritable": false,
-      "sensitivity": "restricted",
-      "requiredScopeKinds": [
-        "operating_organization"
-      ],
-      "notes": "Single-use invitation authority. External acceptance is available only through the restricted token-verifying facade; hashes and lifecycle state are never exposed through generic records."
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
     },
     {
       "table": "document.time_punch",
@@ -2651,6 +2936,68 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "document.worker_compliance_item",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.worker_engagement",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.worker_operational_placement",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts"
+      ],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "document.workflow_request",
       "ddlSource": "ddl/planes/neon/document/03_tables.sql",
       "hasStatus": true,
@@ -2701,6 +3048,44 @@
       "requiredScopeKinds": []
     },
     {
+      "table": "document.workforce_requisition",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": true,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "document.workforce_requisition_supplier",
+      "ddlSource": "ddl/planes/neon/document/03_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [],
+      "writerReferences": [],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
       "table": "master.accounting_profile",
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
@@ -2725,7 +3110,33 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
         "../packages/services/master-data/src/services.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.address_event",
+      "ddlSource": "ddl/common/master/03_platform_tables.sql",
+      "hasStatus": false,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
@@ -2745,8 +3156,14 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -2860,7 +3277,11 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/business-partner-360-service.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
@@ -2900,7 +3321,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-bank-reveal.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
@@ -3016,12 +3440,22 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../../apps/studio/.next/server/chunks/ssr/061b_app_(shell)_mdg_business-partner_ai-experience_experience-editor_tsx_148ar3g._.js",
+        "../../apps/studio/.next/standalone/apps/studio/.next/server/chunks/ssr/061b_app_(shell)_mdg_business-partner_ai-experience_experience-editor_tsx_148ar3g._.js",
+        "../../apps/studio/.next/static/chunks/0g-7e2gha18ls.js",
+        "../../apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx",
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/planes/neon/src/business-partner-import.ts",
         "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/business-partner-360-service.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts",
         "../packages/services/records/src/kysely-record-repository.ts"
       ],
       "writerReferences": [
@@ -3047,8 +3481,12 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "supplier",
@@ -3089,8 +3527,14 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "relationship",
@@ -3110,8 +3554,13 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "relationship",
@@ -3135,6 +3584,8 @@
       "repositoryReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
         "../packages/planes/neon/src/business-partner-profile-match.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
         "../packages/services/records/src/kysely-record-repository.ts"
@@ -3184,8 +3635,15 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/business-partner-360-service.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "supplier",
@@ -3300,8 +3758,14 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
       "businessDomain": "supplier",
@@ -3321,7 +3785,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3401,6 +3867,8 @@
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/services/finance/src/shared/kysely-finance-foundation.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -3466,6 +3934,8 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -3531,6 +4001,8 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -3595,7 +4067,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3617,9 +4091,14 @@
       "repositoryReferences": [
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/kysely-notification-repositories.ts",
-        "../packages/platform/notifications/src/notification-planner.ts"
+        "../packages/platform/notifications/src/notification-planner.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3637,8 +4116,14 @@
       "ddlSource": "ddl/common/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3677,8 +4162,13 @@
       "ddlSource": "ddl/common/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3696,7 +4186,9 @@
       "ddlSource": "ddl/common/master/03_platform_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3738,6 +4230,8 @@
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -3860,8 +4354,17 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3917,8 +4420,17 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -3937,11 +4449,34 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
+        "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts"
       ],
+      "reviewStatus": "pending_review",
+      "slice": "phase1_backlog",
+      "businessDomain": null,
+      "classification": "pending_review",
+      "aggregateRoot": null,
+      "writerKind": null,
+      "writerOwner": null,
+      "externallyReadable": null,
+      "externallyWritable": null,
+      "sensitivity": null,
+      "requiredScopeKinds": []
+    },
+    {
+      "table": "master.external_worker",
+      "ddlSource": "ddl/planes/neon/master/03_tables.sql",
+      "hasStatus": true,
+      "hasVersion": false,
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts"
+      ],
+      "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -4235,7 +4770,10 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-platform.ts",
-        "../packages/adapters/experience-postgres/src/index.ts"
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -4258,7 +4796,10 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -4322,6 +4863,7 @@
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-platform.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -4348,6 +4890,7 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -4373,7 +4916,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4718,8 +5263,17 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -4737,7 +5291,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": false,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4756,7 +5312,9 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4779,13 +5337,16 @@
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/platform/collaboration/src/kysely-collaboration-repository.ts",
+        "../packages/platform/iam/src/kysely-identity-saga.ts",
         "../packages/platform/iam/src/kysely-permission-resolver.ts",
         "../packages/platform/notifications/src/kysely-notification-preferences.ts",
         "../packages/platform/notifications/src/notification-planner.ts",
         "../packages/platform/notifications/src/outbox-planning.ts",
         "../packages/platform/preferences/src/kysely-saved-view-repository.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -4804,9 +5365,12 @@
       "hasStatus": true,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/adapters/experience-postgres/src/index.ts"
+        "../packages/adapters/experience-postgres/src/index.ts",
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
       ],
-      "writerReferences": [],
+      "writerReferences": [
+        "../packages/platform/iam/src/kysely-identity-saga.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -5280,6 +5844,8 @@
       "repositoryReferences": [
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/planes/neon/src/business-partner-import.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
       ],
@@ -5307,7 +5873,10 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+      ],
       "writerReferences": [],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -5511,8 +6080,17 @@
       "ddlSource": "ddl/planes/neon/master/03_tables.sql",
       "hasStatus": true,
       "hasVersion": false,
-      "repositoryReferences": [],
-      "writerReferences": [],
+      "repositoryReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
+        "../packages/services/master-data/src/kysely-business-partner-360-workforce.ts",
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
+      "writerReferences": [
+        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-workforce-repository.ts"
+      ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
       "businessDomain": null,
@@ -6708,12 +7286,16 @@
     "pending table review: document.budget_allocation",
     "pending table review: document.budget_profile",
     "pending table review: document.business_partner_bank_verification",
+    "pending table review: document.business_partner_duplicate_resolution",
+    "pending table review: document.business_partner_invitation_recovery",
     "pending table review: document.catalog_import",
     "pending table review: document.catalog_import_line",
     "pending table review: document.commitment",
     "pending table review: document.commitment_line",
     "pending table review: document.commitment_release_allocation",
     "pending table review: document.compensation_change",
+    "pending table review: document.contingent_work_order",
+    "pending table review: document.contingent_work_order_revision",
     "pending table review: document.delivery_note",
     "pending table review: document.delivery_note_line",
     "pending table review: document.depreciation_run",
@@ -6721,6 +7303,16 @@
     "pending table review: document.depreciation_schedule",
     "pending table review: document.employee_tax_declaration",
     "pending table review: document.employee_tax_declaration_line",
+    "pending table review: document.engagement_onboarding_case",
+    "pending table review: document.external_candidate_evaluation",
+    "pending table review: document.external_candidate_submission",
+    "pending table review: document.external_expense_item",
+    "pending table review: document.external_expense_sheet",
+    "pending table review: document.external_service_entry",
+    "pending table review: document.external_service_entry_line",
+    "pending table review: document.external_time_entry",
+    "pending table review: document.external_time_sheet",
+    "pending table review: document.external_workforce_invoice_allocation",
     "pending table review: document.fx_revaluation_run",
     "pending table review: document.hr_case",
     "pending table review: document.ic_elimination",
@@ -6782,6 +7374,7 @@
     "pending table review: document.schedule_line",
     "pending table review: document.service_sheet",
     "pending table review: document.service_sheet_line",
+    "pending table review: document.service_sheet_source_allocation",
     "pending table review: document.shift_assignment",
     "pending table review: document.sourcing_event",
     "pending table review: document.sourcing_event_award",
@@ -6789,16 +7382,26 @@
     "pending table review: document.sourcing_event_company",
     "pending table review: document.sourcing_event_demand",
     "pending table review: document.sourcing_event_intercompany_allocation",
+    "pending table review: document.statement_of_work",
+    "pending table review: document.statement_of_work_item",
+    "pending table review: document.statement_of_work_revision",
     "pending table review: document.stocktake",
     "pending table review: document.stocktake_line",
+    "pending table review: document.supplier_activation_evidence",
     "pending table review: document.time_punch",
     "pending table review: document.user_profile_update_request",
     "pending table review: document.wht_certificate",
     "pending table review: document.work_item",
+    "pending table review: document.worker_compliance_item",
+    "pending table review: document.worker_engagement",
+    "pending table review: document.worker_operational_placement",
     "pending table review: document.workflow_request",
     "pending table review: document.workflow_stage",
+    "pending table review: document.workforce_requisition",
+    "pending table review: document.workforce_requisition_supplier",
     "pending table review: master.accounting_profile",
     "pending table review: master.address",
+    "pending table review: master.address_event",
     "pending table review: master.address_link",
     "pending table review: master.asset",
     "pending table review: master.asset_assignment_history",
@@ -6844,6 +7447,7 @@
     "pending table review: master.employee_statutory_enrollment",
     "pending table review: master.employment",
     "pending table review: master.external_reference",
+    "pending table review: master.external_worker",
     "pending table review: master.fiscal_period",
     "pending table review: master.fx_rate",
     "pending table review: master.gl_account",
@@ -6917,5 +7521,5 @@
     "pending table review: master.work_pattern_day",
     "pending table review: master.workspace"
   ],
-  "sha256": "2a722a45081ebb82897d25cedb4c047d7e4e3f9d96d4dacec47827e0f85bba00"
+  "sha256": "b20714c7142877699a882443ab55bab1b14e5566cbd4f37581d1ce903b0ccea9"
 }

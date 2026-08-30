@@ -712,6 +712,35 @@ CREATE TABLE mesh.document_acknowledgement (
         CHECK (acknowledged_at <= created_at)
 );
 
+CREATE TABLE mesh.document_business_status_projection (
+    id                      uuid        NOT NULL DEFAULT shared.uuidv7(),
+    source_envelope_id      uuid        NOT NULL,
+    network_relationship_id uuid        NOT NULL,
+    resource_kind           text        NOT NULL,
+    resource_ref            text        NOT NULL,
+    lifecycle_version       bigint      NOT NULL,
+    business_status         text        NOT NULL,
+    safe_reason_code        text,
+    submitted_at            timestamptz,
+    decided_at              timestamptz,
+    last_event_id           uuid        NOT NULL,
+    last_event_hash         char(64)    NOT NULL,
+    updated_at              timestamptz NOT NULL DEFAULT clock_timestamp(),
+    CONSTRAINT document_business_status_projection_pkey PRIMARY KEY (id),
+    CONSTRAINT document_business_status_projection_resource_uq UNIQUE (network_relationship_id, resource_kind, resource_ref),
+    CONSTRAINT document_business_status_projection_envelope_uq UNIQUE (source_envelope_id, resource_kind, resource_ref),
+    CONSTRAINT document_business_status_projection_version_chk CHECK (lifecycle_version >= 1),
+    CONSTRAINT document_business_status_projection_kind_chk CHECK (resource_kind IN ('external_time_sheet','external_expense_sheet','service_sheet','supplier_invoice','invoice_match')),
+    CONSTRAINT document_business_status_projection_ref_chk CHECK (btrim(resource_ref) <> '' AND length(resource_ref) <= 256),
+    CONSTRAINT document_business_status_projection_status_chk CHECK (business_status IN ('received','accepted_for_processing','submitted','pending_approval','approved','rejected','reversed','matched','exception','posted','paid','cancelled')),
+    CONSTRAINT document_business_status_projection_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT document_business_status_projection_hash_chk CHECK (last_event_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT document_business_status_projection_dates_chk CHECK (decided_at IS NULL OR submitted_at IS NULL OR decided_at >= submitted_at)
+);
+
+COMMENT ON TABLE mesh.document_business_status_projection IS
+  'Rebuildable participant-safe status head for workforce claims, service sheets and invoices. It contains opaque references and safe reason codes only, never person, rate, receipt, accounting or unrestricted payload data.';
+
 -- Mesh-owned participant profile and bank foundation.
 -- Cross-plane publication/projection/onboarding is intentionally parked.
 

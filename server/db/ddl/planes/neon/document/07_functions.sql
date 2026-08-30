@@ -59,7 +59,8 @@ BEGIN
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.entity_type IS DISTINCT FROM OLD.entity_type
        OR NEW.entity_id IS DISTINCT FROM OLD.entity_id
-       OR NEW.attachment_id IS DISTINCT FROM OLD.attachment_id
+       OR NEW.attachment_series_id IS DISTINCT FROM OLD.attachment_series_id
+       OR NEW.pinned_attachment_id IS DISTINCT FROM OLD.pinned_attachment_id
        OR NEW.link_kind IS DISTINCT FROM OLD.link_kind
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
@@ -698,6 +699,8 @@ SET search_path = pg_catalog, document
 AS $$
 DECLARE
     v_parent document.purchase_invoice%ROWTYPE;
+    v_service_line document.service_sheet_line%ROWTYPE;
+    v_service_sheet document.service_sheet%ROWTYPE;
 BEGIN
     IF TG_OP = 'DELETE' THEN
         SELECT * INTO v_parent
@@ -742,6 +745,33 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Invoice commitment line must belong to the header commitment'
             USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.source_entity_type IN ('service_sheet','external_service_entry','document.external_service_entry') THEN
+        RAISE EXCEPTION 'Legacy external service-entry matching is disabled; bind the invoice to document.service_sheet and service_sheet_line'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF NEW.source_entity_type = 'document.service_sheet' THEN
+        IF NEW.source_line_id IS NULL THEN
+            RAISE EXCEPTION 'A service-sheet invoice source requires source_line_id'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        SELECT * INTO v_service_line
+          FROM document.service_sheet_line
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_line_id;
+        SELECT * INTO v_service_sheet
+          FROM document.service_sheet
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_entity_id;
+        IF v_service_line.id IS NULL OR v_service_sheet.id IS NULL
+           OR v_service_line.service_sheet_id <> v_service_sheet.id
+           OR v_service_sheet.status NOT IN ('accepted','pending_approval','approved','posted')
+           OR v_service_sheet.company_code_id <> v_parent.company_code_id
+           OR v_service_sheet.supplier_id <> v_parent.supplier_id
+           OR v_service_sheet.commitment_id IS DISTINCT FROM v_parent.commitment_id
+           OR v_service_line.currency_code <> NEW.currency_code
+           OR (NEW.commitment_line_id IS NOT NULL AND v_service_line.commitment_line_id <> NEW.commitment_line_id) THEN
+            RAISE EXCEPTION 'Invoice service-sheet source must identify an accepted canonical line for the same company, supplier, commitment and currency'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
     END IF;
     RETURN NEW;
 END;
@@ -3782,59 +3812,6 @@ $$;
 
 REVOKE ALL ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) FROM PUBLIC;
 
-CREATE OR REPLACE FUNCTION document.trg_guard_supplier_registration_invitation()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog, document
-AS $$
-BEGIN
-    IF TG_OP = 'DELETE' THEN
-        RAISE EXCEPTION 'Supplier registration invitations cannot be deleted; cancel or expire the invitation'
-            USING ERRCODE = 'restrict_violation';
-    END IF;
-    IF TG_OP = 'UPDATE' AND (
-        NEW.id, NEW.tenant_id, NEW.invitation_no, NEW.registration_role,
-        NEW.requested_operating_organization_id, NEW.optional_company_code_id,
-        NEW.intended_supplier_name, NEW.invitee_email_hash, NEW.token_hash,
-        NEW.expires_at, NEW.idempotency_key, NEW.created_at, NEW.created_by
-    ) IS DISTINCT FROM (
-        OLD.id, OLD.tenant_id, OLD.invitation_no, OLD.registration_role,
-        OLD.requested_operating_organization_id, OLD.optional_company_code_id,
-        OLD.intended_supplier_name, OLD.invitee_email_hash, OLD.token_hash,
-        OLD.expires_at, OLD.idempotency_key, OLD.created_at, OLD.created_by
-    ) THEN
-        RAISE EXCEPTION 'Supplier registration invitation authority and creation evidence are immutable'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    IF TG_OP = 'UPDATE' AND OLD.status <> 'pending' THEN
-        RAISE EXCEPTION 'Terminal supplier registration invitations are immutable'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    IF TG_OP = 'UPDATE' AND NEW.status NOT IN ('accepted', 'cancelled', 'expired') THEN
-        RAISE EXCEPTION 'A pending supplier registration invitation may only be accepted, cancelled, or expired'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    IF TG_OP = 'UPDATE' AND NEW.status = 'accepted' AND NEW.expires_at <= statement_timestamp() THEN
-        RAISE EXCEPTION 'An expired supplier registration invitation cannot be accepted'
-            USING ERRCODE = 'object_not_in_prerequisite_state';
-    END IF;
-    IF TG_OP = 'UPDATE' AND NEW.status = 'expired' AND NEW.expires_at > statement_timestamp() THEN
-        RAISE EXCEPTION 'A supplier registration invitation cannot expire before its expiry time'
-            USING ERRCODE = 'object_not_in_prerequisite_state';
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION document.trg_guard_registration_role_immutable()
-RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
-BEGIN
-    IF NEW.registration_role IS DISTINCT FROM OLD.registration_role THEN
-        RAISE EXCEPTION 'Registration invitation role is immutable' USING ERRCODE='check_violation';
-    END IF;
-    RETURN NEW;
-END $$;
-
 CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -4066,12 +4043,46 @@ CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_invitation() RETU
 BEGIN
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'Business Partner invitations cannot be deleted' USING ERRCODE='check_violation'; END IF;
  IF (NEW.id,NEW.tenant_id,NEW.invitation_no,NEW.journey_kind,NEW.registration_mode,NEW.requested_role,NEW.scope_kind,NEW.requested_operating_organization_id,NEW.company_code_id,NEW.legal_entity_id,NEW.org_unit_id,NEW.position_id,NEW.intended_party_name,NEW.invitee_email_hash,NEW.idempotency_key,NEW.created_at,NEW.created_by) IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.invitation_no,OLD.journey_kind,OLD.registration_mode,OLD.requested_role,OLD.scope_kind,OLD.requested_operating_organization_id,OLD.company_code_id,OLD.legal_entity_id,OLD.org_unit_id,OLD.position_id,OLD.intended_party_name,OLD.invitee_email_hash,OLD.idempotency_key,OLD.created_at,OLD.created_by) THEN RAISE EXCEPTION 'Invitation journey, authority, scope, recipient, and creation evidence are immutable' USING ERRCODE='check_violation'; END IF;
- IF OLD.status<>'pending' THEN RAISE EXCEPTION 'Terminal Business Partner invitations are immutable' USING ERRCODE='check_violation'; END IF;
+ IF OLD.status<>'pending' AND NOT (
+   OLD.status='accepted' AND NEW.status='accepted'
+   AND OLD.applicant_access_revoked_at IS NULL
+   AND NEW.applicant_access_revoked_at IS NOT NULL
+   AND NEW.applicant_access_revoked_by IS NOT NULL
+   AND (to_jsonb(NEW)-ARRAY['applicant_access_revoked_at','applicant_access_revoked_by','row_version','updated_at','updated_by'])
+       = (to_jsonb(OLD)-ARRAY['applicant_access_revoked_at','applicant_access_revoked_by','row_version','updated_at','updated_by'])
+ ) THEN RAISE EXCEPTION 'Terminal Business Partner invitations are immutable except for one applicant-access revocation' USING ERRCODE='check_violation'; END IF;
  IF NEW.status='accepted' AND NEW.expires_at<=statement_timestamp() THEN RAISE EXCEPTION 'An expired invitation cannot be accepted' USING ERRCODE='object_not_in_prerequisite_state'; END IF;
  IF NEW.status='pending' AND (NEW.token_hash=OLD.token_hash OR NEW.resend_count<>OLD.resend_count+1) AND (NEW.token_hash,NEW.expires_at,NEW.resend_count) IS DISTINCT FROM (OLD.token_hash,OLD.expires_at,OLD.resend_count) THEN RAISE EXCEPTION 'Resend must atomically rotate the token hash' USING ERRCODE='check_violation'; END IF;
  RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_evidence()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'Business Partner request evidence cannot be deleted' USING ERRCODE='restrict_violation';
+  END IF;
+  IF (NEW.id, NEW.tenant_id, NEW.request_id, NEW.evidence_kind, NEW.attachment_id,
+      NEW.snapshot_id, NEW.source_reference, NEW.content_hash, NEW.classification_code,
+      NEW.metadata, NEW.created_at, NEW.created_by)
+     IS DISTINCT FROM
+     (OLD.id, OLD.tenant_id, OLD.request_id, OLD.evidence_kind, OLD.attachment_id,
+      OLD.snapshot_id, OLD.source_reference, OLD.content_hash, OLD.classification_code,
+      OLD.metadata, OLD.created_at, OLD.created_by) THEN
+    RAISE EXCEPTION 'Business Partner request evidence identity and payload are immutable' USING ERRCODE='restrict_violation';
+  END IF;
+  IF OLD.verification_status <> 'pending'
+     OR NEW.verification_status NOT IN ('verified','rejected','expired')
+     OR NEW.verified_at IS NULL OR NEW.verified_by IS NULL THEN
+    RAISE EXCEPTION 'Evidence verification permits one pending-to-terminal transition' USING ERRCODE='check_violation';
+  END IF;
+  RETURN NEW;
+END $$;
+
 CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_duplicate_resolution() RETURNS trigger
 LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
 DECLARE v_duplicate master.business_partner%ROWTYPE; v_survivor master.business_partner%ROWTYPE;
@@ -4088,8 +4099,11 @@ BEGIN
 END $$;
 
 CREATE OR REPLACE FUNCTION document.fn_resolve_business_partner_duplicate(p_tenant_id uuid,p_duplicate_id uuid,p_survivor_id uuid,p_resolution_kind text,p_reason_code text,p_dependency_evidence jsonb,p_rekey_manifest jsonb,p_snapshot_id uuid,p_resolved_by uuid) RETURNS uuid
-LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$ DECLARE v_id uuid; BEGIN
-  IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id() THEN RAISE EXCEPTION 'Tenant context mismatch' USING ERRCODE='insufficient_privilege'; END IF;
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,master,shared AS $$ DECLARE v_id uuid; BEGIN
+  IF p_tenant_id IS DISTINCT FROM shared.current_tenant_id()
+     OR p_resolved_by IS DISTINCT FROM master.current_principal_id_soft() THEN
+    RAISE EXCEPTION 'Tenant or actor context mismatch' USING ERRCODE='insufficient_privilege';
+  END IF;
   INSERT INTO document.business_partner_duplicate_resolution(tenant_id,duplicate_business_partner_id,surviving_business_partner_id,resolution_kind,reason_code,dependency_evidence,rekey_manifest,snapshot_id,resolved_by)
   VALUES(p_tenant_id,p_duplicate_id,p_survivor_id,p_resolution_kind,p_reason_code,p_dependency_evidence,p_rekey_manifest,p_snapshot_id,p_resolved_by) RETURNING id INTO v_id;
   UPDATE master.business_partner SET status='archived',status_changed_at=now(),status_changed_by=p_resolved_by,updated_by=p_resolved_by WHERE tenant_id=p_tenant_id AND id=p_duplicate_id AND status='inactive';
@@ -4123,6 +4137,261 @@ RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
 BEGIN
     RAISE EXCEPTION 'External workforce historical evidence is append-only'
         USING ERRCODE = 'restrict_violation';
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_claim_header()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document, control AS $$
+DECLARE
+    v_engagement document.worker_engagement%ROWTYPE;
+    v_inbox_kind text;
+BEGIN
+    SELECT * INTO v_engagement
+      FROM document.worker_engagement
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.worker_engagement_id;
+    IF NOT FOUND OR NEW.period_start < v_engagement.start_date OR NEW.period_end >= v_engagement.end_date THEN
+        RAISE EXCEPTION 'External claim period must be contained by the worker engagement'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.source_inbox_id IS NOT NULL THEN
+        SELECT document_kind INTO v_inbox_kind
+          FROM control.mesh_workforce_claim_inbox
+         WHERE tenant_id = NEW.tenant_id AND id = NEW.source_inbox_id;
+        IF v_inbox_kind IS DISTINCT FROM TG_TABLE_NAME THEN
+            RAISE EXCEPTION 'MESH inbox document kind does not match external claim aggregate'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        IF (NEW.id,NEW.tenant_id,NEW.created_at,NEW.created_by)
+           IS DISTINCT FROM (OLD.id,OLD.tenant_id,OLD.created_at,OLD.created_by) THEN
+            RAISE EXCEPTION 'External claim identity and creation evidence are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF OLD.status <> 'draft' AND
+           (NEW.worker_engagement_id,NEW.period_start,NEW.period_end)
+           IS DISTINCT FROM (OLD.worker_engagement_id,OLD.period_start,OLD.period_end) THEN
+            RAISE EXCEPTION 'Submitted external claim engagement and period are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.source_inbox_id IS DISTINCT FROM OLD.source_inbox_id THEN
+            RAISE EXCEPTION 'External claim ingress evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.status IS DISTINCT FROM OLD.status AND NOT (
+            (OLD.status = 'draft' AND NEW.status IN ('submitted','cancelled')) OR
+            (OLD.status = 'submitted' AND NEW.status IN ('pending_approval','rejected','cancelled')) OR
+            (OLD.status = 'pending_approval' AND NEW.status IN ('approved','rejected','cancelled')) OR
+            (OLD.status = 'rejected' AND NEW.status IN ('draft','cancelled')) OR
+            (OLD.status = 'approved' AND NEW.status = 'reversed')
+        ) THEN
+            RAISE EXCEPTION 'Invalid external claim status transition from % to %', OLD.status, NEW.status
+                USING ERRCODE = 'object_not_in_prerequisite_state';
+        END IF;
+        IF OLD.status IN ('approved','reversed','cancelled') AND (
+            to_jsonb(NEW) - ARRAY['status','status_changed_at','status_changed_by','row_version','updated_at','updated_by']
+        ) IS DISTINCT FROM (
+            to_jsonb(OLD) - ARRAY['status','status_changed_at','status_changed_by','row_version','updated_at','updated_by']
+        ) THEN
+            RAISE EXCEPTION 'Approved or terminal external claim evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_external_claim_line()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+DECLARE
+    v_parent_id uuid;
+    v_line_date date;
+    v_period_start date;
+    v_period_end date;
+    v_status text;
+BEGIN
+    IF TG_OP = 'UPDATE' AND (
+        NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+        OR NEW.line_no IS DISTINCT FROM OLD.line_no OR NEW.created_at IS DISTINCT FROM OLD.created_at
+        OR NEW.created_by IS DISTINCT FROM OLD.created_by
+        OR (TG_TABLE_NAME='external_time_entry' AND NEW.time_sheet_id IS DISTINCT FROM OLD.time_sheet_id)
+        OR (TG_TABLE_NAME='external_expense_item' AND NEW.expense_sheet_id IS DISTINCT FROM OLD.expense_sheet_id)
+    ) THEN
+        RAISE EXCEPTION 'External claim line identity and parent are immutable'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF TG_TABLE_NAME = 'external_time_entry' THEN
+        v_parent_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.time_sheet_id ELSE NEW.time_sheet_id END;
+        v_line_date := CASE WHEN TG_OP = 'DELETE' THEN OLD.work_date ELSE NEW.work_date END;
+        SELECT period_start, period_end, status INTO v_period_start, v_period_end, v_status
+          FROM document.external_time_sheet
+         WHERE tenant_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END
+           AND id = v_parent_id FOR SHARE;
+    ELSE
+        v_parent_id := CASE WHEN TG_OP = 'DELETE' THEN OLD.expense_sheet_id ELSE NEW.expense_sheet_id END;
+        v_line_date := CASE WHEN TG_OP = 'DELETE' THEN OLD.expense_date ELSE NEW.expense_date END;
+        SELECT period_start, period_end, status INTO v_period_start, v_period_end, v_status
+          FROM document.external_expense_sheet
+         WHERE tenant_id = CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END
+           AND id = v_parent_id FOR SHARE;
+    END IF;
+    IF v_status IS NULL THEN
+        RAISE EXCEPTION 'External claim line requires an existing parent'
+            USING ERRCODE = 'foreign_key_violation';
+    END IF;
+    IF v_status NOT IN ('draft','rejected') THEN
+        RAISE EXCEPTION 'External claim lines are mutable only while the parent is draft or rejected'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF TG_OP <> 'DELETE' AND (v_line_date < v_period_start OR v_line_date > v_period_end) THEN
+        RAISE EXCEPTION 'External claim line date must fall inside the claim period'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_service_sheet_source_allocation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, document AS $$
+DECLARE
+    v_line document.service_sheet_line%ROWTYPE;
+    v_sheet document.service_sheet%ROWTYPE;
+    v_original document.service_sheet_source_allocation%ROWTYPE;
+    v_source_status text;
+    v_supplier_id uuid;
+    v_company_code_id uuid;
+    v_commitment_id uuid;
+    v_period_start date;
+    v_period_end date;
+    v_source_amount numeric(18,4);
+    v_source_quantity numeric(18,4);
+    v_currency_min character(3);
+    v_currency_max character(3);
+    v_source_net numeric(18,4);
+    v_line_net numeric(18,4);
+    v_delta numeric(18,4);
+    v_source_quantity_net numeric(18,4);
+    v_line_quantity_net numeric(18,4);
+    v_quantity_delta numeric(18,4);
+BEGIN
+    SELECT * INTO v_line FROM document.service_sheet_line
+     WHERE tenant_id = NEW.tenant_id AND id = NEW.service_sheet_line_id FOR UPDATE;
+    SELECT * INTO v_sheet FROM document.service_sheet
+     WHERE tenant_id = NEW.tenant_id AND id = v_line.service_sheet_id FOR UPDATE;
+    IF v_line.id IS NULL OR v_sheet.id IS NULL OR v_sheet.status NOT IN ('draft','pending_acceptance','rejected') THEN
+        RAISE EXCEPTION 'External claim allocation requires a mutable canonical service sheet line'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF NEW.external_time_sheet_id IS NOT NULL THEN
+        SELECT s.status, e.supplier_id, e.company_code_id, COALESCE(c.commitment_id, w.commitment_id), s.period_start, s.period_end
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end
+          FROM document.external_time_sheet s
+          JOIN document.worker_engagement e ON e.tenant_id=s.tenant_id AND e.id=s.worker_engagement_id
+          LEFT JOIN document.contingent_work_order c ON c.tenant_id=e.tenant_id AND c.id=e.contingent_work_order_id
+          LEFT JOIN document.statement_of_work w ON w.tenant_id=e.tenant_id AND w.id=e.statement_of_work_id
+         WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.external_time_sheet_id FOR UPDATE OF s;
+        SELECT COALESCE(sum(amount),0), COALESCE(sum(hours),0), min(currency_code), max(currency_code)
+          INTO v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.external_time_entry WHERE tenant_id=NEW.tenant_id AND time_sheet_id=NEW.external_time_sheet_id;
+    ELSIF NEW.external_expense_sheet_id IS NOT NULL THEN
+        SELECT s.status, e.supplier_id, e.company_code_id, COALESCE(c.commitment_id, w.commitment_id), s.period_start, s.period_end
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end
+          FROM document.external_expense_sheet s
+          JOIN document.worker_engagement e ON e.tenant_id=s.tenant_id AND e.id=s.worker_engagement_id
+          LEFT JOIN document.contingent_work_order c ON c.tenant_id=e.tenant_id AND c.id=e.contingent_work_order_id
+          LEFT JOIN document.statement_of_work w ON w.tenant_id=e.tenant_id AND w.id=e.statement_of_work_id
+         WHERE s.tenant_id=NEW.tenant_id AND s.id=NEW.external_expense_sheet_id FOR UPDATE OF s;
+        SELECT COALESCE(sum(amount),0), NULL::numeric, min(currency_code), max(currency_code)
+          INTO v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.external_expense_item WHERE tenant_id=NEW.tenant_id AND expense_sheet_id=NEW.external_expense_sheet_id;
+    ELSE
+        SELECT i.status, w.supplier_id, w.company_code_id, w.commitment_id, r.start_date, r.end_date,
+               i.amount, i.quantity, r.currency_code, r.currency_code
+          INTO v_source_status, v_supplier_id, v_company_code_id, v_commitment_id, v_period_start, v_period_end,
+               v_source_amount, v_source_quantity, v_currency_min, v_currency_max
+          FROM document.statement_of_work_item i
+          JOIN document.statement_of_work_revision r ON r.tenant_id=i.tenant_id AND r.id=i.statement_of_work_revision_id
+          JOIN document.statement_of_work w ON w.tenant_id=r.tenant_id AND w.id=r.statement_of_work_id
+         WHERE i.tenant_id=NEW.tenant_id AND i.id=NEW.statement_of_work_item_id FOR UPDATE OF i;
+    END IF;
+
+    IF v_source_status IS NULL OR (NEW.allocation_kind='acceptance' AND v_source_status NOT IN ('approved','accepted')) THEN
+        RAISE EXCEPTION 'Only approved external claims or accepted SOW items may be allocated'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    IF v_supplier_id IS DISTINCT FROM v_sheet.supplier_id
+       OR v_company_code_id IS DISTINCT FROM v_sheet.company_code_id
+       OR v_commitment_id IS DISTINCT FROM v_sheet.commitment_id
+       OR v_currency_min IS DISTINCT FROM v_currency_max
+       OR v_currency_min IS DISTINCT FROM NEW.currency_code
+       OR v_line.currency_code IS DISTINCT FROM NEW.currency_code
+       OR v_sheet.currency_code IS DISTINCT FROM NEW.currency_code
+       OR v_period_start < v_sheet.service_period_from
+       OR v_period_end > v_sheet.service_period_to THEN
+        RAISE EXCEPTION 'External claim, commitment, supplier, company, period and currency must match the service sheet'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+
+    IF NEW.allocation_kind = 'reversal' THEN
+        SELECT * INTO v_original FROM document.service_sheet_source_allocation
+         WHERE tenant_id=NEW.tenant_id AND id=NEW.reverses_allocation_id FOR UPDATE;
+        IF v_original.id IS NULL OR v_original.allocation_kind <> 'acceptance'
+           OR (NEW.service_sheet_line_id,NEW.external_time_sheet_id,NEW.external_expense_sheet_id,NEW.statement_of_work_item_id,NEW.accepted_quantity,NEW.accepted_amount,NEW.currency_code)
+              IS DISTINCT FROM
+              (v_original.service_sheet_line_id,v_original.external_time_sheet_id,v_original.external_expense_sheet_id,v_original.statement_of_work_item_id,v_original.accepted_quantity,v_original.accepted_amount,v_original.currency_code) THEN
+            RAISE EXCEPTION 'Service-sheet allocation reversal must exactly match one original acceptance'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        v_delta := -NEW.accepted_amount;
+        v_quantity_delta := -COALESCE(NEW.accepted_quantity, 0);
+    ELSE
+        v_delta := NEW.accepted_amount;
+        v_quantity_delta := COALESCE(NEW.accepted_quantity, 0);
+    END IF;
+
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN accepted_amount ELSE -accepted_amount END),0)
+      INTO v_source_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id
+       AND external_time_sheet_id IS NOT DISTINCT FROM NEW.external_time_sheet_id
+       AND external_expense_sheet_id IS NOT DISTINCT FROM NEW.external_expense_sheet_id
+       AND statement_of_work_item_id IS NOT DISTINCT FROM NEW.statement_of_work_item_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN accepted_amount ELSE -accepted_amount END),0)
+      INTO v_line_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id AND service_sheet_line_id=NEW.service_sheet_line_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN COALESCE(accepted_quantity,0) ELSE -COALESCE(accepted_quantity,0) END),0)
+      INTO v_source_quantity_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id
+       AND external_time_sheet_id IS NOT DISTINCT FROM NEW.external_time_sheet_id
+       AND external_expense_sheet_id IS NOT DISTINCT FROM NEW.external_expense_sheet_id
+       AND statement_of_work_item_id IS NOT DISTINCT FROM NEW.statement_of_work_item_id;
+    SELECT COALESCE(sum(CASE WHEN allocation_kind='acceptance' THEN COALESCE(accepted_quantity,0) ELSE -COALESCE(accepted_quantity,0) END),0)
+      INTO v_line_quantity_net FROM document.service_sheet_source_allocation
+     WHERE tenant_id=NEW.tenant_id AND service_sheet_line_id=NEW.service_sheet_line_id;
+    IF v_source_net + v_delta < 0 OR v_source_net + v_delta > v_source_amount
+       OR v_line_net + v_delta < 0 OR v_line_net + v_delta > v_line.net_amount THEN
+        RAISE EXCEPTION 'Service-sheet allocation would over-accept or over-reverse source or line value'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF NEW.accepted_quantity IS NOT NULL AND (
+        (v_source_quantity IS NOT NULL AND (v_source_quantity_net + v_quantity_delta < 0 OR v_source_quantity_net + v_quantity_delta > v_source_quantity))
+        OR v_line_quantity_net + v_quantity_delta < 0
+        OR v_line_quantity_net + v_quantity_delta > v_line.quantity
+    ) THEN
+        RAISE EXCEPTION 'Service-sheet allocation would over-accept or over-reverse source or line quantity'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_reject_deprecated_external_acceptance_write()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'Legacy external service-entry path is read-only; use document.service_sheet and service_sheet_source_allocation'
+        USING ERRCODE = 'object_not_in_prerequisite_state';
 END;
 $$;
 

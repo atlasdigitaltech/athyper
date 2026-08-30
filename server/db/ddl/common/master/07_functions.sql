@@ -241,8 +241,8 @@ BEGIN
                         USING ERRCODE = 'check_violation';
                 END IF;
                 IF NEW.usage_denied_by IS NULL THEN
-                    RAISE EXCEPTION 'master.address_link usage governance requires usage_denied_by for non-active states',
-                        ERRCODE = 'check_violation';
+                    RAISE EXCEPTION 'master.address_link usage governance requires usage_denied_by for non-active states'
+                        USING ERRCODE = 'check_violation';
                 END IF;
             ELSE
                 NEW.usage_denied_reason_code := NULL;

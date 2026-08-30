@@ -20,22 +20,6 @@ CREATE INDEX address_event_correlation_idx
     ON master.address_event (tenant_id, correlation_id, occurred_at DESC)
     WHERE correlation_id IS NOT NULL;
 
-
-    WHERE status = 'active';
-
-    WHERE is_primary AND status = 'active';
-
-    WHERE status = 'active';
-
-
-
-
-
-    WHERE evidence_hash IS NOT NULL;
-
-
-
-
 CREATE INDEX contact_person_role_contact_idx
     ON master.contact_person_role (tenant_id, contact_person_id, role_code);
 CREATE UNIQUE INDEX contact_person_role_current_uq

@@ -56,3 +56,35 @@ groups:
         for: 2m
         labels: { severity: critical, service: business-partner }
         annotations: { summary: A Business Partner runtime process is not scrape-ready, runbook: docs/runbooks/business-partner-p9-qualification.md }
+  - name: business-partner-360
+    rules:
+      - alert: BusinessPartner360SummaryLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le) (rate(athyper_bp360_duration_ms_bucket{operation="summary"}[10m]))) > 500
+        for: 10m
+        labels: { severity: warning, service: business-partner-360, team: platform }
+        annotations: { summary: Business Partner 360 summary p95 exceeds 500 ms, runbook: docs/runbooks/business-partner-360-operations.md }
+      - alert: BusinessPartner360SectionLatencyHigh
+        expr: histogram_quantile(0.95, sum by (le,section) (rate(athyper_bp360_duration_ms_bucket{operation="section"}[10m]))) > 750
+        for: 10m
+        labels: { severity: warning, service: business-partner-360, team: platform }
+        annotations: { summary: A Business Partner 360 section p95 exceeds 750 ms, runbook: docs/runbooks/business-partner-360-operations.md }
+      - alert: BusinessPartner360ErrorRateHigh
+        expr: sum(rate(athyper_bp360_request_total{outcome="failure"}[10m])) / clamp_min(sum(rate(athyper_bp360_request_total[10m])), 0.001) > 0.01
+        for: 10m
+        labels: { severity: critical, service: business-partner-360, team: platform }
+        annotations: { summary: Business Partner 360 error rate exceeds one percent, runbook: docs/runbooks/business-partner-360-operations.md }
+      - alert: BusinessPartner360DefinitionUnavailable
+        expr: increase(athyper_bp360_completeness_total{status="definition_unavailable"}[10m]) > 0
+        for: 1m
+        labels: { severity: warning, service: business-partner-360, team: platform }
+        annotations: { summary: Business Partner 360 completeness definition is unavailable, runbook: docs/runbooks/business-partner-360-operations.md }
+      - alert: BusinessPartner360MeshFallbackHigh
+        expr: sum(rate(athyper_bp360_mesh_fallback_total[10m])) / clamp_min(sum(rate(athyper_bp360_request_total{section="network"}[10m])), 0.001) > 0.05
+        for: 10m
+        labels: { severity: warning, service: business-partner-360, team: platform }
+        annotations: { summary: Business Partner 360 Network fallback rate exceeds five percent, runbook: docs/runbooks/business-partner-360-operations.md }
+      - alert: BusinessPartner360RevealFailureSpike
+        expr: increase(athyper_bp360_reveal_total{outcome="failure"}[5m]) > 5
+        for: 1m
+        labels: { severity: critical, service: business-partner-360, team: security }
+        annotations: { summary: Purpose-bound Business Partner reveal failures are elevated, runbook: docs/runbooks/business-partner-360-operations.md }

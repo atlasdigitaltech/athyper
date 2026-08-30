@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-360.p0-approval-packet",
+  "release": "phase-1",
+  "evidence": [
+    {
+      "code": "contract_lock",
+      "status": "passed",
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-contract-lock.md"
+    },
+    {
+      "code": "integration_baseline",
+      "status": "passed",
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-integration-baseline-evidence.md"
+    },
+    {
+      "code": "production_repository_materialization",
+      "status": "passed",
+      "evidenceRef": "docs/architecture/evidence/business-partner-360-materialization-evidence.json"
+    },
+    {
+      "code": "legacy_read_policy",
+      "status": "passed",
+      "evidenceRef": "docs/architecture/evidence/business-partner-360-materialization-evidence.json"
+    },
+    {
+      "code": "database_security_privacy",
+      "status": "passed",
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-security-privacy-evidence.md"
+    },
+    {
+      "code": "authenticated_browser_leakage",
+      "status": "pending",
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-browser-accessibility-performance-evidence.md"
+    }
+  ],
+  "approvals": [
+    {
+      "gate": "business_data",
+      "ownerRole": "Business and data owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-contract-lock.md",
+      "approvalRef": null
+    },
+    {
+      "gate": "architecture_contract",
+      "ownerRole": "Architecture and contract owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-contract-lock.md",
+      "approvalRef": null
+    },
+    {
+      "gate": "release_owner",
+      "ownerRole": "Phase 1 release owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-integration-baseline-evidence.md",
+      "approvalRef": null
+    },
+    {
+      "gate": "integration_baseline",
+      "ownerRole": "Integration baseline owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-integration-baseline-evidence.md",
+      "approvalRef": null
+    },
+    {
+      "gate": "materialization_legacy_policy",
+      "ownerRole": "Master-data authority owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/evidence/business-partner-360-materialization-evidence.json",
+      "approvalRef": null
+    },
+    {
+      "gate": "security",
+      "ownerRole": "Independent security owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-security-privacy-evidence.md",
+      "approvalRef": null
+    },
+    {
+      "gate": "privacy_data_protection",
+      "ownerRole": "Independent privacy or data-protection owner",
+      "status": "pending",
+      "approverId": null,
+      "approvedAt": null,
+      "evidenceRef": "docs/architecture/athyper-business-partner-360-security-privacy-evidence.md",
+      "approvalRef": null
+    }
+  ]
+}

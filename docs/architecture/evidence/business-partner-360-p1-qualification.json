@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-360.p1-qualification",
+  "release": "phase-1",
+  "environment": {
+    "name": "release-environment-unassigned",
+    "classification": "release_non_production",
+    "environmentRef": null
+  },
+  "evidence": [
+    { "code": "protected_value_deployment", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-production-integration-evidence.md" },
+    { "code": "attachment_expiry", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-production-integration-evidence.md" },
+    { "code": "mesh_live_transport", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-production-integration-evidence.md" },
+    { "code": "studio_durable_failover", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-production-integration-evidence.md" },
+    { "code": "provider_authority", "status": "passed", "evidenceRef": "docs/architecture/athyper-business-partner-360-production-integration-evidence.md" },
+    { "code": "authenticated_browser", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-browser-accessibility-performance-evidence.md" },
+    { "code": "http_performance", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-browser-accessibility-performance-evidence.md" },
+    { "code": "manual_accessibility", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-browser-accessibility-performance-evidence.md" },
+    { "code": "notification_oncall", "status": "pending", "evidenceRef": "docs/architecture/athyper-business-partner-360-resilience-operational-readiness.md" }
+  ],
+  "providers": [
+    { "code": "procurement", "status": "not_configured", "reasonCode": "PROVIDER_NOT_CONFIGURED" },
+    { "code": "finance", "status": "not_configured", "reasonCode": "PROVIDER_NOT_CONFIGURED" },
+    { "code": "sales", "status": "not_configured", "reasonCode": "PROVIDER_NOT_CONFIGURED" },
+    { "code": "projects", "status": "not_configured", "reasonCode": "PROVIDER_NOT_CONFIGURED" },
+    { "code": "contracts", "status": "not_configured", "reasonCode": "PROVIDER_NOT_CONFIGURED" }
+  ],
+  "browser": { "executedCases": 0, "skippedCases": 10, "fixtureFamilies": [] },
+  "performance": {
+    "summaryP95Ms": null,
+    "sectionP95Ms": null,
+    "firstUsefulIdentityP75Ms": null,
+    "cachedSwitchMaxMs": null,
+    "summaryPayloadP95Bytes": null,
+    "sectionPayloadP95Bytes": null
+  },
+  "accessibility": {
+    "supportedBrowsers": [],
+    "screenReader": false,
+    "keyboardFocus": false,
+    "reflow200Percent": false,
+    "responsive": false,
+    "localization": false,
+    "rtl": false
+  },
+  "operations": { "sinkRef": null, "deliveredAt": null, "acknowledgedAt": null, "participantIds": [] }
+}

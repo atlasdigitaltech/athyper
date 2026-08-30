@@ -148,6 +148,8 @@ ALTER TABLE mesh.document_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_event FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_acknowledgement ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.document_acknowledgement FORCE ROW LEVEL SECURITY;
+ALTER TABLE mesh.document_business_status_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.document_business_status_projection FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY participant_access ON mesh.document_envelope FOR ALL
     USING (
@@ -213,6 +215,20 @@ CREATE POLICY participant_access ON mesh.document_acknowledgement FOR ALL
            )
     ));
 CREATE POLICY seed_write ON mesh.document_acknowledgement
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+CREATE POLICY participant_access ON mesh.document_business_status_projection FOR ALL
+    USING (EXISTS (
+        SELECT 1 FROM mesh.document_envelope e
+         WHERE e.id = document_business_status_projection.source_envelope_id
+           AND shared.current_tenant_id_soft() IN (e.sender_tenant_id,e.receiver_tenant_id)
+    ))
+    WITH CHECK (EXISTS (
+        SELECT 1 FROM mesh.document_envelope e
+         WHERE e.id = document_business_status_projection.source_envelope_id
+           AND shared.current_tenant_id() IN (e.sender_tenant_id,e.receiver_tenant_id)
+    ));
+CREATE POLICY seed_write ON mesh.document_business_status_projection
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 ALTER TABLE mesh.network_account_profile ENABLE ROW LEVEL SECURITY;

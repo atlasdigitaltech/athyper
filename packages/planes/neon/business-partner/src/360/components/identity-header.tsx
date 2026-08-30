@@ -1,0 +1,2 @@
+import {Badge} from "@athyper/platform-ui";import {useBusinessPartner360} from "../business-partner-360-context";
+export function IdentityHeader(){const{summary}=useBusinessPartner360();return <header className="bp360-identity"><div><span className="bp360-eyebrow">{summary.identity.code}</span><h1>{summary.identity.displayName}</h1><p>{summary.identity.category} · as of {summary.asOf}</p></div><div className="bp360-role-badges">{summary.roles.map(role=><Badge key={role.id}>{role.code}</Badge>)}<Badge>{summary.identity.lifecycleStatus}</Badge></div></header>;}

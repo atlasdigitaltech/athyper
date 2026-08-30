@@ -1,0 +1,14 @@
+{
+  "annotations":{"list":[]},"editable":false,"graphTooltip":1,"id":null,"links":[],
+  "panels":[
+    {"id":1,"type":"timeseries","title":"Summary and section p95 (ms)","gridPos":{"h":7,"w":12,"x":0,"y":0},"targets":[{"refId":"A","expr":"histogram_quantile(0.95, sum by (le,operation,section) (rate(athyper_bp360_duration_ms_bucket[5m])))","legendFormat":"{{operation}} {{section}}"}],"fieldConfig":{"defaults":{"unit":"ms"}}},
+    {"id":2,"type":"timeseries","title":"Errors by safe reason","gridPos":{"h":7,"w":12,"x":12,"y":0},"targets":[{"refId":"A","expr":"sum by (section,reason_code) (rate(athyper_bp360_request_total{outcome=\"failure\"}[5m]))","legendFormat":"{{section}} {{reason_code}}"}]},
+    {"id":3,"type":"timeseries","title":"Payload p95 (bytes)","gridPos":{"h":7,"w":8,"x":0,"y":7},"targets":[{"refId":"A","expr":"histogram_quantile(0.95, sum by (le,operation,section) (rate(athyper_bp360_payload_bytes_bucket[5m])))","legendFormat":"{{operation}} {{section}}"}],"fieldConfig":{"defaults":{"unit":"bytes"}}},
+    {"id":4,"type":"timeseries","title":"Completeness status","gridPos":{"h":7,"w":8,"x":8,"y":7},"targets":[{"refId":"A","expr":"sum by (pack,status) (rate(athyper_bp360_completeness_total[15m]))","legendFormat":"{{pack}} {{status}}"}]},
+    {"id":5,"type":"timeseries","title":"MESH fallback","gridPos":{"h":7,"w":8,"x":16,"y":7},"targets":[{"refId":"A","expr":"sum by (reason_code) (rate(athyper_bp360_mesh_fallback_total[10m]))","legendFormat":"{{reason_code}}"}]},
+    {"id":6,"type":"timeseries","title":"Redaction and reveal","gridPos":{"h":7,"w":8,"x":0,"y":14},"targets":[{"refId":"A","expr":"sum by (field_class) (rate(athyper_bp360_redaction_total[10m]))","legendFormat":"redaction {{field_class}}"},{"refId":"B","expr":"sum by (field_class,outcome) (rate(athyper_bp360_reveal_total[10m]))","legendFormat":"reveal {{field_class}} {{outcome}}"}]},
+    {"id":7,"type":"timeseries","title":"Materialization failures","gridPos":{"h":7,"w":8,"x":8,"y":14},"targets":[{"refId":"A","expr":"sum by (status_code) (rate(athyper_business_partner_request_http_total{operation=\"apply\",outcome=\"error\"}[10m]))","legendFormat":"{{status_code}}"}]},
+    {"id":8,"type":"stat","title":"Legacy aggregate calls (24h)","gridPos":{"h":7,"w":8,"x":16,"y":14},"targets":[{"refId":"A","expr":"sum(increase(athyper_business_partner_request_http_total{operation=\"get-aggregate\"}[24h]))"}]}
+  ],
+  "refresh":"30s","schemaVersion":41,"tags":["business-partner","360","release-gate"],"templating":{"list":[]},"time":{"from":"now-6h","to":"now"},"timezone":"browser","title":"Business Partner 360 Release","uid":"business-partner-360-release","version":1
+}

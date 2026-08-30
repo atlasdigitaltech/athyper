@@ -47,6 +47,103 @@ export interface BusinessPartnerRequestSchemaReference {
   readonly hash: string;
 }
 
+export interface BusinessPartnerRequestExtensionBase {
+  readonly clientItemKey: string;
+  readonly definitionFieldCode: string;
+  readonly effectiveFrom?: string;
+  readonly effectiveUntil?: string;
+  readonly sourceReference?: string;
+}
+
+export interface BusinessPartnerRequestAddress extends BusinessPartnerRequestExtensionBase {
+  readonly purpose: string;
+  readonly addressKind?: "street" | "po_box" | "rural" | "military" | "other";
+  readonly line1?: string;
+  readonly line2?: string;
+  readonly city?: string;
+  readonly region?: string;
+  readonly postalCode?: string;
+  readonly poBox?: string;
+  readonly countryCode: string;
+  readonly isPrimary?: boolean;
+  readonly normalizedHash: string;
+  readonly validationEvidenceId?: string;
+}
+
+export interface BusinessPartnerRequestContactPerson extends BusinessPartnerRequestExtensionBase {
+  readonly contactName: string;
+  readonly businessTitle?: string;
+  readonly departmentName?: string;
+  readonly roleCode?: string;
+  readonly isPrimary?: boolean;
+}
+
+export interface BusinessPartnerRequestContactChannel extends BusinessPartnerRequestExtensionBase {
+  readonly contactClientItemKey: string;
+  readonly channelType: "email" | "phone" | "fax" | "sms" | "whatsapp" | "website";
+  readonly value: string;
+  readonly purpose: string;
+  readonly isPrimary?: boolean;
+}
+
+export interface BusinessPartnerRequestIdentifier extends BusinessPartnerRequestExtensionBase {
+  readonly schemeCode: string;
+  readonly value?: string;
+  readonly protectedValueToken?: string;
+  readonly valueHash: string;
+  readonly maskedValue: string;
+  readonly issuingAuthority?: string;
+  readonly issuingCountryCode?: string;
+  readonly isPrimary?: boolean;
+}
+
+export interface BusinessPartnerRequestTaxRegistration extends BusinessPartnerRequestExtensionBase {
+  readonly jurisdictionId: string;
+  readonly taxTypeId?: string;
+  readonly registrationTypeCode: string;
+  readonly protectedValueToken: string;
+  readonly valueHash: string;
+  readonly maskedValue: string;
+  readonly isPrimary?: boolean;
+}
+
+export interface BusinessPartnerRequestClassification extends BusinessPartnerRequestExtensionBase {
+  readonly classificationKind: "commodity" | "industry";
+  readonly referenceId: string;
+  readonly domainCode?: string;
+  readonly partnerRole?: "supplier" | "customer";
+  readonly assignmentKind?: "declared" | "verified" | "inferred" | "imported";
+  readonly isPrimary?: boolean;
+  readonly confidence?: number;
+}
+
+export interface BusinessPartnerRequestCertification extends BusinessPartnerRequestExtensionBase {
+  readonly certificationTypeId?: string;
+  readonly customName?: string;
+  readonly certificateNumberToken?: string;
+  readonly maskedCertificateNumber?: string;
+  readonly certifiedBy?: string;
+  readonly certifiedLocation?: string;
+  readonly attachmentId?: string;
+  readonly companyCodeId?: string;
+}
+
+export interface BusinessPartnerRequestExtensions {
+  readonly addresses?: readonly BusinessPartnerRequestAddress[];
+  readonly contactPersons?: readonly BusinessPartnerRequestContactPerson[];
+  readonly contactChannels?: readonly BusinessPartnerRequestContactChannel[];
+  readonly identifiers?: readonly BusinessPartnerRequestIdentifier[];
+  readonly taxRegistrations?: readonly BusinessPartnerRequestTaxRegistration[];
+  readonly classifications?: readonly BusinessPartnerRequestClassification[];
+  readonly certifications?: readonly BusinessPartnerRequestCertification[];
+}
+
+export interface BusinessPartnerRequestExtensionSummary {
+  readonly mode: "typed_v1" | "legacy_untyped";
+  readonly fingerprint?: string;
+  readonly counts: Readonly<Record<"addresses" | "contactPersons" | "contactChannels" | "identifiers" | "taxRegistrations" | "classifications" | "certifications", number>>;
+}
+
 export interface BusinessPartnerRequest {
   readonly id: string;
   readonly tenantId: string;
@@ -68,6 +165,7 @@ export interface BusinessPartnerRequest {
   readonly positionId?: string;
   readonly schema: BusinessPartnerRequestSchemaReference;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
+  readonly extensionSummary: BusinessPartnerRequestExtensionSummary;
   readonly validationSummary: Readonly<Record<string, unknown>>;
   readonly duplicateSummary: Readonly<Record<string, unknown>>;
   readonly changeImpact: Readonly<Record<string, unknown>>;
@@ -124,6 +222,7 @@ export interface CreateBusinessPartnerRequestCommand {
   readonly orgUnitId?: string;
   readonly positionId?: string;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
+  readonly extensions?: BusinessPartnerRequestExtensions;
 }
 
 export interface PatchBusinessPartnerRequestCommand {
@@ -131,6 +230,7 @@ export interface PatchBusinessPartnerRequestCommand {
   readonly requestId: string;
   readonly expectedVersion: number;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
+  readonly extensions?: BusinessPartnerRequestExtensions;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string | null;
   readonly legalEntityId?: string | null;
@@ -261,6 +361,7 @@ export interface BusinessPartnerRequestMaterialization {
   readonly operatingOrganizationAssignmentId?: string;
   readonly snapshotId: string;
   readonly applicationFingerprint: string;
+  readonly extensionMaterializationCounts: BusinessPartnerRequestExtensionSummary["counts"];
 }
 
 export interface ApplyBusinessPartnerRequestResponse {

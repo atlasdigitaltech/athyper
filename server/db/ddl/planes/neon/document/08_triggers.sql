@@ -943,18 +943,6 @@ CREATE TRIGGER trg_multipart_upload_part_10_immutable
 BEFORE UPDATE OR DELETE ON document.multipart_upload_part
 FOR EACH ROW EXECUTE FUNCTION document.trg_multipart_upload_part_immutable();
 
-CREATE TRIGGER trg_supplier_registration_invitation_05_role
-BEFORE UPDATE ON document.supplier_registration_invitation_legacy
-FOR EACH ROW EXECUTE FUNCTION document.trg_guard_registration_role_immutable();
-CREATE TRIGGER trg_supplier_registration_invitation_10_guard
-BEFORE UPDATE OR DELETE ON document.supplier_registration_invitation_legacy
-FOR EACH ROW EXECUTE FUNCTION document.trg_guard_supplier_registration_invitation();
-CREATE TRIGGER trg_supplier_registration_invitation_80_version
-BEFORE UPDATE ON document.supplier_registration_invitation_legacy
-FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
-CREATE TRIGGER trg_supplier_registration_invitation_90_updated
-BEFORE UPDATE ON document.supplier_registration_invitation_legacy
-FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_business_partner_invitation_10_guard BEFORE UPDATE OR DELETE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_invitation();
 CREATE TRIGGER trg_business_partner_invitation_80_version BEFORE UPDATE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION document.trg_increment_row_version();
 CREATE TRIGGER trg_business_partner_invitation_90_updated BEFORE UPDATE ON document.business_partner_invitation FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -976,9 +964,9 @@ CREATE TRIGGER trg_business_partner_request_90_updated
 BEFORE UPDATE ON document.business_partner_request
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-CREATE TRIGGER trg_business_partner_request_evidence_immutable
+CREATE TRIGGER trg_business_partner_request_evidence_guard
 BEFORE UPDATE OR DELETE ON document.business_partner_request_evidence
-FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_evidence();
 CREATE TRIGGER trg_business_partner_request_validation_immutable
 BEFORE UPDATE OR DELETE ON document.business_partner_request_validation
 FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
@@ -990,17 +978,32 @@ CREATE TRIGGER trg_business_partner_request_16_application_result BEFORE INSERT 
 CREATE TRIGGER trg_business_partner_duplicate_resolution_guard BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_duplicate_resolution FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_duplicate_resolution();
 CREATE TRIGGER trg_business_partner_bank_verification_updated BEFORE UPDATE ON document.business_partner_bank_verification FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 CREATE TRIGGER trg_supplier_activation_evidence_immutable BEFORE UPDATE OR DELETE ON document.supplier_activation_evidence FOR EACH ROW EXECUTE FUNCTION document.trg_guard_supplier_activation_evidence();
-CREATE TRIGGER trg_supplier_registration_recovery_immutable BEFORE UPDATE OR DELETE ON document.supplier_registration_recovery FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 
 CREATE TRIGGER trg_external_candidate_submission_10_scope BEFORE INSERT OR UPDATE OF workforce_requisition_id,requisition_supplier_id,supplier_id ON document.external_candidate_submission FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_candidate_submission();
 CREATE TRIGGER trg_contingent_work_order_10_scope BEFORE INSERT OR UPDATE OF candidate_submission_id,supplier_id ON document.contingent_work_order FOR EACH ROW EXECUTE FUNCTION document.trg_guard_contingent_work_order();
 CREATE TRIGGER trg_worker_engagement_10_scope BEFORE INSERT OR UPDATE OF external_worker_id,supplier_id,company_code_id,legal_entity_id,contingent_work_order_id,statement_of_work_id ON document.worker_engagement FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_engagement();
+CREATE TRIGGER trg_external_time_sheet_10_guard BEFORE INSERT OR UPDATE ON document.external_time_sheet FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_header();
+CREATE TRIGGER trg_external_expense_sheet_10_guard BEFORE INSERT OR UPDATE ON document.external_expense_sheet FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_header();
+CREATE TRIGGER trg_external_time_entry_10_guard BEFORE INSERT OR UPDATE OR DELETE ON document.external_time_entry FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_line();
+CREATE TRIGGER trg_external_expense_item_10_guard BEFORE INSERT OR UPDATE OR DELETE ON document.external_expense_item FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_line();
+CREATE TRIGGER trg_service_sheet_source_allocation_10_guard BEFORE INSERT ON document.service_sheet_source_allocation FOR EACH ROW EXECUTE FUNCTION document.trg_guard_service_sheet_source_allocation();
 
 CREATE TRIGGER trg_external_candidate_evaluation_immutable BEFORE UPDATE OR DELETE ON document.external_candidate_evaluation FOR EACH ROW EXECUTE FUNCTION document.trg_reject_external_workforce_history_mutation();
 CREATE TRIGGER trg_contingent_work_order_revision_guard BEFORE UPDATE OR DELETE ON document.contingent_work_order_revision FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_revision();
 CREATE TRIGGER trg_statement_of_work_revision_guard BEFORE UPDATE OR DELETE ON document.statement_of_work_revision FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_revision();
 CREATE TRIGGER trg_worker_compliance_item_guard BEFORE UPDATE OR DELETE ON document.worker_compliance_item FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_compliance_item();
 CREATE TRIGGER trg_external_workforce_invoice_allocation_immutable BEFORE UPDATE OR DELETE ON document.external_workforce_invoice_allocation FOR EACH ROW EXECUTE FUNCTION document.trg_reject_external_workforce_history_mutation();
+CREATE TRIGGER trg_service_sheet_source_allocation_immutable BEFORE UPDATE OR DELETE ON document.service_sheet_source_allocation FOR EACH ROW EXECUTE FUNCTION document.trg_reject_external_workforce_history_mutation();
+
+CREATE TRIGGER trg_external_service_entry_deprecated_write
+BEFORE INSERT OR UPDATE OR DELETE ON document.external_service_entry
+FOR EACH ROW EXECUTE FUNCTION document.trg_reject_deprecated_external_acceptance_write();
+CREATE TRIGGER trg_external_service_entry_line_deprecated_write
+BEFORE INSERT OR UPDATE OR DELETE ON document.external_service_entry_line
+FOR EACH ROW EXECUTE FUNCTION document.trg_reject_deprecated_external_acceptance_write();
+CREATE TRIGGER trg_external_workforce_invoice_allocation_deprecated_write
+BEFORE INSERT ON document.external_workforce_invoice_allocation
+FOR EACH ROW EXECUTE FUNCTION document.trg_reject_deprecated_external_acceptance_write();
 
 DO $$
 DECLARE v_table text;

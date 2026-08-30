@@ -47,7 +47,8 @@ REVOKE ALL ON
     mesh.document_envelope,
     mesh.document_payload,
     mesh.document_event,
-    mesh.document_acknowledgement
+    mesh.document_acknowledgement,
+    mesh.document_business_status_projection
 FROM PUBLIC;
 
 REVOKE EXECUTE ON FUNCTION
@@ -55,7 +56,8 @@ REVOKE EXECUTE ON FUNCTION
     mesh.trg_guard_document_envelope(),
     mesh.trg_guard_document_payload(),
     mesh.trg_guard_append_only_document_child(),
-    mesh.trg_validate_document_child_participant()
+    mesh.trg_validate_document_child_participant(),
+    mesh.trg_guard_document_business_status_projection()
 FROM PUBLIC;
 
 DO $$
@@ -67,6 +69,7 @@ BEGIN
             mesh.document_event,
             mesh.document_acknowledgement
         TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE ON mesh.document_business_status_projection TO athyperapp;
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
@@ -74,14 +77,16 @@ BEGIN
             mesh.document_envelope,
             mesh.document_payload,
             mesh.document_event,
-            mesh.document_acknowledgement
+            mesh.document_acknowledgement,
+            mesh.document_business_status_projection
         TO athyperadmin;
         GRANT EXECUTE ON FUNCTION
             mesh.trg_validate_document_envelope(),
             mesh.trg_guard_document_envelope(),
             mesh.trg_guard_document_payload(),
             mesh.trg_guard_append_only_document_child(),
-            mesh.trg_validate_document_child_participant()
+            mesh.trg_validate_document_child_participant(),
+            mesh.trg_guard_document_business_status_projection()
         TO athyperadmin;
     END IF;
 END;

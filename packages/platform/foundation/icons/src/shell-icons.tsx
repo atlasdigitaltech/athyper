@@ -20,6 +20,7 @@ export function MessageSquareIcon(props: IconProps) { return <IconFrame {...prop
 export function LogOutIcon(props: IconProps) { return <IconFrame {...props}><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></IconFrame>; }
 export function NetworkIcon(props: IconProps) { return <IconFrame {...props}><rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3M12 12V8"/></IconFrame>; }
 export function PhoneIcon(props: IconProps) { return <IconFrame {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92z"/></IconFrame>; }
+export function PlusIcon(props: IconProps) { return <IconFrame {...props}><path d="M5 12h14M12 5v14"/></IconFrame>; }
 export function PanelsTopLeftIcon(props: IconProps) { return <IconFrame {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18M9 21V9"/></IconFrame>; }
 export function PanelRightIcon(props: IconProps) { return <IconFrame {...props}><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/></IconFrame>; }
 export function Maximize2Icon(props: IconProps) { return <IconFrame {...props}><path d="m15 3 6 6M21 3l-6 6M9 21l-6-6M3 21l6-6"/></IconFrame>; }

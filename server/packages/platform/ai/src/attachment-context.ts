@@ -41,11 +41,13 @@ export class KyselyAtlasAttachmentContextResolver implements AtlasAttachmentCont
       for (const attachmentId of input.attachmentIds) {
         const result = await sql<Row>`SELECT attachment.id,attachment.file_name,attachment.content_type,attachment.sha256,attachment.text_extraction_status,attachment.extracted_text,attachment.pii_detected
           FROM document.attachment attachment
-          JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_id=attachment.id
+          JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id
+          JOIN document.attachment_link link ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
+            AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id)
           WHERE attachment.tenant_id=${input.context.tenantId}::uuid
             AND attachment.id=${attachmentId}::uuid
             AND attachment.uploaded_by=${input.context.principalId}::uuid
-            AND attachment.status='active' AND attachment.is_active AND attachment.is_current AND attachment.is_virus_scanned
+            AND attachment.status='active' AND attachment.is_active AND series.current_attachment_id=attachment.id AND attachment.is_virus_scanned
             AND link.entity_type='atlas.prompt' AND link.entity_id=${input.attachmentContextId}
             AND link.created_by=${input.context.principalId}::uuid
           LIMIT 1`.execute(tx);

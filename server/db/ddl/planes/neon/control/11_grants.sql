@@ -43,24 +43,31 @@ $$;
 REVOKE ALL ON
     control.mesh_business_partner_profile_inbox,
     control.mesh_business_partner_profile_processing_attempt,
-    control.mesh_business_partner_profile_projection
+    control.mesh_business_partner_profile_projection,
+    control.mesh_workforce_claim_inbox,
+    control.mesh_workforce_claim_processing_attempt
 FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION
     control.trg_guard_mesh_business_partner_profile_evidence(),
-    control.trg_guard_mesh_business_partner_profile_projection()
+    control.trg_guard_mesh_business_partner_profile_projection(),
+    control.trg_reject_mesh_workforce_claim_evidence_mutation()
 FROM PUBLIC;
 
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT SELECT, INSERT ON control.mesh_business_partner_profile_inbox,
-            control.mesh_business_partner_profile_processing_attempt TO athyperapp;
+            control.mesh_business_partner_profile_processing_attempt,
+            control.mesh_workforce_claim_inbox,
+            control.mesh_workforce_claim_processing_attempt TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_projection TO athyperapp;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON control.mesh_business_partner_profile_inbox,
             control.mesh_business_partner_profile_processing_attempt,
-            control.mesh_business_partner_profile_projection TO athyperadmin;
+            control.mesh_business_partner_profile_projection,
+            control.mesh_workforce_claim_inbox,
+            control.mesh_workforce_claim_processing_attempt TO athyperadmin;
     END IF;
 END;
 $$;

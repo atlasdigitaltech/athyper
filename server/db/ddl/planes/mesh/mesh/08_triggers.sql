@@ -139,6 +139,10 @@ CREATE TRIGGER trg_document_acknowledgement_90_append_only
 BEFORE UPDATE OR DELETE ON mesh.document_acknowledgement
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_append_only_document_child();
 
+CREATE TRIGGER trg_document_business_status_projection_guard
+BEFORE INSERT OR UPDATE OR DELETE ON mesh.document_business_status_projection
+FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_document_business_status_projection();
+
 CREATE TRIGGER trg_network_account_profile_guard
 BEFORE UPDATE ON mesh.network_account_profile
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_guard_network_identity();

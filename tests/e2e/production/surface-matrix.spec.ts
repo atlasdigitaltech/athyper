@@ -49,6 +49,87 @@ test("desktop or mobile shell matches the active project", async ({ page }, test
   }
 });
 
+test("Atlas Add menu remains usable from desktop through compact mobile widths", async ({ page }) => {
+  await page.goto("/home");
+  const composer = page.locator(".athyper-home__hero .athyper-home__composer");
+  const add = composer.getByRole("button", { name: "Add context" });
+  await expect(add).toBeVisible();
+  await add.click();
+  const menu = page.getByRole("menu", { name: "Add context" });
+  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeEnabled();
+  await expect(menu.getByRole("menuitem", { name: /Business record/ })).toBeDisabled();
+  await expect(menu).toContainText("Coming soon");
+  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(menu.getByRole("menuitem", { name: /Files from device/ })).toBeFocused();
+
+  const fileChooser = page.waitForEvent("filechooser");
+  await menu.getByRole("menuitem", { name: /Files from device/ }).click();
+  expect((await fileChooser).isMultiple()).toBe(true);
+
+  for (const width of [430, 390, 320]) {
+    await page.setViewportSize({ width, height: 850 });
+    await expect(add).toBeVisible();
+    const bounds = await add.boundingBox();
+    expect(bounds?.width).toBeGreaterThanOrEqual(44);
+    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    await expect(composer.getByRole("button", { name: "Ask" })).toBeVisible();
+    await add.click();
+    const menuBounds = await menu.boundingBox();
+    expect(menuBounds?.x).toBeGreaterThanOrEqual(0);
+    expect((menuBounds?.x ?? 0) + (menuBounds?.width ?? 0)).toBeLessThanOrEqual(width);
+    await page.keyboard.press("Escape");
+    await expect(add).toBeFocused();
+  }
+
+  await page.locator("html").evaluate((element) => element.setAttribute("dir", "rtl"));
+  await add.click();
+  const rtlBounds = await menu.boundingBox();
+  expect(rtlBounds?.x).toBeGreaterThanOrEqual(0);
+  expect((rtlBounds?.x ?? 0) + (rtlBounds?.width ?? 0)).toBeLessThanOrEqual(320);
+  await page.keyboard.press("Escape");
+  await page.locator("html").evaluate((element) => element.setAttribute("dir", "ltr"));
+
+  await page.setViewportSize({ width: 430, height: 850 });
+  await page.getByRole("button", { name: "Pin Atlas to the right side" }).click();
+  await expect(page.locator(".athyper-atlas-workspace--dock").getByRole("button", { name: "Add context" })).toBeVisible();
+  await page.goto("/atlas?from=%2Fhome");
+  await expect(page.locator(".athyper-atlas-workspace--fullscreen").getByRole("button", { name: "Add context" })).toBeVisible();
+});
+
+test("Atlas file messages follow the governed attachment vocabulary", async ({ page }) => {
+  const attachmentId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+  await page.route("**/api/relay/attachments/stage", async (route) => {
+    await route.fulfill({ status: 201, contentType: "application/json", body: JSON.stringify({ attachmentId, uploadUrl: `https://objects.dev.athyper.test/__e2e-upload/${attachmentId}` }) });
+  });
+  await page.route("**/__e2e-upload/**", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await route.fulfill({ status: 200 });
+  });
+  await page.route(`**/api/relay/attachments/${attachmentId}/finalize`, async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ attachmentId, status: "active" }) });
+  });
+  await page.route(`**/api/relay/attachments/${attachmentId}/status`, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ attachmentId, status: "active", extractionStatus: "extracted", fileName: "supplier.pdf", contentType: "application/pdf", sizeBytes: 3 }) });
+  });
+  await page.goto("/home");
+  const composer = page.locator(".athyper-home__hero .athyper-home__composer");
+  const input = composer.locator('input[type="file"]');
+
+  await input.setInputFiles({ name: "unsupported.exe", mimeType: "application/octet-stream", buffer: Buffer.from("bad") });
+  await expect(composer).toContainText("Choose a supported file up to 25 MB.");
+
+  await input.setInputFiles({ name: "oversized.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(25 * 1024 * 1024 + 1) });
+  await expect(composer).toContainText("This file exceeds the 25 MB limit.");
+
+  await input.setInputFiles({ name: "supplier.pdf", mimeType: "application/pdf", buffer: Buffer.from("pdf") });
+  await expect(composer).not.toContainText("This file exceeds the 25 MB limit.");
+  await expect(composer).toContainText("Uploading and virus scanning…");
+  await expect(composer).toContainText("Preparing governed content…");
+  await expect(composer).toContainText("Ready to use");
+});
+
 test("light, dark and density modes retain the surface contract", async ({ page }) => {
   await page.goto("/settings");
   for (const theme of ["light", "dark"]) {

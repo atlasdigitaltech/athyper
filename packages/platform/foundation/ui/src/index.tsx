@@ -77,6 +77,7 @@ export function Menu({ open, defaultOpen = false, onOpenChange, children }: { re
   useEffect(() => {
     if (!shown) return;
     if (root.current) announceOverlayOpened(root.current);
+    const focusFrame = window.requestAnimationFrame(() => content.current?.querySelector<HTMLElement>('[role="menuitem"]:not(:disabled)')?.focus());
     const dismissOutside = (event: Event) => {
       if (event.target && !root.current?.contains(event.target as Node) && !content.current?.contains(event.target as Node)) setShown(false);
     };
@@ -88,13 +89,23 @@ export function Menu({ open, defaultOpen = false, onOpenChange, children }: { re
     document.addEventListener("focusin", dismissOutside, true);
     document.addEventListener(overlayOpenedEvent, dismissForAnotherOverlay);
     return () => {
+      window.cancelAnimationFrame(focusFrame);
       document.removeEventListener("pointerdown", dismissOutside, true);
       document.removeEventListener("click", dismissOutside, true);
       document.removeEventListener("focusin", dismissOutside, true);
       document.removeEventListener(overlayOpenedEvent, dismissForAnotherOverlay);
     };
   }, [shown, setShown]);
-  return <MenuContext.Provider value={{ open: shown, setOpen: setShown, root, content }}><div ref={root} className="a-menu" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setShown(false); (event.currentTarget.querySelector('[aria-haspopup="menu"]') as HTMLElement | null)?.focus(); } }}>{children}</div></MenuContext.Provider>;
+  return <MenuContext.Provider value={{ open: shown, setOpen: setShown, root, content }}><div ref={root} className="a-menu" onKeyDown={(event) => {
+    if (event.key === "Escape") { event.preventDefault(); setShown(false); (event.currentTarget.querySelector('[aria-haspopup="menu"]') as HTMLElement | null)?.focus(); return; }
+    if (!shown || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+    const items = Array.from(content.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? []);
+    if (!items.length) return;
+    event.preventDefault();
+    const current = items.indexOf(event.target as HTMLElement);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : event.key === "ArrowDown" ? (current + 1 + items.length) % items.length : (current - 1 + items.length) % items.length;
+    items[next]?.focus();
+  }}>{children}</div></MenuContext.Provider>;
 }
 export function MenuTrigger({ className, onClick, ...props }: ButtonHTMLAttributes<HTMLButtonElement>) { const c = useContext(MenuContext); if (!c) throw new Error("MenuTrigger must be inside Menu"); return <button type="button" aria-haspopup="menu" aria-expanded={c.open} className={cx("a-button", "a-button--ghost", className)} {...props} onClick={(event) => { onClick?.(event); if (!event.defaultPrevented) c.setOpen(!c.open); }} />; }
 export function MenuContent({ className, portal = false, style, ...props }: HTMLAttributes<HTMLDivElement> & { readonly portal?: boolean }) {
@@ -107,7 +118,8 @@ export function MenuContent({ className, portal = false, style, ...props }: HTML
       const trigger = c.root.current?.querySelector<HTMLElement>('[aria-haspopup="menu"]'), menu = c.content.current;
       if (!trigger || !menu) return;
       const anchor = trigger.getBoundingClientRect(), bounds = menu.getBoundingClientRect(), margin = 8, gap = 4;
-      const left = Math.min(Math.max(margin, anchor.right - bounds.width), window.innerWidth - bounds.width - margin);
+      const preferredLeft = window.getComputedStyle(trigger).direction === "rtl" ? anchor.left : anchor.right - bounds.width;
+      const left = Math.min(Math.max(margin, preferredLeft), window.innerWidth - bounds.width - margin);
       const below = anchor.bottom + gap, top = below + bounds.height <= window.innerHeight - margin ? below : Math.max(margin, anchor.top - bounds.height - gap);
       setPosition({ left, top });
     };

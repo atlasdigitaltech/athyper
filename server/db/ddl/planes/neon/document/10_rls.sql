@@ -1,9 +1,5 @@
 ALTER TABLE document.attachment ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.attachment_quota_reservation FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_folder FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.attachment_link ENABLE ROW LEVEL SECURITY;
@@ -30,12 +26,6 @@ ALTER TABLE document.multipart_upload ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.multipart_upload FORCE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version ENABLE ROW LEVEL SECURITY;
 ALTER TABLE snapshot.content_item_version FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_item_access_grant FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_usage FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.content_quota_reservation FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY tenant_access ON document.attachment
     FOR ALL
@@ -43,10 +33,6 @@ CREATE POLICY tenant_access ON document.attachment
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY seed_write ON document.attachment
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_usage FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-CREATE POLICY tenant_access ON document.attachment_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.attachment_quota_reservation FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
 CREATE POLICY tenant_access ON document.attachment_folder
     FOR ALL
@@ -282,30 +268,15 @@ BEGIN
 END;
 $$;
 
-ALTER TABLE document.supplier_registration_invitation_legacy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.supplier_registration_invitation_legacy FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_access ON document.supplier_registration_invitation_legacy
-    FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY seed_write ON document.supplier_registration_invitation_legacy
-    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
-
--- supplier_registration_invitation FORCE ROW LEVEL SECURITY compatibility is
--- provided by its security-invoker view over this forced-RLS base relation.
+-- supplier_registration_invitation compatibility is provided by its
+-- security-invoker view over this forced-RLS generalized authority.
 ALTER TABLE document.business_partner_invitation ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.business_partner_invitation FORCE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_invitation_applicant_policy ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.business_partner_invitation_applicant_policy FORCE ROW LEVEL SECURITY;
 ALTER TABLE document.business_partner_invitation_recovery ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.business_partner_invitation_recovery FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON document.business_partner_invitation FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_write ON document.business_partner_invitation_applicant_policy FOR INSERT WITH CHECK(tenant_id=shared.current_tenant_id() AND applicant_principal_id=master.current_principal_id_soft());
-CREATE POLICY tenant_update ON document.business_partner_invitation_applicant_policy FOR UPDATE USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
-CREATE POLICY applicant_owned_read ON document.business_partner_invitation_applicant_policy FOR SELECT USING(tenant_id=shared.current_tenant_id_soft() AND applicant_principal_id=master.current_principal_id_soft());
 CREATE POLICY tenant_access ON document.business_partner_invitation_recovery FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON document.business_partner_invitation FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
-CREATE POLICY seed_write ON document.business_partner_invitation_applicant_policy FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 CREATE POLICY seed_write ON document.business_partner_invitation_recovery FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 
 ALTER TABLE document.business_partner_request ENABLE ROW LEVEL SECURITY;
@@ -731,9 +702,6 @@ BEGIN
     END IF;
 END;
 $$;
-CREATE POLICY tenant_access ON document.content_item_access_grant FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_usage FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
-CREATE POLICY tenant_access ON document.content_quota_reservation FOR ALL USING (tenant_id=shared.current_tenant_id_soft()) WITH CHECK (tenant_id=shared.current_tenant_id());
 ALTER TABLE document.mesh_business_partner_match ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.mesh_business_partner_match FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_read ON document.mesh_business_partner_match FOR SELECT USING (tenant_id=shared.current_tenant_id_soft());
@@ -761,10 +729,6 @@ ALTER TABLE document.supplier_activation_evidence ENABLE ROW LEVEL SECURITY;
 ALTER TABLE document.supplier_activation_evidence FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON document.supplier_activation_evidence USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON document.supplier_activation_evidence FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
-ALTER TABLE document.supplier_registration_recovery ENABLE ROW LEVEL SECURITY;
-ALTER TABLE document.supplier_registration_recovery FORCE ROW LEVEL SECURITY;
-CREATE POLICY tenant_access ON document.supplier_registration_recovery USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
-CREATE POLICY seed_write ON document.supplier_registration_recovery FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 DO $$
 DECLARE v_table text;
 BEGIN
@@ -773,7 +737,8 @@ BEGIN
         'contingent_work_order','contingent_work_order_revision','statement_of_work','statement_of_work_revision','statement_of_work_item',
         'worker_engagement','worker_operational_placement','worker_compliance_item','engagement_onboarding_case',
         'external_time_sheet','external_time_entry','external_expense_sheet','external_expense_item',
-        'external_service_entry','external_service_entry_line','external_workforce_invoice_allocation'
+        'external_service_entry','external_service_entry_line','external_workforce_invoice_allocation',
+        'service_sheet_source_allocation'
     ] LOOP
         EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
         EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);

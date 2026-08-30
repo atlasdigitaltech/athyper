@@ -25,10 +25,11 @@ const ddlSources = [
   "ddl/common/master/03_tables.sql",
   "ddl/planes/neon/master/03_tables.sql",
   "ddl/common/document/03_tables.sql",
+  "ddl/common/document/03_foundation_tables.sql",
   "ddl/planes/neon/document/03_tables.sql",
 ] as const;
 const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"] as const;
-const expectedTableCount = 269;
+const expectedTableCount = 290;
 
 type DiscoveredTable = {
   readonly table: string;

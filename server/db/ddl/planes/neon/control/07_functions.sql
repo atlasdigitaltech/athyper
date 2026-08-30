@@ -3470,6 +3470,14 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION control.trg_reject_mesh_workforce_claim_evidence_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    RAISE EXCEPTION 'NEON MESH workforce-claim inbox and processing evidence are immutable'
+        USING ERRCODE = 'integrity_constraint_violation';
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION control.trg_reject_customer_lifecycle_event_mutation()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
 BEGIN

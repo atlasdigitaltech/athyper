@@ -571,6 +571,12 @@ FOR EACH ROW EXECUTE FUNCTION control.trg_reject_customer_lifecycle_event_mutati
 CREATE TRIGGER trg_mesh_bp_profile_attempt_immutable
 BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_processing_attempt
 FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_evidence();
+CREATE TRIGGER trg_mesh_workforce_claim_inbox_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_workforce_claim_inbox
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_workforce_claim_evidence_mutation();
+CREATE TRIGGER trg_mesh_workforce_claim_attempt_immutable
+BEFORE UPDATE OR DELETE ON control.mesh_workforce_claim_processing_attempt
+FOR EACH ROW EXECUTE FUNCTION control.trg_reject_mesh_workforce_claim_evidence_mutation();
 CREATE TRIGGER trg_mesh_bp_profile_projection_guard
 BEFORE UPDATE OR DELETE ON control.mesh_business_partner_profile_projection
 FOR EACH ROW EXECUTE FUNCTION control.trg_guard_mesh_business_partner_profile_projection();

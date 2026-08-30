@@ -16,7 +16,7 @@ export function createFeatureFlagService(options: Options<FeatureFlagRepository>
       const definitionActive = definition.status === "active" && effective(definition, now().getTime());
       const override = await repository.getOverride(context.tenantId, definition.id);
       const selected = definitionActive && override?.status === "active" && effective(override, now().getTime()) ? override : undefined;
-      const catalogEnabled = definitionActive && (definition.defaultEnabled || definition.rolloutPct !== undefined && cohort(`${context.tenantId}:${context.principalId}:${code}`) < definition.rolloutPct);
+      const catalogEnabled = definitionActive && definition.defaultEnabled && (definition.rolloutPct === undefined || cohort(`${context.tenantId}:${context.principalId}:${code}`) < definition.rolloutPct);
       return { code, enabled: selected?.enabled ?? catalogEnabled, source: selected ? "tenant_override" as const : "catalog" as const, definition, ...(selected ? { override: selected } : {}) };
     },
     async saveOverride(command: { readonly context: VerifiedRequestContext; readonly code: string; readonly enabled: boolean; readonly reason: string; readonly effectiveFrom: string; readonly effectiveUntil?: string; readonly id?: string; readonly expectedVersion?: number }) {

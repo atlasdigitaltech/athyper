@@ -414,7 +414,9 @@ BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'mesh_business_partner_profile_inbox',
         'mesh_business_partner_profile_processing_attempt',
-        'mesh_business_partner_profile_projection'
+        'mesh_business_partner_profile_projection',
+        'mesh_workforce_claim_inbox',
+        'mesh_workforce_claim_processing_attempt'
     ] LOOP
         EXECUTE format('ALTER TABLE control.%I ENABLE ROW LEVEL SECURITY', v_table);
         EXECUTE format('ALTER TABLE control.%I FORCE ROW LEVEL SECURITY', v_table);

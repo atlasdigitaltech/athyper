@@ -369,12 +369,15 @@ export function createKyselyDerivativeSourceRepository(): DerivativeSourceReposi
     async loadSource(tenantId, attachmentId, tx) {
       const result = await sql<Record<string, unknown>>`
         SELECT storage_key, content_type, sha256, size_bytes
-        FROM document.attachment
-        WHERE tenant_id = ${tenantId}::uuid
-          AND id = ${attachmentId}::uuid
-          AND status = 'active'
-          AND is_active
-          AND is_current
+        FROM document.attachment AS attachment
+        JOIN document.attachment_series AS series
+          ON series.tenant_id = attachment.tenant_id
+         AND series.id = attachment.series_id
+         AND series.current_attachment_id = attachment.id
+        WHERE attachment.tenant_id = ${tenantId}::uuid
+          AND attachment.id = ${attachmentId}::uuid
+          AND attachment.status = 'active'
+          AND attachment.is_active
         LIMIT 1
       `.execute(tx);
       const row = result.rows[0];

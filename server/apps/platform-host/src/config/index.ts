@@ -16,6 +16,11 @@ export interface HostConfig {
     connectionString: string | undefined;
     poolMax: number;
   };
+  businessPartner360: {
+    meshLiveBaseUrl: string | undefined;
+    meshLiveCredentialReference: string | undefined;
+    meshTimeoutMs: number;
+  };
   keycloak: {
     issuerUrl: string | undefined;
     audience: string | undefined;
@@ -238,6 +243,9 @@ export function loadConfig(): HostConfig {
   const meshPoolMax = readPositiveInteger("MESH_DATABASE_POOL_MAX", 10);
   const rawStudioDatabaseUrl = readStudioEnvironment("DATABASE_URL");
   const rawMeshDatabaseUrl = process.env["MESH_DATABASE_URL"]?.trim();
+  const bp360MeshLiveBaseUrl=process.env["BP360_MESH_LIVE_BASE_URL"]?.trim(),bp360MeshLiveCredentialReference=process.env["BP360_MESH_LIVE_CREDENTIAL_REFERENCE"]?.trim(),bp360MeshTimeoutMs=readPositiveInteger("BP360_MESH_TIMEOUT_MS",1_500);
+  if(Boolean(bp360MeshLiveBaseUrl)!==Boolean(bp360MeshLiveCredentialReference))throw new Error("BP360 MESH live transport requires both BP360_MESH_LIVE_BASE_URL and BP360_MESH_LIVE_CREDENTIAL_REFERENCE");
+  if(bp360MeshTimeoutMs>3_000)throw new Error("BP360_MESH_TIMEOUT_MS must not exceed 3000");
   const explicitIssuer =
     process.env["KEYCLOAK_ISSUER_URL"]?.trim() ??
     process.env["IAM_ISSUER_URL"]?.trim();
@@ -510,6 +518,7 @@ export function loadConfig(): HostConfig {
       connectionString: rawMeshDatabaseUrl || undefined,
       poolMax: meshPoolMax,
     },
+    businessPartner360:{meshLiveBaseUrl:bp360MeshLiveBaseUrl||undefined,meshLiveCredentialReference:bp360MeshLiveCredentialReference||undefined,meshTimeoutMs:bp360MeshTimeoutMs},
     keycloak: {
       issuerUrl: keycloakIssuer,
       audience: keycloakAudience || undefined,

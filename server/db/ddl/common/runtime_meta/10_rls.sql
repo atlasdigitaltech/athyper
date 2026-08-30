@@ -8,6 +8,15 @@ CREATE POLICY tenant_usage_counter_access ON runtime_meta.tenant_usage_counter
 CREATE POLICY tenant_usage_counter_seed_write ON runtime_meta.tenant_usage_counter
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
+ALTER TABLE runtime_meta.usage_reservation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.usage_reservation FORCE ROW LEVEL SECURITY;
+CREATE POLICY usage_reservation_access ON runtime_meta.usage_reservation
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY usage_reservation_seed_write ON runtime_meta.usage_reservation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
 ALTER TABLE runtime_meta.authorization_epoch ENABLE ROW LEVEL SECURITY;
 ALTER TABLE runtime_meta.authorization_epoch FORCE ROW LEVEL SECURITY;
 CREATE POLICY authorization_epoch_read ON runtime_meta.authorization_epoch FOR SELECT

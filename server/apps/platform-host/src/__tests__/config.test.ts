@@ -31,6 +31,7 @@ describe("loadConfig", () => {
   keys.push("PUBLICATION_API_ENABLED","PUBLICATION_COMPILE_ENABLED","PUBLICATION_DISPATCH_ENABLED","PUBLICATION_APPLY_ENABLED","PUBLICATION_RECOVERY_ENABLED","PUBLICATION_TARGET_PLANES","PUBLICATION_REQUIRE_SIGNATURE","PUBLICATION_SIGNING_KEY_ID","PUBLICATION_PRIVATE_KEY_REFERENCE","PUBLICATION_PUBLIC_KEY_REFERENCE","PUBLICATION_RUNTIME_VERSION","PUBLICATION_RECOVERY_INTERVAL_MS","INFISICAL_URL","INFISICAL_TOKEN","INFISICAL_WORKSPACE_ID","INFISICAL_ENVIRONMENT","INFISICAL_SECRET_PATH");
   keys.push("FINANCE_F2_ENABLED","FINANCE_F3_ENABLED","FINANCE_F4_ENABLED","FINANCE_F5_ENABLED","FINANCE_F6_ENABLED");
   keys.push("WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED","WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED","WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED","WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED","WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED","WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED","WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED");
+  keys.push("BP360_MESH_LIVE_BASE_URL","BP360_MESH_LIVE_CREDENTIAL_REFERENCE","BP360_MESH_TIMEOUT_MS");
 
   beforeEach(() => {
     for (const k of keys) snapshot[k] = process.env[k];
@@ -55,6 +56,7 @@ describe("loadConfig", () => {
     expect(config.database).toEqual({ connectionString: undefined, poolMax: 10 });
     expect(config.studioDatabase).toEqual({ connectionString: undefined, poolMax: 5 });
     expect(config.meshDatabase).toEqual({ connectionString: undefined, poolMax: 10 });
+    expect(config.businessPartner360).toEqual({meshLiveBaseUrl:undefined,meshLiveCredentialReference:undefined,meshTimeoutMs:1_500});
     expect(config.keycloak).toEqual({
       issuerUrl: undefined,
       audience: undefined,

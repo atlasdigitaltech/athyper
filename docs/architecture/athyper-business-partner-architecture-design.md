@@ -3,7 +3,7 @@
 **Status:** Accepted target architecture  
 **Effective:** 2026-08-29  
 **Authority:** Normative for Business Partner work across NEON, MESH, STUDIO, and TrustIAM/Keycloak  
-**Delivery companion:** [Business Partner pending build plan](./athyper-business-partner-pending-build-plan.md)
+**Delivery companion:** [Business Partner pending build plan](./athyper-business-partner-pending-build-plan.md) · **Experience companion:** [Business Partner 360 view build design](./athyper-business-partner-360-view-build-design.md)
 
 This document supersedes the former three-plane foundation, supplier-onboarding, and NEON onboarding/extension documents. It reconciles those decisions into one architecture. Historical delivery evidence remains in the [production build plan](./neon-mesh-studio-business-partner-production-build-plan.md); unfinished work is tracked only in the delivery companion above.
 

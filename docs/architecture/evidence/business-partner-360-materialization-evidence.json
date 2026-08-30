@@ -1,0 +1,64 @@
+{
+  "capturedAt": "2026-08-30T05:49:41.633Z",
+  "database": "athyper_neon",
+  "repository": "KyselyBusinessPartnerRequestRepository",
+  "rolledBack": true,
+  "typedJourney": {
+    "requestStatus": "applied",
+    "replayed": false,
+    "exactReplay": true,
+    "stableCoordinates": true,
+    "fingerprintConflictRejected": true,
+    "requestedCounts": {
+      "addresses": 1,
+      "contactPersons": 1,
+      "contactChannels": 1,
+      "identifiers": 1,
+      "taxRegistrations": 1,
+      "classifications": 1,
+      "certifications": 1
+    },
+    "materializedCounts": {
+      "addresses": 1,
+      "contactPersons": 1,
+      "contactChannels": 1,
+      "identifiers": 1,
+      "taxRegistrations": 1,
+      "classifications": 1,
+      "certifications": 1
+    },
+    "evidenceItems": 7,
+    "targetTables": [
+      "master.address",
+      "master.business_partner_commodity_capability",
+      "master.business_partner_identifier",
+      "master.business_partner_tax_registration",
+      "master.certification",
+      "master.contact_link",
+      "master.contact_person"
+    ],
+    "snapshotRows": 1
+  },
+  "legacyPolicy": {
+    "mode": "legacy_untyped",
+    "requestStatus": "applied",
+    "materializedCounts": {
+      "addresses": 0,
+      "contactPersons": 0,
+      "contactChannels": 0,
+      "identifiers": 0,
+      "taxRegistrations": 0,
+      "classifications": 0,
+      "certifications": 0
+    },
+    "evidenceItems": 0,
+    "legacyJsonInterpreted": false
+  },
+  "restrictedSentinelSha256": "18ffba1ba196b82a3aa75d8f351a0cb9fac8a7cdeeae635fc524bdf0f01ed2f3",
+  "cleanup": {
+    "typedRequestRows": 0,
+    "legacyRequestRows": 0,
+    "typedPartnerRows": 0,
+    "legacyPartnerRows": 0
+  }
+}

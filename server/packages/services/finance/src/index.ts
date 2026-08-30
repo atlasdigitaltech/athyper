@@ -30,5 +30,7 @@ export * from "./closing/closing-services.js";
 export * from "./closing/kysely-closing-repositories.js";
 export * from "./numbering/numbering-service.js";
 export * from "./numbering/kysely-numbering-repository.js";
+export * from "./external-workforce/service-sheet-source-service.js";
+export * from "./external-workforce/kysely-service-sheet-source-repository.js";
 /** Finance implementations execute only against the Neon business plane. */
 export const financeFoundation = { executionPlane: "neon", routesEnabledByDefault: false } as const;

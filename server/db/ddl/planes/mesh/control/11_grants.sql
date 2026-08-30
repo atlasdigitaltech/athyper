@@ -40,6 +40,7 @@ $$;
 
 REVOKE ALL ON control.network_document_type FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION control.trg_guard_network_document_type() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION control.fn_provision_external_workforce_exchange(uuid,uuid,uuid) FROM PUBLIC;
 
 DO $$
 BEGIN
@@ -50,6 +51,8 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON control.network_document_type TO athyperadmin;
         GRANT EXECUTE ON FUNCTION control.trg_guard_network_document_type()
+            TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION control.fn_provision_external_workforce_exchange(uuid,uuid,uuid)
             TO athyperadmin;
     END IF;
 END;

@@ -2048,6 +2048,79 @@ CREATE TABLE control.mesh_business_partner_profile_processing_attempt (
     CONSTRAINT mesh_bp_profile_attempt_details_chk CHECK (jsonb_typeof(details) = 'object' AND pg_column_size(details) <= 32768)
 );
 
+-- Immutable MESH delivery evidence for external-workforce claims.  Payload
+-- bodies and protected receipts remain in the governed content transport;
+-- this inbox stores only the coordinates required for validation, replay and
+-- idempotent materialization into NEON document aggregates.
+CREATE TABLE control.mesh_workforce_claim_inbox (
+    id                           uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                    uuid        NOT NULL,
+    envelope_id                  uuid        NOT NULL,
+    event_id                     uuid        NOT NULL,
+    document_kind                text        NOT NULL,
+    operation_kind               text        NOT NULL,
+    source_tenant_id             uuid        NOT NULL,
+    source_network_account_id    uuid        NOT NULL,
+    recipient_network_account_id uuid        NOT NULL,
+    network_relationship_id      uuid        NOT NULL,
+    source_principal_id          uuid,
+    entity_id                    uuid        NOT NULL,
+    entity_version_id            uuid        NOT NULL,
+    entity_contract_hash         char(64)    NOT NULL,
+    business_key                 text,
+    correlation_id               text,
+    idempotency_key              text        NOT NULL,
+    payload_hash                 char(64)    NOT NULL,
+    occurred_at                  timestamptz NOT NULL,
+    received_at                  timestamptz NOT NULL DEFAULT clock_timestamp(),
+    received_by                  uuid        NOT NULL,
+    CONSTRAINT mesh_workforce_claim_inbox_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_workforce_claim_inbox_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_workforce_claim_inbox_envelope_uq UNIQUE (tenant_id, envelope_id),
+    CONSTRAINT mesh_workforce_claim_inbox_event_uq UNIQUE (tenant_id, event_id),
+    CONSTRAINT mesh_workforce_claim_inbox_idempotency_uq UNIQUE (tenant_id, source_network_account_id, idempotency_key),
+    CONSTRAINT mesh_workforce_claim_inbox_document_chk CHECK (document_kind IN ('external_time_sheet','external_expense_sheet','supplier_invoice')),
+    CONSTRAINT mesh_workforce_claim_inbox_operation_chk CHECK (operation_kind IN ('submit','revise','withdraw')),
+    CONSTRAINT mesh_workforce_claim_inbox_participant_chk CHECK (tenant_id <> source_tenant_id),
+    CONSTRAINT mesh_workforce_claim_inbox_hash_chk CHECK (entity_contract_hash ~ '^[a-f0-9]{64}$' AND payload_hash ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_workforce_claim_inbox_business_key_chk CHECK (business_key IS NULL OR btrim(business_key) <> ''),
+    CONSTRAINT mesh_workforce_claim_inbox_correlation_chk CHECK (correlation_id IS NULL OR btrim(correlation_id) <> ''),
+    CONSTRAINT mesh_workforce_claim_inbox_key_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT mesh_workforce_claim_inbox_time_chk CHECK (occurred_at <= received_at)
+);
+
+CREATE TABLE control.mesh_workforce_claim_processing_attempt (
+    id               uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id        uuid        NOT NULL,
+    inbox_id         uuid        NOT NULL,
+    attempt_no       integer     NOT NULL,
+    trigger_kind     text        NOT NULL,
+    disposition      text        NOT NULL,
+    aggregate_kind   text,
+    aggregate_id     uuid,
+    safe_reason_code text,
+    details          jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    processed_at     timestamptz NOT NULL DEFAULT clock_timestamp(),
+    processed_by     uuid        NOT NULL,
+    CONSTRAINT mesh_workforce_claim_attempt_pkey PRIMARY KEY (id),
+    CONSTRAINT mesh_workforce_claim_attempt_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT mesh_workforce_claim_attempt_no_uq UNIQUE (tenant_id, inbox_id, attempt_no),
+    CONSTRAINT mesh_workforce_claim_attempt_no_chk CHECK (attempt_no >= 1),
+    CONSTRAINT mesh_workforce_claim_attempt_trigger_chk CHECK (trigger_kind IN ('delivery','replay','manual_reprocess')),
+    CONSTRAINT mesh_workforce_claim_attempt_disposition_chk CHECK (disposition IN ('materialized','duplicate','rejected','quarantined','failed')),
+    CONSTRAINT mesh_workforce_claim_attempt_target_chk CHECK (
+        (disposition = 'materialized' AND aggregate_kind IN ('external_time_sheet','external_expense_sheet','purchase_invoice') AND aggregate_id IS NOT NULL AND safe_reason_code IS NULL)
+        OR (disposition <> 'materialized' AND aggregate_kind IS NULL AND aggregate_id IS NULL)
+    ),
+    CONSTRAINT mesh_workforce_claim_attempt_reason_chk CHECK (safe_reason_code IS NULL OR safe_reason_code ~ '^[A-Z][A-Z0-9_.-]{1,126}$'),
+    CONSTRAINT mesh_workforce_claim_attempt_json_chk CHECK (jsonb_typeof(details) = 'object' AND pg_column_size(details) <= 32768)
+);
+
+COMMENT ON TABLE control.mesh_workforce_claim_inbox IS
+  'Append-only NEON receipt of a MESH external-workforce claim envelope. It contains transport coordinates and hashes, never the unrestricted claim or receipt payload.';
+COMMENT ON TABLE control.mesh_workforce_claim_processing_attempt IS
+  'Append-only replay/materialization evidence for one MESH workforce-claim inbox receipt.';
+
 CREATE TABLE control.mesh_business_partner_profile_projection (
     id                          uuid        NOT NULL DEFAULT shared.uuidv7(),
     tenant_id                   uuid        NOT NULL,

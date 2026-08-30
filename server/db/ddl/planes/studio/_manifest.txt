@@ -48,6 +48,7 @@ planes/studio/master/03_tables.sql
 planes/studio/metadata/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
+common/document/03_foundation_tables.sql
 planes/studio/document/03_tables.sql
 planes/studio/snapshot/03_tables.sql
 planes/studio/control/03_tables.sql
@@ -214,6 +215,7 @@ planes/studio/authz/14_publication_permission_reference_seed.sql
 planes/studio/authz/15_business_partner_definition_permission_reference_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
+common/authz/16_content_record_acl_reference_seed.sql
 common/shared/12_reference_seed.sql
 common/control/12_ui_locale_catalog_seed.sql
 common/audit/12_reference_seed.sql

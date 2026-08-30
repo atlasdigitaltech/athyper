@@ -8,6 +8,16 @@
     REFERENCES control.usage_metric_catalog (id)
     ON DELETE RESTRICT;
 
+ALTER TABLE runtime_meta.usage_reservation
+    ADD CONSTRAINT usage_reservation_tenant_fk
+        FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE CASCADE,
+    ADD CONSTRAINT usage_reservation_metric_fk
+        FOREIGN KEY (usage_metric_id) REFERENCES control.usage_metric_catalog(id) ON DELETE RESTRICT,
+    ADD CONSTRAINT usage_reservation_created_by_fk
+        FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT usage_reservation_updated_by_fk
+        FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE runtime_meta.authorization_epoch
     ADD CONSTRAINT authorization_epoch_scope_chk CHECK (
         (scope_kind = 'global' AND tenant_id IS NULL AND plane_code IS NULL)

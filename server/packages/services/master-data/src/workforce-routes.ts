@@ -4,7 +4,7 @@ import type { Application, NextFunction, Request, RequestHandler, Response } fro
 import { MasterDataError } from "./errors.js";
 
 export function registerWorkforceRoutes(app:Application,options:{readonly authenticate:RequestHandler;readonly readContext:(response:Response)=>VerifiedRequestContext;readonly service:WorkforceService}){
-  const route=(work:(request:Request,context:VerifiedRequestContext,response:Response)=>Promise<unknown>):RequestHandler=>async(request,response,next)=>{try{const result=await work(request,options.readContext(response),response);if(!response.headersSent)response.json(result);}catch(error){handle(error,response,next);}};
+  const route=(work:(request:Request,context:VerifiedRequestContext,response:Response)=>Promise<unknown>):RequestHandler=>async(request,response,next)=>{response.setHeader("Cache-Control","private, no-store");response.setHeader("Pragma","no-cache");try{const result=await work(request,options.readContext(response),response);if(!response.headersSent)response.json(result);}catch(error){handle(error,response,next);}};
   app.get("/api/neon/workforce",options.authenticate,route((request,context)=>options.service.list({context,companyCodeId:uuidOptional(request.query["companyCodeId"],"companyCodeId"),status:textOptional(request.query["status"]),limit:integerOptional(request.query["limit"])})));
   app.get("/api/neon/workforce/:employeeId",options.authenticate,route((request,context)=>options.service.get({context,employeeId:uuid(request.params["employeeId"],"employeeId")})));
   app.get("/api/neon/workforce/:employeeId/readiness",options.authenticate,route(async(request,context)=>(await options.service.get({context,employeeId:uuid(request.params["employeeId"],"employeeId")})).readiness));

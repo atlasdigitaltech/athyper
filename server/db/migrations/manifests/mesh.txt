@@ -35,3 +35,5 @@
 20260829_security_definer_deployment_owner_correction.sql
 20260829_atlas_conversation_access_grants.sql
 20260829_atlas_experience_configuration.sql
+20260830_document_foundation_consolidation.sql
+20260830_mesh_external_workforce_exchange.sql

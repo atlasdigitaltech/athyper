@@ -27,8 +27,6 @@ export interface AttachmentRecord {
   readonly sha256?: string;
   readonly provenance?: AttachmentProvenance;
   readonly quarantineKey?: string;
-  readonly thumbnailKey?: string;
-  readonly previewKey?: string;
   readonly isCurrent: boolean;
   readonly isActive: boolean;
   readonly hasLegalHold: boolean;
@@ -42,6 +40,8 @@ export interface AttachmentRepository<T> {
   lockForStaging?(identity: AttachmentIdentity, tx: T): Promise<void>;
   createStaged(input: AttachmentUploadIntent & { storageKey: string; expiresAt: string }, tx: T): Promise<AttachmentRecord>;
   load(identity: AttachmentIdentity, tx: T): Promise<AttachmentRecord | null>;
+  /** Tenant-scoped read used only after the owning attachment authorization command succeeds. */
+  loadForDownload?(identity: AttachmentIdentity, tx: T): Promise<AttachmentRecord | null>;
   /** Privileged maintenance path; implementations must authorize a service principal and remain tenant-scoped. */
   loadForMaintenance?(identity: AttachmentIdentity, tx: T): Promise<AttachmentRecord | null>;
   finalizeClean(identity: AttachmentIdentity, input: { storageKey: string; sha256: string; sizeBytes: number; contentType: string }, tx: T): Promise<AttachmentRecord>;
@@ -72,6 +72,7 @@ export interface AttachmentLifecycle {
   stage(input: AttachmentUploadIntent): Promise<StagedUpload>;
   finalize(identity: AttachmentIdentity, contentType: string): Promise<AttachmentRecord>;
   status(identity: AttachmentIdentity): Promise<AttachmentRecord>;
+  createAuthorizedDownload(identity: AttachmentIdentity, expirySeconds?: number): Promise<{ readonly attachmentId:string;readonly url:string;readonly expiresAt:string }>;
   deactivate(identity: AttachmentIdentity, reason?: string): Promise<void>;
   expire(identity: AttachmentIdentity): Promise<void>;
   purge(identity: AttachmentIdentity): Promise<boolean>;
@@ -153,6 +154,16 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
       return current;
     },
 
+    async createAuthorizedDownload(identity, expirySeconds = 120) {
+      const ttl=Math.min(Math.max(expirySeconds,30),300);
+      const current=await options.transactions.run(identity.planeKey,identity,tx=>(options.repository.loadForDownload??options.repository.load)(identity,tx));
+      if(!current)throw new Error("Attachment not found");
+      if(current.status!=="active"||!current.isActive||!current.sha256)throw new AttachmentDownloadError("ATTACHMENT_DOWNLOAD_UNAVAILABLE","Only active, verified attachments may be downloaded");
+      if(current.expiresAt&&Date.parse(current.expiresAt)<=now().getTime())throw new AttachmentDownloadError("ATTACHMENT_DOWNLOAD_EXPIRED","The attachment download has expired");
+      const expiresAt=new Date(now().getTime()+ttl*1000).toISOString();
+      return{attachmentId:current.id,url:await options.storage.createDownloadUrl(current.storageKey,ttl),expiresAt};
+    },
+
     async deactivate(identity, reason = "deactivated") {
       await options.transactions.run(identity.planeKey, identity, async (tx) => {
         await options.repository.deactivate(identity, reason, tx);
@@ -181,7 +192,7 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
         ]));
         if (held || retentionActive(series?.retentionUntil ?? undefined, now())) return false;
       }
-      for (const key of [current.storageKey, current.thumbnailKey, current.previewKey]) if (key) await options.storage.delete(key).catch(() => undefined);
+      await options.storage.delete(current.storageKey).catch(() => undefined);
       await options.transactions.run(identity.planeKey, identity, async (tx) => {
         await options.repository.markPurged(identity, tx);
         await options.quota.release(identity, tx);
@@ -204,7 +215,7 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
           const [held, series] = await options.transactions.run(input.planeKey, identity, tx => Promise.all([options.legalHoldRepository!.hasActiveHold(input.tenantId, current.seriesId!, tx), options.seriesRepository!.load(input.tenantId, current.seriesId!, tx)]));
           if (held || retentionActive(series?.retentionUntil ?? undefined, now())) continue;
         }
-        for (const key of [current.storageKey, current.thumbnailKey, current.previewKey]) if (key) await options.storage.delete(key).catch(() => undefined);
+        await options.storage.delete(current.storageKey).catch(() => undefined);
         await options.transactions.run(input.planeKey, identity, async tx => {
           await options.repository.markPurgedForMaintenance!(identity, tx);
           await options.quota.release(identity, tx);
@@ -227,6 +238,8 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
     },
   };
 }
+
+export class AttachmentDownloadError extends Error{constructor(readonly code:"ATTACHMENT_DOWNLOAD_UNAVAILABLE"|"ATTACHMENT_DOWNLOAD_EXPIRED",message:string){super(message);}}
 
 function measure(source: AsyncIterable<Uint8Array>) {
   const hash = createHash("sha256");

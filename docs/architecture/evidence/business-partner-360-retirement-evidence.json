@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-360.retirement-evidence",
+  "consumerInventoryRef": "docs/architecture/evidence/business-partner-360-legacy-consumer-inventory.json",
+  "evidence": {
+    "legacyCalls": -1,
+    "observationDays": 0,
+    "telemetryRetentionDays": 1,
+    "trafficEvidenceRef": null,
+    "zeroCallWindowStartedAt": null,
+    "zeroCallWindowEndedAt": null,
+    "knownConsumers": 1,
+    "compatibilityTestsPassed": true,
+    "rollbackApproved": false,
+    "rollbackApprovalRef": null,
+    "ownerApprovals": []
+  },
+  "localTelemetryProbe": {
+    "capturedAt": "2026-08-30T06:10:00.000Z",
+    "queryWindow": "24h",
+    "retentionDays": 1,
+    "result": "no_series",
+    "qualifiedAsZero": false,
+    "query": "sum(increase(athyper_business_partner_request_http_total{operation=\"get-aggregate\"}[24h]))"
+  },
+  "status": "not_eligible"
+}

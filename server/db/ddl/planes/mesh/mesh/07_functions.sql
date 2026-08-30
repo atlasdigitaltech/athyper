@@ -587,6 +587,46 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION mesh.trg_guard_document_business_status_projection()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, mesh
+AS $$
+DECLARE
+    v_envelope mesh.document_envelope%ROWTYPE;
+    v_event_envelope_id uuid;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Document business-status projections are rebuilt, not deleted directly'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    SELECT * INTO v_envelope FROM mesh.document_envelope
+     WHERE id=NEW.source_envelope_id;
+    SELECT envelope_id INTO v_event_envelope_id FROM mesh.document_event
+     WHERE id=NEW.last_event_id;
+    IF v_envelope.id IS NULL
+       OR v_envelope.network_relationship_id IS DISTINCT FROM NEW.network_relationship_id
+       OR v_event_envelope_id IS DISTINCT FROM NEW.source_envelope_id THEN
+        RAISE EXCEPTION 'Business-status projection must match its envelope, relationship and last event'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        IF (NEW.id,NEW.source_envelope_id,NEW.network_relationship_id,NEW.resource_kind,NEW.resource_ref)
+           IS DISTINCT FROM
+           (OLD.id,OLD.source_envelope_id,OLD.network_relationship_id,OLD.resource_kind,OLD.resource_ref) THEN
+            RAISE EXCEPTION 'Business-status projection coordinates are immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        IF NEW.lifecycle_version <= OLD.lifecycle_version THEN
+            RAISE EXCEPTION 'Business-status projection lifecycle version must increase'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        NEW.updated_at := clock_timestamp();
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION mesh.trg_validate_profile_trade_role()
 RETURNS trigger
 LANGUAGE plpgsql

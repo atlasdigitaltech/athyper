@@ -56,4 +56,4 @@ export { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon, Building2Icon, ColumnsIcon
 export { MenuIcon } from "./menu";
 export { UserIcon } from "./user";
 export { WarningIcon } from "./warning";
-export { BellIcon, CalculatorIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, ClockIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, InboxIcon, LanguagesIcon, LockIcon, LogOutIcon, MailIcon, Maximize2Icon, MessageCircleIcon, MessageSquareIcon, MinusIcon, NetworkIcon, PanelRightIcon, PanelsTopLeftIcon, PhoneIcon, ShieldCheckIcon, ShoppingCartIcon, SparklesIcon, WarehouseIcon } from "./shell-icons";
+export { BellIcon, CalculatorIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, ClipboardCheckIcon, ClockIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, InboxIcon, LanguagesIcon, LockIcon, LogOutIcon, MailIcon, Maximize2Icon, MessageCircleIcon, MessageSquareIcon, MinusIcon, NetworkIcon, PanelRightIcon, PanelsTopLeftIcon, PhoneIcon, PlusIcon, ShieldCheckIcon, ShoppingCartIcon, SparklesIcon, WarehouseIcon } from "./shell-icons";

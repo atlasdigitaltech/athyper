@@ -1161,6 +1161,9 @@ CREATE INDEX certification_expiry_idx
   WHERE effective_until IS NOT NULL AND status = 'active'::text;
 CREATE INDEX certification_owner_idx
   ON master.certification USING btree (tenant_id, owner_type, owner_id);
+CREATE INDEX certification_current_owner_idx
+  ON master.certification (tenant_id, owner_type, owner_id, effective_from, effective_until)
+  WHERE status = 'active';
 CREATE INDEX certification_type_idx
   ON master.certification USING btree (tenant_id, certification_type_id)
   WHERE certification_type_id IS NOT NULL;

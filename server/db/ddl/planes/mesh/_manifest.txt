@@ -41,6 +41,7 @@ common/master/03_platform_tables.sql
 planes/mesh/master/03_tables.sql
 common/snapshot/03_tables.sql
 common/audit/03_tables.sql
+common/document/03_foundation_tables.sql
 planes/mesh/document/03_tables.sql
 planes/mesh/snapshot/03_tables.sql
 planes/mesh/control/03_tables.sql
@@ -198,6 +199,7 @@ common/control/12_banking_reference_seed.sql
 common/control/12_usage_metric_catalog_seed.sql
 common/master/12_contact_person_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
+common/authz/16_content_record_acl_reference_seed.sql
 planes/mesh/mesh/12_certification_reference_seed.sql
 planes/mesh/control/12_lookup_reference_entrypoint.sql
 planes/mesh/control/12_reference_seed.sql

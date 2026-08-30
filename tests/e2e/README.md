@@ -57,6 +57,35 @@ State fixtures should expose `data-ui-state="<state>"`; semantic fallback text
 is accepted during migration. Fixture actions must be safe to repeat because
 CI retries failed tests.
 
+### Business Partner 360 qualification
+
+The BP360 qualification suite is limited to the supported Chromium desktop and
+Pixel 7 profiles and is invoked with:
+
+```sh
+PLAYWRIGHT_PRODUCTION_MATRIX=1 \
+PLAYWRIGHT_NEON_BASE_URL=https://neon.example.test \
+PLAYWRIGHT_BP360_RECORD_ID=<dual-role-business-partner-uuid> \
+PLAYWRIGHT_BP360_PERSON_RECORD_ID=<workforce-business-partner-uuid> \
+PLAYWRIGHT_BP360_ORGANIZATION_ID=<operating-organization-uuid> \
+PLAYWRIGHT_BP360_COMPANY_CODE_ID=<company-code-uuid> \
+PLAYWRIGHT_BP360_RESTRICTED_SENTINELS=<comma-separated-synthetic-raw-values> \
+PLAYWRIGHT_BP360_PERFORMANCE=1 \
+pnpm test:e2e:bp360-qualification
+```
+
+`PLAYWRIGHT_BP360_AS_OF` may override the historical date. Use an account that
+can perform the audited person reveal for the cleanup journey. The suite covers
+canonical/deep-link history, superseded-request abort, role/scope switching,
+historical read-only behavior, governed destinations, sensitive close/expiry/
+navigation/permission-loss cleanup, browser-state leakage, WCAG automation,
+200% reflow, RTL layout, and the HTTP latency/payload budgets. Automated Axe
+and semantic checks support but do not replace manual screen-reader and
+localization certification.
+Use unique, synthetic fixture values for the restricted sentinels, covering raw
+bank, tax, national identifier, birth, compensation, evidence and risk data.
+The variable is used only as a negative matcher and its value is never printed.
+
 ## PI visual activation record
 
 The PI visual project is manual and non-blocking in CI until activation.

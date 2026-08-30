@@ -1,3 +1,14 @@
+CREATE OR REPLACE FUNCTION master.trg_guard_address_event_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $function$
+BEGIN
+    RAISE EXCEPTION 'master.address_event is append-only; create a new event instead'
+        USING ERRCODE = '55000';
+END;
+$function$;
+
 CREATE OR REPLACE FUNCTION master.trg_guard_canonical_party_graph() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
 DECLARE v_cursor uuid; v_origin uuid; v_seen uuid[]:=ARRAY[]::uuid[];
 BEGIN

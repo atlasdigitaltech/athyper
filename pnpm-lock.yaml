@@ -1695,6 +1695,9 @@ importers:
 
   server/db:
     dependencies:
+      '@athyper/server-service-master-data':
+        specifier: workspace:*
+        version: link:../packages/services/master-data
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -3774,6 +3777,9 @@ importers:
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
+      '@athyper/server-contract-secrets':
+        specifier: workspace:*
+        version: link:../../contracts/secrets
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
