@@ -25,6 +25,35 @@ JOIN master.risk_source s ON s.code = c.source_code;
 COMMENT ON VIEW control.v_risk_source_config IS
   'Tenant-safe effective risk-source configuration joined to the Neon source registry.';
 
+CREATE VIEW control.current_customer_account_designation
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT id AS designation_id, tenant_id, business_partner_id, customer_id,
+       operating_organization_id, company_code_id, designation_type,
+       priority_tier, effective_from, effective_until, rationale,
+       approved_at, approved_by, row_version
+  FROM control.customer_account_designation
+ WHERE status = 'approved'
+   AND effective_from <= CURRENT_DATE
+   AND (effective_until IS NULL OR effective_until > CURRENT_DATE);
+
+COMMENT ON VIEW control.current_customer_account_designation IS
+  'Read-only current governed Customer designations; replaces master.customer.is_key_account.';
+
+CREATE VIEW control.current_customer_credit_limit
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT id AS credit_review_id, tenant_id, business_partner_id, customer_id,
+       operating_organization_id, company_code_id, approved_credit_limit,
+       approved_currency_code, decision, effective_from, effective_until,
+       approved_at, approved_by, row_version
+  FROM control.customer_credit_review
+ WHERE decision IN ('approved','conditional')
+   AND approved_credit_limit IS NOT NULL
+   AND effective_from <= CURRENT_DATE
+   AND (effective_until IS NULL OR effective_until > CURRENT_DATE);
+
+COMMENT ON VIEW control.current_customer_credit_limit IS
+  'Read-only current credit-limit resolver. Every returned amount is the effective outcome of one approved or conditional credit review.';
+
 CREATE VIEW control.accounting_profile_policy_catalog
 WITH (security_invoker = true, security_barrier = true) AS
 SELECT

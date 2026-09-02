@@ -1107,6 +1107,34 @@ ALTER TABLE master.customer
     REFERENCES master.business_partner (tenant_id, id)
     ON DELETE RESTRICT;
 
+ALTER TABLE master.business_partner_alias
+    ADD CONSTRAINT business_partner_alias_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_alias_country_fk
+    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by)
+    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_alias_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =,
+        normalized_alias WITH =, alias_kind WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        COALESCE(language_code, '*'::text) WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active'),
+    ADD CONSTRAINT business_partner_alias_primary_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =, alias_kind WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        COALESCE(language_code, '*'::text) WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active' AND is_primary);
+
 DO $$
 DECLARE
     v_table text;
@@ -1351,11 +1379,14 @@ ALTER TABLE master.bank_account
 ALTER TABLE master.person
     ADD CONSTRAINT person_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE CASCADE,
-    ADD CONSTRAINT person_business_partner_fk
-    FOREIGN KEY (tenant_id, business_partner_id)
-    REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT person_country_fk
     FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
+
+-- NOT VALID preserves pre-S2 person/group Business Partner history while
+-- enforcing the organization-only boundary for every new or changed row.
+ALTER TABLE master.business_partner
+    ADD CONSTRAINT business_partner_organization_only_chk
+    CHECK (partner_category = 'organization') NOT VALID;
 
 ALTER TABLE master.person_sensitive_profile
     ADD CONSTRAINT person_sensitive_profile_tenant_fk
@@ -2178,7 +2209,15 @@ ALTER TABLE master.business_partner_relationship
     FOREIGN KEY (tenant_id, target_business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_relationship_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
+    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_relationship_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, source_business_partner_id WITH =,
+        target_business_partner_id WITH =, relationship_type_code WITH =,
+        COALESCE(country_code, '**'::bpchar) WITH =,
+        daterange(COALESCE(effective_from, '-infinity'::date),
+                  COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');
 
 ALTER TABLE master.business_partner_governance_relation
     ADD CONSTRAINT business_partner_governance_relation_owner_fk
@@ -2256,7 +2295,13 @@ ALTER TABLE master.business_partner_operating_organization_assignment
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT business_partner_operating_org_assignment_org_fk
     FOREIGN KEY (tenant_id, operating_organization_id)
-    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT;
+    REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_operating_org_assignment_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =, business_partner_id WITH =,
+        operating_organization_id WITH =, partner_role WITH =,
+        daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
+    ) WHERE (status = 'active');
 
 ALTER TABLE master.company_code_supplier_profile
     ADD CONSTRAINT company_code_supplier_profile_supplier_fk
@@ -2289,9 +2334,6 @@ ALTER TABLE master.company_code_customer_profile
     REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_customer_profile_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT,
-    ADD CONSTRAINT company_code_customer_profile_credit_currency_fk
-    FOREIGN KEY (credit_limit_currency_code)
-    REFERENCES shared.currency (code) ON DELETE RESTRICT,
     ADD CONSTRAINT company_code_customer_profile_payment_term_fk
     FOREIGN KEY (tenant_id, payment_term_id)
     REFERENCES master.payment_term (tenant_id, id) ON DELETE RESTRICT,
@@ -2302,11 +2344,11 @@ ALTER TABLE master.company_code_customer_profile
     FOREIGN KEY (tenant_id, default_dimension_set_id)
     REFERENCES master.dimension_set (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE master.legal_entity_business_partner_link
-    ADD CONSTRAINT legal_entity_business_partner_link_legal_entity_fk
+ALTER TABLE master.legal_entity_internal_partner_link
+    ADD CONSTRAINT legal_entity_internal_partner_link_legal_entity_fk
     FOREIGN KEY (tenant_id, legal_entity_id)
     REFERENCES master.legal_entity (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT legal_entity_business_partner_link_partner_fk
+    ADD CONSTRAINT legal_entity_internal_partner_link_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id)
     REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT;
 
@@ -2349,7 +2391,7 @@ BEGIN
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
-        'legal_entity_business_partner_link',
+        'legal_entity_internal_partner_link',
         'intercompany_trading_pair'
     ] LOOP
         EXECUTE format(

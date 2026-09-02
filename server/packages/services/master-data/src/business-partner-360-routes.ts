@@ -59,9 +59,21 @@ export function registerBusinessPartner360Routes(
         response.status(200).json(value);
       } catch (error) {
         statusCode = error instanceof MasterDataError ? error.status : 500;
-        if (error instanceof MasterDataError)
+        if (error instanceof MasterDataError) {
           facts = { reasonCode: error.code };
-        next(error);
+          response
+            .status(error.status)
+            .type("application/problem+json")
+            .json({
+              type: `urn:athyper:problem:${error.code.toLowerCase().replaceAll("_", "-")}`,
+              title: title(error.status),
+              status: error.status,
+              detail: error.message,
+              instance: request.originalUrl,
+              code: error.code,
+              requestId: options.readContext(response).requestId,
+            });
+        } else next(error);
       } finally {
         options.telemetry?.({
           operation,
@@ -139,6 +151,22 @@ export function registerBusinessPartner360Routes(
     ),
   );
 }
+function title(status: number) {
+  const titles: Readonly<Record<number, string>> = {
+    400: "Bad Request",
+    401: "Unauthorized",
+    403: "Forbidden",
+    404: "Not Found",
+    409: "Conflict",
+    422: "Unprocessable Content",
+    423: "Locked",
+    428: "Precondition Required",
+    429: "Too Many Requests",
+    500: "Internal Server Error",
+    503: "Service Unavailable",
+  };
+  return titles[status] ?? "Request Failed";
+}
 function query(request: Request, context: VerifiedRequestContext) {
   return {
     context,
@@ -190,8 +218,7 @@ function role(value: unknown): BusinessPartner360RoleLens {
   if (
     value !== "all" &&
     value !== "supplier" &&
-    value !== "customer" &&
-    value !== "workforce"
+    value !== "customer"
   )
     throw invalid("roleLens is invalid");
   return value;

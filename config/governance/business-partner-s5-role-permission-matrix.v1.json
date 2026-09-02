@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-s5-role-permission-matrix",
+  "owner": "master-data",
+  "roles": ["athyperapp", "athyperadmin", "object_owner", "PUBLIC"],
+  "rules": [
+    {
+      "code": "command_execute",
+      "objects": [
+        "control.command_business_partner_lifecycle(uuid,text,uuid,text,bigint,text,text,uuid)",
+        "control.command_business_partner_decision(uuid,text,uuid,text,bigint,text,text,text,jsonb,uuid)",
+        "control.command_customer_lifecycle(uuid,uuid,uuid,uuid,uuid,text,text,date,text,jsonb,text,uuid)"
+      ],
+      "privilege": "EXECUTE",
+      "expected": {"athyperapp": true, "athyperadmin": true, "object_owner": true, "PUBLIC": false}
+    },
+    {
+      "code": "internal_function_execute",
+      "objects": [
+        "control.fn_record_business_partner_mutation(uuid,text,uuid,uuid,text,text,text,bigint,text,text,text,jsonb,uuid)",
+        "control.trg_enforce_business_partner_mutation_authority()",
+        "control.trg_reject_business_partner_mutation_evidence_change()",
+        "control.trg_guard_business_partner_mutation_evidence_payload()",
+        "control.trg_record_customer_lifecycle_mutation()"
+      ],
+      "privilege": "EXECUTE",
+      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false}
+    },
+    {
+      "code": "evidence_read",
+      "objects": ["control.business_partner_mutation_evidence"],
+      "privilege": "SELECT",
+      "expected": {"athyperapp": true, "athyperadmin": true, "object_owner": true, "PUBLIC": false}
+    },
+    {
+      "code": "evidence_mutation",
+      "objects": ["control.business_partner_mutation_evidence"],
+      "privilege": "INSERT,UPDATE,DELETE",
+      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "runtimeBoundary": "Object-owner UPDATE and DELETE remain blocked by the immutable-evidence trigger; INSERT is reserved for the internal recorder."
+    },
+    {
+      "code": "lifecycle_column_update",
+      "objects": [
+        "master.business_partner.status",
+        "master.supplier.status",
+        "master.customer.status",
+        "master.business_partner_relationship.status"
+      ],
+      "privilege": "UPDATE",
+      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "runtimeBoundary": "Object-owner direct state changes remain blocked by the S5 mutation-authority trigger."
+    },
+    {
+      "code": "decision_column_update",
+      "objects": [
+        "control.business_partner_qualification.decision",
+        "control.supplier_preference_designation.status",
+        "control.customer_account_designation.status",
+        "control.customer_credit_review.decision"
+      ],
+      "privilege": "UPDATE",
+      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "runtimeBoundary": "Object-owner direct decisions remain blocked by the S5 mutation-authority trigger."
+    }
+  ],
+  "certification": {
+    "failClosed": true,
+    "requiresLiveCatalogEvaluation": true,
+    "requiresBehavioralOwnerGuardProbes": true
+  }
+}

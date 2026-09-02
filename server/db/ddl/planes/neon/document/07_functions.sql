@@ -2973,6 +2973,152 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION document.fn_workforce_request_payload_has_restricted_key(p_value jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_key text;
+    v_child jsonb;
+    v_normalized text;
+BEGIN
+    IF jsonb_typeof(p_value) = 'object' THEN
+        FOR v_key, v_child IN SELECT key, value FROM jsonb_each(p_value)
+        LOOP
+            v_normalized := regexp_replace(lower(v_key), '[^a-z0-9]', '', 'g');
+            IF v_normalized IN (
+                'firstname', 'middlename', 'lastname', 'preferredname', 'displayname',
+                'email', 'emailaddress', 'phone', 'phonenumber', 'dateofbirth',
+                'gender', 'maritalstatus', 'nationality', 'nationalid',
+                'nationalidentifier', 'taxidentifier', 'passport', 'passportnumber',
+                'bankaccount', 'iban', 'compensation', 'salary'
+            ) THEN
+                RETURN true;
+            END IF;
+            IF document.fn_workforce_request_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    ELSIF jsonb_typeof(p_value) = 'array' THEN
+        FOR v_child IN SELECT value FROM jsonb_array_elements(p_value)
+        LOOP
+            IF document.fn_workforce_request_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    END IF;
+    RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_workforce_request()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_valid_transition boolean := false;
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Workforce requests cannot be deleted; cancel or supersede the request'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+
+    IF document.fn_workforce_request_payload_has_restricted_key(NEW.requested_changes) THEN
+        RAISE EXCEPTION 'Restricted person values belong in protected profile content, not workforce request JSON'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status <> 'draft'
+           OR NEW.workflow_request_id IS NOT NULL
+           OR NEW.decision_fingerprint IS NOT NULL
+           OR NEW.application_fingerprint IS NOT NULL
+           OR num_nonnulls(
+                NEW.materialized_person_id, NEW.materialized_employee_id,
+                NEW.materialized_employment_id, NEW.materialized_work_assignment_id,
+                NEW.materialized_principal_id, NEW.materialized_onboarding_case_id,
+                NEW.materialization_snapshot_id
+           ) > 0
+           OR NEW.submitted_at IS NOT NULL OR NEW.submitted_by IS NOT NULL
+           OR NEW.approved_at IS NOT NULL OR NEW.approved_by IS NOT NULL
+           OR NEW.applied_at IS NOT NULL OR NEW.applied_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New workforce requests must start as evidence-free drafts'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF (NEW.id, NEW.tenant_id, NEW.request_no, NEW.request_kind, NEW.source_kind,
+        NEW.target_person_id, NEW.target_employee_id, NEW.target_employment_id,
+        NEW.idempotency_key, NEW.created_at, NEW.created_by)
+       IS DISTINCT FROM
+       (OLD.id, OLD.tenant_id, OLD.request_no, OLD.request_kind, OLD.source_kind,
+        OLD.target_person_id, OLD.target_employee_id, OLD.target_employment_id,
+        OLD.idempotency_key, OLD.created_at, OLD.created_by) THEN
+        RAISE EXCEPTION 'Workforce request identity, target, kind, and creation evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status IN ('applied','rejected','cancelled','superseded') AND NEW IS DISTINCT FROM OLD THEN
+        RAISE EXCEPTION 'Final workforce request evidence is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    IF OLD.status NOT IN ('draft','validating','validation_failed','returned') AND (
+        NEW.legal_entity_id IS DISTINCT FROM OLD.legal_entity_id
+        OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.org_unit_id IS DISTINCT FROM OLD.org_unit_id
+        OR NEW.position_id IS DISTINCT FROM OLD.position_id
+        OR NEW.protected_profile_content_item_id IS DISTINCT FROM OLD.protected_profile_content_item_id
+        OR NEW.payload_schema_code IS DISTINCT FROM OLD.payload_schema_code
+        OR NEW.payload_schema_version IS DISTINCT FROM OLD.payload_schema_version
+        OR NEW.payload_schema_hash IS DISTINCT FROM OLD.payload_schema_hash
+        OR NEW.requested_changes IS DISTINCT FROM OLD.requested_changes
+        OR NEW.workflow_request_id IS DISTINCT FROM OLD.workflow_request_id
+        OR NEW.decision_fingerprint IS DISTINCT FROM OLD.decision_fingerprint
+    ) THEN
+        RAISE EXCEPTION 'Submitted workforce request scope, payload, workflow, and decision evidence are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF OLD.status IS DISTINCT FROM NEW.status THEN
+        v_valid_transition := CASE OLD.status
+            WHEN 'draft' THEN NEW.status IN ('validating','cancelled')
+            WHEN 'validating' THEN NEW.status IN ('draft','validation_failed','pending_approval','cancelled')
+            WHEN 'validation_failed' THEN NEW.status IN ('draft','validating','cancelled')
+            WHEN 'pending_approval' THEN NEW.status IN ('returned','approved','rejected','cancelled')
+            WHEN 'returned' THEN NEW.status IN ('validating','cancelled','superseded')
+            WHEN 'approved' THEN NEW.status = 'applying'
+            WHEN 'applying' THEN NEW.status IN ('applied','failed')
+            WHEN 'failed' THEN NEW.status IN ('applying','superseded')
+            ELSE false
+        END;
+        IF NOT v_valid_transition THEN
+            RAISE EXCEPTION 'Invalid workforce request transition: % -> %', OLD.status, NEW.status
+                USING ERRCODE = 'check_violation';
+        END IF;
+    END IF;
+
+    IF NEW.status IN ('pending_approval','returned','approved','rejected','applying','applied','failed')
+       AND (NEW.submitted_at IS NULL OR NEW.submitted_by IS NULL
+            OR NEW.workflow_request_id IS NULL OR NEW.decision_fingerprint IS NULL) THEN
+        RAISE EXCEPTION 'Reviewed workforce request requires submission, workflow, and fingerprint evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.status IN ('approved','applying','applied','failed')
+       AND (NEW.approved_at IS NULL OR NEW.approved_by IS NULL) THEN
+        RAISE EXCEPTION 'Approved workforce request requires approval evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    NEW.row_version := OLD.row_version + 1;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION document.trg_validate_compensation_change()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
 DECLARE v_group master.pay_group%ROWTYPE; v_structure master.pay_structure%ROWTYPE; v_current master.compensation_assignment%ROWTYPE; v_approved master.compensation_assignment%ROWTYPE;
@@ -2994,6 +3140,23 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION document.fn_workforce_request_approvers(p_tenant_id uuid,p_legal_entity_id uuid,p_company_code_id uuid,p_excluded_principal_id uuid)
+RETURNS TABLE(principal_id uuid) LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path=pg_catalog,document,authz,master,shared AS $$
+ SELECT DISTINCT member.principal_id FROM authz.group_member member
+ JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id AND principal.status='active'
+ JOIN authz.plane_membership membership ON membership.tenant_id=member.tenant_id AND membership.principal_id=member.principal_id AND membership.status='active' AND membership.effective_from<=now() AND(membership.effective_until IS NULL OR membership.effective_until>now())
+ JOIN authz.group_role grant_row ON grant_row.tenant_id=member.tenant_id AND grant_row.group_id=member.group_id AND grant_row.status='active' AND grant_row.effective_from<=now() AND(grant_row.effective_until IS NULL OR grant_row.effective_until>now())
+ JOIN authz.role role_row ON role_row.tenant_id=grant_row.tenant_id AND role_row.id=grant_row.role_id AND role_row.status='active'
+ JOIN authz.role_permission rp ON rp.tenant_id=role_row.tenant_id AND rp.role_id=role_row.id
+ JOIN authz.permission permission ON permission.id=rp.permission_id AND permission.canonical_code='neon.workforce.request.decide' AND permission.status='published'
+ JOIN authz.scope_target target ON target.tenant_id=grant_row.tenant_id AND target.id=grant_row.scope_target_id AND target.status='active'
+ WHERE p_tenant_id=shared.current_tenant_id() AND member.tenant_id=p_tenant_id AND member.status='active' AND member.effective_from<=now() AND(member.effective_until IS NULL OR member.effective_until>now()) AND member.principal_id IS DISTINCT FROM p_excluded_principal_id
+ AND((target.scope_kind='tenant' AND target.target_id=p_tenant_id) OR(target.scope_kind='legal_entity' AND target.target_id=p_legal_entity_id) OR(p_company_code_id IS NOT NULL AND target.scope_kind='company_code' AND target.target_id=p_company_code_id))
+ ORDER BY member.principal_id LIMIT 200
+$$;
+REVOKE ALL ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) FROM PUBLIC;
 
 CREATE OR REPLACE FUNCTION document.trg_validate_tax_declaration()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document,master AS $$
@@ -3811,6 +3974,117 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION document.fn_business_partner_payload_has_restricted_key(
+    p_value jsonb
+)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+DECLARE
+    v_key text;
+    v_child jsonb;
+    v_normalized text;
+BEGIN
+    IF jsonb_typeof(p_value) = 'object' THEN
+        FOR v_key, v_child IN SELECT key, value FROM jsonb_each(p_value)
+        LOOP
+            v_normalized := regexp_replace(lower(v_key), '[^a-z0-9]', '', 'g');
+            IF v_normalized IN (
+                'address', 'addresses', 'contact', 'contacts',
+                'contactperson', 'contactpersons', 'contactchannel', 'contactchannels',
+                'identifier', 'identifiers', 'taxregistration', 'taxregistrations',
+                'classification', 'classifications', 'certification', 'certifications',
+                'taxidentifier', 'taxid', 'nationalidentifier', 'nationalid'
+            ) THEN
+                RETURN true;
+            END IF;
+
+            IF document.fn_business_partner_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    ELSIF jsonb_typeof(p_value) = 'array' THEN
+        FOR v_child IN SELECT value FROM jsonb_array_elements(p_value)
+        LOOP
+            IF document.fn_business_partner_payload_has_restricted_key(v_child) THEN
+                RETURN true;
+            END IF;
+        END LOOP;
+    END IF;
+
+    RETURN false;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_payload_boundary()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+BEGIN
+    IF TG_OP = 'UPDATE' AND NEW.extension_mode IS DISTINCT FROM OLD.extension_mode THEN
+        RAISE EXCEPTION 'Business Partner request extension mode is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF TG_OP = 'UPDATE'
+       AND OLD.status NOT IN ('draft', 'returned', 'validation_failed')
+       AND (
+           NEW.extension_fingerprint IS DISTINCT FROM OLD.extension_fingerprint
+           OR NEW.extension_counts IS DISTINCT FROM OLD.extension_counts
+       ) THEN
+        RAISE EXCEPTION 'Reviewed Business Partner request extension summary is immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    IF document.fn_business_partner_payload_has_restricted_key(NEW.proposed_payload) THEN
+        RAISE EXCEPTION 'Typed identity extensions are not permitted in proposed_payload'
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request_extension()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, document
+AS $$
+DECLARE
+    v_tenant uuid;
+    v_request uuid;
+BEGIN
+    IF TG_TABLE_NAME = 'business_partner_request_materialization_item' THEN
+        IF TG_OP <> 'INSERT' THEN
+            RAISE EXCEPTION 'Business Partner request materialization evidence is immutable'
+                USING ERRCODE = 'restrict_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    v_tenant := CASE WHEN TG_OP = 'DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+    v_request := CASE WHEN TG_OP = 'DELETE' THEN OLD.request_id ELSE NEW.request_id END;
+
+    IF NOT EXISTS (
+        SELECT 1
+        FROM document.business_partner_request request
+        WHERE request.tenant_id = v_tenant
+          AND request.id = v_request
+          AND request.extension_mode = 'typed_v1'
+          AND request.status IN ('draft', 'returned', 'validation_failed')
+          AND (TG_OP = 'DELETE' OR request.source_kind = NEW.source_kind)
+    ) THEN
+        RAISE EXCEPTION 'Typed request extensions are editable only before submission'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+
+    RETURN CASE WHEN TG_OP = 'DELETE' THEN OLD ELSE NEW END;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION document.trg_guard_business_partner_request()
 RETURNS trigger

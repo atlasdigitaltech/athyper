@@ -18,15 +18,16 @@ interface AcceptanceFixture {
 }
 
 const common = ["overview", "identity", "contacts", "addresses", "identifiers-tax", "roles-scope", "requests", "activity"] as const;
+const organizationCommon = [...common, "governance"] as const;
 const fixtures: readonly AcceptanceFixture[] = [
-  { code: "organization", category: "organization", roles: [], expected: common },
-  { code: "supplier", category: "organization", roles: ["supplier"], expected: [...common, "supplier-company", "banking", "qualifications-certificates", "business-activity"] },
-  { code: "customer", category: "organization", roles: ["customer"], expected: [...common, "customer-company", "credit", "business-activity"] },
-  { code: "dual-role", category: "organization", roles: ["supplier", "customer"], expected: [...common, "supplier-company", "customer-company", "banking", "qualifications-certificates", "credit", "business-activity"] },
-  { code: "person", category: "person", roles: [], expected: [...common, "workforce"] },
-  { code: "workforce", category: "person", roles: ["workforce"], expected: [...common, "workforce"] },
-  { code: "external-worker", category: "person", roles: ["workforce"], expected: [...common, "workforce"] },
-  { code: "mesh-linked", category: "organization", roles: ["supplier"], meshLinked: true, expected: [...common, "supplier-company", "banking", "qualifications-certificates", "business-activity", "network"] },
+  { code: "organization", category: "organization", roles: [], expected: organizationCommon },
+  { code: "supplier", category: "organization", roles: ["supplier"], expected: [...organizationCommon, "supplier-company", "banking", "qualifications-certificates", "business-activity"] },
+  { code: "customer", category: "organization", roles: ["customer"], expected: [...organizationCommon, "customer-company", "credit", "business-activity"] },
+  { code: "dual-role", category: "organization", roles: ["supplier", "customer"], expected: [...organizationCommon, "supplier-company", "customer-company", "banking", "qualifications-certificates", "credit", "business-activity"] },
+  { code: "person", category: "person", roles: [], expected: [] },
+  { code: "workforce", category: "person", roles: ["workforce"], expected: [] },
+  { code: "external-worker", category: "person", roles: ["workforce"], expected: [] },
+  { code: "mesh-linked", category: "organization", roles: ["supplier"], meshLinked: true, expected: [...organizationCommon, "supplier-company", "banking", "qualifications-certificates", "business-activity", "network"] },
 ];
 
 describe("Business Partner 360 Phase 1 contract lock", () => {

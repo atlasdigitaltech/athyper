@@ -647,7 +647,7 @@ $$;
 CREATE TRIGGER trg_business_partner_05_normalize
 BEFORE INSERT OR UPDATE OF
     code, name, display_name, legal_name, legal_form,
-    registration_country_code, website_url, description, aliases
+    registration_country_code, website_url, description
 ON master.business_partner
 FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_counterparty();
 
@@ -666,6 +666,10 @@ CREATE TRIGGER trg_business_partner_20_status_changed
 BEFORE UPDATE OF status ON master.business_partner
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+CREATE TRIGGER trg_business_partner_19_mutation_authority
+BEFORE UPDATE OF status ON master.business_partner
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
 CREATE TRIGGER trg_business_partner_30_updated_at
 BEFORE UPDATE ON master.business_partner
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -679,6 +683,10 @@ CREATE TRIGGER trg_supplier_10_guard
 BEFORE UPDATE OR DELETE ON master.supplier
 FOR EACH ROW EXECUTE FUNCTION master.trg_guard_counterparty_lifecycle();
 
+CREATE TRIGGER trg_supplier_09_record_version
+BEFORE UPDATE ON master.supplier
+FOR EACH ROW EXECUTE FUNCTION master.trg_bump_business_partner_record_version();
+
 CREATE TRIGGER trg_supplier_15_role
 BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, supplier_type
 ON master.supplier
@@ -688,6 +696,10 @@ CREATE TRIGGER trg_supplier_20_status_changed
 BEFORE UPDATE OF status ON master.supplier
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
+CREATE TRIGGER trg_supplier_19_mutation_authority
+BEFORE UPDATE OF status ON master.supplier
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
 CREATE TRIGGER trg_supplier_30_updated_at
 BEFORE UPDATE ON master.supplier
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
@@ -696,6 +708,19 @@ CREATE TRIGGER trg_customer_05_normalize
 BEFORE INSERT OR UPDATE OF customer_code, customer_type
 ON master.customer
 FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_counterparty();
+
+CREATE TRIGGER trg_customer_07_record_version
+BEFORE UPDATE ON master.customer
+FOR EACH ROW EXECUTE FUNCTION master.trg_bump_business_partner_record_version();
+
+CREATE TRIGGER trg_customer_08_lifecycle_initial
+BEFORE INSERT ON master.customer
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_customer_lifecycle_authority();
+
+CREATE TRIGGER trg_customer_09_lifecycle_authority
+BEFORE UPDATE OF status, status_changed_at, status_changed_by
+ON master.customer
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_customer_lifecycle_authority();
 
 CREATE TRIGGER trg_customer_10_guard
 BEFORE UPDATE OR DELETE ON master.customer
@@ -1109,6 +1134,50 @@ CREATE TRIGGER trg_business_partner_relationship_lookup
 BEFORE INSERT OR UPDATE OF relationship_type_code
 ON master.business_partner_relationship
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+CREATE TRIGGER trg_business_partner_relationship_cycle
+BEFORE INSERT OR UPDATE OF tenant_id, source_business_partner_id,
+    target_business_partner_id, relationship_type_code, status
+ON master.business_partner_relationship
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_partner_relationship_cycle();
+CREATE TRIGGER trg_business_partner_relationship_08_delete_guard
+BEFORE DELETE ON master.business_partner_relationship
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_business_partner_relationship_mutation();
+CREATE TRIGGER trg_business_partner_relationship_09_record_version
+BEFORE UPDATE ON master.business_partner_relationship
+FOR EACH ROW EXECUTE FUNCTION master.trg_bump_business_partner_record_version();
+CREATE TRIGGER trg_business_partner_relationship_19_mutation_authority
+BEFORE UPDATE OF status ON master.business_partner_relationship
+FOR EACH ROW EXECUTE FUNCTION control.trg_enforce_business_partner_mutation_authority();
+
+CREATE TRIGGER trg_business_partner_catalog
+BEFORE INSERT OR UPDATE OF tenant_id, legal_form ON master.business_partner
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_counterparty_catalog();
+CREATE TRIGGER trg_business_partner_alias_cache_guard
+BEFORE UPDATE OF aliases ON master.business_partner
+FOR EACH ROW EXECUTE FUNCTION master.trg_guard_business_partner_alias_cache();
+CREATE TRIGGER trg_business_partner_alias_cache_refresh
+AFTER INSERT OR UPDATE OR DELETE ON master.business_partner_alias
+FOR EACH ROW EXECUTE FUNCTION master.trg_refresh_business_partner_alias_cache();
+CREATE TRIGGER trg_supplier_type_catalog
+BEFORE INSERT OR UPDATE OF tenant_id, supplier_type ON master.supplier
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_counterparty_catalog();
+CREATE TRIGGER trg_customer_type_catalog
+BEFORE INSERT OR UPDATE OF tenant_id, customer_type ON master.customer
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_counterparty_catalog();
+CREATE TRIGGER trg_customer_statement_cycle_catalog
+BEFORE INSERT OR UPDATE OF tenant_id, statement_cycle_code ON master.company_code_customer_profile
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_counterparty_catalog();
+
+CREATE TRIGGER trg_supplier_profile_active_references
+BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, payment_term_id,
+    default_accounting_profile_id, preferred_remittance_bank_link_id, status
+ON master.company_code_supplier_profile
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_profile_references();
+CREATE TRIGGER trg_customer_profile_active_references
+BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, payment_term_id,
+    default_accounting_profile_id, status
+ON master.company_code_customer_profile
+FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_profile_references();
 CREATE TRIGGER trg_business_partner_governance_lookup
 BEFORE INSERT OR UPDATE OF relation_type_code
 ON master.business_partner_governance_relation
@@ -1132,9 +1201,9 @@ BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id,
 ON master.business_partner_operating_organization_assignment
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_business_partner_role();
 
-CREATE TRIGGER trg_legal_entity_business_partner_link_validate
+CREATE TRIGGER trg_legal_entity_internal_partner_link_validate
 BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id
-ON master.legal_entity_business_partner_link
+ON master.legal_entity_internal_partner_link
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_legal_entity_partner_link();
 
 CREATE TRIGGER trg_company_code_supplier_profile_remittance
@@ -1164,7 +1233,7 @@ BEGIN
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
-        'legal_entity_business_partner_link',
+        'legal_entity_internal_partner_link',
         'intercompany_trading_pair'
     ] LOOP
         EXECUTE format(
@@ -1194,19 +1263,9 @@ CREATE TRIGGER trg_person_status_changed
 BEFORE UPDATE OF status ON master.person
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
 
-CREATE TRIGGER trg_person_business_partner_guard
-BEFORE INSERT OR UPDATE ON master.person
-FOR EACH ROW EXECUTE FUNCTION master.trg_validate_person_business_partner();
-
-CREATE CONSTRAINT TRIGGER trg_business_partner_person_cardinality
-AFTER INSERT OR UPDATE ON master.business_partner
-DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION master.trg_assert_active_person_business_partner();
-
-CREATE CONSTRAINT TRIGGER trg_person_business_partner_cardinality
-AFTER INSERT OR UPDATE OR DELETE ON master.person
-DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION master.trg_assert_active_person_business_partner();
+CREATE TRIGGER trg_person_business_partner_legacy_link_immutable
+BEFORE INSERT OR UPDATE OR DELETE ON master.person_business_partner_legacy_link
+FOR EACH ROW EXECUTE FUNCTION master.trg_reject_person_business_partner_legacy_link_mutation();
 
 CREATE TRIGGER trg_site_hierarchy
 BEFORE INSERT OR UPDATE OF tenant_id, company_code_id, parent_site_id

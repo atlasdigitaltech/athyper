@@ -1,5 +1,5 @@
 -- Generated canonical attachment, content, and collaboration foundation.
--- Run: node scripts/sync-document-foundation.mjs --write
+-- Run: node scripts/checks/ddl/sync-document-foundation.mjs --write
 
 CREATE TABLE document.attachment_series (
     id                       uuid                                NOT NULL DEFAULT shared.uuidv7(),

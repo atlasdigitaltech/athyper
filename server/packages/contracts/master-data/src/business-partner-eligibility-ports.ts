@@ -21,6 +21,6 @@ export interface BusinessPartnerEligibilityRepository<Transaction=unknown> {
   createCustomerCreditReview(input:Omit<CreateCustomerCreditReviewCommand,"context">&{readonly tenantId:string;readonly createdBy:string},transaction:Transaction):Promise<CustomerCreditReview>;
   decideCustomerCreditReview(input:Omit<DecideCustomerCreditReviewCommand,"context">&{readonly tenantId:string;readonly decidedBy:string;readonly decisionFingerprint:string},transaction:Transaction):Promise<{readonly review:CustomerCreditReview;readonly replayed:boolean}|null>;
   listCustomerCreditReviews(input:{readonly tenantId:string;readonly businessPartnerId:string;readonly operatingOrganizationId:string;readonly companyCodeId:string},transaction:Transaction):Promise<readonly CustomerCreditReview[]>;
-  transitionCustomer(input:Omit<CustomerLifecycleCommand,"context"|"businessDate">&{readonly tenantId:string;readonly actorId:string;readonly readiness?:PartnerEligibilityDecision},transaction:Transaction):Promise<CustomerLifecycleResult|null>;
+  transitionCustomer(input:Omit<CustomerLifecycleCommand,"context">&{readonly tenantId:string;readonly actorId:string;readonly readiness?:PartnerEligibilityDecision},transaction:Transaction):Promise<CustomerLifecycleResult|null>;
 }
 export type BusinessPartnerEligibilityTransactionCoordinator<Transaction> = PlaneTransactionCoordinator<Transaction>;

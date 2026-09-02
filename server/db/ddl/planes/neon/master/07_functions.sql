@@ -3102,16 +3102,6 @@ BEGIN
             nullif(upper(btrim(NEW.registration_country_code::text)), '')::character(2);
         NEW.website_url := nullif(btrim(NEW.website_url), '');
         NEW.description := nullif(btrim(NEW.description), '');
-        SELECT COALESCE(
-                   array_agg(alias_value ORDER BY alias_value),
-                   '{}'::text[]
-               )
-          INTO NEW.aliases
-          FROM (
-              SELECT DISTINCT btrim(value) AS alias_value
-                FROM unnest(COALESCE(NEW.aliases, '{}'::text[])) AS value
-               WHERE btrim(value) <> ''
-          ) AS normalized_alias;
     ELSIF TG_TABLE_NAME = 'supplier' THEN
         NEW.supplier_code := upper(btrim(NEW.supplier_code));
         NEW.supplier_type :=
@@ -3122,6 +3112,116 @@ BEGIN
             lower(btrim(NEW.customer_type::text))::master.customer_type_d;
     END IF;
 
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_counterparty_catalog()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+DECLARE
+    v_domain text;
+    v_code text;
+BEGIN
+    IF TG_TABLE_NAME = 'business_partner' THEN
+        IF NEW.legal_form IS NULL THEN RETURN NEW; END IF;
+        NEW.legal_form := CASE lower(btrim(NEW.legal_form))
+            WHEN 'private_limited_company' THEN 'private_limited'
+            ELSE lower(btrim(NEW.legal_form)) END;
+        v_domain := 'master.legal_form'; v_code := NEW.legal_form;
+    ELSIF TG_TABLE_NAME = 'supplier' THEN
+        v_domain := 'master.supplier_type'; v_code := NEW.supplier_type::text;
+    ELSIF TG_TABLE_NAME = 'customer' THEN
+        v_domain := 'master.customer_type'; v_code := NEW.customer_type::text;
+    ELSE
+        IF NEW.statement_cycle_code IS NULL THEN RETURN NEW; END IF;
+        NEW.statement_cycle_code := lower(btrim(NEW.statement_cycle_code));
+        v_domain := 'master.statement_cycle'; v_code := NEW.statement_cycle_code;
+    END IF;
+    IF NOT control.lookup_value_is_active(v_domain, v_code, NEW.tenant_id) THEN
+        RAISE EXCEPTION 'Unknown or inactive lookup value %/%', v_domain, v_code
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_business_partner_alias_cache()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+BEGIN
+    IF NEW.aliases IS DISTINCT FROM OLD.aliases AND pg_trigger_depth() < 2 THEN
+        RAISE EXCEPTION 'business_partner.aliases is a derived cache; write master.business_partner_alias'
+            USING ERRCODE='generated_always';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_refresh_business_partner_alias_cache()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+DECLARE v_tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);v_partner uuid:=COALESCE(NEW.business_partner_id,OLD.business_partner_id);
+BEGIN
+    UPDATE master.business_partner bp SET aliases=COALESCE((
+      SELECT array_agg(a.alias_name ORDER BY a.is_primary DESC,a.alias_name)
+      FROM master.business_partner_alias a WHERE a.tenant_id=v_tenant AND a.business_partner_id=v_partner
+       AND a.status='active' AND a.effective_from<=CURRENT_DATE AND(a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)
+    ),'{}'::text[]) WHERE bp.tenant_id=v_tenant AND bp.id=v_partner;
+    RETURN COALESCE(NEW,OLD);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_partner_relationship_cycle()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.status <> 'active' OR NEW.relationship_type_code <> 'parent' THEN
+        RETURN NEW;
+    END IF;
+    IF EXISTS (
+        WITH RECURSIVE ancestors(id) AS (
+            SELECT NEW.target_business_partner_id
+            UNION
+            SELECT relation.target_business_partner_id
+              FROM master.business_partner_relationship relation
+              JOIN ancestors ON ancestors.id = relation.source_business_partner_id
+             WHERE relation.tenant_id = NEW.tenant_id
+               AND relation.relationship_type_code = 'parent'
+               AND relation.status = 'active'
+               AND relation.id IS DISTINCT FROM NEW.id
+        ) SELECT 1 FROM ancestors WHERE id = NEW.source_business_partner_id
+    ) THEN
+        RAISE EXCEPTION 'Business Partner parent relationship would create a cycle'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_validate_partner_profile_references()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF NEW.status = 'active' THEN
+        IF NOT EXISTS (SELECT 1 FROM master.company_code c WHERE c.tenant_id=NEW.tenant_id AND c.id=NEW.company_code_id AND c.is_active) THEN
+            RAISE EXCEPTION 'Company code must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF NEW.payment_term_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.payment_term p WHERE p.tenant_id=NEW.tenant_id AND p.id=NEW.payment_term_id AND p.is_active) THEN
+            RAISE EXCEPTION 'Payment term must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF NEW.default_accounting_profile_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM master.accounting_profile p WHERE p.tenant_id=NEW.tenant_id AND p.id=NEW.default_accounting_profile_id AND p.is_active) THEN
+            RAISE EXCEPTION 'Accounting profile must be active' USING ERRCODE='foreign_key_violation';
+        END IF;
+        IF TG_TABLE_NAME = 'company_code_supplier_profile' AND NEW.preferred_remittance_bank_link_id IS NOT NULL
+           AND NOT EXISTS (SELECT 1 FROM master.bank_account_link l WHERE l.tenant_id=NEW.tenant_id AND l.id=NEW.preferred_remittance_bank_link_id AND (l.company_code_id IS NULL OR l.company_code_id=NEW.company_code_id) AND l.effective_from<=CURRENT_DATE AND (l.effective_until IS NULL OR l.effective_until>CURRENT_DATE)) THEN
+            RAISE EXCEPTION 'Remittance bank link must be effective for the company' USING ERRCODE='foreign_key_violation';
+        END IF;
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -3216,6 +3316,96 @@ BEGIN
             USING ERRCODE = 'check_violation';
     END IF;
 
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_business_partner_relationship_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master
+AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        RAISE EXCEPTION 'Business Partner relationships are archived, not deleted'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.source_business_partner_id IS DISTINCT FROM OLD.source_business_partner_id
+       OR NEW.target_business_partner_id IS DISTINCT FROM OLD.target_business_partner_id
+       OR NEW.relationship_type_code IS DISTINCT FROM OLD.relationship_type_code
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at
+       OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN
+        RAISE EXCEPTION 'Business Partner relationship identity and provenance are immutable'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    NEW.record_version := OLD.record_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_bump_business_partner_record_version()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
+BEGIN
+    NEW.record_version := OLD.record_version + 1;
+    RETURN NEW;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION master.trg_guard_customer_lifecycle_authority()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, master, control
+AS $$
+DECLARE
+    v_event_id uuid;
+    v_event control.customer_lifecycle_event%ROWTYPE;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        IF NEW.status::text <> 'prospect'
+           OR NEW.status_changed_at IS NOT NULL
+           OR NEW.status_changed_by IS NOT NULL THEN
+            RAISE EXCEPTION 'New Customer roles must start as evidence-free prospects'
+                USING ERRCODE = 'check_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.status IS NOT DISTINCT FROM OLD.status THEN
+        IF NEW.status_changed_at IS DISTINCT FROM OLD.status_changed_at
+           OR NEW.status_changed_by IS DISTINCT FROM OLD.status_changed_by THEN
+            RAISE EXCEPTION 'Customer lifecycle evidence is command-owned'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    BEGIN
+        v_event_id := NULLIF(
+            current_setting('app.customer_lifecycle_event_id', true), ''
+        )::uuid;
+    EXCEPTION WHEN invalid_text_representation THEN
+        v_event_id := NULL;
+    END;
+    IF v_event_id IS NULL THEN
+        RAISE EXCEPTION 'Customer status may only change through control.command_customer_lifecycle'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    SELECT event.* INTO v_event
+      FROM control.customer_lifecycle_event event
+     WHERE event.id = v_event_id
+       AND event.tenant_id = OLD.tenant_id
+       AND event.customer_id = OLD.id;
+    IF NOT FOUND
+       OR v_event.business_partner_id IS DISTINCT FROM OLD.business_partner_id
+       OR v_event.from_status IS DISTINCT FROM OLD.status::text
+       OR v_event.to_status IS DISTINCT FROM NEW.status::text
+       OR v_event.occurred_by IS DISTINCT FROM NEW.updated_by THEN
+        RAISE EXCEPTION 'Customer status change does not match its lifecycle command evidence'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -3625,64 +3815,14 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION master.trg_validate_person_business_partner()
+CREATE OR REPLACE FUNCTION master.trg_reject_person_business_partner_legacy_link_mutation()
 RETURNS trigger
 LANGUAGE plpgsql
-SET search_path = pg_catalog, master
+SET search_path = pg_catalog
 AS $$
-DECLARE
-    v_category master.business_partner_category_d;
 BEGIN
-    IF TG_OP = 'UPDATE'
-       AND (NEW.id, NEW.tenant_id, NEW.business_partner_id, NEW.created_at, NEW.created_by)
-           IS DISTINCT FROM
-           (OLD.id, OLD.tenant_id, OLD.business_partner_id, OLD.created_at, OLD.created_by) THEN
-        RAISE EXCEPTION 'Person Business Partner binding and creation evidence are immutable'
-            USING ERRCODE = 'check_violation';
-    END IF;
-
-    SELECT partner_category INTO v_category
-      FROM master.business_partner
-     WHERE tenant_id = NEW.tenant_id AND id = NEW.business_partner_id;
-    IF v_category IS DISTINCT FROM 'person'::master.business_partner_category_d THEN
-        RAISE EXCEPTION 'Person rows require a person-category Business Partner in the same tenant'
-            USING ERRCODE = 'check_violation';
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION master.trg_assert_active_person_business_partner()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog, master
-AS $$
-DECLARE
-    v_partner_id uuid;
-    v_tenant_id uuid;
-    v_category master.business_partner_category_d;
-    v_status master.business_partner_status_d;
-    v_people bigint;
-BEGIN
-    IF TG_TABLE_NAME = 'business_partner' THEN
-        IF TG_OP='DELETE' THEN v_partner_id:=OLD.id; v_tenant_id:=OLD.tenant_id;
-        ELSE v_partner_id:=NEW.id; v_tenant_id:=NEW.tenant_id; END IF;
-    ELSE
-        IF TG_OP='DELETE' THEN v_partner_id:=OLD.business_partner_id; v_tenant_id:=OLD.tenant_id;
-        ELSE v_partner_id:=NEW.business_partner_id; v_tenant_id:=NEW.tenant_id; END IF;
-    END IF;
-    SELECT partner_category,status INTO v_category,v_status
-      FROM master.business_partner WHERE tenant_id=v_tenant_id AND id=v_partner_id;
-    IF FOUND AND v_category='person' AND v_status='active' THEN
-        SELECT count(*) INTO v_people FROM master.person
-         WHERE tenant_id=v_tenant_id AND business_partner_id=v_partner_id;
-        IF v_people<>1 THEN
-            RAISE EXCEPTION 'Active person-category Business Partner requires exactly one Person profile'
-                USING ERRCODE='check_violation';
-        END IF;
-    END IF;
-    IF TG_OP='DELETE' THEN RETURN OLD; END IF;
-    RETURN NEW;
+    RAISE EXCEPTION 'Legacy Person-to-Business-Partner evidence is immutable'
+        USING ERRCODE = 'restrict_violation';
 END;
 $$;
 

@@ -1,0 +1,241 @@
+{
+  "schemaVersion": 1,
+  "scope": "S0-S5 Business Partner DDL, including security and mutation ownership",
+  "normalization": {
+    "whitespace": "collapsed",
+    "constraints": "compared by relation, type, validation flags, and definition; names ignored",
+    "indexes": "constraint-owned indexes represented by constraint semantics"
+  },
+  "differences": {
+    "relationDispositions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "columns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "requestExtensionColumns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "constraintSemantics": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "supportingIndexes": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "rls": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "policies": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "triggers": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "functions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "tableOwners": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "tableGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "functionGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "comments": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Columns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Constraints": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Indexes": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Rls": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Policies": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Triggers": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Functions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Owners": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2TableGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s2Comments": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Columns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Constraints": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Indexes": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Triggers": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Functions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Views": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3RlsAndPolicies": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3Comments": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3LifecycleTableGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3LifecycleColumnGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s3LifecycleFunctionGrants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4Columns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4Constraints": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4Indexes": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4Triggers": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4Functions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s4RlsPolicies": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5Columns": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5ConstraintsIndexes": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5Triggers": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5Functions": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5RlsPolicies": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    },
+    "s5Grants": {
+      "missingInUpgrade": [],
+      "extraInUpgrade": [],
+      "changed": []
+    }
+  }
+}

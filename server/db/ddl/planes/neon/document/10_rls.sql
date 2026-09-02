@@ -311,6 +311,33 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
+        'business_partner_request_address',
+        'business_partner_request_contact_person',
+        'business_partner_request_contact_channel',
+        'business_partner_request_identifier',
+        'business_partner_request_tax_registration',
+        'business_partner_request_classification',
+        'business_partner_request_certification',
+        'business_partner_request_materialization_item'
+    ]
+    LOOP
+        EXECUTE format('ALTER TABLE document.%I ENABLE ROW LEVEL SECURITY', v_table);
+        EXECUTE format('ALTER TABLE document.%I FORCE ROW LEVEL SECURITY', v_table);
+        EXECUTE format(
+            'CREATE POLICY tenant_access ON document.%I '
+            'USING (tenant_id = shared.current_tenant_id()) '
+            'WITH CHECK (tenant_id = shared.current_tenant_id())',
+            v_table
+        );
+    END LOOP;
+END;
+$$;
+
+DO $$
+DECLARE
+    v_table text;
+BEGIN
+    FOREACH v_table IN ARRAY ARRAY[
         'workflow_request','workflow_stage',
         'commitment','commitment_line','commitment_release_allocation',
         'purchase_invoice','purchase_invoice_line','invoice_match_case',
@@ -519,7 +546,7 @@ DECLARE v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request','workforce_request','workforce_request_validation',
         'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
         'payroll_result','payroll_result_line'
     ] LOOP
@@ -531,7 +558,7 @@ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
             'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-            'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+            'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request','workforce_request','workforce_request_validation',
             'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
             'payroll_result','payroll_result_line'
         ] LOOP EXECUTE format('CREATE POLICY admin_access ON document.%I FOR ALL TO athyperadmin USING(true) WITH CHECK(true)',v_table); END LOOP;

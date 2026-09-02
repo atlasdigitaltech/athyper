@@ -1,0 +1,418 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": {
+    "canonicalManifest": "ddl/planes/neon/_manifest.txt",
+    "migrationManifest": "migrations/manifests/neon.txt",
+    "disposition": "ddl/planes/neon/business-partner-ddl-disposition.v1.json"
+  },
+  "counts": {
+    "canonical": 23,
+    "canonical_clean_build_only": 12,
+    "compatibility_view": 2,
+    "retired": 2
+  },
+  "relations": [
+    {
+      "relation": "document.business_partner_bank_verification",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_business_partner_account_bank_linkage.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_duplicate_resolution",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_business_partner_request_application_invariants.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_invitation",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_business_partner_invitation_generalization.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_invitation_applicant_policy",
+      "disposition": "retired",
+      "canonicalKind": null,
+      "canonicalSources": [],
+      "migrationSources": [
+        "20260829_neon_business_partner_invitation_generalization.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_invitation_recovery",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_business_partner_invitation_generalization.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_business_partner_request_foundation.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_address",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_certification",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_classification",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_contact_channel",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_contact_person",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_evidence",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_business_partner_request_foundation.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_identifier",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_materialization_item",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_tax_registration",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_business_partner_typed_request_extensions.sql"
+      ]
+    },
+    {
+      "relation": "document.business_partner_request_validation",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_business_partner_request_foundation.sql"
+      ]
+    },
+    {
+      "relation": "document.mesh_business_partner_acceptance",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_mesh_business_partner_match_request.sql"
+      ]
+    },
+    {
+      "relation": "document.mesh_business_partner_acceptance_event",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_mesh_business_partner_match_request.sql"
+      ]
+    },
+    {
+      "relation": "document.mesh_business_partner_match",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260828_neon_mesh_business_partner_match_request.sql"
+      ]
+    },
+    {
+      "relation": "document.supplier_activation_evidence",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_supplier_readiness_lifecycle.sql"
+      ]
+    },
+    {
+      "relation": "document.supplier_registration_invitation",
+      "disposition": "compatibility_view",
+      "canonicalKind": "view",
+      "canonicalSources": [
+        "planes/neon/document/09_views.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_supplier_registration_channel.sql",
+        "20260829_neon_business_partner_invitation_generalization.sql"
+      ]
+    },
+    {
+      "relation": "document.supplier_registration_recovery",
+      "disposition": "retired",
+      "canonicalKind": null,
+      "canonicalSources": [],
+      "migrationSources": [
+        "20260829_neon_supplier_readiness_lifecycle.sql"
+      ]
+    },
+    {
+      "relation": "document.workforce_requisition_supplier",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/document/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260830_neon_external_workforce_services_procurement.sql"
+      ]
+    },
+    {
+      "relation": "master.business_partner",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_alias",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260903_neon_business_partner_integrity_hardening.sql"
+      ]
+    },
+    {
+      "relation": "master.business_partner_commodity_capability",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_governance_relation",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_governance_summary",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "view",
+      "canonicalSources": [
+        "planes/neon/master/09_views.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_identifier",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_industry_classification",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260829_neon_business_partner_industry_classification.sql"
+      ]
+    },
+    {
+      "relation": "master.business_partner_operating_organization_assignment",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_relationship",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.business_partner_tax_registration",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.company_code_customer_profile",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.company_code_supplier_profile",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.customer",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    },
+    {
+      "relation": "master.legal_entity_business_partner_link",
+      "disposition": "compatibility_view",
+      "canonicalKind": "view",
+      "canonicalSources": [
+        "planes/neon/master/09_views.sql"
+      ],
+      "migrationSources": [
+        "20260902_neon_internal_partner_and_customer_designation.sql"
+      ]
+    },
+    {
+      "relation": "master.person_business_partner_legacy_link",
+      "disposition": "canonical",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": [
+        "20260902_neon_business_partner_organization_boundary.sql"
+      ]
+    },
+    {
+      "relation": "master.supplier",
+      "disposition": "canonical_clean_build_only",
+      "canonicalKind": "table",
+      "canonicalSources": [
+        "planes/neon/master/03_tables.sql"
+      ],
+      "migrationSources": []
+    }
+  ]
+}

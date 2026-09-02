@@ -13790,8 +13790,6 @@ model company_code_customer_profile {
   customer_id                                                                    String                           @db.Uuid
   company_code_id                                                                String                           @db.Uuid
   currency_code                                                                  String?                          @db.Char(3)
-  credit_limit                                                                   Decimal?                         @db.Decimal(18, 4)
-  credit_limit_currency_code                                                     String?                          @db.Char(3)
   payment_term_id                                                                String?                          @db.Uuid
   default_accounting_profile_id                                                  String?                          @db.Uuid
   default_dimension_set_id                                                       String?                          @db.Uuid
@@ -13809,7 +13807,6 @@ model company_code_customer_profile {
   accounting_profile                                                             accounting_profile?              @relation(fields: [tenant_id, default_accounting_profile_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_accounting_fk")
   company_code                                                                   company_code                     @relation(fields: [tenant_id, company_code_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_company_fk")
   principal_company_code_customer_profile_tenant_id_created_byToprincipal        principal                        @relation("company_code_customer_profile_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_created_by_fk")
-  currency_company_code_customer_profile_credit_limit_currency_codeTocurrency    currency?                        @relation("company_code_customer_profile_credit_limit_currency_codeTocurrency", fields: [credit_limit_currency_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "company_code_customer_profile_credit_currency_fk")
   currency_company_code_customer_profile_currency_codeTocurrency                 currency?                        @relation("company_code_customer_profile_currency_codeTocurrency", fields: [currency_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "company_code_customer_profile_currency_fk")
   customer                                                                       customer                         @relation(fields: [tenant_id, customer_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_customer_fk")
   dimension_set                                                                  dimension_set?                   @relation(fields: [tenant_id, default_dimension_set_id], references: [tenant_id, id], onUpdate: NoAction, map: "company_code_customer_profile_dimension_fk")
@@ -14293,7 +14290,6 @@ model customer {
   business_partner_id                                       String                          @db.Uuid
   customer_code                                             String
   customer_type                                             String                          @default("corporate")
-  is_key_account                                            Boolean                         @default(false)
   metadata                                                  Json                            @default("{}")
   status                                                    String                          @default("prospect")
   is_active                                                 Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
@@ -14317,7 +14313,6 @@ model customer {
   @@unique([tenant_id, business_partner_id], map: "customer_business_partner_uq")
   @@unique([tenant_id, id], map: "customer_tenant_id_uq")
   @@index([tenant_id, created_by], map: "customer_created_by_idx")
-  @@index([tenant_id, customer_code], map: "customer_key_account_idx", where: raw("(is_key_account AND ((status)::text = 'active'::text))"))
   @@index([tenant_id, status_changed_by], map: "customer_status_changed_by_idx", where: raw("(status_changed_by IS NOT NULL)"))
   @@index([tenant_id, status, customer_type], map: "customer_status_type_idx")
   @@index([tenant_id, updated_by], map: "customer_updated_by_idx", where: raw("(updated_by IS NOT NULL)"))
@@ -19943,7 +19938,6 @@ model currency {
   catalog_price                                                                                    catalog_price[]
   company_code                                                                                     company_code[]
   company_code_book_assignment                                                                     company_code_book_assignment[]
-  company_code_customer_profile_company_code_customer_profile_credit_limit_currency_codeTocurrency company_code_customer_profile[]          @relation("company_code_customer_profile_credit_limit_currency_codeTocurrency")
   company_code_customer_profile_company_code_customer_profile_currency_codeTocurrency              company_code_customer_profile[]          @relation("company_code_customer_profile_currency_codeTocurrency")
   company_code_supplier_profile                                                                    company_code_supplier_profile[]
   compensation_assignment                                                                          compensation_assignment[]

@@ -6,6 +6,10 @@ SELECT value.code, value.name, value.description, 'master', true,
        '{"configurability":"tenant_extensible"}'::jsonb, 'active',
        '00000000-0000-0000-0000-000000000000'::uuid
 FROM (VALUES
+    ('master.supplier_type', 'Supplier Type',
+     'Governed procurement role classification for a supplier.'),
+    ('master.customer_type', 'Customer Type',
+     'Governed sales role classification for a customer.'),
     ('master.business_partner_relationship_type', 'Business Partner Relationship Type',
      'Commercial relationship between two business partners.'),
     ('master.business_partner_governance_role', 'Business Partner Governance Role',
@@ -31,6 +35,17 @@ SELECT NULL, value.code, value.name, value.domain_code, value.category,
        value.sort_order, true, '{}'::jsonb, 'active',
        '00000000-0000-0000-0000-000000000000'::uuid
 FROM (VALUES
+    ('general', 'General', 'master.supplier_type', 'commercial', 10::smallint),
+    ('strategic', 'Strategic', 'master.supplier_type', 'commercial', 20::smallint),
+    ('service', 'Service Provider', 'master.supplier_type', 'commercial', 30::smallint),
+    ('carrier', 'Carrier', 'master.supplier_type', 'logistics', 40::smallint),
+    ('intercompany', 'Intercompany', 'master.supplier_type', 'internal', 50::smallint),
+
+    ('corporate', 'Corporate', 'master.customer_type', 'organization', 10::smallint),
+    ('government', 'Government', 'master.customer_type', 'organization', 20::smallint),
+    ('individual', 'Individual (legacy)', 'master.customer_type', 'legacy', 30::smallint),
+    ('intercompany', 'Intercompany', 'master.customer_type', 'internal', 40::smallint),
+
     ('affiliate', 'Affiliate', 'master.business_partner_relationship_type', 'corporate', 10::smallint),
     ('parent', 'Parent', 'master.business_partner_relationship_type', 'corporate', 20::smallint),
     ('subsidiary', 'Subsidiary', 'master.business_partner_relationship_type', 'corporate', 30::smallint),

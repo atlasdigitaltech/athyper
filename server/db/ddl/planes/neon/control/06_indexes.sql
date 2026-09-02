@@ -45,6 +45,22 @@ CREATE INDEX supplier_preference_designation_supplier_idx
     ON control.supplier_preference_designation
        (tenant_id, supplier_id, operating_organization_id, status);
 
+CREATE UNIQUE INDEX customer_account_designation_idempotency_uq
+    ON control.customer_account_designation (tenant_id, idempotency_key);
+CREATE UNIQUE INDEX customer_account_designation_decision_idempotency_uq
+    ON control.customer_account_designation (tenant_id, decision_idempotency_key)
+    WHERE decision_idempotency_key IS NOT NULL;
+CREATE UNIQUE INDEX customer_account_designation_revocation_idempotency_uq
+    ON control.customer_account_designation (tenant_id, revocation_idempotency_key)
+    WHERE revocation_idempotency_key IS NOT NULL;
+CREATE INDEX customer_account_designation_resolution_idx
+    ON control.customer_account_designation
+       (tenant_id, business_partner_id, operating_organization_id,
+        company_code_id, designation_type, status, effective_from, effective_until);
+CREATE INDEX customer_account_designation_customer_idx
+    ON control.customer_account_designation
+       (tenant_id, customer_id, operating_organization_id, status);
+
 CREATE INDEX business_partner_block_partner_idx
     ON control.business_partner_block
        (tenant_id, business_partner_id, status, effective_from);
@@ -478,11 +494,18 @@ CREATE UNIQUE INDEX customer_credit_review_idempotency_uq ON control.customer_cr
 CREATE UNIQUE INDEX customer_credit_review_decision_idempotency_uq ON control.customer_credit_review(tenant_id,decision_idempotency_key) WHERE decision_idempotency_key IS NOT NULL;
 CREATE INDEX customer_credit_review_scope_idx ON control.customer_credit_review(tenant_id,business_partner_id,operating_organization_id,company_code_id,created_at DESC);
 CREATE UNIQUE INDEX customer_credit_review_effective_approved_uq ON control.customer_credit_review(tenant_id,customer_id,operating_organization_id,company_code_id) WHERE decision IN('approved','conditional') AND effective_until IS NULL;
+CREATE INDEX customer_credit_review_effective_resolution_idx ON control.customer_credit_review(tenant_id,customer_id,operating_organization_id,company_code_id,effective_from,effective_until,approved_at DESC) WHERE decision IN('approved','conditional');
 CREATE UNIQUE INDEX customer_lifecycle_event_idempotency_uq ON control.customer_lifecycle_event(tenant_id,idempotency_key);
 CREATE INDEX customer_lifecycle_event_customer_idx ON control.customer_lifecycle_event(tenant_id,customer_id,occurred_at DESC);
+CREATE UNIQUE INDEX business_partner_mutation_evidence_idempotency_uq ON control.business_partner_mutation_evidence(tenant_id,idempotency_key);
+CREATE UNIQUE INDEX business_partner_mutation_evidence_version_uq ON control.business_partner_mutation_evidence(tenant_id,aggregate_kind,aggregate_id,resulting_version);
+CREATE INDEX business_partner_mutation_evidence_partner_idx ON control.business_partner_mutation_evidence(tenant_id,business_partner_id,occurred_at DESC);
 CREATE INDEX external_workforce_rate_card_active_idx
     ON control.external_workforce_rate_card (tenant_id, company_code_id, effective_from, effective_until)
     WHERE status = 'active';
 CREATE INDEX external_workforce_rate_match_idx
     ON control.external_workforce_rate (tenant_id, rate_card_id, supplier_id, job_id, site_id, worker_classification, effective_from)
     WHERE status = 'active';
+CREATE INDEX business_partner_decision_scope_authority_idx
+ON control.business_partner_decision_scope
+(tenant_id,qualification_id,supplier_preference_id,customer_designation_id,credit_review_id,scope_group);

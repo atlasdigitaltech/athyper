@@ -191,6 +191,7 @@ planes/neon/authz/19_supplier_registration_permission_reference_seed.sql
 planes/neon/authz/20_customer_onboarding_permission_reference_seed.sql
 planes/neon/authz/21_business_partner_invitation_permission_reference_seed.sql
 planes/neon/authz/22_business_partner_360_permission_reference_seed.sql
+planes/neon/authz/23_workforce_request_permission_reference_seed.sql
 planes/neon/control/12_business_partner_360_feature_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql

@@ -52,8 +52,23 @@ BEGIN
             document.business_partner_request_evidence,
             document.business_partner_request_validation
         TO athyperapp;
+        GRANT SELECT, INSERT, UPDATE, DELETE ON
+            document.business_partner_request_address,
+            document.business_partner_request_contact_person,
+            document.business_partner_request_contact_channel,
+            document.business_partner_request_identifier,
+            document.business_partner_request_tax_registration,
+            document.business_partner_request_classification,
+            document.business_partner_request_certification
+        TO athyperapp;
+        GRANT SELECT, INSERT ON
+            document.business_partner_request_materialization_item
+        TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperapp;
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperapp;
     END IF;
 
@@ -63,11 +78,22 @@ BEGIN
             document.business_partner_invitation_recovery,
             document.business_partner_request,
             document.business_partner_request_evidence,
-            document.business_partner_request_validation
+            document.business_partner_request_validation,
+            document.business_partner_request_address,
+            document.business_partner_request_contact_person,
+            document.business_partner_request_contact_channel,
+            document.business_partner_request_identifier,
+            document.business_partner_request_tax_registration,
+            document.business_partner_request_classification,
+            document.business_partner_request_certification,
+            document.business_partner_request_materialization_item
         TO athyperadmin;
         GRANT SELECT ON document.supplier_registration_invitation TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_registration() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_business_partner_payload_has_restricted_key(jsonb) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_payload_boundary() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_business_partner_request_extension() TO athyperadmin;
         GRANT EXECUTE ON FUNCTION document.fn_business_partner_request_approvers(uuid, uuid, uuid, uuid) TO athyperadmin;
     END IF;
 END;
@@ -329,21 +355,38 @@ DO $$ BEGIN
         GRANT SELECT,INSERT,UPDATE ON
             document.shift_assignment,document.time_punch,document.attendance_day,document.attendance_adjustment_request,
             document.compensation_change,document.employee_tax_declaration,document.employee_tax_declaration_line,
-            document.leave_request,document.people_request,document.hr_case,document.onboarding_case,document.offboarding_case,
+            document.leave_request,document.people_request,document.workforce_request,document.hr_case,document.onboarding_case,document.offboarding_case,
             document.payroll_period,document.payroll_run,document.payroll_run_employee,document.payroll_result
         TO athyperapp;
-        GRANT SELECT,INSERT ON document.leave_balance_entry,document.payroll_result_line TO athyperapp;
+        GRANT SELECT,INSERT ON document.leave_balance_entry,document.payroll_result_line,document.workforce_request_validation TO athyperapp;
         GRANT SELECT,INSERT ON document.policy_acknowledgment TO athyperapp;
     END IF;
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
         GRANT ALL PRIVILEGES ON
             document.shift_assignment,document.time_punch,document.attendance_day,document.attendance_adjustment_request,
             document.compensation_change,document.employee_tax_declaration,document.employee_tax_declaration_line,
-            document.leave_request,document.leave_balance_entry,document.people_request,document.hr_case,
+            document.leave_request,document.leave_balance_entry,document.people_request,document.workforce_request,document.workforce_request_validation,document.hr_case,
             document.onboarding_case,document.offboarding_case,document.payroll_period,document.payroll_run,
             document.payroll_run_employee,document.payroll_result,document.payroll_result_line,
             document.policy_acknowledgment
         TO athyperadmin;
+    END IF;
+END $$;
+
+REVOKE ALL ON document.workforce_request FROM PUBLIC;
+REVOKE ALL ON document.workforce_request_validation FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_workforce_request() FROM PUBLIC;
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_workforce_request() TO athyperapp;
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_payload_has_restricted_key(jsonb) TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.trg_guard_workforce_request() TO athyperadmin;
+        GRANT EXECUTE ON FUNCTION document.fn_workforce_request_approvers(uuid,uuid,uuid,uuid) TO athyperadmin;
     END IF;
 END $$;
 

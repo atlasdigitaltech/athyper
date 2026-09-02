@@ -42,7 +42,9 @@ export function createBusinessPartnerInvitationService<Transaction>(options: Bus
   return {
     template(journeyKind) { return templates[journeyKind]; },
     async create(command) {
-      assertNeon(command.context); validateCreate(command, now());
+      assertNeon(command.context);
+      if(command.journeyKind === "candidate") throw new MasterDataError(410,"WORKFORCE_INVITATION_MOVED","Candidate intake must create a People/Workforce request");
+      validateCreate(command, now());
       await authorize(options.authorizer, command.context, permission(command.journeyKind, "create"), scopeForAuthorization(command.context.tenantId, command.scope));
       const emailHash = digest(normalizeEmail(command.inviteeEmail));
       return options.transactions.run("neon", actor(command.context), async transaction => {
@@ -88,9 +90,10 @@ export function createBusinessPartnerInvitationService<Transaction>(options: Bus
     },
     async accept(command) {
       assertNeon(command.context); validateAccept(command.token, command.inviteeEmail, command.requestIdempotencyKey, command.proposedPayload);
+      if(command.journeyKind === "candidate") throw new MasterDataError(410,"WORKFORCE_INVITATION_MOVED","Candidate invitations must use the People/Workforce service");
       await authorize(options.authorizer, command.context, permission(command.journeyKind, "respond"), { tenantId: command.context.tenantId, externalApplicant: true, restrictedSessionRequired: true, journeyKind: command.journeyKind });
       assertApprovedFields(command.journeyKind, command.proposedPayload);
-      const schema = await options.schemas.resolve({ context: command.context, kind: command.journeyKind === "candidate" ? "add_workforce" : "new_partner", sourceKind: "portal", requestedRole: command.journeyKind === "candidate" ? "workforce" : command.journeyKind });
+      const schema = await options.schemas.resolve({ context: command.context, kind: "new_partner", sourceKind: "portal", requestedRole: command.journeyKind });
       if (!schema.code || schema.version < 1 || !/^[a-f0-9]{64}$/.test(schema.hash)) throw new MasterDataError(503, "BUSINESS_PARTNER_INVITATION_SCHEMA_UNAVAILABLE", "Published request schema is unavailable");
       return options.transactions.run("neon", actor(command.context), async transaction => {
         const result = await options.repository.accept({ tenantId: command.context.tenantId, journeyKind: command.journeyKind, tokenHash: digest(command.token), inviteeEmailHash: digest(normalizeEmail(command.inviteeEmail)), applicantPrincipalId: command.context.principalId, requestIdempotencyKey: command.requestIdempotencyKey, requestNo: requestNo(), schema, proposedPayload: command.proposedPayload }, transaction);

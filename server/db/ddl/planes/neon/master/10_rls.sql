@@ -819,6 +819,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
+        'business_partner_alias',
         'business_partner_relationship',
         'business_partner_governance_relation',
         'business_partner_identifier',
@@ -828,7 +829,7 @@ BEGIN
         'business_partner_operating_organization_assignment',
         'company_code_supplier_profile',
         'company_code_customer_profile',
-        'legal_entity_business_partner_link',
+        'legal_entity_internal_partner_link',
         'intercompany_trading_pair',
         'contact_person_identity_link'
     ] LOOP
@@ -851,6 +852,18 @@ $$;
 
 ALTER TABLE master.person ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.person FORCE ROW LEVEL SECURITY;
+ALTER TABLE master.person_business_partner_legacy_link ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.person_business_partner_legacy_link FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_read ON master.person_business_partner_legacy_link
+    FOR SELECT USING (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY seed_read ON master.person_business_partner_legacy_link
+    FOR SELECT TO CURRENT_USER USING (true);
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        CREATE POLICY admin_read ON master.person_business_partner_legacy_link
+            FOR SELECT TO athyperadmin USING (true);
+    END IF;
+END $$;
 ALTER TABLE master.person_sensitive_profile ENABLE ROW LEVEL SECURITY;
 ALTER TABLE master.person_sensitive_profile FORCE ROW LEVEL SECURITY;
 ALTER TABLE master.site ENABLE ROW LEVEL SECURITY;

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "scope": {
+    "schemas": ["document", "master"],
+    "namePattern": "business_partner|supplier|customer"
+  },
+  "compatibilityViews": [
+    "document.supplier_registration_invitation",
+    "master.legal_entity_business_partner_link"
+  ],
+  "retiredRelations": [
+    "document.business_partner_invitation_applicant_policy",
+    "document.supplier_registration_recovery",
+    "document.supplier_registration_invitation_legacy"
+  ],
+  "requiredTypedRequestRelations": [
+    "document.business_partner_request_address",
+    "document.business_partner_request_contact_person",
+    "document.business_partner_request_contact_channel",
+    "document.business_partner_request_identifier",
+    "document.business_partner_request_tax_registration",
+    "document.business_partner_request_classification",
+    "document.business_partner_request_certification",
+    "document.business_partner_request_materialization_item"
+  ]
+}

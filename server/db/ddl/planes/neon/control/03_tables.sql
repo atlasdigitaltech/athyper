@@ -259,11 +259,13 @@ CREATE TABLE control.business_partner_qualification (
         CHECK ((reviewed_at IS NULL) = (reviewed_by IS NULL)),
     CONSTRAINT business_partner_qualification_approval_pair_chk
         CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT business_partner_qualification_no_self_approval_chk
+        CHECK (reviewed_by IS NULL OR reviewed_by <> created_by),
     CONSTRAINT business_partner_qualification_approved_chk
         CHECK (decision NOT IN ('approved', 'conditional')
                OR approved_at IS NOT NULL),
     CONSTRAINT business_partner_qualification_metadata_chk
-        CHECK (jsonb_typeof(metadata) = 'object'),
+        CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384),
     CONSTRAINT business_partner_qualification_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
@@ -330,12 +332,74 @@ CREATE TABLE control.supplier_preference_designation (
     CONSTRAINT supplier_preference_designation_no_self_approval_chk CHECK (
         reviewed_by IS NULL OR reviewed_by <> created_by),
     CONSTRAINT supplier_preference_designation_row_version_chk CHECK (row_version >= 1),
-    CONSTRAINT supplier_preference_designation_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT supplier_preference_designation_metadata_chk CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384),
     CONSTRAINT supplier_preference_designation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
 COMMENT ON TABLE control.supplier_preference_designation IS
   'Governed effective-dated preferred-supplier designation by operating organization, optional company code, and optional commodity category. Preference ranks an eligible supplier; it never replaces readiness controls.';
+
+CREATE TABLE control.customer_account_designation (
+    id                          uuid                                          NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                   uuid                                          NOT NULL,
+    business_partner_id         uuid                                          NOT NULL,
+    customer_id                 uuid                                          NOT NULL,
+    operating_organization_id   uuid                                          NOT NULL,
+    company_code_id             uuid,
+    designation_type            control.customer_account_designation_type_d   NOT NULL,
+    priority_tier               smallint,
+    effective_from              date                                          NOT NULL,
+    effective_until             date,
+    rationale                   text                                          NOT NULL,
+    status                      control.customer_account_designation_status_d NOT NULL DEFAULT 'pending',
+    idempotency_key             text                                          NOT NULL,
+    decision_reason             text,
+    reviewed_at                 timestamptz,
+    reviewed_by                 uuid,
+    approved_at                 timestamptz,
+    approved_by                 uuid,
+    decision_idempotency_key    text,
+    decision_fingerprint        text,
+    revocation_reason           text,
+    revoked_at                  timestamptz,
+    revoked_by                  uuid,
+    revocation_idempotency_key  text,
+    revocation_fingerprint      text,
+    row_version                 bigint                                        NOT NULL DEFAULT 1,
+    metadata                    jsonb                                         NOT NULL DEFAULT '{}'::jsonb,
+    created_at                  timestamptz                                   NOT NULL DEFAULT now(),
+    created_by                  uuid                                          NOT NULL,
+    updated_at                  timestamptz,
+    updated_by                  uuid,
+
+    CONSTRAINT customer_account_designation_pkey PRIMARY KEY (id),
+    CONSTRAINT customer_account_designation_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT customer_account_designation_priority_chk CHECK (priority_tier IS NULL OR priority_tier BETWEEN 1 AND 5),
+    CONSTRAINT customer_account_designation_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT customer_account_designation_decision_key_chk CHECK (decision_idempotency_key IS NULL OR (btrim(decision_idempotency_key) = decision_idempotency_key AND length(decision_idempotency_key) BETWEEN 8 AND 200)),
+    CONSTRAINT customer_account_designation_revocation_key_chk CHECK (revocation_idempotency_key IS NULL OR (btrim(revocation_idempotency_key) = revocation_idempotency_key AND length(revocation_idempotency_key) BETWEEN 8 AND 200)),
+    CONSTRAINT customer_account_designation_fingerprint_chk CHECK ((decision_fingerprint IS NULL OR decision_fingerprint ~ '^[a-f0-9]{64}$') AND (revocation_fingerprint IS NULL OR revocation_fingerprint ~ '^[a-f0-9]{64}$')),
+    CONSTRAINT customer_account_designation_range_chk CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT customer_account_designation_reason_chk CHECK (length(rationale) BETWEEN 1 AND 4000 AND (decision_reason IS NULL OR length(decision_reason) BETWEEN 1 AND 4000) AND (revocation_reason IS NULL OR length(revocation_reason) BETWEEN 1 AND 4000)),
+    CONSTRAINT customer_account_designation_review_pair_chk CHECK ((reviewed_at IS NULL) = (reviewed_by IS NULL)),
+    CONSTRAINT customer_account_designation_approval_pair_chk CHECK ((approved_at IS NULL) = (approved_by IS NULL)),
+    CONSTRAINT customer_account_designation_revoke_pair_chk CHECK ((revoked_at IS NULL) = (revoked_by IS NULL)),
+    CONSTRAINT customer_account_designation_state_evidence_chk CHECK (
+        (status = 'pending' AND reviewed_at IS NULL AND approved_at IS NULL AND decision_idempotency_key IS NULL AND decision_fingerprint IS NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'approved' AND reviewed_at IS NOT NULL AND approved_at IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'rejected' AND reviewed_at IS NOT NULL AND approved_at IS NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NULL AND revocation_idempotency_key IS NULL AND revocation_fingerprint IS NULL)
+        OR (status = 'revoked' AND reviewed_at IS NOT NULL AND approved_at IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint IS NOT NULL AND revoked_at IS NOT NULL AND revocation_idempotency_key IS NOT NULL AND revocation_fingerprint IS NOT NULL)),
+    CONSTRAINT customer_account_designation_no_self_approval_chk CHECK (reviewed_by IS NULL OR reviewed_by <> created_by),
+    CONSTRAINT customer_account_designation_row_version_chk CHECK (row_version >= 1),
+    CONSTRAINT customer_account_designation_metadata_chk CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384),
+    CONSTRAINT customer_account_designation_audit_pair_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+
+COMMENT ON TABLE control.customer_account_designation IS
+  'Governed effective-dated customer account designation by sales operating organization and optional company code. It models key-account, strategic, and priority-service decisions separately from supplier preference, credit, eligibility, and customer master status.';
+
+COMMENT ON COLUMN control.customer_account_designation.priority_tier IS
+  'Optional tenant-defined priority from 1 (highest) through 5 (lowest); it does not grant credit or override blocks.';
 
 CREATE TABLE control.business_partner_block (
     id                        uuid                           NOT NULL DEFAULT shared.uuidv7(),
@@ -2300,12 +2364,15 @@ CREATE TABLE control.customer_credit_review (
     company_code_id            uuid        NOT NULL,
     review_type_code           text        NOT NULL DEFAULT 'initial',
     requested_credit_limit     numeric(20,4),
-    currency_code              character(3),
+    requested_currency_code    character(3),
+    approved_credit_limit      numeric(20,4),
+    approved_currency_code     character(3),
     risk_class_code            text,
     decision                   text        NOT NULL DEFAULT 'pending',
     decision_reason            text,
     conditions                 jsonb       NOT NULL DEFAULT '[]'::jsonb,
-    effective_from             date,
+    authority_evidence         jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    effective_from             date        NOT NULL DEFAULT CURRENT_DATE,
     effective_until            date,
     idempotency_key            text        NOT NULL,
     decision_idempotency_key   text,
@@ -2322,17 +2389,63 @@ CREATE TABLE control.customer_credit_review (
     CONSTRAINT customer_credit_review_pkey PRIMARY KEY(id),
     CONSTRAINT customer_credit_review_tenant_id_uq UNIQUE(tenant_id,id),
     CONSTRAINT customer_credit_review_decision_chk CHECK(decision IN('pending','approved','conditional','rejected','suspended','expired')),
-    CONSTRAINT customer_credit_review_limit_chk CHECK(requested_credit_limit IS NULL OR requested_credit_limit>=0),
-    CONSTRAINT customer_credit_review_currency_chk CHECK((requested_credit_limit IS NULL)=(currency_code IS NULL)),
-    CONSTRAINT customer_credit_review_range_chk CHECK(effective_until IS NULL OR effective_from IS NULL OR effective_until>effective_from),
-    CONSTRAINT customer_credit_review_conditions_chk CHECK(jsonb_typeof(conditions)='array'),
+    CONSTRAINT customer_credit_review_requested_limit_chk CHECK(requested_credit_limit IS NULL OR requested_credit_limit>=0),
+    CONSTRAINT customer_credit_review_requested_currency_chk CHECK((requested_credit_limit IS NULL)=(requested_currency_code IS NULL)),
+    CONSTRAINT customer_credit_review_approved_limit_chk CHECK(approved_credit_limit IS NULL OR approved_credit_limit>=0),
+    CONSTRAINT customer_credit_review_approved_currency_chk CHECK((approved_credit_limit IS NULL)=(approved_currency_code IS NULL)),
+    CONSTRAINT customer_credit_review_outcome_limit_chk CHECK(decision IN('approved','conditional') OR approved_credit_limit IS NULL),
+    CONSTRAINT customer_credit_review_range_chk CHECK(effective_until IS NULL OR effective_until>effective_from),
+    CONSTRAINT customer_credit_review_conditions_chk CHECK(jsonb_typeof(conditions)='array' AND jsonb_array_length(conditions)<=50 AND octet_length(conditions::text)<=32768),
+    CONSTRAINT customer_credit_review_authority_evidence_chk CHECK(jsonb_typeof(authority_evidence)='object' AND octet_length(authority_evidence::text)<=65536),
     CONSTRAINT customer_credit_review_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
     CONSTRAINT customer_credit_review_decision_evidence_chk CHECK((decision='pending' AND reviewed_at IS NULL AND reviewed_by IS NULL AND decision_reason IS NULL AND decision_idempotency_key IS NULL AND decision_fingerprint IS NULL) OR (decision<>'pending' AND reviewed_at IS NOT NULL AND reviewed_by IS NOT NULL AND decision_reason IS NOT NULL AND decision_idempotency_key IS NOT NULL AND decision_fingerprint ~ '^[a-f0-9]{64}$')),
     CONSTRAINT customer_credit_review_approval_pair_chk CHECK((approved_at IS NULL)=(approved_by IS NULL)),
+    CONSTRAINT customer_credit_review_no_self_approval_chk CHECK(reviewed_by IS NULL OR reviewed_by<>created_by),
     CONSTRAINT customer_credit_review_approved_chk CHECK((decision IN('approved','conditional'))=(approved_at IS NOT NULL)),
     CONSTRAINT customer_credit_review_version_chk CHECK(row_version>=1),
     CONSTRAINT customer_credit_review_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
 );
+
+CREATE TABLE control.business_partner_mutation_evidence (
+    id                  uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id           uuid        NOT NULL,
+    aggregate_kind      text        NOT NULL,
+    aggregate_id        uuid        NOT NULL,
+    business_partner_id uuid,
+    command_code        text        NOT NULL,
+    from_state          text        NOT NULL,
+    to_state            text        NOT NULL,
+    expected_version    bigint      NOT NULL,
+    resulting_version   bigint      NOT NULL,
+    reason              text        NOT NULL,
+    idempotency_key     text        NOT NULL,
+    command_fingerprint text        NOT NULL,
+    evidence            jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    occurred_at         timestamptz NOT NULL DEFAULT clock_timestamp(),
+    occurred_by         uuid        NOT NULL,
+    CONSTRAINT business_partner_mutation_evidence_pkey PRIMARY KEY(id),
+    CONSTRAINT business_partner_mutation_evidence_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT business_partner_mutation_evidence_kind_chk CHECK(aggregate_kind IN(
+        'business_partner','supplier','customer','business_partner_relationship',
+        'qualification','supplier_preference','customer_designation','customer_credit_review')),
+    CONSTRAINT business_partner_mutation_evidence_code_chk CHECK(command_code ~ '^[a-z][a-z0-9_.-]{2,126}$'),
+    CONSTRAINT business_partner_mutation_evidence_state_chk CHECK(
+        from_state ~ '^[a-z][a-z0-9_.-]{1,62}$' AND to_state ~ '^[a-z][a-z0-9_.-]{1,62}$'
+        AND from_state <> to_state),
+    CONSTRAINT business_partner_mutation_evidence_version_chk CHECK(
+        expected_version >= 1 AND resulting_version = expected_version + 1),
+    CONSTRAINT business_partner_mutation_evidence_reason_chk CHECK(
+        length(btrim(reason)) BETWEEN 1 AND 4000),
+    CONSTRAINT business_partner_mutation_evidence_idempotency_chk CHECK(
+        btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
+    CONSTRAINT business_partner_mutation_evidence_fingerprint_chk CHECK(
+        command_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_mutation_evidence_payload_chk CHECK(
+        jsonb_typeof(evidence)='object' AND octet_length(evidence::text)<=16384)
+);
+
+COMMENT ON TABLE control.business_partner_mutation_evidence IS
+  'S5 append-only evidence ledger for command-owned Business Partner lifecycle and governed decisions. Every accepted mutation is versioned, idempotent, actor-bound, and paired atomically with event.outbox.';
 
 CREATE TABLE control.customer_lifecycle_event (
     id                         uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -2345,9 +2458,11 @@ CREATE TABLE control.customer_lifecycle_event (
     from_status                text        NOT NULL,
     to_status                  text        NOT NULL,
     reason_code                text        NOT NULL,
+    business_date              date        NOT NULL,
     readiness_fingerprint      text,
     readiness_evidence         jsonb       NOT NULL DEFAULT '{}'::jsonb,
     idempotency_key            text        NOT NULL,
+    command_fingerprint        text        NOT NULL,
     occurred_at                timestamptz NOT NULL DEFAULT now(),
     occurred_by                uuid        NOT NULL,
     CONSTRAINT customer_lifecycle_event_pkey PRIMARY KEY(id),
@@ -2356,12 +2471,69 @@ CREATE TABLE control.customer_lifecycle_event (
     CONSTRAINT customer_lifecycle_event_transition_chk CHECK((action_code='activate' AND from_status='prospect' AND to_status='active') OR (action_code='suspend' AND from_status='active' AND to_status='suspended') OR (action_code='reactivate' AND from_status='suspended' AND to_status='active')),
     CONSTRAINT customer_lifecycle_event_reason_chk CHECK(reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'),
     CONSTRAINT customer_lifecycle_event_fingerprint_chk CHECK(readiness_fingerprint IS NULL OR readiness_fingerprint ~ '^[a-f0-9]{64}$'),
-    CONSTRAINT customer_lifecycle_event_evidence_chk CHECK(jsonb_typeof(readiness_evidence)='object'),
+    CONSTRAINT customer_lifecycle_event_command_fingerprint_chk CHECK(command_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT customer_lifecycle_event_evidence_chk CHECK(jsonb_typeof(readiness_evidence)='object' AND octet_length(readiness_evidence::text)<=65536),
+    CONSTRAINT customer_lifecycle_event_readiness_chk CHECK(action_code='suspend' OR (readiness_fingerprint IS NOT NULL AND readiness_evidence->>'decisionFingerprint'=readiness_fingerprint AND readiness_evidence->>'eligible'='true')),
     CONSTRAINT customer_lifecycle_event_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
 );
 
-COMMENT ON TABLE control.customer_credit_review IS 'Independent, company-scoped customer credit/commercial decision aggregate; registration approval cannot decide it.';
-COMMENT ON TABLE control.customer_lifecycle_event IS 'Immutable audited customer activation, suspension, and reactivation command ledger pinned to readiness evidence.';
+COMMENT ON TABLE control.customer_credit_review IS 'Sole company-scoped authority for requested and approved customer credit limits. Registration approval cannot decide it, and customer/company master records cannot store a limit.';
+COMMENT ON COLUMN control.customer_credit_review.approved_credit_limit IS 'Effective governed credit-limit outcome. Only approved or conditional review records may carry a value.';
+COMMENT ON COLUMN control.customer_credit_review.authority_evidence IS 'Immutable decision provenance, including supported-baseline migration evidence; it is not an alternate credit-limit authority.';
+COMMENT ON TABLE control.customer_lifecycle_event IS 'Immutable audited and idempotent Customer lifecycle command ledger. It is the sole authority permitted to change master.customer.status.';
+
+-- Normalized decision coordinates.  Rows within one scope_group are
+-- conjunctive; separate groups are alternatives.  The typed target columns
+-- avoid unvalidated polymorphic UUIDs.
+CREATE TABLE control.business_partner_decision_scope (
+    id                        uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                 uuid        NOT NULL,
+    qualification_id          uuid,
+    supplier_preference_id    uuid,
+    customer_designation_id   uuid,
+    credit_review_id          uuid,
+    scope_group               smallint    NOT NULL DEFAULT 1,
+    scope_mode                text        NOT NULL DEFAULT 'include',
+    scope_kind                text        NOT NULL,
+    operating_organization_id uuid,
+    company_code_id           uuid,
+    commodity_category_id     uuid,
+    country_code              character(2),
+    tax_jurisdiction_id       uuid,
+    organization_unit_id      uuid,
+    effective_from            date        NOT NULL DEFAULT CURRENT_DATE,
+    effective_until           date,
+    hierarchy_version         bigint,
+    resolution_fingerprint    text,
+    metadata                  jsonb       NOT NULL DEFAULT '{}'::jsonb,
+    created_at                timestamptz NOT NULL DEFAULT now(),
+    created_by                uuid        NOT NULL,
+    CONSTRAINT business_partner_decision_scope_pkey PRIMARY KEY (id),
+    CONSTRAINT business_partner_decision_scope_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT business_partner_decision_scope_authority_chk CHECK (
+        num_nonnulls(qualification_id, supplier_preference_id,
+                     customer_designation_id, credit_review_id) = 1),
+    CONSTRAINT business_partner_decision_scope_group_chk CHECK (scope_group BETWEEN 1 AND 100),
+    CONSTRAINT business_partner_decision_scope_mode_chk CHECK (scope_mode IN ('include','exclude')),
+    CONSTRAINT business_partner_decision_scope_kind_chk CHECK (
+        scope_kind IN ('global','operating_organization','company_code','commodity_category',
+                       'country','tax_jurisdiction','organization_unit')),
+    CONSTRAINT business_partner_decision_scope_target_chk CHECK (
+        (scope_kind='global' AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+        OR (scope_kind='operating_organization' AND operating_organization_id IS NOT NULL AND num_nonnulls(company_code_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+        OR (scope_kind='company_code' AND company_code_id IS NOT NULL AND num_nonnulls(operating_organization_id,commodity_category_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+        OR (scope_kind='commodity_category' AND commodity_category_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,country_code,tax_jurisdiction_id,organization_unit_id)=0)
+        OR (scope_kind='country' AND country_code IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,tax_jurisdiction_id,organization_unit_id)=0)
+        OR (scope_kind='tax_jurisdiction' AND tax_jurisdiction_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,organization_unit_id)=0)
+        OR (scope_kind='organization_unit' AND organization_unit_id IS NOT NULL AND num_nonnulls(operating_organization_id,company_code_id,commodity_category_id,country_code,tax_jurisdiction_id)=0)),
+    CONSTRAINT business_partner_decision_scope_range_chk CHECK (effective_until IS NULL OR effective_until>effective_from),
+    CONSTRAINT business_partner_decision_scope_hierarchy_chk CHECK ((hierarchy_version IS NULL)=(resolution_fingerprint IS NULL) AND (hierarchy_version IS NULL OR hierarchy_version>=1)),
+    CONSTRAINT business_partner_decision_scope_fingerprint_chk CHECK (resolution_fingerprint IS NULL OR resolution_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT business_partner_decision_scope_metadata_chk CHECK (jsonb_typeof(metadata)='object' AND octet_length(metadata::text)<=8192)
+);
+
+COMMENT ON TABLE control.business_partner_decision_scope IS
+  'Normalized include/exclude scope coordinates for BP qualification, preference, designation, and credit decisions.';
 -- Fieldglass-inspired external-workforce pricing policy.  Rate cards are
 -- governed configuration; accepted commercial rates are snapshotted on work
 -- order/SOW revisions and transaction lines.

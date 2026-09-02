@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-s4-migration-evidence",
+  "capturedAt": "2026-09-02T18:34:55.229Z",
+  "database": "athyper_neon",
+  "disposableRequired": true,
+  "migration": "server/db/migrations/20260903_neon_business_partner_integrity_hardening.sql",
+  "preflight": {
+    "rejected": true,
+    "sqlState": "P0001",
+    "message": "S4 preflight failed: oversized or authority-bearing BP metadata must be remediated"
+  },
+  "before": {
+    "business_partners": 2,
+    "suppliers": 1,
+    "customers": 1,
+    "qualifications": 1,
+    "preferences": 1,
+    "designations": 1,
+    "credit_reviews": 1
+  },
+  "after": {
+    "business_partners": 2,
+    "suppliers": 1,
+    "customers": 1,
+    "qualifications": 1,
+    "preferences": 1,
+    "designations": 1,
+    "credit_reviews": 1
+  },
+  "rowCountsPreserved": true,
+  "aliases": {
+    "legacyElements": 3,
+    "backfilledRows": 3,
+    "preserved": true
+  },
+  "scopes": {
+    "rows": [
+      {
+        "authority": "credit_review",
+        "count": 2
+      },
+      {
+        "authority": "customer_designation",
+        "count": 2
+      },
+      {
+        "authority": "qualification",
+        "count": 2
+      },
+      {
+        "authority": "supplier_preference",
+        "count": 2
+      }
+    ],
+    "expected": {
+      "credit_review": 2,
+      "customer_designation": 2,
+      "qualification": 2,
+      "supplier_preference": 2
+    },
+    "preserved": true
+  },
+  "passed": true
+}

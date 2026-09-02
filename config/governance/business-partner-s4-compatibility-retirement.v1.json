@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.business-partner-s4-compatibility-retirement",
+  "owner": "master-data",
+  "window": {
+    "startsOn": "2026-09-03",
+    "minimumObservationDays": 30,
+    "minimumZeroUsageDays": 14,
+    "earliestRemovalOn": "2026-10-03"
+  },
+  "surfaces": [
+    {
+      "code": "business_partner_aliases_cache",
+      "relation": "master.business_partner",
+      "columns": ["aliases"],
+      "replacement": "master.business_partner_alias",
+      "writePolicy": "derived_only",
+      "telemetry": ["repository_source_inventory", "pg_stat_statements"],
+      "removalGate": "No supported reader references master.business_partner.aliases and observed query usage is zero for 14 consecutive days after a 30-day compatibility window."
+    },
+    {
+      "code": "flattened_decision_scope",
+      "relation": "control.business_partner_qualification|control.supplier_preference_designation|control.customer_account_designation|control.customer_credit_review",
+      "columns": [
+        "operating_organization_id",
+        "company_code_id",
+        "commodity_capability_id",
+        "commodity_category_id"
+      ],
+      "replacement": "control.business_partner_decision_scope",
+      "writePolicy": "compatibility_input_only",
+      "telemetry": ["repository_source_inventory", "pg_stat_statements"],
+      "removalGate": "All supported writers create normalized decision scopes directly, all readers resolve normalized scope rows, and observed flattened-column usage is zero for 14 consecutive days after a 30-day compatibility window."
+    }
+  ],
+  "requiredApprovals": ["master-data-owner", "database-owner", "release-owner"],
+  "forwardFixOnly": true
+}

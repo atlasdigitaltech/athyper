@@ -603,6 +603,16 @@ CREATE INDEX leave_balance_employee_idx ON document.leave_balance_entry(tenant_i
 CREATE INDEX leave_balance_source_idx ON document.leave_balance_entry(tenant_id,source_entity_type,source_entity_id) WHERE source_entity_id IS NOT NULL;
 CREATE INDEX people_request_employee_idx ON document.people_request(tenant_id,employee_id,status);
 CREATE INDEX people_request_workflow_idx ON document.people_request(tenant_id,workflow_request_id) WHERE workflow_request_id IS NOT NULL;
+CREATE INDEX workforce_request_queue_idx ON document.workforce_request(tenant_id,status,created_at,id);
+CREATE INDEX workforce_request_person_idx ON document.workforce_request(tenant_id,target_person_id,status) WHERE target_person_id IS NOT NULL;
+CREATE INDEX workforce_request_employment_idx ON document.workforce_request(tenant_id,target_employment_id,status) WHERE target_employment_id IS NOT NULL;
+CREATE INDEX workforce_request_scope_idx ON document.workforce_request(tenant_id,legal_entity_id,company_code_id,org_unit_id,status);
+CREATE INDEX workforce_request_workflow_idx ON document.workforce_request(tenant_id,workflow_request_id) WHERE workflow_request_id IS NOT NULL;
+CREATE INDEX workforce_request_validation_request_idx ON document.workforce_request_validation(tenant_id,request_id,evaluated_at DESC,evaluation_id);
+CREATE UNIQUE INDEX workforce_request_open_target_kind_uq
+    ON document.workforce_request(tenant_id,target_person_id,request_kind)
+    WHERE target_person_id IS NOT NULL
+      AND status IN ('draft','validating','validation_failed','pending_approval','returned','approved','applying','failed');
 CREATE INDEX hr_case_employee_idx ON document.hr_case(tenant_id,employee_id,status) WHERE employee_id IS NOT NULL;
 CREATE INDEX hr_case_assignee_idx ON document.hr_case(tenant_id,assigned_to,status) WHERE assigned_to IS NOT NULL;
 CREATE INDEX onboarding_case_person_idx ON document.onboarding_case(tenant_id,person_id,status);
@@ -871,6 +881,22 @@ CREATE INDEX business_partner_request_evidence_request_idx
 CREATE INDEX business_partner_request_validation_request_idx
     ON document.business_partner_request_validation
        (tenant_id, request_id, evaluation_id, severity, outcome);
+CREATE INDEX business_partner_request_address_request_idx
+    ON document.business_partner_request_address (tenant_id, request_id);
+CREATE INDEX business_partner_request_contact_person_request_idx
+    ON document.business_partner_request_contact_person (tenant_id, request_id);
+CREATE INDEX business_partner_request_contact_channel_request_idx
+    ON document.business_partner_request_contact_channel (tenant_id, request_id);
+CREATE INDEX business_partner_request_identifier_request_idx
+    ON document.business_partner_request_identifier (tenant_id, request_id);
+CREATE INDEX business_partner_request_tax_registration_request_idx
+    ON document.business_partner_request_tax_registration (tenant_id, request_id);
+CREATE INDEX business_partner_request_classification_request_idx
+    ON document.business_partner_request_classification (tenant_id, request_id);
+CREATE INDEX business_partner_request_certification_request_idx
+    ON document.business_partner_request_certification (tenant_id, request_id);
+CREATE INDEX business_partner_request_materialization_item_request_idx
+    ON document.business_partner_request_materialization_item (tenant_id, request_id);
 CREATE INDEX mesh_business_partner_match_snapshot_idx ON document.mesh_business_partner_match (tenant_id, snapshot_id, created_at DESC);
 CREATE INDEX mesh_business_partner_match_org_idx ON document.mesh_business_partner_match (tenant_id, operating_organization_id, created_at DESC);
 CREATE INDEX mesh_business_partner_match_candidate_idx ON document.mesh_business_partner_match (tenant_id, candidate_business_partner_id, created_at DESC) WHERE candidate_business_partner_id IS NOT NULL;

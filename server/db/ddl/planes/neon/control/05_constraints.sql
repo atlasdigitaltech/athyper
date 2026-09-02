@@ -952,6 +952,28 @@ ALTER TABLE control.supplier_preference_designation
     ADD CONSTRAINT supplier_preference_designation_updated_by_fk
     FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
+ALTER TABLE control.customer_account_designation
+    ADD CONSTRAINT customer_account_designation_tenant_fk
+    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_customer_fk
+    FOREIGN KEY (tenant_id, customer_id) REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_reviewed_by_fk
+    FOREIGN KEY (tenant_id, reviewed_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_approved_by_fk
+    FOREIGN KEY (tenant_id, approved_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_revoked_by_fk
+    FOREIGN KEY (tenant_id, revoked_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_created_by_fk
+    FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_updated_by_fk
+    FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
+
 ALTER TABLE control.business_partner_block
     ADD CONSTRAINT business_partner_block_tenant_fk
     FOREIGN KEY (tenant_id)
@@ -1036,7 +1058,9 @@ ALTER TABLE control.customer_credit_review
   ADD CONSTRAINT customer_credit_review_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_customer_fk FOREIGN KEY(tenant_id,customer_id) REFERENCES master.customer(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT customer_credit_review_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_credit_review_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_credit_review_requested_currency_fk FOREIGN KEY(requested_currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_credit_review_approved_currency_fk FOREIGN KEY(approved_currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_reviewed_by_fk FOREIGN KEY(tenant_id,reviewed_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_approved_by_fk FOREIGN KEY(tenant_id,approved_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
@@ -1049,6 +1073,11 @@ ALTER TABLE control.customer_lifecycle_event
   ADD CONSTRAINT customer_lifecycle_event_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_actor_fk FOREIGN KEY(tenant_id,occurred_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE control.business_partner_mutation_evidence
+  ADD CONSTRAINT business_partner_mutation_evidence_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
+  ADD CONSTRAINT business_partner_mutation_evidence_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT business_partner_mutation_evidence_actor_fk FOREIGN KEY(tenant_id,occurred_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
 ALTER TABLE control.external_workforce_rate_card
     ADD CONSTRAINT external_workforce_rate_card_tenant_fk FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_workforce_rate_card_company_fk FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id, id) ON DELETE RESTRICT,
@@ -1076,3 +1105,38 @@ ALTER TABLE control.external_workforce_rate
         COALESCE(worker_classification, '') WITH =,
         daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)') WITH &&
     ) WHERE (status = 'active');
+ALTER TABLE control.business_partner_decision_scope
+    ADD CONSTRAINT business_partner_decision_scope_qualification_fk
+    FOREIGN KEY (tenant_id, qualification_id) REFERENCES control.business_partner_qualification(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_decision_scope_preference_fk
+    FOREIGN KEY (tenant_id, supplier_preference_id) REFERENCES control.supplier_preference_designation(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_decision_scope_designation_fk
+    FOREIGN KEY (tenant_id, customer_designation_id) REFERENCES control.customer_account_designation(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_decision_scope_credit_fk
+    FOREIGN KEY (tenant_id, credit_review_id) REFERENCES control.customer_credit_review(tenant_id,id) ON DELETE CASCADE,
+    ADD CONSTRAINT business_partner_decision_scope_org_fk
+    FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_company_fk
+    FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_commodity_fk
+    FOREIGN KEY (tenant_id, commodity_category_id) REFERENCES master.commodity_category(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_country_fk
+    FOREIGN KEY (country_code) REFERENCES shared.country(code) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_jurisdiction_fk
+    FOREIGN KEY (tenant_id, tax_jurisdiction_id) REFERENCES master.tax_jurisdiction(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_org_unit_fk
+    FOREIGN KEY (tenant_id, organization_unit_id) REFERENCES master.org_unit(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_created_by_fk
+    FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT,
+    ADD CONSTRAINT business_partner_decision_scope_no_overlap_excl
+    EXCLUDE USING gist (
+        tenant_id WITH =,
+        COALESCE(qualification_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(supplier_preference_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(customer_designation_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(credit_review_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        scope_group WITH =, scope_mode WITH =, scope_kind WITH =,
+        COALESCE(operating_organization_id,company_code_id,commodity_category_id,tax_jurisdiction_id,organization_unit_id,'00000000-0000-0000-0000-000000000000'::uuid) WITH =,
+        COALESCE(country_code,'**'::bpchar) WITH =,
+        daterange(effective_from,COALESCE(effective_until,'infinity'::date),'[)') WITH &&
+    );

@@ -274,7 +274,7 @@ CREATE DOMAIN master.business_partner_legal_classification_d AS text
     CHECK (VALUE IN ('government', 'nonprofit', 'sole_proprietor'));
 
 COMMENT ON DOMAIN master.business_partner_category_d IS
-  'Structural party kind only: organization, person, or reserved group.';
+  'Compatibility structural kind. S2 permits only organization on new NEON Business Partner rows; person and group remain readable only for pre-S2 history.';
 COMMENT ON DOMAIN master.business_partner_ownership_d IS
   'Tenant ownership axis, independent of structural party kind and commercial role.';
 COMMENT ON DOMAIN master.business_partner_legal_classification_d IS

@@ -332,7 +332,13 @@ WITH supplier_role AS (
             c.customer_type,
             c.status AS customer_status,
             c.is_active AS customer_is_active,
-            COALESCE(c.is_key_account, false) AS is_key_account,
+            EXISTS (
+                SELECT 1 FROM control.customer_account_designation designation
+                 WHERE designation.tenant_id=c.tenant_id AND designation.customer_id=c.id
+                   AND designation.designation_type='key_account' AND designation.status='approved'
+                   AND designation.effective_from<=CURRENT_DATE
+                   AND(designation.effective_until IS NULL OR designation.effective_until>CURRENT_DATE)
+            ) AS is_key_account,
             NULL::text AS risk_rating,
             count(ccp.id)::integer AS customer_company_scope_count,
             count(ccp.id) FILTER (WHERE ccp.is_active)::integer AS customer_active_scope_count,
@@ -342,7 +348,7 @@ WITH supplier_role AS (
             c.updated_at AS customer_updated_at
            FROM master.customer c
              LEFT JOIN master.company_code_customer_profile ccp ON ccp.tenant_id = c.tenant_id AND ccp.customer_id = c.id
-          GROUP BY c.tenant_id, c.business_partner_id, c.id, c.customer_code, c.customer_type, c.status, c.is_active, c.is_key_account, c.created_at, c.updated_at
+          GROUP BY c.tenant_id, c.business_partner_id, c.id, c.customer_code, c.customer_type, c.status, c.is_active, c.created_at, c.updated_at
         )
  SELECT bp.id,
     bp.tenant_id,
@@ -604,7 +610,13 @@ UNION ALL
     COALESCE(cs.company_scope_count, 0) AS company_scope_count,
     COALESCE(cs.blocked_scope_count, 0) AS blocked_scope_count,
     NULL::boolean AS is_payment_ready,
-    COALESCE(c.is_key_account, false) AS is_key_account,
+    EXISTS (
+        SELECT 1 FROM control.customer_account_designation designation
+         WHERE designation.tenant_id=c.tenant_id AND designation.customer_id=c.id
+           AND designation.designation_type='key_account' AND designation.status='approved'
+           AND designation.effective_from<=CURRENT_DATE
+           AND(designation.effective_until IS NULL OR designation.effective_until>CURRENT_DATE)
+    ) AS is_key_account,
     NULL::text AS risk_rating,
     COALESCE(cs.blocked_scope_count, 0) > 0 OR (c.status::text = ANY (ARRAY['on_hold'::text, 'credit_hold'::text])) AS is_blocked,
     cs.primary_currency_code,
@@ -963,3 +975,14 @@ COMMENT ON VIEW master.business_partner_governance_summary IS
   'Canonical governance summary over business_partner_governance_relation.';
 COMMENT ON VIEW master.entity_commodity_assignment IS
   'Canonical commodity assignment projection replacing v_entity_commodity.';
+
+CREATE VIEW master.legal_entity_business_partner_link
+WITH (security_invoker = true, security_barrier = true) AS
+SELECT id, tenant_id, legal_entity_id, business_partner_id,
+       effective_from, effective_until, notes, metadata, status, is_active,
+       status_changed_at, status_changed_by, created_at, created_by,
+       updated_at, updated_by
+FROM master.legal_entity_internal_partner_link;
+
+COMMENT ON VIEW master.legal_entity_business_partner_link IS
+  'Deprecated read-compatibility alias. New code must use master.legal_entity_internal_partner_link.';

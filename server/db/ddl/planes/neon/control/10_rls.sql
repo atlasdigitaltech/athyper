@@ -78,6 +78,15 @@ CREATE POLICY tenant_access ON control.supplier_preference_designation
 CREATE POLICY seed_write ON control.supplier_preference_designation
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
 
+ALTER TABLE control.customer_account_designation ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.customer_account_designation FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.customer_account_designation
+    FOR ALL
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY seed_write ON control.customer_account_designation
+    FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
 ALTER TABLE control.business_partner_block ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.business_partner_block FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON control.business_partner_block
@@ -93,6 +102,8 @@ BEGIN
         CREATE POLICY admin_access ON control.business_partner_qualification
             FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
         CREATE POLICY admin_access ON control.supplier_preference_designation
+            FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
+        CREATE POLICY admin_access ON control.customer_account_designation
             FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
         CREATE POLICY admin_access ON control.business_partner_block
             FOR ALL TO athyperadmin USING (true) WITH CHECK (true);
@@ -445,6 +456,14 @@ ALTER TABLE control.customer_lifecycle_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE control.customer_lifecycle_event FORCE ROW LEVEL SECURITY;
 CREATE POLICY tenant_access ON control.customer_lifecycle_event USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON control.customer_lifecycle_event FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE control.business_partner_mutation_evidence ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.business_partner_mutation_evidence FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.business_partner_mutation_evidence FOR SELECT USING(tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY seed_write ON control.business_partner_mutation_evidence FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+ALTER TABLE control.business_partner_decision_scope ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.business_partner_decision_scope FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON control.business_partner_decision_scope USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON control.business_partner_decision_scope FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 DO $$
 DECLARE v_table text;
 BEGIN

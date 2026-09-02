@@ -9,7 +9,6 @@ export * from "./business-partner-360-sections.js";
 export * from "./business-partner-360-role-sections.js";
 export * from "./business-partner-360-commercial-controls.js";
 export * from "./business-partner-360-explainability.js";
-export * from "./business-partner-360-workforce.js";
 export * from "./business-partner-360-network.js";
 export * from "./business-partner-invitations.js";
 export type * from "./business-partner-invitation-ports.js";

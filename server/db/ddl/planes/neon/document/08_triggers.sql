@@ -704,7 +704,7 @@ DECLARE v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
         'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request',
+        'employee_tax_declaration','employee_tax_declaration_line','leave_request','leave_balance_entry','people_request','workforce_request',
         'hr_case','onboarding_case','offboarding_case','payroll_period','payroll_run','payroll_run_employee',
         'payroll_result','payroll_result_line','policy_acknowledgment'
     ] LOOP
@@ -712,7 +712,7 @@ BEGIN
     END LOOP;
     FOREACH v_table IN ARRAY ARRAY[
         'shift_assignment','time_punch','attendance_day','attendance_adjustment_request','compensation_change',
-        'employee_tax_declaration','leave_request','people_request','hr_case','onboarding_case','offboarding_case',
+        'employee_tax_declaration','leave_request','people_request','workforce_request','hr_case','onboarding_case','offboarding_case',
         'payroll_period','payroll_run','payroll_run_employee','payroll_result'
     ] LOOP
         EXECUTE format('CREATE TRIGGER trg_%1$s_05_creation_guard BEFORE UPDATE ON document.%1$I FOR EACH ROW EXECUTE FUNCTION document.trg_guard_creation_evidence()',v_table);
@@ -744,6 +744,10 @@ CREATE TRIGGER trg_leave_request_15_state BEFORE INSERT OR UPDATE ON document.le
 CREATE TRIGGER trg_leave_balance_entry_10_contract BEFORE INSERT ON document.leave_balance_entry FOR EACH ROW EXECUTE FUNCTION document.trg_validate_leave_contract();
 CREATE TRIGGER trg_leave_balance_entry_15_immutable BEFORE UPDATE OR DELETE ON document.leave_balance_entry FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_people_request_15_state BEFORE INSERT OR UPDATE ON document.people_request FOR EACH ROW EXECUTE FUNCTION document.trg_manage_hr_approval();
+CREATE TRIGGER trg_workforce_request_15_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.workforce_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_workforce_request();
+CREATE TRIGGER trg_workforce_request_validation_immutable BEFORE UPDATE OR DELETE ON document.workforce_request_validation FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_hr_case_15_state BEFORE INSERT OR UPDATE ON document.hr_case FOR EACH ROW EXECUTE FUNCTION document.trg_manage_hr_case();
 CREATE TRIGGER trg_onboarding_case_15_state BEFORE INSERT OR UPDATE ON document.onboarding_case FOR EACH ROW EXECUTE FUNCTION document.trg_manage_people_case();
 CREATE TRIGGER trg_offboarding_case_15_state BEFORE INSERT OR UPDATE ON document.offboarding_case FOR EACH ROW EXECUTE FUNCTION document.trg_manage_people_case();
@@ -953,6 +957,10 @@ FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request();
 CREATE TRIGGER trg_business_partner_request_15_registration_guard
 BEFORE INSERT OR UPDATE ON document.business_partner_request
 FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_registration();
+CREATE TRIGGER trg_business_partner_request_payload_boundary
+BEFORE INSERT OR UPDATE OF proposed_payload, extension_mode, extension_fingerprint, extension_counts
+ON document.business_partner_request
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_payload_boundary();
 CREATE TRIGGER trg_business_partner_request_20_status
 BEFORE UPDATE OF status, status_changed_at, status_changed_by
 ON document.business_partner_request
@@ -970,6 +978,32 @@ FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_eviden
 CREATE TRIGGER trg_business_partner_request_validation_immutable
 BEFORE UPDATE OR DELETE ON document.business_partner_request_validation
 FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
+
+CREATE TRIGGER trg_business_partner_request_address_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_address
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_contact_person_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_contact_person
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_contact_channel_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_contact_channel
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_identifier_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_identifier
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_tax_registration_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_tax_registration
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_classification_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_classification
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_certification_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_certification
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+CREATE TRIGGER trg_business_partner_request_materialization_item_guard
+BEFORE INSERT OR UPDATE OR DELETE ON document.business_partner_request_materialization_item
+FOR EACH ROW EXECUTE FUNCTION document.trg_guard_business_partner_request_extension();
+
 CREATE TRIGGER trg_mesh_business_partner_match_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_match FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_mesh_business_partner_acceptance_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();
 CREATE TRIGGER trg_mesh_business_partner_acceptance_event_immutable BEFORE UPDATE OR DELETE ON document.mesh_business_partner_acceptance_event FOR EACH ROW EXECUTE FUNCTION document.trg_reject_update();

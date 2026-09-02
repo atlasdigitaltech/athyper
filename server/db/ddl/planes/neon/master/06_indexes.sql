@@ -297,10 +297,6 @@ CREATE UNIQUE INDEX customer_code_uq
 CREATE INDEX customer_status_type_idx
     ON master.customer (tenant_id, status, customer_type);
 
-CREATE INDEX customer_key_account_idx
-    ON master.customer (tenant_id, customer_code)
-    WHERE is_key_account AND status = 'active';
-
 CREATE INDEX customer_created_by_idx
     ON master.customer (tenant_id, created_by);
 
@@ -1127,11 +1123,11 @@ CREATE INDEX company_code_customer_profile_company_idx
     ON master.company_code_customer_profile
        (tenant_id, company_code_id, status, customer_id);
 
-CREATE UNIQUE INDEX legal_entity_business_partner_link_legal_uq
-    ON master.legal_entity_business_partner_link (tenant_id, legal_entity_id)
+CREATE UNIQUE INDEX legal_entity_internal_partner_link_legal_uq
+    ON master.legal_entity_internal_partner_link (tenant_id, legal_entity_id)
     WHERE effective_until IS NULL AND status = 'active';
-CREATE UNIQUE INDEX legal_entity_business_partner_link_partner_uq
-    ON master.legal_entity_business_partner_link (tenant_id, business_partner_id)
+CREATE UNIQUE INDEX legal_entity_internal_partner_link_partner_uq
+    ON master.legal_entity_internal_partner_link (tenant_id, business_partner_id)
     WHERE effective_until IS NULL AND status = 'active';
 
 CREATE UNIQUE INDEX intercompany_trading_pair_current_uq
@@ -1175,3 +1171,11 @@ CREATE INDEX organization_amendment_resource_idx ON master.organization_amendmen
 CREATE INDEX organization_amendment_effective_idx ON master.organization_amendment(tenant_id,effective_at DESC);
 CREATE INDEX external_worker_status_idx
     ON master.external_worker (tenant_id, status, worker_number);
+CREATE INDEX business_partner_alias_resolution_idx
+    ON master.business_partner_alias
+    (tenant_id, business_partner_id, effective_from, effective_until)
+    WHERE status = 'active';
+
+CREATE INDEX business_partner_alias_normalized_idx
+    ON master.business_partner_alias (tenant_id, normalized_alias)
+    WHERE status = 'active';

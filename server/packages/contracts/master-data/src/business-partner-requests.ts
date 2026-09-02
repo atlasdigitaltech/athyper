@@ -14,21 +14,19 @@ export const businessPartnerPermissions = Object.freeze({ read: "neon.relationsh
 
 export type BusinessPartnerRequestKind =
   | "new_partner" | "amend_partner" | "add_supplier" | "add_customer"
-  | "add_workforce"
   | "assign_organization" | "configure_company" | "change_bank"
-  | "change_employment"
   | "deactivate" | "reactivate" | "archive";
 export type BusinessPartnerRequestSourceKind = "manual" | "portal" | "mesh" | "import" | "api";
 export type BusinessPartnerRegistrationMode = "direct" | "self_service" | "on_behalf" | "integration";
-export type BusinessPartnerRequestedRole = "supplier" | "customer" | "workforce";
+export type BusinessPartnerRequestedRole = "supplier" | "customer";
 export type BusinessPartnerRequestStatus =
   | "draft" | "validating" | "validation_failed" | "pending_approval"
   | "returned" | "approved" | "rejected" | "applying" | "applied"
   | "failed" | "cancelled" | "superseded";
 export type BusinessPartnerApplicationResultKind =
-  | "partner_role_created" | "workforce_created" | "partner_amended"
+  | "partner_role_created" | "partner_amended"
   | "organization_assigned" | "company_configured" | "bank_verification_started"
-  | "employment_changed" | "partner_deactivated" | "partner_reactivated" | "partner_archived";
+  | "partner_deactivated" | "partner_reactivated" | "partner_archived";
 
 export interface BusinessPartnerRequestSource {
   readonly kind: BusinessPartnerRequestSourceKind;
@@ -160,6 +158,7 @@ export interface BusinessPartnerRequest {
   readonly requestedRole?: BusinessPartnerRequestedRole;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
+  /** Historical persistence only; new Business Partner commands cannot write workforce scope. */
   readonly legalEntityId?: string;
   readonly orgUnitId?: string;
   readonly positionId?: string;
@@ -173,6 +172,7 @@ export interface BusinessPartnerRequest {
   readonly materializedBusinessPartnerId?: string;
   readonly materializedSupplierId?: string;
   readonly materializedCustomerId?: string;
+  /** Historical result coordinates retained for immutable pre-S2 request evidence. */
   readonly materializedPersonId?: string;
   readonly materializedEmployeeId?: string;
   readonly materializedEmploymentId?: string;
@@ -218,9 +218,6 @@ export interface CreateBusinessPartnerRequestCommand {
   readonly requestedRole?: BusinessPartnerRequestedRole;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
-  readonly legalEntityId?: string;
-  readonly orgUnitId?: string;
-  readonly positionId?: string;
   readonly proposedPayload: Readonly<Record<string, unknown>>;
   readonly extensions?: BusinessPartnerRequestExtensions;
 }
@@ -233,9 +230,6 @@ export interface PatchBusinessPartnerRequestCommand {
   readonly extensions?: BusinessPartnerRequestExtensions;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string | null;
-  readonly legalEntityId?: string | null;
-  readonly orgUnitId?: string | null;
-  readonly positionId?: string | null;
   readonly requestedRole?: BusinessPartnerRequestedRole | null;
   readonly representationEvidenceId?: string | null;
 }
@@ -345,16 +339,10 @@ export interface ApplyBusinessPartnerRequestCommand {
 export interface BusinessPartnerRequestMaterialization {
   readonly businessPartnerId: string;
   readonly resultKind: BusinessPartnerApplicationResultKind;
-  readonly partnerRole?: "supplier" | "customer" | "workforce";
+  readonly partnerRole?: "supplier" | "customer";
   readonly roleId?: string;
   readonly supplierId?: string;
   readonly customerId?: string;
-  readonly personId?: string;
-  readonly employeeId?: string;
-  readonly employmentId?: string;
-  readonly workAssignmentId?: string;
-  readonly onboardingCaseId?: string;
-  readonly principalId?: string;
   readonly bankVerificationId?: string;
   readonly reasonCode?: string;
   readonly companyProfileId?: string;
@@ -402,11 +390,12 @@ export interface BusinessPartnerAggregate {
     createdAt: string; updatedAt?: string;
   }>[];
   readonly customers: readonly Readonly<{
-    id: string; customerCode: string; customerType: string; isKeyAccount: boolean; status: string;
+    id: string; customerCode: string; customerType: string; status: string;
+    designations: readonly Readonly<{id:string;type:string;priorityTier?:number;effectiveFrom:string;effectiveUntil?:string}>[];
     createdAt: string; updatedAt?: string;
   }>[];
   readonly supplierCompanyProfiles: readonly Readonly<{id:string;supplierId:string;companyCodeId:string;currencyCode?:string;paymentTermId?:string;status:string;createdAt:string;updatedAt?:string}>[];
-  readonly customerCompanyProfiles: readonly Readonly<{id:string;customerId:string;companyCodeId:string;currencyCode?:string;creditLimit?:number;creditLimitCurrencyCode?:string;paymentTermId?:string;statementCycleCode?:string;status:string;createdAt:string;updatedAt?:string}>[];
+  readonly customerCompanyProfiles: readonly Readonly<{id:string;customerId:string;companyCodeId:string;currencyCode?:string;paymentTermId?:string;statementCycleCode?:string;status:string;createdAt:string;updatedAt?:string}>[];
   readonly organizationAssignments: readonly Readonly<{
     id: string; operatingOrganizationId: string; operatingOrganizationCode: string;
     operatingOrganizationName: string; partnerRole: string; status: string;
