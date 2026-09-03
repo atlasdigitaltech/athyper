@@ -528,6 +528,185 @@ No application service may maintain a second status or decision authority in met
 
 The six principal net-new relations are `document.entity_change_case`, `governance.cycle_subject`, `metadata.entity_surface_component_binding`, `snapshot.entity_snapshot_lineage`, `governance.authority_register`, and `mesh.network_relationship_capability`. Everything else should extend or converge an existing authority unless a later evidence-backed review proves a separate operational projection is required.
 
+### 12.6 End-to-end physical architecture and IAM organization correlation
+
+#### 12.6.1 Identity spine and database boundary
+
+One real-world organization can have several purpose-specific representations. They are correlated by one opaque `canonical_party_id`; they are not the same record and do not share lifecycle authority.
+
+```text
+Studio administration database
+  master.canonical_party.id
+          |
+          | copied opaque correlation value; verified and reconciled
+          | no cross-database foreign key and no authorization semantics
+          +----------------------+----------------------+----------------------+
+          |                      |                      |                      |
+  trustiam.organization   MESH mesh.network_account  NEON legal entity   NEON business partner
+  .canonical_party_id     .canonical_party_id        .canonical_party_id .canonical_party_id
+          |                      |                                             |
+          | desired IAM         | exchange identity                           +-- master.supplier
+          | organization        +-- network relationship                      +-- master.customer
+          | and plane scopes    +-- document envelopes                        +-- governed children
+          |
+          +-- trustiam.application_projection
+                +-- trustiam.projection_scope
+```
+
+The correlation has these invariants:
+
+1. Studio `master.canonical_party` is the deduplicated party-correlation authority. It is not an IAM organization, application tenant, MESH account, legal entity or NEON Business Partner.
+2. `canonical_party_id` is copied into each plane by a governed projection. Because the planes are independently deployed databases, consumers must not assume a physical cross-database FK.
+3. The canonical-party ID is not a login subject, credential, role, permission or tenant selector. Possessing or matching it grants no access.
+4. A plane must validate a copied claim against the signed projection/event, store source version and hash, and reconcile missing, duplicate, merged or conflicting claims.
+5. A canonical-party merge never rewrites history. New/current projections point to the survivor; snapshot lineage and merge evidence preserve the losing coordinates.
+6. A single canonical party may have more than one purpose-specific MESH account or NEON representation. Live uniqueness is therefore by `(canonical_party_id, purpose)`, not by `canonical_party_id` alone.
+
+#### 12.6.2 Meaning of “organization” by boundary
+
+| Term | Physical authority | Meaning | Must not be used as |
+|---|---|---|---|
+| Canonical party | Studio `master.canonical_party` | Deduplicated real-world party and reconciliation anchor | Tenant, credential or operational master |
+| IAM organization | Studio `trustiam.organization` plus external provider organization | Desired identity-administration container | Supplier/customer master or authorization grant |
+| Tenant | Plane-local `master.tenant` | Data-isolation and administrative ownership boundary | Real-world-party identifier |
+| Legal entity | NEON `master.legal_entity` | Internal statutory organization | External Business Partner |
+| Operating organization | NEON `master.operating_organization` | Internal procurement/sales responsibility scope | Identity-provider organization |
+| Business Partner | NEON `master.business_partner` | Recipient-local external organization master | Person, tenant or MESH account |
+| Supplier/customer | NEON `master.supplier` / `master.customer` | Commercial role of a Business Partner | Duplicate organization identity |
+| Network account | MESH `mesh.network_account` | Party endpoint for exchange and relationships | Login identity or recipient-local master |
+| Principal | Plane-local `master.principal` | Application actor projected from an identity subject | Organization or Business Partner |
+
+An IAM organization normally represents the party administering a tenant or delegated external access. A NEON Business Partner represents an organization the tenant does business with. They may share a canonical party—for example, a supplier self-service IAM organization and the buyer's supplier BP—but that match alone must never provision access. Access additionally requires an active identity binding, an approved application projection, an effective scope, and applicable relationship/engagement policy.
+
+#### 12.6.3 Studio and TrustIAM table/field contract
+
+| Table | Fields that form the contract | Governance rule |
+|---|---|---|
+| `master.canonical_party` | `authority_tenant_id`, `id`, `party_kind`, `legal_name`, `display_name`, `incorporation_country_code`, `verification_status`, `status`, `merged_into_party_id`, `record_version` | `id` is the only plane correlation token. Names are descriptive and cannot be used to join records. Only verified matching/merge commands change party identity. |
+| `master.canonical_party_identifier` | `party_id`, `scheme`, issuer coordinates, `normalized_value`, `value_hash`, `claim_status`, `verification_status`, `evidence_snapshot`, valid time | Matching uses normalized and hashed identifiers under purpose policy. Raw values must be protected according to classification. |
+| `master.canonical_party_relationship` | `from_party_id`, `to_party_id`, `relationship_kind`, `verification_status`, `status`, valid time | Describes real-world group/subsidiary relations; it does not imply MESH connectivity or IAM inheritance. |
+| `master.canonical_party_merge` | losing/surviving IDs, `approved_case_id`, reason, before/after snapshots, approver, effective time | Maker-checker merge evidence and permanent lineage. |
+| `trustiam.organization` | `authority_tenant_id`, `canonical_party_id`, `realm_key`, `external_organization_id`, `organization_alias`, `status`, observed adapter version/time | Desired-state IAM organization. `(realm_key, external_organization_id)` addresses the provider object; alias/display name never identifies authority. |
+| `trustiam.organization_provider` | `organization_id`, `protocol`, `provider_code`, `external_provider_id`, `approved_domains`, `routing_contract`, `status` | Stores routing and approval, never credentials or secrets. Domain ownership is verified before activation. |
+| `trustiam.application_projection` | `organization_id`, `target_plane`, `target_tenant_id`, `desired_version`, `desired_hash`, source case/resource, status, reconciliation status, valid time | Declares desired organization presence in a plane. It does not itself grant access. |
+| `trustiam.projection_scope` | `projection_id`, `scope_kind`, `target_id`, `ceiling_mode`, `network_role_ceiling`, `desired_version`, status | Maximum organizational/network boundary the projection may address. Application grants must be equal to or narrower than this ceiling. |
+| `trustiam.identity_provisioning_request` | `subject_key`, idempotency/fingerprint, realm and normalized identifier, target planes, provider subject, status/version | Creates or reconciles a human/service identity. It remains separate from organization correlation. |
+
+Every projection event must carry `authority_tenant_id`, `canonical_party_id`, source aggregate/version/hash, target plane/tenant, operation, effective range, correlation/causation IDs and idempotency key. Plane adapters acknowledge desired and observed versions; a mismatch is quarantined rather than silently rebound.
+
+#### 12.6.4 MESH table/field contract
+
+| Table | Required identity/lifecycle fields | Authority and relation to NEON/IAM |
+|---|---|---|
+| `mesh.network_account` | `tenant_id`, `id`, `canonical_party_id`, `account_purpose_code`, `account_code`, names, `network_role`, country/currency, `status` | MESH exchange endpoint. `canonical_party_id` correlates the party; `tenant_id` owns the row; neither authenticates a principal. |
+| `mesh.network_account_identifier` | `network_account_id`, `scheme`, `identifier_value`, issuer, primary/verification/status | Network matching evidence; do not use mutable names or account codes as the NEON BP key. |
+| `mesh.network_account_identity` | account/tenant coordinates, immutable canonical-party/purpose coordinates, evidence/version | Hardened immutable identity head used to detect account-coordinate mutation and replay. |
+| `mesh.network_relationship` and `mesh.network_relationship_identity` | buyer/supplier account and tenant coordinates, kind, status/version, effective time | Cross-tenant relationship episode. It does not create a NEON supplier or an IAM grant. |
+| `mesh.network_relationship_capability` (new) | relationship ID, `capability_code`, requested/approved/effective timestamps, status/version, routing policy, actor/evidence | Gates `profile_exchange`, `sourcing`, `procurement`, `invoicing`, `payments` and `services_procurement` independently. |
+| `mesh.document_envelope` / payload / event / acknowledgement | sender/receiver account, relationship and capability, document/contract/hash, purpose, classification, correlation, idempotency, lifecycle state | Immutable exchange transport and evidence. Payload values remain proposals until a NEON command materializes them. |
+| `mesh.network_account_profile_publication` and event | publisher account, release/field set, recipient/purpose, snapshot/hash, valid time/status | Recipient-specific disclosure projection, not a shared global master. |
+| `mesh.network_command_evidence` | aggregate and command coordinates, before/after version, actor, fingerprint, result | Append-only proof for command-owned MESH lifecycle changes. |
+
+MESH principals are authorized using the authenticated principal-to-network-account binding and active relationship capability. `canonical_party_id` is used only as a consistency claim. A relationship must fail closed if sender/receiver tenants, accounts, capability, principal binding or immutable identity head disagree.
+
+#### 12.6.5 NEON Business Partner table/field contract
+
+| Aggregate/table | Key fields | Field-level authority |
+|---|---|---|
+| `master.business_partner` | `tenant_id`, `id`, `canonical_party_id`, `representation_purpose_code`, `code`, names/legal attributes, parent, `status`, `record_version` | Organization identity and recipient-local lifecycle. `partner_category='organization'`; code is tenant-local; canonical party is correlation only. Status changes only through governed commands. |
+| `master.supplier` | `tenant_id`, `id`, `business_partner_id`, `supplier_code`, supplier type, `status`, version | Supplier-role state. It does not duplicate BP legal/name fields. |
+| `master.customer` | `tenant_id`, `id`, `business_partner_id`, `customer_code`, customer type, `status`, version | Customer-role state. Credit and designation remain separate control authorities. |
+| `master.business_partner_operating_organization_assignment` | BP/role IDs, `operating_organization_id`, effective range, status | Declares where the internal procurement/sales organization may use the role. It is an authorization/readiness scope, not party identity. |
+| Company supplier/customer profiles | role ID, `company_code_id`, accounting/payment/configuration fields, status/effective range | Company-specific operational setup; no global role status or legal identity duplication. |
+| Normalized BP child tables | BP ID plus stable item ID, type/catalog reference, normalized value, verification, valid time/status | Addresses, contacts, identifiers, tax registrations, classifications, certifications and aliases. Contract fields map here only after approval. |
+| `control.business_partner_qualification` | BP/supplier, process/decision, evidence and effective range | Qualification decision authority. |
+| `control.supplier_preference_designation` | BP/supplier, designation, scope/effective range, decision evidence | Buyer-owned preference authority. |
+| `control.customer_credit_review` | BP/customer, approved amount/currency, scope, decision/effective range | Sole approved credit authority. Request payload may contain requested values only. |
+| `control.customer_account_designation` | BP/customer, designation, scope/effective range, decision evidence | Customer classification/designation authority. |
+| `control.business_partner_decision_scope` | exactly one decision parent plus typed organization/company/commodity/geographic scope, include/exclude, hierarchy version, valid time | Normalized applicability; no expanding nullable scope fields on decision heads. |
+| `control.mesh_business_partner_account_link` | recipient tenant/BP, source tenant/account, recipient account, relationship, role, external reference, decision/status/version | Governed assertion that one MESH account represents a specific recipient-local BP. Approval is required even when canonical-party IDs match. |
+| `master.external_reference` | owner/entity coordinates, source system/external ID, valid time/status | Recipient-local durable external correlation and replay-safe lookup. |
+| `control.business_partner_mutation_evidence` | aggregate/BP, command, from/to state/version, actor, idempotency/fingerprint, evidence | Append-only proof of all authoritative BP and role mutations. |
+
+The account-link command must enforce all of the following before `status='active'`: the MESH account identity is verified; the relationship and `profile_exchange` capability are effective; the incoming and BP canonical-party claims are either equal or an approved reconciliation case explains the difference; the NEON duplicate decision is complete; source/recipient coordinates agree with the received envelope; and maker-checker evidence exists. A later mismatch sets the link to suspended/quarantined and opens a reconciliation case; it never rewrites the BP automatically.
+
+#### 12.6.6 Contract field-to-column materialization matrix
+
+Published field metadata must contain a stable semantic field ID, classification, proposal path, materializer code and authority target. Physical columns are compiler output and may change without changing the semantic ID.
+
+| Semantic field example | Proposal/snapshot path | Approved NEON target | MESH disclosure | IAM use |
+|---|---|---|---|---|
+| Organization legal name | `organization.legalName` | `master.business_partner.legal_name` | Allowed in an approved exchange field set | May populate display text only; never provider key |
+| Display name | `organization.displayName` | `master.business_partner.display_name` | Usually allowed | `trustiam.organization.display_name` is a separately projected copy |
+| Incorporation country | `organization.incorporation.countryCode` | `master.business_partner.registration_country_code` | Allowed by purpose/classification | Matching/reconciliation input only |
+| Registration identifier | `organization.identifiers[$itemId]` | normalized BP identifier child row | Selective disclosure; protect raw value as classified | Canonical-party identifier verification input, not login identifier |
+| Address | `organization.addresses[$itemId]` | BP address/relation child | Recipient-specific field set | No IAM authority |
+| Contact | `organization.contacts[$itemId]` | BP contact person/channel children | Purpose/consent limited | A contact is not automatically an IAM principal |
+| Supplier type | `roles.supplier.typeCode` | `master.supplier.supplier_type` | Optional profile fact | No IAM authority |
+| Customer type | `roles.customer.typeCode` | `master.customer.customer_type` | Optional profile fact | No IAM authority |
+| Qualification answer | `qualification.responses[...]` | immutable snapshots; approved result to `control.business_partner_qualification` | Request/response document only | No IAM authority |
+| Requested credit | `customer.credit.requestedAmount` | request snapshot only | Optional request document | No IAM authority |
+| Approved credit | not writable by external form | `control.customer_credit_review` | Decision acknowledgement may disclose outcome | No IAM authority |
+| Bank account | protected disclosure reference/token | protected bank authority/link after verification | Token/encrypted disclosure only | Prohibited |
+| IAM organization alias/domain | separate IAM onboarding contract | no BP column | Not a BP-profile field | `trustiam.organization` / provider after domain verification |
+
+Materialization follows `missing/null/clear/replace/append/revoke/preserve` semantics from the pinned contract. The adapter writes only its registered targets, records source-member-to-target-row lineage, and emits a result snapshot containing the complete aggregate. No generic JSON-to-column reflection is permitted in an authoritative command.
+
+#### 12.6.7 Lifecycle state propagation
+
+```text
+verified canonical party
+  -> IAM organization desired/provisioned (administrative identity path)
+  -> MESH account pending/active (exchange path)
+  -> MESH relationship + profile_exchange capability
+  -> signed disclosure envelope
+  -> NEON received/transformed/proposal snapshots
+  -> duplicate and canonical-party reconciliation
+  -> approved entity-change case
+  -> materialize Business Partner in onboarding state
+  -> approve MESH-account-to-BP link
+  -> create supplier/customer role in onboarding state
+  -> organization/company configuration and scoped decisions
+  -> readiness decision
+  -> command-owned activation
+  -> IAM application access only when separately requested and approved
+```
+
+State propagation is event-driven and monotonic by aggregate version. It is not distributed two-phase commit. Each consumer stores an inbox idempotency key, source version and hash, applies one local atomic command, publishes an outbox event, and acknowledges the source. Gaps, stale versions, hash conflicts and unknown contracts are quarantined and replayable.
+
+Lifecycle effects are deliberately asymmetric:
+
+| Source event | Required downstream behavior |
+|---|---|
+| Canonical party merged/contested | Suspend new correlation decisions; reconcile projections and links; preserve historical IDs. |
+| IAM organization suspended | Revoke/invalidate associated identity access; do not deactivate the BP or MESH account automatically. |
+| MESH account/relationship/capability suspended | Stop affected exchange routes; quarantine new envelopes; evaluate linked external access. Do not erase the NEON BP. |
+| NEON BP archived | Disable recipient-local commercial use and links according to policy; do not retire the sender's MESH account. |
+| Supplier/customer role suspended | Block that commercial role and dependent access/readiness only; preserve the other role. |
+| Worker engagement/supplier access dependency ended | Deprovision scoped external-worker access and increment the principal authorization epoch. |
+
+#### 12.6.8 RLS, grants and field protection
+
+- Every plane-local row uses its local tenant/authority-tenant key and tenant-composite FKs. Request context must set authenticated `principal_id`, tenant and, where required, network account; callers cannot supply trusted context through payload JSON.
+- Runtime roles receive `EXECUTE` on governed commands and read access to approved projections. They do not receive direct updates to lifecycle, decision, correlation, scope, hash, version or approval fields.
+- `canonical_party_id`, external provider IDs, principal bindings and account-link coordinates are immutable after activation except through correction/merge commands with evidence.
+- RLS is forced on tenant-owned authorities and symmetric on relationship-derived MESH objects. Cross-tenant visibility must be derived from both relationship participation and active capability.
+- Public/general snapshots exclude credentials, secrets, national identifiers, raw bank data and unrestricted workforce PII. Protected values use tokenization or envelope encryption with purpose, recipient, key version, expiry and crypto-shredding policy.
+- Read models expose masked identifiers and classification-filtered fields. Field-level permission checks operate on stable semantic field IDs/classifications, not hard-coded UI names.
+
+#### 12.6.9 Reconciliation and acceptance gates
+
+The end-to-end implementation is complete only when automated checks prove:
+
+1. every active TrustIAM organization, MESH account, NEON legal entity and correlated BP has a resolvable, non-merged canonical-party claim or an open exception;
+2. no canonical-party match alone results in a principal binding, permission, role or application grant;
+3. each active `mesh_business_partner_account_link` resolves to an effective relationship capability and agreeing immutable source/recipient coordinates;
+4. BP, supplier, customer, decision and account-link protected fields are writable only through registered commands;
+5. each submitted/decision/result snapshot is contract-hash valid and its field-level lineage resolves to either a normalized authority row or an explicitly request-only field;
+6. tenant isolation, participant symmetry, stale-version rejection, exact replay, maker-checker, rollback atomicity and outbox replay pass on clean and upgraded databases;
+7. suspension and termination scenarios revoke the correct MESH routes and IAM scopes without conflating independent aggregate lifecycles; and
+8. authority-register drift checks reconcile DDL constraints, grants, triggers, commands, events, retention and prohibited field placement in all three planes.
+
 ## 13. Table disposition
 
 ### 13.0 Current-use finding
