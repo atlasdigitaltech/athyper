@@ -88,10 +88,20 @@ export interface ExperienceLocaleCatalogGovernanceRecord {
 }
 export interface ExperienceLocalePolicyRecord { readonly catalogs?: readonly ExperienceLocaleCatalogGovernanceRecord[]; readonly enabledLocales: readonly string[]; readonly defaultLocale: string; readonly fallbackLocale: string; readonly revision: string; }
 
+export interface ExperienceSurfaceReleaseRecord {
+  readonly id: string; readonly targetPlane: "studio" | "neon" | "mesh"; readonly surfaceKey: string;
+  readonly layer: "shared" | "tenant"; readonly revision: number; readonly status: "draft" | "published" | "retired";
+  readonly definition: Readonly<Record<string, unknown>>; readonly contentHash: string; readonly source: "human" | "atlas";
+  readonly publishedAt?: string;
+}
+export interface ExperienceSurfaceProjectionRecord { readonly surfaceKey: string; readonly layer: "shared" | "tenant"; readonly sourceReleaseId: string; readonly sourceRevision: number; readonly definition: Readonly<Record<string, unknown>>; readonly contentHash: string; }
+export interface PersonalSurfaceArrangementRecord { readonly surfaceKey: string; readonly baseRevision: number; readonly arrangement: Readonly<Record<string, unknown>>; }
+export interface RouteSlugRedirectRecord { readonly sourcePath: string; readonly targetPath: string; readonly redirectStatus: 301 | 308; }
+
 export interface ExperienceCatalogRecord {
   readonly planActive: boolean;
   readonly planRevision: string;
-  readonly associations: readonly Readonly<{ workspaceCode: string; workspaceName: string; workspaceIconKey?: string; workspaceSortOrder: number; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey?: string; moduleSortOrder: number; primary: boolean; revision: string }>[];
+  readonly associations: readonly Readonly<{ workspaceCode: string; workspaceName: string; workspaceIconKey?: string; workspaceSortOrder: number; workspaceSharedInfrastructure?: boolean; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey?: string; moduleSortOrder: number; primary: boolean; revision: string }>[];
   readonly permissions: readonly Readonly<{ code: string; moduleId: string; revision: string }>[];
 }
 
@@ -118,6 +128,17 @@ export interface ExperiencePlaneRepository {
   readLocalePolicy?(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord>;
   updateLocalePolicy?(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord>;
   updatePrincipalLocale?(context: VerifiedRequestContext, localeCode: string): Promise<void>;
+  saveSurfaceDraft?(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string; layer: "shared" | "tenant"; definition: Readonly<Record<string, unknown>>; contentHash: string; source: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord>;
+  listSurfaceReleases?(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string }>): Promise<readonly ExperienceSurfaceReleaseRecord[]>;
+  rollbackSurfaceRelease?(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord | undefined>;
+  publishSurfaceRelease?(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord | undefined>;
+  applySurfaceProjection?(context: VerifiedRequestContext, release: ExperienceSurfaceReleaseRecord): Promise<void>;
+  readSurfaceProjections?(context: VerifiedRequestContext, surfaceKey: string): Promise<readonly ExperienceSurfaceProjectionRecord[]>;
+  readPersonalSurfaceArrangement?(context: VerifiedRequestContext, surfaceKey: string): Promise<PersonalSurfaceArrangementRecord | undefined>;
+  savePersonalSurfaceArrangement?(context: VerifiedRequestContext, input: PersonalSurfaceArrangementRecord): Promise<PersonalSurfaceArrangementRecord>;
+  deletePersonalSurfaceArrangement?(context: VerifiedRequestContext, surfaceKey: string): Promise<void>;
+  readRouteSlugRedirect?(context: VerifiedRequestContext, sourcePath: string, at: Date): Promise<RouteSlugRedirectRecord | undefined>;
+  registerRouteSlugRedirect?(context: VerifiedRequestContext, input: Readonly<{ catalogKind: "workspace" | "module" | "entity"; catalogCode: string; sourcePath: string; targetPath: string; redirectStatus: 301 | 308; sourceReleaseId: string }>): Promise<RouteSlugRedirectRecord>;
 }
 
 export type ExperienceRepositoryProvider = ExactPlaneRepositoryProvider<ExperiencePlaneRepository>;

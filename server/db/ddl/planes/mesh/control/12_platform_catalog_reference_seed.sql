@@ -37,10 +37,21 @@ FROM master.module m WHERE m.status='active'
 ON CONFLICT (workspace_id,module_id) DO UPDATE SET is_primary=true,sort_order=excluded.sort_order,metadata=excluded.metadata,status='active',updated_at=now(),updated_by=excluded.created_by
 WHERE (control.workspace_module.is_primary,control.workspace_module.sort_order,control.workspace_module.metadata,control.workspace_module.status) IS DISTINCT FROM (excluded.is_primary,excluded.sort_order,excluded.metadata,excluded.status);
 
+UPDATE control.workspace_module association
+SET status='deprecated',updated_at=now(),updated_by='00000000-0000-0000-0000-000000000000'::uuid
+WHERE association.status='active'
+  AND association.metadata #>> '{_seed,pack}'='mesh.control-platform-catalog'
+  AND NOT EXISTS (
+    SELECT 1 FROM master.module module
+    WHERE module.id=association.module_id
+      AND module.workspace_id=association.workspace_id
+      AND module.status='active'
+  );
+
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.workspace WHERE status='active') <> 2
-     OR (SELECT count(*) FROM control.module WHERE status='active') <> 19
-     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 19 THEN
+  IF (SELECT count(*) FROM control.workspace WHERE status='active') <> 5
+     OR (SELECT count(*) FROM control.module WHERE status='active') <> 25
+     OR (SELECT count(*) FROM control.workspace_module WHERE status='active' AND is_primary) <> 25 THEN
     RAISE EXCEPTION 'mesh control catalog backfill count mismatch'; END IF;
   IF EXISTS (SELECT 1 FROM master.workspace m JOIN control.workspace c USING(id) WHERE m.code<>c.code)
      OR EXISTS (SELECT 1 FROM master.module m JOIN control.module c USING(id) WHERE m.code<>c.code) THEN

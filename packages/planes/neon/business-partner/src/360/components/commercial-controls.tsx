@@ -210,12 +210,34 @@ function SupplierControls({
     <div className="bp360-section-list">
       <Notice data={data} />
       <Cards
+        title="Current approved limit"
+        items={record(data["currentLimit"])?[record(data["currentLimit"])!]:[]}
+        fields={["amount", "currencyCode", "decision", "effectiveFrom", "effectiveUntil", "creditReviewId"]}
+      />
+      <Cards
+        title="Commodity capabilities"
+        items={rows(data["commodityCapabilities"])}
+        fields={[
+          "categoryCode",
+          "categoryName",
+          "commodityCodes",
+          "partnerRole",
+          "status",
+          "effectiveFrom",
+          "effectiveUntil",
+          "notes",
+        ]}
+      />
+      <Cards
         title="Qualifications"
         items={rows(data["qualifications"])}
         fields={[
           "typeCode",
           "partnerRole",
           "decision",
+          "commodityCategoryCode",
+          "commodityCategoryName",
+          "commodityCodes",
           "effectiveFrom",
           "effectiveUntil",
           "nextReviewAt",
@@ -270,7 +292,9 @@ function Credit({ data }: { data: Readonly<Record<string, unknown>> }) {
         fields={[
           "reviewTypeCode",
           "requestedCreditLimit",
-          "currencyCode",
+          "requestedCurrencyCode",
+          "approvedCreditLimit",
+          "approvedCurrencyCode",
           "decision",
           "decisionReason",
           "effectiveFrom",
@@ -352,7 +376,14 @@ function record(value: unknown) {
 function show(value: unknown) {
   if (value === undefined || value === null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
-  return Array.isArray(value) ? value.join(", ") : String(value);
+  return Array.isArray(value) ? value.map(showListItem).join(", ") : String(value);
+}
+function showListItem(value: unknown) {
+  const item = record(value);
+  if (!item) return String(value);
+  if (item["domainCode"] && item["code"])
+    return `${String(item["domainCode"]).toUpperCase()} ${String(item["code"])}${item["name"] ? ` — ${String(item["name"])}` : ""}`;
+  return String(value);
 }
 function label(value: string) {
   return value

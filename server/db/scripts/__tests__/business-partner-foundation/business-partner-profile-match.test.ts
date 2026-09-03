@@ -58,7 +58,7 @@ test("WP11 migration and permission seed are ordered only in NEON", () => {
   );
   assert.match(
     read("ddl/planes/neon/_manifest.txt"),
-    /18_business_partner_profile_match_permission_reference_seed\.sql/,
+    /14_permission_reference_seed\.sql/,
   );
   assert.doesNotMatch(
     read("migrations/manifests/mesh.txt"),

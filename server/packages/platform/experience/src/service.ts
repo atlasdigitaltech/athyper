@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { parseExperienceSurface, parsePersonalSurfaceArrangement, resolveEffectiveExperience, type EffectiveExperienceSurface, type ExperienceRegistryPolicy, type ExperienceSurface, type PersonalSurfaceArrangement, type PublishedExperienceLayer } from "@athyper/contract-platform-dashboard";
+import { defaultExperienceSurface } from "@athyper/contract-platform-dashboard/defaults";
 import { LOCALE_REGISTRY, SUPPORTED_UI_LOCALES, isSupportedLocale, matchSupportedLocale, textDirection, type SupportedLocale } from "@athyper/platform-i18n";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EffectiveFeature, ExperienceBootstrap, ExperienceLocaleCatalog, ExperienceLocalePolicy, ExperienceLocalization, ExperienceModule, ExperienceProfile, ExperienceWorkspace, LocaleCatalogStatus, MeshNetworkAccountCatalog, NeonCapabilityGroup, NeonOperatingOrganizationCapability, NeonOperatingOrganizationCatalog, NeonWorkContextBootstrap } from "./contracts.js";
-import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceLocaleCatalogGovernanceRecord, ExperienceRepositoryProvider } from "./ports.js";
+import type { ExperienceCache, ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceInvalidationHooks, ExperienceLocaleCatalogGovernanceRecord, ExperienceRepositoryProvider, ExperienceSurfaceProjectionRecord, ExperienceSurfaceReleaseRecord, RouteSlugRedirectRecord } from "./ports.js";
 
 export class ExperienceAccessError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); this.name = "ExperienceAccessError"; }
@@ -18,6 +20,7 @@ const PLATFORM_PROFILE: ExperienceProfile = Object.freeze({
   localeCode: "en-US", languageCode: "en", timezoneCode: "UTC", dateFormat: "yyyy-MM-dd", numberFormat: "latn",
   weekStart: 1, weekendDays: Object.freeze([0, 6]), appearanceMode: "system", densityCode: "comfortable",
 });
+const SURFACE_REGISTRY_POLICY: ExperienceRegistryPolicy = Object.freeze({ dataSources: new Set(["catalog.summary"]), actions: new Set(["catalog.navigate"]), extensions: new Set(["studio.preview","neon.atlas-welcome","mesh.network-overview"]) });
 
 export function createExperienceService(options: ExperienceServiceOptions) {
   const now = options.now ?? (() => new Date());
@@ -73,6 +76,81 @@ export function createExperienceService(options: ExperienceServiceOptions) {
     async localePolicy(context:VerifiedRequestContext,targetPlane=context.planeKey):Promise<ExperienceLocalePolicy>{if(targetPlane!==context.planeKey&&(context.planeKey!=="studio"||!context.permissions.allowed.includes("studio.platform.catalog.manage")))deny("EXPERIENCE_LOCALE_POLICY_FORBIDDEN","Cross-plane locale policy requires Studio catalog authority");const repository=options.repositories.require(targetPlane),target={...context,planeKey:targetPlane};return normalizeLocalePolicy(targetPlane,await repository.readLocalePolicy?.(target));},
     async updateLocalePolicy(context:VerifiedRequestContext,targetPlane:VerifiedRequestContext["planeKey"],input:{readonly catalogs:readonly ExperienceLocaleCatalogGovernanceRecord[];readonly enabledLocales:readonly string[];readonly defaultLocale:string;readonly fallbackLocale:string}):Promise<ExperienceLocalePolicy>{if(context.planeKey!=="studio"||!context.permissions.allowed.includes("studio.platform.catalog.manage"))deny("EXPERIENCE_LOCALE_POLICY_FORBIDDEN","Locale activation requires Studio catalog authority");const policy=validateLocalePolicyInput(targetPlane,input),repository=options.repositories.require(targetPlane);if(!repository.updateLocalePolicy)throw Object.assign(new Error("Locale policy writer is unavailable"),{code:"EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE"});const target={...context,planeKey:targetPlane},saved=await repository.updateLocalePolicy(target,{catalogs:policy.catalogs.map(({localeCode,status,coveragePct,linguisticReviewPassed,layoutReviewPassed,automatedTestsPassed})=>({localeCode,status,coveragePct,linguisticReviewPassed,layoutReviewPassed,automatedTestsPassed})),enabledLocales:policy.enabledLocales,defaultLocale:policy.defaultLocale,fallbackLocale:policy.fallbackLocale});await options.cache?.invalidate([`${targetPlane}:profile`,`${targetPlane}:tenant:${context.tenantId}`]);return normalizeLocalePolicy(targetPlane,saved);},
     async updatePrincipalLocale(context:VerifiedRequestContext,localeCode:string):Promise<ExperienceBootstrap>{const repository=options.repositories.require(context.planeKey),policy=normalizeLocalePolicy(context.planeKey,await repository.readLocalePolicy?.(context)),canonical=canonicalLocale(localeCode,""),catalog=canonical?catalogCodeForLocale(canonical):undefined;if(!catalog||!policy.enabledLocales.includes(catalog))throw new ExperienceAccessError(400,"EXPERIENCE_LOCALE_NOT_ENABLED","The selected locale is not enabled and qualified for this plane");if(!repository.updatePrincipalLocale)throw Object.assign(new Error("Locale preference writer is unavailable"),{code:"EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE"});await repository.updatePrincipalLocale(context,catalog);await options.cache?.invalidate([`${context.planeKey}:profile`,`${context.planeKey}:principal:${context.principalId}`]);return this.bootstrap(context);},
+    async saveSurfaceDraft(context: VerifiedRequestContext, input: Readonly<{ targetPlane: VerifiedRequestContext["planeKey"]; layer: "shared" | "tenant"; definition: unknown; source?: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord> {
+      requireSurfaceAuthority(context);
+      let surface: ExperienceSurface;
+      try { surface = parseExperienceSurface(input.definition, SURFACE_REGISTRY_POLICY); }
+      catch (cause) { throw new ExperienceAccessError(400, "EXPERIENCE_SURFACE_INVALID", cause instanceof Error ? cause.message : "Surface definition is invalid"); }
+      if (surface.scope.plane !== input.targetPlane) throw new ExperienceAccessError(400, "EXPERIENCE_SURFACE_PLANE_MISMATCH", "Surface scope plane must match the target plane");
+      const repository = options.repositories.require("studio");
+      if (!repository.saveSurfaceDraft) unavailable("Surface draft writer is unavailable");
+      const definition = JSON.parse(JSON.stringify(surface)) as Record<string, unknown>;
+      try{return await repository.saveSurfaceDraft(context, { targetPlane: input.targetPlane, surfaceKey: surface.id, layer: input.layer, definition, contentHash: stableHash(definition), source: input.source ?? "human",...(input.expectedContentHash?{expectedContentHash:input.expectedContentHash}:{}) });}catch(error){if(error&&typeof error==="object"&&Reflect.get(error,"code")==="EXPERIENCE_SURFACE_DRAFT_CONFLICT")throw new ExperienceAccessError(409,"EXPERIENCE_SURFACE_DRAFT_CONFLICT","The draft changed after it was loaded; reload before saving");throw error;}
+    },
+    async surfaceHistory(context:VerifiedRequestContext,targetPlane:VerifiedRequestContext["planeKey"],surfaceKey:string):Promise<readonly ExperienceSurfaceReleaseRecord[]>{requireSurfaceAuthority(context);const repository=options.repositories.require("studio");if(!repository.listSurfaceReleases)unavailable("Surface release history reader is unavailable");return repository.listSurfaceReleases(context,{targetPlane,surfaceKey});},
+    async rollbackSurface(context:VerifiedRequestContext,releaseId:string):Promise<ExperienceSurfaceReleaseRecord>{requireSurfaceAuthority(context);const repository=options.repositories.require("studio");if(!repository.rollbackSurfaceRelease)unavailable("Surface rollback writer is unavailable");const release=await repository.rollbackSurfaceRelease(context,releaseId);if(!release)throw new ExperienceAccessError(404,"EXPERIENCE_SURFACE_RELEASE_NOT_FOUND","The requested release does not exist");return release;},
+    async publishSurface(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord> {
+      requireSurfaceAuthority(context);
+      const sourceRepository = options.repositories.require("studio");
+      if (!sourceRepository.publishSurfaceRelease) unavailable("Surface publisher is unavailable");
+      const release = await sourceRepository.publishSurfaceRelease(context, releaseId);
+      if (!release) throw new ExperienceAccessError(404, "EXPERIENCE_SURFACE_DRAFT_NOT_FOUND", "The requested draft is unavailable or no longer publishable");
+      const targetRepository = options.repositories.require(release.targetPlane);
+      if (!targetRepository.applySurfaceProjection) unavailable("Target surface projection writer is unavailable");
+      await targetRepository.applySurfaceProjection(contextForPlane(context, release.targetPlane), release);
+      await options.cache?.invalidate([`${release.targetPlane}:experience-surface:${release.surfaceKey}`, `${release.targetPlane}:tenant:${context.tenantId}`]);
+      return release;
+    },
+    async surface(context: VerifiedRequestContext, surfaceKey: string): Promise<EffectiveExperienceSurface> {
+      const repository = options.repositories.require(context.planeKey);
+      if (!repository.readSurfaceProjections) unavailable("Surface projection reader is unavailable");
+      const system = defaultExperienceSurface(surfaceKey, context.planeKey);
+      if (!system) throw new ExperienceAccessError(404, "EXPERIENCE_SURFACE_NOT_FOUND", "The requested system surface does not exist in this plane");
+      const [projections, personalRecord] = await Promise.all([repository.readSurfaceProjections(context, surfaceKey), repository.readPersonalSurfaceArrangement?.(context, surfaceKey)]);
+      let layers: PublishedExperienceLayer[];
+      let arrangement: PersonalSurfaceArrangement | undefined;
+      try {
+        layers = projections.map((projection) => ({ layer: projection.layer, surface: parseExperienceSurface(projection.definition, SURFACE_REGISTRY_POLICY) }));
+        arrangement = personalRecord ? parsePersonalSurfaceArrangement(personalRecord.arrangement) : undefined;
+      } catch (cause) { throw new ExperienceAccessError(500, "EXPERIENCE_SURFACE_PROJECTION_INVALID", cause instanceof Error ? cause.message : "A published surface projection is invalid"); }
+      return resolveEffectiveExperience(system, layers, arrangement, {
+        ...revisionForLayer(projections, "shared"), ...revisionForLayer(projections, "tenant"),
+      });
+    },
+    async savePersonalArrangement(context: VerifiedRequestContext, surfaceKey: string, value: unknown): Promise<EffectiveExperienceSurface> {
+      const repository = options.repositories.require(context.planeKey);
+      if (!repository.savePersonalSurfaceArrangement) unavailable("Personal arrangement writer is unavailable");
+      let arrangement: PersonalSurfaceArrangement;
+      try { arrangement = parsePersonalSurfaceArrangement(value); }
+      catch (cause) { throw new ExperienceAccessError(400, "EXPERIENCE_ARRANGEMENT_INVALID", cause instanceof Error ? cause.message : "Personal arrangement is invalid"); }
+      if (arrangement.surfaceId !== surfaceKey) throw new ExperienceAccessError(400, "EXPERIENCE_ARRANGEMENT_SURFACE_MISMATCH", "Arrangement surfaceId must match the route surface key");
+      const current = await this.surface(context, surfaceKey);
+      if (arrangement.baseRevision !== current.surface.revision) throw new ExperienceAccessError(409, "EXPERIENCE_ARRANGEMENT_STALE", "The surface changed; reload before saving this arrangement");
+      await repository.savePersonalSurfaceArrangement(context, { surfaceKey, baseRevision: arrangement.baseRevision, arrangement: JSON.parse(JSON.stringify(arrangement)) as Record<string, unknown> });
+      await options.cache?.invalidate([`${context.planeKey}:experience-surface:${surfaceKey}`, `${context.planeKey}:principal:${context.principalId}`]);
+      return this.surface(context, surfaceKey);
+    },
+    async deletePersonalArrangement(context: VerifiedRequestContext, surfaceKey: string): Promise<EffectiveExperienceSurface> {
+      const repository = options.repositories.require(context.planeKey);
+      if (!repository.deletePersonalSurfaceArrangement) unavailable("Personal arrangement writer is unavailable");
+      await repository.deletePersonalSurfaceArrangement(context, surfaceKey);
+      await options.cache?.invalidate([`${context.planeKey}:experience-surface:${surfaceKey}`, `${context.planeKey}:principal:${context.principalId}`]);
+      return this.surface(context, surfaceKey);
+    },
+    async routeRedirect(context: VerifiedRequestContext, sourcePath: string): Promise<RouteSlugRedirectRecord | undefined> {
+      if (!/^\/[a-z0-9][a-z0-9/-]*$/.test(sourcePath) || sourcePath.includes("..") || sourcePath.includes("//")) throw new ExperienceAccessError(400, "EXPERIENCE_ROUTE_PATH_INVALID", "Route path is invalid");
+      const repository = options.repositories.require(context.planeKey);
+      if (!repository.readRouteSlugRedirect) unavailable("Route redirect reader is unavailable");
+      return repository.readRouteSlugRedirect(context, sourcePath, now());
+    },
+    async registerRouteRedirect(context: VerifiedRequestContext, input: Readonly<{ targetPlane: VerifiedRequestContext["planeKey"]; catalogKind: "workspace" | "module" | "entity"; catalogCode: string; sourcePath: string; targetPath: string; redirectStatus: 301 | 308; sourceReleaseId: string }>):Promise<RouteSlugRedirectRecord>{
+      requireSurfaceAuthority(context);
+      for(const path of [input.sourcePath,input.targetPath])if(!/^\/[a-z0-9][a-z0-9/-]*$/.test(path)||path.includes("..")||path.includes("//"))throw new ExperienceAccessError(400,"EXPERIENCE_ROUTE_PATH_INVALID","Route path is invalid");
+      if(input.sourcePath===input.targetPath)throw new ExperienceAccessError(400,"EXPERIENCE_ROUTE_REDIRECT_LOOP","Redirect source and target must differ");
+      const repository=options.repositories.require(input.targetPlane);
+      if(!repository.registerRouteSlugRedirect)unavailable("Route redirect writer is unavailable");
+      try{return await repository.registerRouteSlugRedirect(contextForPlane(context,input.targetPlane),input);}catch(error){if(error&&typeof error==="object"&&Reflect.get(error,"code")==="EXPERIENCE_ROUTE_REDIRECT_LOOP")throw new ExperienceAccessError(409,"EXPERIENCE_ROUTE_REDIRECT_LOOP","Route redirect would create a loop");throw error;}
+    },
     async neonWorkContexts(context: VerifiedRequestContext): Promise<NeonWorkContextBootstrap> {
       assertSnapshotBoundToContext(context);
       if (context.planeKey !== "neon") deny("EXPERIENCE_NEON_CONTEXT_REQUIRED", "Company work contexts are available only in Neon");
@@ -154,6 +232,11 @@ function assertSnapshotBoundToContext(context: VerifiedRequestContext): void {
 }
 
 function deny(code: string, message: string): never { throw new ExperienceAccessError(403, code, message); }
+function requireSurfaceAuthority(context: VerifiedRequestContext): void { if (context.planeKey !== "studio" || !context.permissions.allowed.includes("studio.platform.catalog.manage")) deny("EXPERIENCE_SURFACE_FORBIDDEN", "Surface authoring and publication require Studio catalog authority"); }
+function unavailable(message: string): never { throw Object.assign(new Error(message), { code: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" }); }
+function contextForPlane(context: VerifiedRequestContext, planeKey: VerifiedRequestContext["planeKey"]): VerifiedRequestContext { return { ...context, planeKey, permissions: { ...context.permissions, planeKey } }; }
+function stableHash(value: unknown): string { return createHash("sha256").update(stableJson(value)).digest("hex"); }
+function stableJson(value: unknown): string { if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`; if (value && typeof value === "object") return `{${Object.entries(value as Record<string, unknown>).sort(([left],[right])=>left.localeCompare(right)).map(([key,item])=>`${JSON.stringify(key)}:${stableJson(item)}`).join(",")}}`; return JSON.stringify(value); }
 function authorizationRevision(context: VerifiedRequestContext) { return { principalFingerprint: context.permissions.principalFingerprint, profileHash: context.profileHash, schemaHash: context.permissions.schemaHash, resolvedAt: context.permissions.resolvedAt }; }
 function revision(value: unknown): string { return `sha256:${createHash("sha256").update(stable(value)).digest("hex")}`; }
 function stable(value: unknown): string { if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`; if (value && typeof value === "object") return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`).join(",")}}`; return JSON.stringify(value) ?? "null"; }
@@ -246,6 +329,7 @@ function operatingOrganizationCapabilities(domain:string):readonly NeonOperating
 function resolveWorkspaces(catalog: ExperienceCatalogRecord): readonly ExperienceWorkspace[] {
   const groups = new Map<string, ExperienceWorkspace & { modules: ExperienceModule[] }>();
   for (const row of [...catalog.associations].sort((a, b) => a.workspaceSortOrder - b.workspaceSortOrder || a.workspaceCode.localeCompare(b.workspaceCode) || a.moduleSortOrder - b.moduleSortOrder || a.moduleCode.localeCompare(b.moduleCode))) {
+    if (row.workspaceSharedInfrastructure) continue;
     let group = groups.get(row.workspaceCode);
     if (!group) { group = { code: row.workspaceCode, name: row.workspaceName, ...(row.workspaceIconKey ? { iconKey: row.workspaceIconKey } : {}), sortOrder: row.workspaceSortOrder, modules: [] }; groups.set(row.workspaceCode, group); }
     group.modules.push({ code: row.moduleCode, name: row.moduleName, ...(row.moduleIconKey ? { iconKey: row.moduleIconKey } : {}), sortOrder: row.moduleSortOrder, primary: row.primary });
@@ -275,3 +359,4 @@ function integer(value: unknown, min: number, max: number): number | undefined {
 function days(value: unknown): readonly number[] | undefined { return Array.isArray(value) && value.length > 0 && value.every((item) => integer(item, 0, 6) !== undefined) ? [...new Set(value as number[])] : undefined; }
 function appearance(value: unknown): ExperienceProfile["appearanceMode"] | undefined { return ["system", "light", "dark", "high_contrast"].includes(String(value)) ? value as ExperienceProfile["appearanceMode"] : undefined; }
 function density(value: unknown): ExperienceProfile["densityCode"] | undefined { return ["comfortable", "compact"].includes(String(value)) ? value as ExperienceProfile["densityCode"] : undefined; }
+function revisionForLayer(rows: readonly ExperienceSurfaceProjectionRecord[], layer: "shared" | "tenant"): Readonly<{ sharedRevision?: number; tenantRevision?: number }> { const revision=rows.find((row)=>row.layer===layer)?.sourceRevision; return revision===undefined?{}:layer==="shared"?{sharedRevision:revision}:{tenantRevision:revision}; }

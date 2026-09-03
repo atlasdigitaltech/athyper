@@ -71,7 +71,7 @@ const queries: Record<string, string> = {
     SELECT format('%I.%s.%s', c.relname, con.contype,
              row_number() OVER (
                PARTITION BY c.relname, con.contype
-               ORDER BY pg_get_constraintdef(con.oid, true)
+               ORDER BY regexp_replace(pg_get_constraintdef(con.oid, true), '\s+', '', 'g') COLLATE "C"
              )) AS object_key,
            concat_ws('|', con.contype, con.convalidated::text,
              con.condeferrable::text, con.condeferred::text,
@@ -463,6 +463,19 @@ const normalize = (value: string): string => value
 const clean = postgres(cleanUrl, { max: 1, prepare: false });
 const upgrade = postgres(upgradeUrl, { max: 1, prepare: false });
 
+type DatabaseIdentity = { system_identifier: string; database_oid: string; database_name: string };
+const identity = async (sql: postgres.Sql): Promise<DatabaseIdentity> => {
+  const rows = await sql<DatabaseIdentity[]>`
+    SELECT (SELECT system_identifier::text FROM pg_control_system()) AS system_identifier,
+           oid::text AS database_oid,
+           datname AS database_name
+      FROM pg_database
+     WHERE datname = current_database()
+  `;
+  if (!rows[0]) throw new Error("unable to resolve database identity");
+  return rows[0];
+};
+
 const capture = async (sql: postgres.Sql, query: string): Promise<Map<string, string>> => {
   const parameters = query.includes("$1") ? [typedRelations] : [];
   const rows = await sql.unsafe<CatalogRow[]>(query, parameters);
@@ -482,6 +495,13 @@ const compare = (cleanState: Map<string, string>, upgradeState: Map<string, stri
 });
 
 try {
+  const [cleanIdentity, upgradeIdentity] = await Promise.all([identity(clean), identity(upgrade)]);
+  if (cleanIdentity.system_identifier === upgradeIdentity.system_identifier
+    && cleanIdentity.database_oid === upgradeIdentity.database_oid) {
+    throw new Error(
+      `clean and upgrade inputs resolve to the same database: ${cleanIdentity.database_name}; distinct databases are required`,
+    );
+  }
   const differences: Record<string, Difference> = {};
   for (const [category, query] of Object.entries(queries)) {
     const [cleanState, upgradeState] = await Promise.all([
@@ -499,6 +519,7 @@ try {
       constraints: "compared by relation, type, validation flags, and definition; names ignored",
       indexes: "constraint-owned indexes represented by constraint semantics",
     },
+    databases: { clean: cleanIdentity, upgrade: upgradeIdentity },
     differences,
   };
   const output = args.get("--json");

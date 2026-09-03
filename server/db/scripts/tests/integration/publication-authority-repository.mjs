@@ -2,7 +2,7 @@ import { strict as assert } from "node:assert";
 import pg from "pg";
 import { Kysely, PostgresDialect, sql } from "kysely";
 const { KyselyPublicationAuthorityRepository } = await import(
-  process.env.PUBLICATION_REPOSITORY_MODULE ?? "../../../../packages/services/publication/dist/index.js"
+  process.env.PUBLICATION_REPOSITORY_MODULE ?? "../../../../packages/services/publication/src/index.ts"
 );
 
 const connectionString = process.env.DATABASE_URL;

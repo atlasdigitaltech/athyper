@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
 import type { EntityListDataOperationsV1, EntityListDescriptorV1, EntityListResultV1, JsonValue, ListFieldDescriptorV1, ListFilterOperator, ListFilterV1, ListSortV1, ListViewMode } from "@athyper/contract-platform-entity-list";
+import type { EntityDetailDescriptorV1, EntityFormDescriptorV1, EntityRecordV1, EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
 import type { Authorizer, EffectiveAuthorizationScope, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { EntityFieldDescriptor, EntityListDefaultStateDescriptor, EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-contract-metadata";
-import type { ListRecordsQuery, RecordCollectionScopeResolution, RecordCollectionScopeResolver } from "@athyper/server-contract-records";
+import type { ListRecordsQuery, RecordCollectionScopeResolution, RecordCollectionScopeResolver, RecordQueryService } from "@athyper/server-contract-records";
 import { RecordServiceError } from "./errors.js";
 import { recordFieldFilterOperators } from "./list-query-policy.js";
 import { descriptorFor, type RecordListExecutor } from "./query-service.js";
@@ -10,12 +11,15 @@ import { authorizeRecordListRead, readableRecordFields } from "./record-read-acc
 
 export interface EntityListService {
   descriptor(context: VerifiedRequestContext, entityCode: string, scopeCoordinate?: ListRecordsQuery["scopeCoordinate"]): Promise<EntityListDescriptorV1>;
+  formDescriptor(context: VerifiedRequestContext, entityCode: string, mode: "create" | "edit"): Promise<EntityFormDescriptorV1>;
+  detailDescriptor(context: VerifiedRequestContext, entityCode: string): Promise<EntityDetailDescriptorV1>;
+  record(context: VerifiedRequestContext, entityCode: string, recordId: string): Promise<EntityRecordV1>;
   list(query: ListRecordsQuery): Promise<EntityListResultV1>;
 }
 
 export const ENTITY_LIST_MAX_SORT_LEVELS = 3;
 
-export function createEntityListService(options: { readonly metadata: MetadataReader; readonly authorizer: Authorizer; readonly listExecutor: RecordListExecutor; readonly collectionScopes?: RecordCollectionScopeResolver }): EntityListService {
+export function createEntityListService(options: { readonly metadata: MetadataReader; readonly authorizer: Authorizer; readonly listExecutor: RecordListExecutor; readonly queries?: RecordQueryService; readonly collectionScopes?: RecordCollectionScopeResolver }): EntityListService {
   return Object.freeze({
     async descriptor(context: VerifiedRequestContext, entityCode: string, scopeCoordinate?: ListRecordsQuery["scopeCoordinate"]) {
       const descriptor = await descriptorFor(options.metadata, context, entityCode);
@@ -25,6 +29,45 @@ export function createEntityListService(options: { readonly metadata: MetadataRe
       const readable = await readableRecordFields(options.authorizer, context, descriptor);
       const dataOperations = await effectiveDataOperations(options.authorizer, context, descriptor, readable, authorization.scope, collectionScope);
       return compileEntityListDescriptor(context, descriptor, readable, authorization.scope, collectionScope, dataOperations);
+    },
+    async formDescriptor(context: VerifiedRequestContext, entityCode: string, mode: "create" | "edit") {
+      const descriptor = await descriptorFor(options.metadata, context, entityCode);
+      const operation = mode === "create" ? "create" : "patch";
+      await requireOperation(options.authorizer, context, descriptor, operation);
+      if(mode === "edit") await requireOperation(options.authorizer, context, descriptor, "read");
+      const readable = new Set((await readableRecordFields(options.authorizer, context, descriptor)).map((field) => field.key));
+      const fields = await Promise.all(descriptor.fields.map(async (field) => {
+        const writable = field.writableOn.includes(operation) && (!field.writePermissionCode || (await options.authorizer.authorize({ context, permissionCode: field.writePermissionCode, resource: { tenantId: context.tenantId, entityCode, operationKey: operation, field: field.key } })).allowed);
+        if (!readable.has(field.key) && !writable) return undefined;
+        return surfaceField(field, !writable);
+      }));
+      const visible = fields.filter((field): field is EntitySurfaceFieldV1 => Boolean(field));
+      if (!visible.some((field) => !field.readOnly)) throw new RecordServiceError(403, "ENTITY_FORM_FIELDS_FORBIDDEN", "No fields are writable for this entity form");
+      const label = humanize(entityCode), projection = { entityCode, mode, fields: visible, operation };
+      return Object.freeze({ schema: "athyper.entity-form-descriptor/1", plane: descriptor.planeKey, entity: Object.freeze({ code: entityCode, label, pluralLabel: pluralize(label) }), revision: surfaceRevision(descriptor, projection), mode, title: mode === "create" ? `New ${label}` : `Edit ${label}`, description: `${mode === "create" ? "Create" : "Update"} a governed ${label.toLocaleLowerCase()} record.`, fields: Object.freeze(visible), submit: Object.freeze({ operation, label: mode === "create" ? `Create ${label}` : `Save ${label}` }) });
+    },
+    async detailDescriptor(context: VerifiedRequestContext, entityCode: string) {
+      const descriptor = await descriptorFor(options.metadata, context, entityCode);
+      await requireOperation(options.authorizer, context, descriptor, "read");
+      const readable = await readableRecordFields(options.authorizer, context, descriptor);
+      if (!readable.length) throw new RecordServiceError(403, "ENTITY_DETAIL_FIELDS_FORBIDDEN", "No fields are readable for this entity detail");
+      const actions: { code: string; label: string; kind: "edit" | "transition" }[] = [];
+      if (descriptor.operations["patch"] && await operationAllowed(options.authorizer, context, descriptor, "patch")) actions.push({ code: "edit", label: "Edit", kind: "edit" });
+      for (const transition of descriptor.lifecycle?.transitions ?? []) if ((await options.authorizer.authorize({ context, permissionCode: transition.permissionCode, resource: { tenantId: context.tenantId, entityCode, operationKey: "transition", transitionCode: transition.code } })).allowed) actions.push({ code: transition.code, label: humanize(transition.code), kind: "transition" });
+      const fields = readable.map((field) => surfaceField(field, true));
+      const identity = descriptor.listPresentation?.identityField;
+      const titleField = identity && readable.some((field) => field.key === identity) ? identity : readable.find((field) => field.storagePath === descriptor.storage.idField)?.key ?? readable[0]!.key;
+      return Object.freeze({ schema: "athyper.entity-detail-descriptor/1", plane: descriptor.planeKey, entity: Object.freeze({ code: entityCode, label: humanize(entityCode), pluralLabel: pluralize(humanize(entityCode)) }), revision: surfaceRevision(descriptor, { entityCode, fields, actions, titleField }), titleField, fields: Object.freeze(fields), actions: Object.freeze(actions) });
+    },
+    async record(context:VerifiedRequestContext,entityCode:string,recordId:string){
+      if(!options.queries)throw new RecordServiceError(503,"ENTITY_RECORD_ADAPTER_UNAVAILABLE","The normalized entity record adapter is unavailable");
+      const descriptor=await descriptorFor(options.metadata,context,entityCode),result=await options.queries.get({context,entityCode,recordId}),data=result.data;
+      if(!data)throw new RecordServiceError(404,"ENTITY_RECORD_NOT_FOUND","The governed record was not found");
+      const rawId=data[descriptor.storage.idField];
+      if(typeof rawId!=="string"&&typeof rawId!=="number")throw new RecordServiceError(500,"RECORD_IDENTITY_INVALID","The record has no serializable identity");
+      const values=Object.fromEntries(descriptor.fields.flatMap((field)=>Object.hasOwn(data,field.key)?[[field.key,data[field.key]]]:[]));
+      const rawVersion=descriptor.storage.versionField?data[descriptor.storage.versionField]:undefined,version=typeof rawVersion==="number"&&Number.isInteger(rawVersion)&&rawVersion>=0?rawVersion:undefined;
+      return Object.freeze({id:String(rawId),...(version===undefined?{}:{version}),values:Object.freeze(values)});
     },
     async list(query: ListRecordsQuery) {
       if ((query.sort?.length ?? 0) > 10) throw new RecordServiceError(400, "TOO_MANY_SORT_FIELDS", "Entity lists support at most ten sort fields");
@@ -58,6 +101,11 @@ export function createEntityListService(options: { readonly metadata: MetadataRe
     },
   });
 }
+
+async function requireOperation(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, operation: string): Promise<void> { if (!(await operationAllowed(authorizer, context, descriptor, operation))) throw new RecordServiceError(descriptor.operations[operation] ? 403 : 409, descriptor.operations[operation] ? "FORBIDDEN" : "ENTITY_OPERATION_UNAVAILABLE", `Entity ${operation} operation is not available`); }
+async function operationAllowed(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, operation: string): Promise<boolean> { const published = descriptor.operations[operation], permissionCode = published?.permissionCode; if (!permissionCode) return false; return (await authorizer.authorize({ context, permissionCode, resource: published.authorizationMode === "permission_only" ? { tenantId: context.tenantId } : { tenantId: context.tenantId, entityCode: descriptor.entityCode, operationKey: operation, resourceCode: descriptor.entityCode } })).allowed; }
+function surfaceField(field: EntityFieldDescriptor, readOnly: boolean): EntitySurfaceFieldV1 { const raw = Array.isArray(field.validation?.["options"]) ? field.validation["options"] : []; const options = raw.flatMap((candidate) => typeof candidate === "string" ? [{ value: candidate, label: humanize(candidate) }] : candidate && typeof candidate === "object" && !Array.isArray(candidate) && typeof Reflect.get(candidate, "value") === "string" ? [{ value: String(Reflect.get(candidate, "value")), label: typeof Reflect.get(candidate, "label") === "string" ? String(Reflect.get(candidate, "label")) : humanize(String(Reflect.get(candidate, "value"))) }] : []); return Object.freeze({ key: field.key, label: field.list?.label ?? humanize(field.key), kind: field.type, required: field.required, readOnly, ...(options.length ? { options: Object.freeze(options) } : {}) }); }
+function surfaceRevision(descriptor: EntityRuntimeDescriptor, projection: unknown) { return Object.freeze({ release: descriptor.releaseNo, descriptorHash: normalizeDigest(descriptor.compiledHash), surfaceHash: digest(projection) }); }
 
 export function compileEntityListDescriptor(context: VerifiedRequestContext, descriptor: EntityRuntimeDescriptor, readableFields: readonly EntityFieldDescriptor[], scope?: EffectiveAuthorizationScope, collectionScope?: RecordCollectionScopeResolution, dataOperations?: EntityListDataOperationsV1): EntityListDescriptorV1 {
   if (!readableFields.length) throw new RecordServiceError(403, "ENTITY_LIST_FIELDS_FORBIDDEN", "No fields are readable for this entity list");

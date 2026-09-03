@@ -33,3 +33,6 @@
 20260829_atlas_conversation_access_grants.sql
 20260829_atlas_experience_configuration.sql
 20260830_document_foundation_consolidation.sql
+20260901_studio_platform_catalog_alignment.sql
+20260903_lookup_seed_encoding_correction.sql
+20260903_canonical_baseline_cleanup.sql

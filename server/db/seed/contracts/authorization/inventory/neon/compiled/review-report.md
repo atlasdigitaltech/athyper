@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 ## Coverage
 
-- Physical tables: 290 (143 master, 147 document)
+- Physical tables: 302 (145 master, 157 document)
 - Reviewed tables: 45
-- Pending business review: 245
+- Pending business review: 257
 - Proposed operations: 43
 - Proposed lifecycles: 6
 - Studio-to-Neon organization resource contracts: 3
@@ -67,7 +67,7 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 | master.customer | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | operating_organization |
 | master.intercompany_trading_pair | business_partner | aggregate_root | master.intercompany_trading_pair | @athyper/svc-records | legal_entity |
 | master.legal_entity | organization_topology | aggregate_root | master.legal_entity | @athyper/server-service-master-data | legal_entity |
-| master.legal_entity_business_partner_link | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | legal_entity |
+| master.legal_entity_internal_partner_link | business_partner | aggregate_child | master.business_partner | @athyper/svc-records | legal_entity |
 | master.operating_organization | organization_topology | aggregate_root | master.operating_organization | @athyper/server-service-master-data | operating_organization |
 | master.operating_organization_company_assignment | organization_topology | aggregate_child | master.operating_organization | @athyper/server-service-master-data | operating_organization, company_code |
 | master.procurement_organization_profile | organization_topology | aggregate_child | master.operating_organization | @athyper/server-service-master-data | operating_organization |
@@ -189,6 +189,14 @@ Required before enforcement:
 - document.business_partner_bank_verification
 - document.business_partner_duplicate_resolution
 - document.business_partner_invitation_recovery
+- document.business_partner_request_address
+- document.business_partner_request_certification
+- document.business_partner_request_classification
+- document.business_partner_request_contact_channel
+- document.business_partner_request_contact_person
+- document.business_partner_request_identifier
+- document.business_partner_request_materialization_item
+- document.business_partner_request_tax_registration
 - document.catalog_import
 - document.catalog_import_line
 - document.commitment
@@ -298,6 +306,8 @@ Required before enforcement:
 - document.worker_operational_placement
 - document.workflow_request
 - document.workflow_stage
+- document.workforce_request
+- document.workforce_request_validation
 - document.workforce_requisition
 - document.workforce_requisition_supplier
 - master.accounting_profile
@@ -317,6 +327,7 @@ Required before enforcement:
 - master.bom_component
 - master.brand_profile
 - master.business_intent
+- master.business_partner_alias
 - master.career_band
 - master.career_level
 - master.catalog
@@ -383,6 +394,7 @@ Required before enforcement:
 - master.payment_term_clause
 - master.payment_term_discount_tier
 - master.person
+- master.person_business_partner_legacy_link
 - master.person_sensitive_profile
 - master.position
 - master.principal
@@ -424,5 +436,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 245 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 257 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

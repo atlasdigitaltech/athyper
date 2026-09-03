@@ -1,0 +1,64 @@
+{
+  "$schema": "athyper-platform-catalog/1",
+  "reservedGlobalSlugs": ["home", "inbox", "notifications", "operations", "atlas", "auth", "api", "sign-in", "logout", "select-context"],
+  "planes": {
+    "studio": {
+      "seedNamespace": "studio",
+      "workspaces": [
+        { "code": "foundation", "routeSlug": "foundation", "name": "Platform Foundation", "visibility": "internal", "order": 0, "modules": [["fnd", "foundation", "Foundation Runtime"], ["rel", "reference-data", "Reference & Shared Data"]] },
+        { "code": "entity", "routeSlug": "entity", "name": "Entity Studio", "visibility": "primary", "order": 10, "modules": [["meta", "metadata", "Metadata & Entity Studio"], ["pol", "policies", "Policy & Rules Engine"], ["wfl", "workflows", "Workflow Designer"], ["pub", "publishing", "Publication & Release Management"], ["doc", "documents", "Document Generation & Processing"], ["cms", "content", "Content & Object Storage"], ["exp", "experiences", "Experience & Navigation Design"]] },
+        { "code": "trustiam", "routeSlug": "trust-iam", "name": "TrustIAM Studio", "visibility": "primary", "order": 20, "modules": [["iam", "identity-access", "Identity & Access Management"], ["onb", "onboarding", "Trust & Onboarding"], ["aud", "governance-audit", "Identity Governance & Audit"]] },
+        { "code": "plans", "routeSlug": "plans", "name": "Plans & Entitlements Studio", "visibility": "primary", "order": 30, "modules": [["pcat", "platform-catalog", "Platform Catalog Management"], ["sub", "subscriptions", "Subscription Management"], ["ent", "entitlements", "Plan & Module Entitlements"], ["usg", "usage", "Usage & Quota"]] },
+        { "code": "observability", "routeSlug": "observability", "name": "Observability Studio", "visibility": "primary", "order": 40, "modules": [["obs", "platform-observability", "Platform Observability"], ["err", "errors", "Error Tracking"], ["sre", "reliability", "Service Reliability"]] },
+        { "code": "communications", "routeSlug": "communications", "name": "Communications Studio", "visibility": "primary", "order": 50, "modules": [["ntf", "notifications", "Notifications & Messaging"], ["act", "activity", "Activity & Commentary"]] },
+        { "code": "integration", "routeSlug": "integration", "name": "Integration & Automation Studio", "visibility": "primary", "order": 60, "modules": [["int", "integration-hub", "Integration Hub"], ["job", "automation", "Automation & Jobs"]] },
+        { "code": "atlas_ai", "routeSlug": "atlas-ai", "name": "Atlas AI Studio", "visibility": "primary", "order": 70, "modules": [["aip", "providers", "AI Provider & Model Management"], ["agt", "agents", "Agents & Governed Tools"], ["knw", "knowledge", "Knowledge & Retrieval"], ["aig", "governance", "AI Governance & Safety"]] },
+        { "code": "extension", "routeSlug": "extensions", "name": "Extension Studio", "visibility": "secondary", "order": 80, "modules": [["ext", "plugins", "Plugins & Extensions"], ["dev", "developer-tools", "Developer Tools & SDK"]] },
+        { "code": "platform_ops", "routeSlug": "platform-operations", "name": "Platform Operations Studio", "visibility": "internal", "order": 90, "modules": [["ops", "operations", "Platform Operations"], ["sec", "security", "Secrets & Security"], ["sea", "search", "Search"], ["ana", "analytics", "Platform Analytics"]] }
+      ]
+    },
+    "neon": {
+      "seedNamespace": "neon",
+      "workspaceDescriptions": {
+        "core": "Shared runtime, identity, workflow, integration, content, and platform services.",
+        "mdg": "Create, validate, approve, and maintain trusted enterprise master data.",
+        "fin": "Manage accounting, payables, receivables, treasury, budgets, tax, and asset accounting.",
+        "scm": "Plan and execute supplier, sourcing, procurement, inventory, quality, warehouse, and logistics operations.",
+        "com": "Manage customer relationships, sales, orders, pricing, and commercial performance.",
+        "ppl": "Manage employees, time, talent, payroll, and the external workforce.",
+        "prs": "Plan projects, deliver professional services, and manage service operations.",
+        "ops": "Manage manufacturing execution and enterprise maintenance operations.",
+        "ast": "Manage enterprise assets, real estate, facilities, spaces, and physical operations."
+      },
+      "moduleCards": {
+        "bp": { "description": "Create and govern supplier, customer, and partner master data.", "actions": [["New", "new"], ["Manage", "partners"]] },
+        "item": { "description": "Create and govern products, materials, and item master data." },
+        "finmd": { "description": "Govern accounts, cost objects, payment terms, and financial reference data." },
+        "org": { "description": "Maintain organizations, hierarchies, classifications, and shared reference data." },
+        "loc": { "description": "Govern locations, sites, addresses, and geographic reference data." },
+        "dqs": { "description": "Monitor data quality, resolve exceptions, and coordinate stewardship." }
+      },
+      "workspaces": [
+        { "code": "core", "routeSlug": "core", "name": "Core Platform", "iconKey": "settings", "visibility": "internal", "order": 0, "modules": [["fnd", "foundation", "Foundation Runtime", "settings"], ["meta", "metadata", "Metadata Runtime", "database"], ["iam", "identity-access", "Identity & Access Management", "shield-check"], ["aud", "audit", "Audit & Governance", "clipboard-check"], ["pol", "policies", "Policy & Rules Engine", "shield-check"], ["wfl", "workflows", "Workflow Engine", "route"], ["job", "automation", "Automation & Jobs", "settings"], ["doc", "documents", "Document Services", "file-signature"], ["ntf", "notification-services", "Notification Services", "bell"], ["int", "integration", "Integration Hub", "organization"], ["cms", "content", "Content Services", "database"], ["act", "activity", "Activity & Commentary", "message"], ["rel", "reference-data", "Reference & Shared Data", "database-check"]] },
+        { "code": "mdg", "routeSlug": "mdg", "name": "Master Data Governance", "iconKey": "database-check", "visibility": "primary", "order": 10, "modules": [["bp", "business-partner", "Business Partner Management", "contact"], ["item", "product-item", "Product & Item Governance", "package"], ["finmd", "financial-master", "Financial Master Data", "database-currency"], ["org", "organization-reference", "Organization & Reference Data", "organization"], ["loc", "location-address", "Location & Address Governance", "map-pin"], ["dqs", "data-quality", "Data Quality & Stewardship", "database-check"]] },
+        { "code": "fin", "routeSlug": "finance", "name": "Finance", "iconKey": "landmark", "visibility": "primary", "order": 20, "modules": [["acc", "financial-accounting", "Financial Accounting", "book-open"], ["ap", "accounts-payable", "Accounts Payable", "receipt-out"], ["ar", "accounts-receivable", "Accounts Receivable", "receipt-in"], ["treasury", "cash-treasury", "Cash & Treasury Management", "coins"], ["budget", "budget-control", "Budget Management & Control", "wallet"], ["tax", "tax", "Tax Management", "percent-receipt"], ["faa", "fixed-assets", "Fixed Asset Accounting", "building-calculator"]] },
+        { "code": "scm", "routeSlug": "supply-chain", "name": "Supply Chain", "iconKey": "route", "visibility": "primary", "order": 30, "modules": [["srm", "supplier-management", "Supplier Management", "factory-handshake"], ["source", "strategic-sourcing", "Strategic Sourcing", "target"], ["contract", "contracts", "Contract Management", "file-signature"], ["buy", "procurement", "Procurement", "shopping-cart"], ["demand", "planning", "Demand & Supply Planning", "chart"], ["inventory", "inventory", "Inventory Management", "boxes"], ["wms", "warehouse", "Warehouse Management", "warehouse"], ["qms", "quality", "Quality Management", "clipboard-check"], ["logistics", "transport-logistics", "Transportation & Logistics", "truck"]] },
+        { "code": "com", "routeSlug": "commercial", "name": "Commercial", "iconKey": "handshake", "visibility": "primary", "order": 40, "modules": [["crm", "crm", "Customer Relationship Management", "contact"], ["sale", "sales-orders", "Sales & Order Management", "receipt-out"], ["pcm", "pricing", "Pricing & Commercial Management", "tag"]] },
+        { "code": "ppl", "routeSlug": "people", "name": "People", "iconKey": "users", "visibility": "primary", "order": 50, "modules": [["hr", "core-hr", "Core Human Resources", "id-card"], ["tna", "time-attendance", "Time & Attendance", "user-clock"], ["tal", "talent", "Talent Management", "user-star"], ["payroll", "payroll", "Payroll", "banknote"], ["workforce", "external-workforce", "External Workforce", "user-briefcase"]] },
+        { "code": "prs", "routeSlug": "projects-services", "name": "Projects & Services", "iconKey": "briefcase", "visibility": "primary", "order": 60, "modules": [["prjcost", "projects", "Project Management", "gantt"], ["psa", "professional-services", "Professional Services", "briefcase"], ["itsm", "service-management", "Service Management", "headset"]] },
+        { "code": "ops", "routeSlug": "operations-management", "name": "Operations", "iconKey": "factory", "visibility": "primary", "order": 70, "modules": [["mfg", "manufacturing", "Manufacturing", "factory"], ["maint", "maintenance", "Maintenance Management", "wrench"]] },
+        { "code": "ast", "routeSlug": "assets-facilities", "name": "Assets & Facilities", "iconKey": "building", "visibility": "primary", "order": 80, "modules": [["asset", "enterprise-assets", "Enterprise Asset Management", "asset"], ["assetrems", "real-estate", "Real Estate Management", "building-key"], ["assetfm", "facilities", "Facilities Management", "building-wrench"]] }
+      ]
+    },
+    "mesh": {
+      "seedNamespace": "mesh",
+      "workspaces": [
+        { "code": "core", "routeSlug": "core", "name": "Core Platform", "visibility": "internal", "order": 0, "modules": [["fnd", "foundation", "Foundation Runtime"], ["iam", "identity-access", "Identity & Access Management"], ["aud", "audit", "Audit & Governance"], ["pol", "policies", "Policy & Rules Engine"], ["wfl", "workflows", "Workflow Engine"], ["job", "automation", "Automation & Jobs"], ["doc", "documents", "Document Services"], ["ntf", "notifications", "Notification Services"], ["int", "integration", "Integration Hub"], ["cms", "content", "Content Services"], ["act", "activity", "Activity & Commentary"], ["rel", "reference-data", "Reference & Shared Data"]] },
+        { "code": "network_rel", "routeSlug": "network-relationships", "name": "Network & Relationships", "visibility": "primary", "order": 10, "modules": [["npm", "partner-network", "Network & Partner Management"], ["mkd", "marketplace", "Marketplace & Discovery"], ["rlc", "relationships", "Relationship Collaboration"], ["nin", "intelligence", "Network Intelligence"]] },
+        { "code": "commercial_collab", "routeSlug": "commercial-collaboration", "name": "Commercial Collaboration", "visibility": "primary", "order": 20, "modules": [["mso", "sourcing", "Sourcing"], ["mct", "contract", "Contract"], ["btx", "transaction", "Business Transaction"]] },
+        { "code": "supply_services", "routeSlug": "supply-services", "name": "Supply & Services Collaboration", "visibility": "primary", "order": 30, "modules": [["scc", "supply-chain", "Supply Chain"], ["wsc", "workforce-services", "Workforce & Services"]] },
+        { "code": "financial_collab", "routeSlug": "financial-collaboration", "name": "Financial Collaboration", "visibility": "primary", "order": 40, "modules": [["pwc", "payments-working-capital", "Payments & Working Capital"], ["trf", "trade-finance", "Trade Finance"], ["fpg", "financing-programs", "Financing Programs"], ["fpn", "partner-network", "Financial Partner Network"]] }
+      ]
+    }
+  }
+}

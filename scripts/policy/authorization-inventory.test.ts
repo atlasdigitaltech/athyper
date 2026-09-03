@@ -40,7 +40,7 @@ function makeRegistry(
       excludedDirectories: ["node_modules", "dist"],
       excludedFiles: [
         "config/governance/authorization-inventory.v1.json",
-        "docs/architecture/authorization-source-inventory.md",
+        "policy/reports/authorization/inventories/authorization-source-inventory.md",
       ],
       captureSourceDdls: [
         {
@@ -404,14 +404,14 @@ test("verification separates structural drift from owned known anomalies", () =>
     registry,
   );
   const inventory = buildAuthorizationInventory(root);
-  mkdirSync(join(root, "docs", "architecture"), { recursive: true });
+  mkdirSync(join(root, "policy", "reports", "authorization", "inventories"), { recursive: true });
   writeFileSync(
     join(root, "config", "governance", "authorization-inventory.v1.json"),
     serializeAuthorizationInventory(inventory),
     "utf8",
   );
   writeFileSync(
-    join(root, "docs", "architecture", "authorization-source-inventory.md"),
+    join(root, "policy", "reports", "authorization", "inventories", "authorization-source-inventory.md"),
     renderAuthorizationInventoryMarkdown(inventory),
     "utf8",
   );

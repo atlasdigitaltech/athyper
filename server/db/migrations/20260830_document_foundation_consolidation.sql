@@ -153,12 +153,16 @@ INSERT INTO document.attachment_series(id,tenant_id,current_attachment_id,create
 SELECT attachment.id,attachment.tenant_id,CASE WHEN attachment.is_current THEN attachment.id END,attachment.created_at,attachment.created_by
 FROM document.attachment attachment WHERE attachment.series_id IS NULL
 ON CONFLICT(tenant_id,id) DO NOTHING;
-UPDATE document.attachment SET series_id=id WHERE series_id IS NULL;
+UPDATE document.attachment
+   SET series_id=id,
+       updated_by=COALESCE(updated_by,created_by)
+ WHERE series_id IS NULL;
 UPDATE document.attachment_series series SET current_attachment_id=(
   SELECT attachment.id FROM document.attachment attachment
   WHERE attachment.tenant_id=series.tenant_id AND attachment.series_id=series.id
   ORDER BY attachment.is_current DESC,attachment.version_no DESC,attachment.created_at DESC LIMIT 1
-) WHERE series.current_attachment_id IS NULL;
+),updated_by=COALESCE(series.updated_by,series.created_by)
+WHERE series.current_attachment_id IS NULL;
 
 ALTER TABLE document.attachment_link ADD COLUMN IF NOT EXISTS pinned_attachment_id uuid;
 ALTER TABLE document.attachment_link ADD COLUMN IF NOT EXISTS attachment_series_id uuid;
@@ -181,11 +185,19 @@ CREATE INDEX IF NOT EXISTS attachment_link_pinned_attachment_idx ON document.att
 DROP INDEX IF EXISTS document.attachment_link_series_idx;
 CREATE INDEX attachment_link_series_idx ON document.attachment_link(tenant_id,attachment_series_id);
 
+-- The legacy active-attachment view selects the preview/current columns below.
+-- Recreate it after the column retirement so preserved databases can migrate
+-- without requiring DROP COLUMN ... CASCADE.
+DROP VIEW IF EXISTS document.active_attachment;
 ALTER TABLE document.attachment DROP COLUMN IF EXISTS is_current;
 ALTER TABLE document.attachment DROP COLUMN IF EXISTS thumbnail_key;
 ALTER TABLE document.attachment DROP COLUMN IF EXISTS preview_key;
 ALTER TABLE document.attachment DROP COLUMN IF EXISTS preview_generated_at;
 ALTER TABLE document.attachment DROP COLUMN IF EXISTS is_preview_generation_failed;
+CREATE VIEW document.active_attachment AS
+SELECT *
+  FROM document.attachment
+ WHERE status NOT IN ('deleted', 'expired', 'rejected');
 
 CREATE OR REPLACE FUNCTION document.trg_attachment_link_guard() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,document AS $$
 BEGIN

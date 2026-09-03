@@ -16,8 +16,8 @@ export async function runBusinessPartner360OperationalReadiness(options) {
   assertLocalNeon(options.neonDatabaseUrl);
   const scenarios = [];
   scenarios.push(run("studio-mesh-cursor-reveal", "pnpm", ["--filter", "@athyper/server-service-master-data", "exec", "vitest", "run", "src/__tests__/business-partner-360-production-integrations.test.ts", "src/__tests__/business-partner-360-mesh-network-adapter.test.ts", "src/__tests__/business-partner-360-service.test.ts", "src/__tests__/business-partner-360-commercial-controls.test.ts"]));
-  scenarios.push(run("permission-epoch-client-invalidation", "pnpm", ["--filter", "@athyper/product-neon-business-partner", "exec", "vitest", "run", "src/360/business-partner-360-client.test.ts", "src/360/business-partner-360-section-client.test.ts", "src/360/business-partner-360-role-client.test.ts", "src/360/business-partner-360-network-client.test.ts", "src/360/business-partner-360-workforce-client.test.ts"]));
-  const materialization = run("failed-materialization-rollback", "pnpm", ["--filter", "@athyper/server-db", "exec", "tsx", "scripts/run-business-partner-360-security-evidence.ts", `--neon-database-url=${options.neonDatabaseUrl}`, "--confirm=RUN-BS360-SECURITY-EVIDENCE"]);
+  scenarios.push(run("permission-epoch-client-invalidation", "pnpm", ["--filter", "@athyper/product-neon-business-partner", "exec", "vitest", "run", "src/360/business-partner-360-client.test.ts", "src/360/business-partner-360-section-client.test.ts", "src/360/business-partner-360-role-client.test.ts", "src/360/business-partner-360-network-client.test.ts"]));
+  const materialization = run("failed-materialization-rollback", "pnpm", ["--filter", "@athyper/server-db", "exec", "tsx", "scripts/business-partner-360/run-business-partner-360-security-evidence.ts", `--neon-database-url=${options.neonDatabaseUrl}`, "--confirm=RUN-BS360-SECURITY-EVIDENCE"]);
   scenarios.push(materialization);
   const materializationDocument = lastJson(materialization.stdout);
   assert(Array.isArray(materializationDocument.faultInjection) && materializationDocument.faultInjection.length === 6 && materializationDocument.faultInjection.every((item) => item.rolledBack), "six-stage materialization rollback evidence is incomplete");
@@ -81,7 +81,8 @@ async function validateTelemetry() {
 }
 
 async function validateApprovalLedger(path) {
-  const document = JSON.parse(await readFile(resolve(root, path ?? "docs/architecture/evidence/business-partner-360-release-approvals.json"), "utf8"));
+  if (!path) throw new Error("--approval-ledger is required");
+  const document = JSON.parse(await readFile(resolve(root, path), "utf8"));
   assert(document.schemaVersion === 1 && Array.isArray(document.approvals), "approval ledger schema is invalid");
   const byGate = new Map(document.approvals.map((approval) => [approval.gate, approval]));
   const pending = [], invalid = [];

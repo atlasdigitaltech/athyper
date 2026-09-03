@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { ProvisionPlane } from "../safe-provision.js";
+import type { ProvisionPlane } from "./safe-provision.js";
 import type { TenantAuthorityProjection } from "../seed/tenant-authority-projection.js";
 
 export const THREE_PLANE_MANIFEST = resolve(

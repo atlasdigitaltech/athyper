@@ -65,6 +65,8 @@
     "db:setup:rebuild-entity-metadata": "pnpm --dir server/db run db:setup:rebuild-entity-metadata",
     "clean": "turbo clean && rm -rf node_modules",
     "brand:build": "pnpm --filter @athyper/platform-brand run typecheck && pnpm --filter @athyper/platform-theme run iam:build",
+    "catalog:generate": "node scripts/catalog/generate-platform-catalog.mjs",
+    "catalog:check": "node scripts/catalog/generate-platform-catalog.mjs --check",
     "brand:sync:apps": "tsx scripts/brand/sync-app-brand.ts",
     "brand:sync:gateway": "tsx scripts/brand/sync-gateway-brand.ts",
     "brand:sync:presentation": "node scripts/brand/sync-plane-presentation.mjs",

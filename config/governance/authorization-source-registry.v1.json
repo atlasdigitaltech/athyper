@@ -18,6 +18,7 @@
       ".git",
       ".next",
       ".turbo",
+      "acceptance-output",
       "build",
       "coverage",
       "data",
@@ -31,7 +32,7 @@
     "excludedFiles": [
       "config/governance/authorization-inventory.v1.json",
       "config/governance/authorization-source-registry.v1.json",
-      "docs/architecture/authorization-source-inventory.md"
+      "policy/reports/authorization/inventories/authorization-source-inventory.md"
     ],
     "captureSourceDdls": [
       {

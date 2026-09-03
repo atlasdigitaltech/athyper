@@ -81,7 +81,7 @@ pnpm.cmd run db:provision:three-plane
 For an existing DDL foundation, explicitly skip the fresh-database DDL phase:
 
 ```powershell
-pnpm.cmd --dir server/db exec tsx scripts/provision-three-plane.ts --apply --skip-foundation
+pnpm.cmd --dir server/db exec tsx scripts/provisioning/provision-three-plane.ts --apply --skip-foundation
 ```
 
 The canonical manifest is `seed/manifests/three-plane-demo.v1.json`. It owns the

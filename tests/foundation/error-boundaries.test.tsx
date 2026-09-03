@@ -47,13 +47,24 @@ test("rejects unsafe return paths", () => {
 });
 
 test("loading markup distinguishes stable bootstrap and local refresh states", () => {
-  const bootstrap = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" />), collapsed = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" collapsed applicationName="Neon" planeDescriptor="Business Operating Platform" planeIconSrc="/icon.png" />), refresh = renderToStaticMarkup(<AppLoadingBoundary kind="refresh" />);
+  const bootstrap = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" />), collapsed = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" collapsed applicationName="Neon" planeDescriptor="Business Operating Platform" planeIconSrc="/icon.png" />), persistent = renderToStaticMarkup(<AppLoadingBoundary kind="bootstrap" collapsed applicationName="Neon" planeDescriptor="Business Operating Platform" planeIconSrc="/icon.png" planeWordmarkSrc="/lockup.svg" persistentDesktopBrand />), refresh = renderToStaticMarkup(<AppLoadingBoundary kind="refresh" />);
   assert.match(bootstrap, /aria-busy="true"/);
   assert.match(bootstrap, /a-app-loader__rail/);
   assert.match(collapsed, /data-collapsed="true"/);
   assert.match(collapsed, />›</);
   assert.doesNotMatch(collapsed, />BOP</);
   assert.match(collapsed, /a-app-loader__brand-icon/);
+  assert.match(persistent, /data-desktop-brand="true"/);
+  assert.match(persistent, /a-app-loader__desktop-brand/);
+  assert.match(persistent, /a-app-loader__desktop-menu/);
+  assert.match(persistent, /a-app-loader__brand-wordmark/);
+  assert.match(persistent, /a-app-loader__header-actions/);
+  assert.match(persistent, /a-app-loader__secondary-grid/);
+  assert.match(persistent, /a-app-loader__activity/);
+  assert.match(persistent, /a-app-loader__rail-footer/);
+  assert.match(persistent, /a-app-loader__rail-profile/);
+  assert.doesNotMatch(persistent, /Business Operating Platform/);
+  assert.doesNotMatch(persistent, /a-app-loader__brand-icon/);
   assert.match(refresh, /Updating content/);
   assert.match(refresh, /a-app-loader__grid/);
   assert.match(refresh, /aria-live="polite"/);

@@ -44,6 +44,17 @@ describe("experience effective-access projection", () => {
     expect(validateRuntimeSchema(experienceBootstrapSchema, first)).toBe(first);
   });
 
+  it("keeps shared infrastructure entitled without projecting it as a navigation workspace", async () => {
+    const infrastructureModuleId="30000000-0000-4000-8000-000000000002";
+    const repo=repository({async readCatalog(){return{planActive:true,planRevision:"plan:shared",associations:[
+      {workspaceCode:"core",workspaceName:"Core Platform",workspaceSortOrder:1,workspaceSharedInfrastructure:true,moduleId:infrastructureModuleId,moduleCode:"iam",moduleName:"Identity & Access Management",moduleSortOrder:1,primary:true,revision:"catalog:core"},
+      {workspaceCode:"mdg",workspaceName:"Master Data Governance",workspaceSortOrder:10,workspaceSharedInfrastructure:false,moduleId,moduleCode:"bp",moduleName:"Business Partner Management",moduleSortOrder:1,primary:true,revision:"catalog:mdg"},
+    ],permissions:[{code:"platform.identity.read",moduleId:infrastructureModuleId,revision:"permission:core"},{code:"finance.invoice.read",moduleId,revision:"permission:bp"}]};}});
+    const result=await service(repo).bootstrap({...context,permissions:{...context.permissions,allowed:["platform.identity.read","finance.invoice.read"]}});
+    expect(result.workspaces.map((workspace)=>workspace.code)).toEqual(["mdg"]);
+    expect(result.permissions).toEqual(["finance.invoice.read","platform.identity.read"]);
+  });
+
   it("returns context-not-ready without modules or permissions when provisioning has no plan", async () => {
     const repo = repository({ async readIdentity() { return { tenantCode:"tenant",tenantDisplayName:"Tenant Alpha",tenantStatus: "active", tenantRealmKey: "neon", tenantRevision: "tenant:1",principalCode:"user.one",principalDisplayName:"User One", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true }; } });
     await expect(service(repo).bootstrap(context)).resolves.toMatchObject({ state: "context_not_ready", workspaces: [], permissions: [], features: {}, nextActions: ["retry_later"] });
@@ -140,4 +151,21 @@ describe("experience effective-access projection", () => {
     await projection.bootstrap(context);
     expect(reads).toBe(2);
   });
+
+  it("validates in Studio, publishes once, and applies only an exact-plane projection", async () => {
+    const studioContext:VerifiedRequestContext={...context,planeKey:"studio",realmKey:"studio",permissions:{...context.permissions,planeKey:"studio",allowed:["studio.platform.catalog.manage"]}};
+    let projectedPlane="", projectedRelease="";
+    const draft={id:"a0000000-0000-4000-8000-000000000001",targetPlane:"neon" as const,surfaceKey:"neon.home",layer:"tenant" as const,revision:1,status:"draft" as const,definition:{},contentHash:"a".repeat(64),source:"human" as const};
+    const studio=repository({async saveSurfaceDraft(_context,input){expect(input.source).toBe("human");return{...draft,definition:input.definition,contentHash:input.contentHash};},async publishSurfaceRelease(){return{...draft,status:"published",publishedAt:"2026-08-31T00:00:00Z"};}});
+    const neon=repository({async applySurfaceProjection(target,release){projectedPlane=target.planeKey;projectedRelease=release.id;}});
+    const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({studio,neon})});
+    const saved=await projection.saveSurfaceDraft(studioContext,{targetPlane:"neon",layer:"tenant",definition:{schema:"athyper-experience-surface/1",id:"neon.home",revision:1,scope:{kind:"home",plane:"neon"},title:"Home",blocks:[{id:"welcome",type:"text",text:"Welcome"}]}});
+    expect(saved.contentHash).toMatch(/^[0-9a-f]{64}$/);
+    await expect(projection.publishSurface(studioContext,saved.id)).resolves.toMatchObject({status:"published"});
+    expect({projectedPlane,projectedRelease}).toEqual({projectedPlane:"neon",projectedRelease:draft.id});
+  });
+
+  it("rejects unregistered executable surface references before persistence",async()=>{const studioContext:VerifiedRequestContext={...context,planeKey:"studio",realmKey:"studio",permissions:{...context.permissions,planeKey:"studio",allowed:["studio.platform.catalog.manage"]}};let writes=0;const studio=repository({async saveSurfaceDraft(){writes++;throw new Error("must not write");}});const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({studio})});await expect(projection.saveSurfaceDraft(studioContext,{targetPlane:"studio",layer:"tenant",definition:{schema:"athyper-experience-surface/1",id:"studio.home",revision:1,scope:{kind:"home",plane:"studio"},title:"Home",blocks:[{id:"unsafe",type:"extension",extension:"arbitrary.code"}]}})).rejects.toMatchObject({status:400,code:"EXPERIENCE_SURFACE_INVALID"});expect(writes).toBe(0);});
+
+  it("resolves system, shared, tenant, and revision-bound personal layers in order",async()=>{let saved:unknown;const tenantDefinition={schema:"athyper-experience-surface/1",id:"neon.home",revision:3,scope:{kind:"home",plane:"neon"},title:"Tenant home",blocks:[{id:"visible.card",type:"text",text:"Visible"},{id:"hidden.card",type:"text",text:"Hidden"}]};const repo=repository({async readSurfaceProjections(){return[{surfaceKey:"neon.home",layer:"shared",sourceReleaseId:"shared",sourceRevision:2,definition:{...tenantDefinition,revision:2,title:"Shared home"},contentHash:"a".repeat(64)},{surfaceKey:"neon.home",layer:"tenant",sourceReleaseId:"tenant",sourceRevision:3,definition:tenantDefinition,contentHash:"b".repeat(64)}];},async readPersonalSurfaceArrangement(){return{surfaceKey:"neon.home",baseRevision:3,arrangement:{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:3,hidden:["hidden.card"],spans:{"visible.card":2}}};},async savePersonalSurfaceArrangement(_context,input){saved=input;return input;}});const projection=service(repo);await expect(projection.surface(context,"neon.home")).resolves.toMatchObject({surface:{title:"Tenant home",blocks:[{id:"visible.card",span:2}]},provenance:{systemRevision:1,sharedRevision:2,tenantRevision:3,personalApplied:true}});await projection.savePersonalArrangement(context,"neon.home",{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:3,hidden:[]});expect(saved).toMatchObject({surfaceKey:"neon.home",baseRevision:3});await expect(projection.savePersonalArrangement(context,"neon.home",{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:2})).rejects.toMatchObject({status:409,code:"EXPERIENCE_ARRANGEMENT_STALE"});});
 });

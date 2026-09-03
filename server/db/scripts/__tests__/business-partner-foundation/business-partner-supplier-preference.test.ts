@@ -75,7 +75,7 @@ test("preference authorization and audit contracts are production reference seed
     studioManifest,
   ] = await Promise.all([
     read(
-      "ddl/planes/neon/authz/16_supplier_preference_permission_reference_seed.sql",
+      "ddl/planes/neon/authz/14_permission_reference_seed.sql",
     ),
     read("ddl/common/audit/12_reference_seed.sql"),
     read("migrations/20260829_business_partner_audit_contract_baseline.sql"),
@@ -84,7 +84,7 @@ test("preference authorization and audit contracts are production reference seed
     read("migrations/manifests/mesh.txt"),
     read("migrations/manifests/studio.txt"),
   ]);
-  assert.match(permission, /seed-expected-row-count: exact:1/);
+  assert.match(permission, /Supplier preference permission count mismatch/);
   assert.match(permission, /neon\.supplier\.preference\.admin/);
   assert.match(permission, /'high',true,true/);
   assert.match(permission, /'operating_organization','subtree'/);

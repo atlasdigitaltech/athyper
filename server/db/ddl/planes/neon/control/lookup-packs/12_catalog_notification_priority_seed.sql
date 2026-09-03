@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('notification.priority', 'Notification Priority', 'Dispatch and display priority for messages, notifications, delivery records, and digest items. Drives UI sort order, SLA thresholds, and retry control. is_extensible=true ??? tenants may define custom priority tiers with SLA targets.', 'control', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('notification.priority', 'Notification Priority', 'Dispatch and display priority for messages, notifications, delivery records, and digest items. Drives UI sort order, SLA thresholds, and retry control. is_extensible=true — tenants may define custom priority tiers with SLA targets.', 'control', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

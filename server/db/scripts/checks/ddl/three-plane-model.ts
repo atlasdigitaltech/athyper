@@ -95,7 +95,7 @@ for (const plane of planes) {
 }
 
 const packageJson = await readFile(resolve(databaseRoot, "package.json"), "utf8");
-const provision = await readFile(resolve(databaseRoot, "scripts/safe-provision.ts"), "utf8");
+const provision = await readFile(resolve(databaseRoot, "scripts/provisioning/safe-provision.ts"), "utf8");
 const foundationRunner = await readFile(resolve(databaseRoot, "ddl/foundation-runner.ps1"), "utf8");
 const activeSources = packageJson + provision + foundationRunner;
 

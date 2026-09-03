@@ -21,3 +21,5 @@ export * from "./atlas-admin-routes.js";
 export * from "./experience-configuration.js";
 export * from "./atlas-experience-routes.js";
 export * from "./attachment-context.js";
+export * from "./surface-draft-generation.js";
+export * from "./atlas-surface-draft-routes.js";

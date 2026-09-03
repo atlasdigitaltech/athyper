@@ -58,12 +58,12 @@ test("server bootstrap redirects before experience access and hydrates one safe 
 
 test("protected bootstrap treats logout between session and experience reads as unauthenticated", async () => {
   const result = await readProtectedBootstrap({
-    request: new Request("https://neon.local/system/verification"),
-    returnTo: "/system/verification",
+    request: new Request("https://neon.local/operations"),
+    returnTo: "/operations",
     readSession: async () => Response.json(session),
     readExperience: async () => new Response(null, { status: 401 }),
   });
-  assert.deepEqual(result, { state: "redirect", location: "/api/auth/login?returnTo=%2Fsystem%2Fverification", reason: "unauthenticated" });
+  assert.deepEqual(result, { state: "redirect", location: "/api/auth/login?returnTo=%2Foperations", reason: "unauthenticated" });
 });
 
 test("existing application sessions bypass stale sign-in history safely", async () => {

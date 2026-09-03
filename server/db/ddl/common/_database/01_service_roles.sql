@@ -4,6 +4,11 @@
 
 DO $$
 BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        CREATE ROLE athyperadmin
+            NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         CREATE ROLE athyperapp
             NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
@@ -56,6 +61,8 @@ BEGIN
 END;
 $$;
 
+COMMENT ON ROLE athyperadmin IS
+  'NOLOGIN administrative privilege role. Deployment login identities and object owners are provisioned separately; row-level security remains enforced.';
 COMMENT ON ROLE athyperapp IS
   'NOLOGIN least-privilege role inherited by application login identities; row-level security remains enforced.';
 COMMENT ON ROLE athyper_trustiam_service IS

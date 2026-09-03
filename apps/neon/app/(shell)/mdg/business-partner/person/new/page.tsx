@@ -1,3 +1,3 @@
-import { NewWorkforcePersonRequest } from "@athyper/product-neon-business-partner";
+import { redirect } from "next/navigation";
 
-export default function NewWorkforcePersonPage(){return <NewWorkforcePersonRequest/>;}
+export default function LegacyWorkforcePersonPage(){redirect("/people/workforce/requests/new");}

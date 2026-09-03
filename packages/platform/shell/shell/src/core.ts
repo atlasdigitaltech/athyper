@@ -84,6 +84,8 @@ export function deriveShellNavigation(registry: readonly PlaneRouteDefinition[],
 export function canAccessRoute(navigation: DerivedShellNavigation, pathname: string): boolean { return navigation.workspaces.some((workspace) => workspace.href === pathname) || navigation.routes.some((route) => route.href === pathname || (route.href !== "/" && pathname.startsWith(`${route.href}/`))); }
 export function selectLandingRoute(navigation: DerivedShellNavigation, requestedPath?: string): string | undefined { return requestedPath && canAccessRoute(navigation, requestedPath) ? requestedPath : navigation.landingHref; }
 export function deriveBreadcrumbs(navigation: DerivedShellNavigation, pathname: string): readonly Readonly<{ label: string; href?: string }>[] {
+  const workspaceLanding = navigation.workspaces.find((item) => item.href === pathname);
+  if (workspaceLanding) return Object.freeze([Object.freeze({ label: workspaceLanding.name, href: workspaceLanding.href })]);
   const route = [...navigation.routes].sort((a, b) => b.href.length - a.href.length).find((item) => item.href === pathname || (item.href !== "/" && pathname.startsWith(`${item.href}/`)));
   if (!route) return Object.freeze([]);
   const workspace = navigation.workspaces.find((item) => item.code === route.workspaceCode);

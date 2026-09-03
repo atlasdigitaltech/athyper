@@ -17,7 +17,7 @@ const inventoryPath = resolve(
 );
 const markdownPath = resolve(
   repositoryRoot,
-  "docs/architecture/authorization-data-disposition-inventory.md",
+  "policy/reports/authorization/inventories/authorization-data-disposition-inventory.md",
 );
 const ddlRoot = resolve(repositoryRoot, "server/db/ddl");
 const checkOnly = process.argv.includes("--check");

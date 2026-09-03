@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "kind": "athyper.business-partner-360.rollout-cohorts",
-  "featureCode": "neon.business_partner.view_360",
-  "environment": "local-disposable",
-  "internal": ["athyper"],
-  "canary": ["technostat"],
-  "notes": "Named staging only. Cohort presence does not authorize enablement."
-}

@@ -7,15 +7,10 @@
  * --strict exits non-zero while any finding lacks an approved disposition.
  */
 
-import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import pg from "pg";
-
-interface Options {
-  output?: string;
-  strict: boolean;
-}
+import { findingFingerprint, parseAuthorizationQualityOptions } from "./authorization-quality-support.js";
 
 interface RawFinding {
   source_primary_key: unknown;
@@ -60,27 +55,6 @@ interface DispositionRow {
   resolved_at: Date | null;
 }
 
-function parseOptions(args: string[]): Options {
-  const options: Options = { strict: false };
-  for (const arg of args) {
-    if (arg === "--strict") {
-      options.strict = true;
-    } else if (arg.startsWith("--output=")) {
-      const value = arg.slice("--output=".length).trim();
-      if (!value) throw new Error("--output requires a path");
-      options.output = resolve(value);
-    } else if (arg === "--help") {
-      process.stdout.write(
-        "Usage: neon-authorization-quality.ts [--strict] [--output=PATH]\n",
-      );
-      process.exit(0);
-    } else {
-      throw new Error(`Unknown argument: ${arg}`);
-    }
-  }
-  return options;
-}
-
 function quoteIdent(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
@@ -89,25 +63,13 @@ function quoteLiteral(value: string): string {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, child]) => [key, canonicalize(child)]),
-    );
-  }
-  return value;
-}
-
 function fingerprintFor(
   kind: string,
   sourceSchema: string,
   sourceTable: string,
   row: RawFinding,
 ): string {
-  const material = canonicalize({
+  return findingFingerprint({
     kind,
     sourceSchema,
     sourceTable,
@@ -116,10 +78,9 @@ function fingerprintFor(
     referencedTenantId: row.referenced_tenant_id,
     details: row.details,
   });
-  return createHash("sha256").update(JSON.stringify(material)).digest("hex");
 }
 
-const options = parseOptions(process.argv.slice(2));
+const options = parseAuthorizationQualityOptions(process.argv.slice(2), "neon-authorization-quality.ts");
 const connectionString = process.env.DATABASE_URL?.trim();
 if (!connectionString) {
   throw new Error("DATABASE_URL is required for the Wave 0 data-quality report.");

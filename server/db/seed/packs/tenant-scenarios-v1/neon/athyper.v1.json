@@ -1,6 +1,6 @@
 {
   "contractVersion": "athyper.tenant-scenario.v1",
-  "packVersion": "2.1.0",
+  "packVersion": "2.0.0",
   "plane": "neon",
   "tenantCode": "athyper",
   "complexity": "complex",

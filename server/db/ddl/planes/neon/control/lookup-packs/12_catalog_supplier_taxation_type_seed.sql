@@ -39,7 +39,7 @@ WHERE (control.lookup_domain.name, control.lookup_domain.description,
 INSERT INTO control.lookup_value
   (code, name, domain_code, description, category, sort_order, is_system, metadata, status, created_by)
 VALUES
-  ('standard', 'Standard', 'master.supplier_taxation_type', 'Standard taxation ??? VAT/GST charged at standard rate', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('standard', 'Standard', 'master.supplier_taxation_type', 'Standard taxation — VAT/GST charged at standard rate', NULL, 10, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('withholding', 'Withholding Tax', 'master.supplier_taxation_type', 'Buyer deducts WHT at source before remitting', NULL, 20, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('reverse_charge', 'Reverse Charge', 'master.supplier_taxation_type', 'Tax liability reversed to buyer (cross-border services)', NULL, 30, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('zero_rated', 'Zero-Rated', 'master.supplier_taxation_type', 'Supply taxable at 0% (exports, certain necessities)', NULL, 40, true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),

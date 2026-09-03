@@ -147,8 +147,8 @@ expect(
   "seeded IAM contracts cover runtime authentication and provisioning evidence",
   seed.includes("authentication\\.(succeeded|failed|denied)")
     && seed.includes("^iam\\.provisioning\\.[a-z][a-z0-9_]*$")
-    && seed.includes("'grant','revoke','login','logout'")
-    && seed.includes("-- seed-pack-version: 1.1.0"),
+    && ["'grant'", "'revoke'", "'login'", "'logout'"].every((operation) => seed.includes(operation))
+    && /-- seed-pack-version: 1\.[1-9][0-9]*\.0/.test(seed),
 );
 expect(
   "platform transaction writer uses the granted canonical append function",
@@ -225,7 +225,7 @@ const telemetryRecords = await read(
   "server/packages/contracts/telemetry/src/records.ts",
 );
 const alloy = await read(
-  "stack/config/telemetry/logging/alloy.alloy",
+  "deploy/compose/operations/config/alloy.alloy",
 );
 expect(
   "shared telemetry contract carries typed trace context",

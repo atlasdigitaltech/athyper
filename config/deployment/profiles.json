@@ -5,7 +5,7 @@
     "athyper-neon": {
       "entryApplication": "@athyper/neon",
       "requiredProductPackages": ["@athyper/product-neon-business-partner", "@athyper/product-neon-navigation", "@athyper/product-neon-shell"],
-      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui", "@athyper/platform-verification"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
       "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/neon... build",
@@ -18,7 +18,7 @@
     "athyper-studio": {
       "entryApplication": "@athyper/studio",
       "requiredProductPackages": ["@athyper/product-studio-business-partner", "@athyper/product-studio-shell"],
-      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui", "@athyper/platform-verification"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
       "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/studio... build",
@@ -31,7 +31,7 @@
     "athyper-mesh": {
       "entryApplication": "@athyper/mesh",
       "requiredProductPackages": ["@athyper/product-mesh-business-partner", "@athyper/product-mesh-shell"],
-      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui", "@athyper/platform-verification"],
+      "requiredSharedPackages": ["@athyper/contract-platform-api", "@athyper/contract-platform-auth-session", "@athyper/contract-platform-authorization", "@athyper/contract-platform-navigation", "@athyper/platform-api-client", "@athyper/platform-gateway-bff-relay", "@athyper/platform-iam-auth-bff", "@athyper/platform-iam-session", "@athyper/platform-iam-session-store", "@athyper/platform-icons", "@athyper/platform-query", "@athyper/platform-shell", "@athyper/platform-shell-app-foundation", "@athyper/platform-shell-runtime", "@athyper/platform-surface-kit", "@athyper/platform-theme", "@athyper/platform-ui"],
       "requiredServerServices": ["@athyper/server-platform-host"],
       "environmentVariables": ["NODE_ENV", "PORT", "APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"],
       "buildCommand": "pnpm --filter @athyper/mesh... build",

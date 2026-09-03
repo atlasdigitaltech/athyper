@@ -128,20 +128,6 @@ function Roles({ data }: { data: Readonly<Record<string, unknown>> }) {
         rows={array(data["legalEntityAssignments"])}
         fields={["legalEntityId", "effectiveFrom", "effectiveUntil"]}
       />
-      <Cards
-        title="Work assignments"
-        rows={array(data["workAssignments"])}
-        fields={[
-          "legalEntityId",
-          "companyCodeId",
-          "orgUnitId",
-          "positionId",
-          "assignmentType",
-          "fte",
-          "effectiveFrom",
-          "effectiveUntil",
-        ]}
-      />
     </>
   );
 }
@@ -185,7 +171,12 @@ function Customer({ data }: { data: Readonly<Record<string, unknown>> }) {
       <ObjectCard
         title="Customer role"
         value={record(data["customer"])}
-        fields={["code", "type", "keyAccount", "status"]}
+        fields={["code", "type", "status"]}
+      />
+      <Cards
+        title="Governed designations"
+        rows={asRows(record(data["customer"])?.["designations"])}
+        fields={["type", "priorityTier", "effectiveFrom", "effectiveUntil"]}
       />
       <ObjectCard
         title="Sales assignment"
@@ -266,6 +257,7 @@ function Cards({
     </Card>
   );
 }
+function asRows(value:unknown):readonly Readonly<Record<string,unknown>>[]{return Array.isArray(value)?value.filter((item):item is Readonly<Record<string,unknown>>=>Boolean(item&&typeof item==="object"&&!Array.isArray(item))):[];}
 function ObjectCard({
   title,
   value,

@@ -5,7 +5,6 @@ export * from "./bootstrap";
 export * from "./work-context";
 export * from "./operating-organization";
 export * from "./network-account";
-export * from "./verification";
 export * from "./localization";
 export * from "./entity-list";
 

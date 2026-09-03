@@ -469,6 +469,32 @@ model atlas_conversation_retention_policy {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model atlas_experience_release {
+  id           String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id    String    @db.Uuid
+  scope        String
+  revision     BigInt
+  status       String    @default("draft")
+  definition   Json
+  content_hash String    @db.Char(64)
+  published_at DateTime? @db.Timestamptz(6)
+  published_by String?   @db.Uuid
+  created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  created_by   String    @db.Uuid
+  updated_at   DateTime? @db.Timestamptz(6)
+  updated_by   String?   @db.Uuid
+
+  @@unique([tenant_id, scope], map: "atlas_experience_release_draft_uq", where: raw("(status = 'draft'::text)"))
+  @@unique([tenant_id, scope], map: "atlas_experience_release_published_uq", where: raw("(status = 'published'::text)"))
+  @@unique([tenant_id, scope, revision], map: "atlas_experience_release_revision_uq")
+  @@unique([tenant_id, id], map: "atlas_experience_release_tenant_id_uq")
+  @@index([tenant_id, scope, revision(sort: Desc)], map: "atlas_experience_release_history_idx")
+  @@schema("ai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model atlas_knowledge_chunk {
   id                       String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                String                   @db.Uuid
@@ -2261,6 +2287,37 @@ model cycle_type {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model experience_surface_release {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  target_plane      String
+  surface_key       String
+  layer             String    @default("tenant")
+  revision          BigInt
+  status            String    @default("draft")
+  definition        Json
+  content_hash      String    @db.Char(64)
+  source            String    @default("human")
+  validation_report Json      @default("{\"valid\": true, \"issues\": []}")
+  base_release_id   String?   @db.Uuid
+  published_at      DateTime? @db.Timestamptz(6)
+  published_by      String?   @db.Uuid
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+  updated_at        DateTime? @db.Timestamptz(6)
+  updated_by        String?   @db.Uuid
+
+  @@unique([tenant_id, id], map: "experience_surface_release_coordinate_uq")
+  @@unique([tenant_id, target_plane, surface_key, layer], map: "experience_surface_release_draft_uq", where: raw("(status = 'draft'::text)"))
+  @@unique([tenant_id, target_plane, surface_key, layer], map: "experience_surface_release_published_uq", where: raw("(status = 'published'::text)"))
+  @@unique([tenant_id, target_plane, surface_key, layer, revision], map: "experience_surface_release_revision_uq")
+  @@index([tenant_id, target_plane, surface_key, layer, revision(sort: Desc)], map: "experience_surface_release_history_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model feature_flag_catalog {
   id                    String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   code                  String                  @unique(map: "feature_flag_catalog_code_uq")
@@ -2685,6 +2742,7 @@ model parameter_definition {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model policy_activation {
   id                   String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id            String?           @db.Uuid
@@ -2747,6 +2805,7 @@ model policy_definition {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model policy_evaluation_history {
   id                   String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id            String            @db.Uuid
@@ -2905,6 +2964,30 @@ model rounding_rule {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model route_slug_history {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  target_plane      String
+  catalog_kind      String
+  catalog_code      String
+  source_path       String
+  target_path       String
+  redirect_status   Int       @default(308) @db.SmallInt
+  source_release_id String    @db.Uuid
+  effective_from    DateTime  @default(now()) @db.Timestamptz(6)
+  effective_until   DateTime? @db.Timestamptz(6)
+  status            String    @default("active")
+  created_at        DateTime  @default(now()) @db.Timestamptz(6)
+  created_by        String    @db.Uuid
+
+  @@unique([tenant_id, target_plane, source_path], map: "route_slug_history_active_source_uq", where: raw("(status = 'active'::text)"))
+  @@unique([tenant_id, id], map: "route_slug_history_coordinate_uq")
+  @@index([tenant_id, target_plane, target_path], map: "route_slug_history_target_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model subscription_plan {
@@ -3048,6 +3131,32 @@ model tenant_usage_limit_override {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model ui_locale_catalog {
+  locale_code                                         String                     @id
+  format_locale_code                                  String
+  rollout_wave                                        Int                        @db.SmallInt
+  status                                              String                     @default("draft")
+  coverage_pct                                        Int                        @default(0) @db.SmallInt
+  linguistic_review_passed                            Boolean                    @default(false)
+  layout_review_passed                                Boolean                    @default(false)
+  automated_tests_passed                              Boolean                    @default(false)
+  qualified                                           Boolean?                   @default(dbgenerated("((status = 'qualified'::text) AND (coverage_pct = 100) AND linguistic_review_passed AND layout_review_passed AND automated_tests_passed)"))
+  review_evidence                                     Json                       @default("{}")
+  created_at                                          DateTime                   @default(now()) @db.Timestamptz(6)
+  created_by                                          String                     @db.Uuid
+  updated_at                                          DateTime?                  @db.Timestamptz(6)
+  updated_by                                          String?                    @db.Uuid
+  locale_ui_locale_catalog_format_locale_codeTolocale locale                     @relation("ui_locale_catalog_format_locale_codeTolocale", fields: [format_locale_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ui_locale_catalog_format_locale_fk")
+  locale_ui_locale_catalog_locale_codeTolocale        locale                     @relation("ui_locale_catalog_locale_codeTolocale", fields: [locale_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "ui_locale_catalog_locale_fk")
+  tenant_locale_activation                            tenant_locale_activation[]
+
+  @@index([rollout_wave, status, locale_code], map: "ui_locale_catalog_rollout_idx")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model usage_metric_catalog {
   id                            String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   code                          String                          @unique(map: "usage_metric_catalog_code_uq")
@@ -3068,6 +3177,7 @@ model usage_metric_catalog {
   tenant_usage_limit_override   tenant_usage_limit_override[]
   module                        control_module?                 @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "usage_metric_catalog_module_fk")
   tenant_usage_counter          tenant_usage_counter[]
+  usage_reservation             usage_reservation[]
 
   @@index([module_id, code], map: "usage_metric_catalog_module_idx", where: raw("(((status)::text = 'active'::text) AND (module_id IS NOT NULL))"))
   @@schema("control")
@@ -3230,15 +3340,10 @@ model attachment {
   kind                                                                                                        String                            @default("attachment")
   storage_bucket                                                                                              String
   storage_key                                                                                                 String
-  thumbnail_key                                                                                               String?
-  preview_key                                                                                                 String?
-  preview_generated_at                                                                                        DateTime?                         @db.Timestamptz(6)
-  is_preview_generation_failed                                                                                Boolean                           @default(false)
   is_virus_scanned                                                                                            Boolean                           @default(false)
   version_no                                                                                                  Int                               @default(1)
   parent_attachment_id                                                                                        String?                           @db.Uuid
   reference_count                                                                                             Int                               @default(0)
-  is_current                                                                                                  Boolean                           @default(true)
   is_active                                                                                                   Boolean                           @default(true)
   is_auto_delete_on_expiry                                                                                    Boolean                           @default(false)
   expires_at                                                                                                  DateTime?                         @db.Timestamptz(6)
@@ -3260,24 +3365,24 @@ model attachment {
   pii_detected                                                                                                Boolean                           @default(false)
   pii_types                                                                                                   Json                              @default("[]")
   pii_scanned_at                                                                                              DateTime?                         @db.Timestamptz(6)
-  series_id                                                                                                   String?                           @db.Uuid
+  series_id                                                                                                   String                            @db.Uuid
   principal_attachment_tenant_id_created_byToprincipal                                                        principal                         @relation("attachment_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_created_by_fk")
   attachment                                                                                                  attachment?                       @relation("attachmentToattachment", fields: [tenant_id, parent_attachment_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_parent_fk")
   other_attachment                                                                                            attachment[]                      @relation("attachmentToattachment")
-  attachment_series_attachment_tenant_id_series_idToattachment_series                                         attachment_series?                @relation("attachment_tenant_id_series_idToattachment_series", fields: [tenant_id, series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_series_id_fk")
+  attachment_series_attachment_tenant_id_series_idToattachment_series                                         attachment_series                 @relation("attachment_tenant_id_series_idToattachment_series", fields: [tenant_id, series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_series_id_fk")
   principal_attachment_tenant_id_status_changed_byToprincipal                                                 principal?                        @relation("attachment_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_status_changed_by_fk")
   tenant                                                                                                      tenant                            @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "attachment_tenant_fk")
   principal_attachment_tenant_id_updated_byToprincipal                                                        principal?                        @relation("attachment_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_updated_by_fk")
   principal_attachment_tenant_id_uploaded_byToprincipal                                                       principal?                        @relation("attachment_tenant_id_uploaded_byToprincipal", fields: [tenant_id, uploaded_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_uploaded_by_fk")
   attachment_derivative                                                                                       attachment_derivative[]
   attachment_link                                                                                             attachment_link[]
-  attachment_quota_reservation                                                                                attachment_quota_reservation[]
   attachment_series_attachment_series_tenant_id_current_attachment_idToattachment                             attachment_series[]               @relation("attachment_series_tenant_id_current_attachment_idToattachment")
   multipart_upload_multipart_upload_tenant_id_attachment_idToattachment                                       multipart_upload[]                @relation("multipart_upload_tenant_id_attachment_idToattachment")
   multipart_upload_multipart_upload_tenant_id_parent_attachment_idToattachment                                multipart_upload[]                @relation("multipart_upload_tenant_id_parent_attachment_idToattachment")
   notification_message_attachment_notification_message_attachment_tenant_id_attachment_idToattachment         notification_message_attachment[] @relation("notification_message_attachment_tenant_id_attachment_idToattachment")
   notification_message_attachment_notification_message_attachment_tenant_id_attachment_version_idToattachment notification_message_attachment[] @relation("notification_message_attachment_tenant_id_attachment_version_idToattachment")
 
+  @@unique([tenant_id, id, series_id], map: "attachment_tenant_id_series_uq")
   @@unique([tenant_id, id], map: "attachment_tenant_id_uq")
   @@index([expires_at], map: "attachment_expiry_idx", where: raw("(is_auto_delete_on_expiry AND ((status)::text <> 'deleted'::text))"))
   @@index([tenant_id, parent_attachment_id], map: "attachment_parent_idx", where: raw("(parent_attachment_id IS NOT NULL)"))
@@ -3420,75 +3525,26 @@ model attachment_link {
   tenant_id            String             @db.Uuid
   entity_type          String
   entity_id            String
-  attachment_id        String             @db.Uuid
-  attachment_series_id String?            @db.Uuid
+  attachment_series_id String             @db.Uuid
   link_kind            String             @default("related")
   display_order        Int                @default(0)
   metadata             Json               @default("{}")
   folder_id            String?            @db.Uuid
   created_at           DateTime           @default(now()) @db.Timestamptz(6)
   created_by           String             @db.Uuid
-  attachment           attachment         @relation(fields: [tenant_id, attachment_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_attachment_fk")
-  attachment_series    attachment_series? @relation(fields: [tenant_id, attachment_series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_attachment_series_fk")
+  pinned_attachment_id String?            @db.Uuid
+  attachment_series    attachment_series  @relation(fields: [tenant_id, attachment_series_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_attachment_series_fk")
   principal            principal          @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_created_by_fk")
   attachment_folder    attachment_folder? @relation(fields: [tenant_id, folder_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_link_folder_fk")
+  attachment           attachment?        @relation(fields: [tenant_id, pinned_attachment_id, attachment_series_id], references: [tenant_id, id, series_id], onDelete: NoAction, onUpdate: NoAction, map: "attachment_link_pinned_attachment_fk")
   tenant               tenant             @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "attachment_link_tenant_fk")
 
-  @@unique([tenant_id, entity_type, entity_id, attachment_id, link_kind], map: "attachment_link_owner_attachment_uq")
+  @@unique([tenant_id, entity_type, entity_id, attachment_series_id, pinned_attachment_id, link_kind], map: "attachment_link_owner_attachment_uq")
   @@unique([tenant_id, id], map: "attachment_link_tenant_id_uq")
-  @@index([tenant_id, attachment_id], map: "attachment_link_attachment_idx")
   @@index([tenant_id, folder_id], map: "attachment_link_folder_idx", where: raw("(folder_id IS NOT NULL)"))
   @@index([tenant_id, entity_type, entity_id, display_order], map: "attachment_link_owner_idx")
-  @@index([tenant_id, attachment_series_id], map: "attachment_link_series_idx", where: raw("(attachment_series_id IS NOT NULL)"))
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model attachment_quota_reservation {
-  id             String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id      String     @db.Uuid
-  quota_kind     String
-  resource_type  String
-  resource_id    String     @db.Uuid
-  reserved_bytes BigInt
-  reserved_items BigInt     @default(1)
-  actual_bytes   BigInt?
-  status         String     @default("reserved")
-  expires_at     DateTime   @db.Timestamptz(6)
-  committed_at   DateTime?  @db.Timestamptz(6)
-  released_at    DateTime?  @db.Timestamptz(6)
-  created_at     DateTime   @default(now()) @db.Timestamptz(6)
-  created_by     String     @db.Uuid
-  updated_at     DateTime?  @db.Timestamptz(6)
-  updated_by     String?    @db.Uuid
-  attachment     attachment @relation(fields: [tenant_id, resource_id], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_quota_reservation_attachment_fk")
-  principal      principal  @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_quota_reservation_created_by_fk")
-  tenant         tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "attachment_quota_reservation_tenant_fk")
-
-  @@unique([tenant_id, quota_kind, resource_type, resource_id])
-  @@index([tenant_id, expires_at], map: "attachment_quota_reservation_expiry_idx", where: raw("(status = 'reserved'::text)"))
-  @@index([tenant_id, resource_id], map: "attachment_quota_reservation_resource_idx")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model attachment_quota_usage {
-  tenant_id      String    @db.Uuid
-  quota_kind     String
-  used_bytes     BigInt    @default(0)
-  reserved_bytes BigInt    @default(0)
-  used_items     BigInt    @default(0)
-  reserved_items BigInt    @default(0)
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  created_by     String    @db.Uuid
-  updated_at     DateTime? @db.Timestamptz(6)
-  updated_by     String?   @db.Uuid
-  principal      principal @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "attachment_quota_usage_created_by_fk")
-  tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "attachment_quota_usage_tenant_fk")
-
-  @@id([tenant_id, quota_kind])
+  @@index([tenant_id, pinned_attachment_id], map: "attachment_link_pinned_attachment_idx", where: raw("(pinned_attachment_id IS NOT NULL)"))
+  @@index([tenant_id, attachment_series_id], map: "attachment_link_series_idx")
   @@schema("document")
 }
 
@@ -3654,6 +3710,7 @@ model comment_mention {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model comment_moderation_flag {
   id                                                                 String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                          String     @db.Uuid
@@ -3701,6 +3758,7 @@ model comment_reaction {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model comment_revision {
   id             String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id      String    @db.Uuid
@@ -3728,41 +3786,39 @@ model comment_revision {
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model content_item {
-  id                                                                                   String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                            String                      @db.Uuid
+  id                                                                                   String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                            String                 @db.Uuid
   code                                                                                 String
   title                                                                                String
-  kind                                                                                 String                      @default("page")
-  parent_id                                                                            String?                     @db.Uuid
-  locale_code                                                                          String                      @default("en")
+  kind                                                                                 String                 @default("page")
+  parent_id                                                                            String?                @db.Uuid
+  locale_code                                                                          String                 @default("en")
   slug                                                                                 String
   summary                                                                              String?
-  current_version_id                                                                   String?                     @db.Uuid
-  metadata                                                                             Json                        @default("{}")
-  status                                                                               String                      @default("DRAFT")
-  status_changed_at                                                                    DateTime?                   @db.Timestamptz(6)
-  status_changed_by                                                                    String?                     @db.Uuid
+  current_version_id                                                                   String?                @db.Uuid
+  metadata                                                                             Json                   @default("{}")
+  status                                                                               String                 @default("DRAFT")
+  status_changed_at                                                                    DateTime?              @db.Timestamptz(6)
+  status_changed_by                                                                    String?                @db.Uuid
   preview_text                                                                         String?
   preview_html                                                                         String?
-  preview_generated_at                                                                 DateTime?                   @db.Timestamptz(6)
-  created_at                                                                           DateTime                    @default(now()) @db.Timestamptz(6)
-  created_by                                                                           String                      @db.Uuid
-  updated_at                                                                           DateTime?                   @db.Timestamptz(6)
-  updated_by                                                                           String?                     @db.Uuid
-  row_version                                                                          BigInt                      @default(1)
-  principal_content_item_tenant_id_created_byToprincipal                               principal                   @relation("content_item_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_created_by_fk")
-  content_item_version_content_item_tenant_id_current_version_idTocontent_item_version content_item_version?       @relation("content_item_tenant_id_current_version_idTocontent_item_version", fields: [tenant_id, current_version_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "content_item_current_version_fk")
-  locale                                                                               locale                      @relation(fields: [locale_code], references: [code], onUpdate: NoAction, map: "content_item_locale_fk")
-  content_item                                                                         content_item?               @relation("content_itemTocontent_item", fields: [tenant_id, parent_id], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_parent_fk")
-  other_content_item                                                                   content_item[]              @relation("content_itemTocontent_item")
-  principal_content_item_tenant_id_status_changed_byToprincipal                        principal?                  @relation("content_item_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_status_changed_by_fk")
-  tenant                                                                               tenant                      @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "content_item_tenant_fk")
-  principal_content_item_tenant_id_updated_byToprincipal                               principal?                  @relation("content_item_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_updated_by_fk")
-  content_item_access_grant                                                            content_item_access_grant[]
-  content_item_link_content_item_link_tenant_id_source_content_item_idTocontent_item   content_item_link[]         @relation("content_item_link_tenant_id_source_content_item_idTocontent_item")
-  content_item_link_content_item_link_tenant_id_target_content_item_idTocontent_item   content_item_link[]         @relation("content_item_link_tenant_id_target_content_item_idTocontent_item")
-  content_quota_reservation                                                            content_quota_reservation[]
-  content_item_version_content_item_version_tenant_id_content_item_idTocontent_item    content_item_version[]      @relation("content_item_version_tenant_id_content_item_idTocontent_item")
+  preview_generated_at                                                                 DateTime?              @db.Timestamptz(6)
+  created_at                                                                           DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                                                                           String                 @db.Uuid
+  updated_at                                                                           DateTime?              @db.Timestamptz(6)
+  updated_by                                                                           String?                @db.Uuid
+  row_version                                                                          BigInt                 @default(1)
+  principal_content_item_tenant_id_created_byToprincipal                               principal              @relation("content_item_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_created_by_fk")
+  content_item_version_content_item_tenant_id_current_version_idTocontent_item_version content_item_version?  @relation("content_item_tenant_id_current_version_idTocontent_item_version", fields: [tenant_id, current_version_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "content_item_current_version_fk")
+  locale                                                                               locale                 @relation(fields: [locale_code], references: [code], onUpdate: NoAction, map: "content_item_locale_fk")
+  content_item                                                                         content_item?          @relation("content_itemTocontent_item", fields: [tenant_id, parent_id], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_parent_fk")
+  other_content_item                                                                   content_item[]         @relation("content_itemTocontent_item")
+  principal_content_item_tenant_id_status_changed_byToprincipal                        principal?             @relation("content_item_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_status_changed_by_fk")
+  tenant                                                                               tenant                 @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "content_item_tenant_fk")
+  principal_content_item_tenant_id_updated_byToprincipal                               principal?             @relation("content_item_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_updated_by_fk")
+  content_item_link_content_item_link_tenant_id_source_content_item_idTocontent_item   content_item_link[]    @relation("content_item_link_tenant_id_source_content_item_idTocontent_item")
+  content_item_link_content_item_link_tenant_id_target_content_item_idTocontent_item   content_item_link[]    @relation("content_item_link_tenant_id_target_content_item_idTocontent_item")
+  content_item_version_content_item_version_tenant_id_content_item_idTocontent_item    content_item_version[] @relation("content_item_version_tenant_id_content_item_idTocontent_item")
 
   @@unique([tenant_id, parent_id, locale_code, slug], map: "content_item_child_slug_uq", where: raw("(parent_id IS NOT NULL)"))
   @@unique([tenant_id, code, locale_code], map: "content_item_code_uq")
@@ -3770,29 +3826,6 @@ model content_item {
   @@unique([tenant_id, id], map: "content_item_tenant_id_uq")
   @@index([tenant_id, parent_id, locale_code], map: "content_item_parent_idx")
   @@index([tenant_id, status, kind, updated_at(sort: Desc)], map: "content_item_status_idx")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model content_item_access_grant {
-  id              String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String       @db.Uuid
-  content_item_id String       @db.Uuid
-  subject_type    String
-  subject_id      String?      @db.Uuid
-  access_level    String
-  effect          String       @default("allow")
-  expires_at      DateTime?    @db.Timestamptz(6)
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
-  created_by      String       @db.Uuid
-  principal       principal    @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "content_item_access_grant_created_by_fk")
-  content_item    content_item @relation(fields: [tenant_id, content_item_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "content_item_access_grant_item_fk")
-  tenant          tenant       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "content_item_access_grant_tenant_fk")
-
-  @@unique([tenant_id, content_item_id, subject_type, subject_id, access_level, effect])
-  @@unique([tenant_id, id])
-  @@index([tenant_id, subject_type, subject_id, content_item_id], map: "content_item_acl_subject_idx")
   @@schema("document")
 }
 
@@ -3816,46 +3849,6 @@ model content_item_link {
   @@unique([tenant_id, source_content_item_id, target_content_item_id, relation_type], map: "content_item_link_target_uq")
   @@unique([tenant_id, id], map: "content_item_link_tenant_id_uq")
   @@index([tenant_id, target_content_item_id], map: "content_item_link_target_idx")
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model content_quota_reservation {
-  id              String       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String       @db.Uuid
-  quota_kind      String
-  content_item_id String       @db.Uuid
-  reserved_items  BigInt       @default(1)
-  status          String       @default("reserved")
-  expires_at      DateTime     @db.Timestamptz(6)
-  committed_at    DateTime?    @db.Timestamptz(6)
-  released_at     DateTime?    @db.Timestamptz(6)
-  created_at      DateTime     @default(now()) @db.Timestamptz(6)
-  created_by      String       @db.Uuid
-  updated_at      DateTime?    @db.Timestamptz(6)
-  updated_by      String?      @db.Uuid
-  content_item    content_item @relation(fields: [tenant_id, content_item_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction, map: "content_quota_reservation_item_fk")
-
-  @@unique([tenant_id, quota_kind, content_item_id])
-  @@index([tenant_id, expires_at], map: "content_quota_reservation_expiry_idx", where: raw("(status = 'reserved'::text)"))
-  @@schema("document")
-}
-
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model content_quota_usage {
-  tenant_id      String    @db.Uuid
-  quota_kind     String
-  used_items     BigInt    @default(0)
-  reserved_items BigInt    @default(0)
-  created_at     DateTime  @default(now()) @db.Timestamptz(6)
-  created_by     String    @db.Uuid
-  updated_at     DateTime? @db.Timestamptz(6)
-  updated_by     String?   @db.Uuid
-  tenant         tenant    @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "content_quota_usage_tenant_fk")
-
-  @@id([tenant_id, quota_kind])
   @@schema("document")
 }
 
@@ -4354,6 +4347,7 @@ model notification_delivery {
   webhook_subscription          event_webhook_subscription?     @relation(fields: [tenant_id, subscription_id], references: [tenant_id, id], onDelete: SetNull, onUpdate: NoAction, map: "notification_delivery_subscription_fk")
   tenant                        tenant                          @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "notification_delivery_tenant_fk")
   notification_inbox_state      notification_inbox_state?
+  notification_provider_event   notification_provider_event[]
   notification_delivery_attempt notification_delivery_attempt[]
 
   @@unique([tenant_id, message_id, recipient_id, channel], map: "notification_delivery_coordinate_uq")
@@ -4385,6 +4379,32 @@ model notification_delivery_claim {
 
   @@unique([tenant_id, idempotency_key], map: "notification_delivery_claim_key_uq")
   @@index([expires_at], map: "notification_delivery_claim_expiry_idx", where: raw("(completed_at IS NULL)"))
+  @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notification_email_suppression {
+  id                          String                       @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                   String?                      @db.Uuid
+  scope                       String
+  address_hash                String                       @unique(map: "notification_email_suppression_global_active_uq", where: raw("((scope = 'global'::text) AND (released_at IS NULL))")) @db.Char(64)
+  reason                      String
+  provider_code               String?
+  source_provider_event_id    String?                      @db.Uuid
+  expires_at                  DateTime?                    @db.Timestamptz(6)
+  released_at                 DateTime?                    @db.Timestamptz(6)
+  released_by                 String?                      @db.Uuid
+  created_at                  DateTime                     @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                  String                       @db.Uuid
+  updated_at                  DateTime?                    @db.Timestamptz(6)
+  updated_by                  String?                      @db.Uuid
+  notification_provider_event notification_provider_event? @relation(fields: [tenant_id, source_provider_event_id], references: [tenant_id, id], onDelete: Restrict, onUpdate: NoAction, map: "notification_email_suppression_source_fk")
+  tenant                      tenant?                      @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "notification_email_suppression_tenant_fk")
+
+  @@unique([tenant_id, address_hash], map: "notification_email_suppression_tenant_active_uq", where: raw("((scope = 'tenant'::text) AND (released_at IS NULL))"))
+  @@index([expires_at], map: "notification_email_suppression_expiry_idx", where: raw("((released_at IS NULL) AND (expires_at IS NOT NULL))"))
   @@schema("event")
 }
 
@@ -4520,6 +4540,37 @@ model notification_outbox_state {
   @@unique([tenant_id, outbox_id], map: "notification_outbox_state_coordinate_uq")
   @@index([tenant_id, next_retry_at, created_at], map: "notification_outbox_state_claim_idx", where: raw("(status = ANY (ARRAY['pending'::text, 'failed'::text]))"))
   @@index([locked_until], map: "notification_outbox_state_lease_idx", where: raw("(status = 'processing'::text)"))
+  @@schema("event")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model notification_provider_event {
+  id                             String                           @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                      String                           @db.Uuid
+  delivery_id                    String                           @db.Uuid
+  provider_code                  String
+  provider_event_id              String
+  provider_message_id            String
+  event_type                     String
+  occurred_at                    DateTime                         @db.Timestamptz(6)
+  diagnostic                     Json                             @default("{}")
+  payload_sha256                 String                           @db.Char(64)
+  previous_status                String
+  projected_status               String
+  transition_applied             Boolean
+  is_redacted                    Boolean                          @default(true)
+  created_at                     DateTime                         @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                     String                           @db.Uuid
+  notification_email_suppression notification_email_suppression[]
+  notification_delivery          notification_delivery            @relation(fields: [tenant_id, delivery_id], references: [tenant_id, id], onUpdate: NoAction, map: "notification_provider_event_delivery_fk")
+  tenant                         tenant                           @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "notification_provider_event_tenant_fk")
+
+  @@unique([provider_code, provider_event_id], map: "notification_provider_event_provider_id_uq")
+  @@unique([tenant_id, id], map: "notification_provider_event_tenant_id_uq")
+  @@index([tenant_id, delivery_id, occurred_at(sort: Desc), id(sort: Desc)], map: "notification_provider_event_delivery_idx")
+  @@index([provider_code, provider_message_id], map: "notification_provider_event_message_idx")
   @@schema("event")
 }
 
@@ -5128,31 +5179,61 @@ model notification_dlq {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model address {
-  id                String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String         @db.Uuid
-  address_type      String?
-  line1             String?
-  line2             String?
-  line3             String?
-  city              String?
-  region            String?
-  postal_code       String?
-  country_code      String?        @db.Char(2)
-  latitude          Decimal?       @db.Decimal(9, 6)
-  longitude         Decimal?       @db.Decimal(9, 6)
-  normalized_hash   String         @db.Char(64)
-  metadata          Json           @default("{}")
-  status            String         @default("active")
-  is_active         Boolean?       @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at DateTime?      @db.Timestamptz(6)
-  status_changed_by String?        @db.Uuid
-  created_at        DateTime       @default(now()) @db.Timestamptz(6)
-  created_by        String         @db.Uuid
-  updated_at        DateTime?      @db.Timestamptz(6)
-  updated_by        String?        @db.Uuid
-  country           country?       @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "address_country_fk")
-  tenant            tenant         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_tenant_fk")
-  address_link      address_link[]
+  id                                                                         String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                  String          @db.Uuid
+  address_type                                                               String?
+  line1                                                                      String?
+  line2                                                                      String?
+  line3                                                                      String?
+  city                                                                       String?
+  region                                                                     String?
+  postal_code                                                                String?
+  country_code                                                               String          @db.Char(2)
+  latitude                                                                   Decimal?        @db.Decimal(9, 6)
+  longitude                                                                  Decimal?        @db.Decimal(9, 6)
+  normalized_hash                                                            String          @db.Char(64)
+  metadata                                                                   Json            @default("{}")
+  status                                                                     String          @default("draft")
+  is_active                                                                  Boolean?        @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                          DateTime?       @db.Timestamptz(6)
+  status_changed_by                                                          String?         @db.Uuid
+  created_at                                                                 DateTime        @default(now()) @db.Timestamptz(6)
+  created_by                                                                 String          @db.Uuid
+  updated_at                                                                 DateTime?       @db.Timestamptz(6)
+  updated_by                                                                 String?         @db.Uuid
+  address_kind                                                               String          @default("street")
+  dependent_locality                                                         String?
+  state_region_code                                                          String?
+  timezone_code                                                              String?
+  normalization_version                                                      String          @default("v1")
+  formatted_address                                                          String?
+  format_version                                                             String          @default("v1")
+  street_name                                                                String?
+  house_number                                                               String?
+  house_number_suffix                                                        String?
+  building_name                                                              String?
+  floor                                                                      String?
+  room                                                                       String?
+  entrance                                                                   String?
+  unit                                                                       String?
+  po_box                                                                     String?
+  po_box_postal_code                                                         String?
+  po_box_city                                                                String?
+  delivery_service_type                                                      String?
+  delivery_service_number                                                    String?
+  validation_status                                                          String          @default("unverified")
+  validation_provider                                                        String?
+  validation_confidence                                                      Decimal?        @db.Decimal(5, 2)
+  validated_at                                                               DateTime?       @db.Timestamptz(6)
+  current_validation_event_id                                                String?         @db.Uuid
+  country                                                                    country         @relation(fields: [country_code], references: [code], onUpdate: NoAction, map: "address_country_fk")
+  address_event_address_tenant_id_current_validation_event_idToaddress_event address_event?  @relation("address_tenant_id_current_validation_event_idToaddress_event", fields: [tenant_id, current_validation_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_current_validation_event_fk")
+  state_region                                                               state_region?   @relation(fields: [country_code, state_region_code], references: [country_code, code], onUpdate: NoAction, map: "address_state_region_fk")
+  tenant                                                                     tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_tenant_fk")
+  timezone                                                                   timezone?       @relation(fields: [timezone_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "address_timezone_fk")
+  address_event_address_event_tenant_id_related_address_idToaddress          address_event[] @relation("address_event_tenant_id_related_address_idToaddress")
+  address_event_address_event_tenant_id_subject_address_idToaddress          address_event[] @relation("address_event_tenant_id_subject_address_idToaddress")
+  address_link                                                               address_link[]
 
   @@unique([tenant_id, normalized_hash], map: "address_normalized_hash_uq", where: raw("(status = 'active'::text)"))
   @@unique([tenant_id, id], map: "address_tenant_id_uq")
@@ -5162,29 +5243,71 @@ model address {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model address_event {
+  id                                                                   String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                            String          @db.Uuid
+  event_type                                                           String
+  subject_address_id                                                   String          @db.Uuid
+  related_address_id                                                   String?         @db.Uuid
+  correlation_id                                                       String?         @db.Uuid
+  evidence_event_id                                                    String?         @db.Uuid
+  provider                                                             String?
+  provider_reference                                                   String?
+  result_status                                                        String?
+  confidence                                                           Decimal?        @db.Decimal(5, 2)
+  reason_code                                                          String?
+  evidence_hash                                                        String?         @db.Char(64)
+  payload                                                              Json?
+  effective_at                                                         DateTime?       @db.Timestamptz(6)
+  occurred_at                                                          DateTime        @default(now()) @db.Timestamptz(6)
+  created_at                                                           DateTime        @default(now()) @db.Timestamptz(6)
+  created_by                                                           String          @db.Uuid
+  address_address_tenant_id_current_validation_event_idToaddress_event address[]       @relation("address_tenant_id_current_validation_event_idToaddress_event")
+  principal                                                            principal       @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_event_created_by_fk")
+  address_event                                                        address_event?  @relation("address_eventToaddress_event", fields: [tenant_id, evidence_event_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_event_evidence_event_fk")
+  other_address_event                                                  address_event[] @relation("address_eventToaddress_event")
+  address_address_event_tenant_id_related_address_idToaddress          address?        @relation("address_event_tenant_id_related_address_idToaddress", fields: [tenant_id, related_address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_event_related_address_fk")
+  address_address_event_tenant_id_subject_address_idToaddress          address         @relation("address_event_tenant_id_subject_address_idToaddress", fields: [tenant_id, subject_address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_event_subject_address_fk")
+  tenant                                                               tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_event_tenant_fk")
+
+  @@unique([tenant_id, id], map: "address_event_tenant_id_uq")
+  @@index([tenant_id, correlation_id, occurred_at(sort: Desc)], map: "address_event_correlation_idx", where: raw("(correlation_id IS NOT NULL)"))
+  @@index([tenant_id, related_address_id, occurred_at(sort: Desc)], map: "address_event_related_idx", where: raw("(related_address_id IS NOT NULL)"))
+  @@index([tenant_id, subject_address_id, occurred_at(sort: Desc)], map: "address_event_subject_idx")
+  @@index([tenant_id, event_type, occurred_at(sort: Desc)], map: "address_event_type_idx")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model address_link {
-  id              String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id       String     @db.Uuid
-  owner_type_id   String     @db.Uuid
-  owner_id        String     @db.Uuid
-  address_id      String     @db.Uuid
-  purpose         String     @default("default")
-  role_qualifier  String?
-  attention_line  String?
-  is_primary      Boolean    @default(false)
-  effective_from  DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
-  effective_until DateTime?  @db.Date
-  metadata        Json       @default("{}")
-  created_at      DateTime   @default(now()) @db.Timestamptz(6)
-  created_by      String     @db.Uuid
-  updated_at      DateTime?  @db.Timestamptz(6)
-  updated_by      String?    @db.Uuid
-  address         address    @relation(fields: [tenant_id, address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_address_fk")
-  owner_type_rel      owner_type @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
-  tenant          tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
+  id                       String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String     @db.Uuid
+  owner_type_id            String     @db.Uuid
+  owner_id                 String     @db.Uuid
+  address_id               String     @db.Uuid
+  purpose                  String     @default("default")
+  role_qualifier           String?
+  attention_line           String?
+  is_primary               Boolean    @default(false)
+  effective_from           DateTime   @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until          DateTime?  @db.Date
+  metadata                 Json       @default("{}")
+  created_at               DateTime   @default(now()) @db.Timestamptz(6)
+  created_by               String     @db.Uuid
+  updated_at               DateTime?  @db.Timestamptz(6)
+  updated_by               String?    @db.Uuid
+  usage_status             String     @default("active")
+  usage_denied_reason_code String?
+  usage_denied_at          DateTime?  @db.Timestamptz(6)
+  usage_denied_by          String?    @db.Uuid
+  address                  address    @relation(fields: [tenant_id, address_id], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_address_fk")
+  owner_type_rel               owner_type @relation(fields: [owner_type_id], references: [id], onUpdate: NoAction, map: "address_link_owner_type_fk")
+  tenant                   tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
+  principal                principal? @relation(fields: [tenant_id, usage_denied_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_usage_denied_by_fk")
 
   @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_current_primary_uq", where: raw("(is_primary AND (effective_until IS NULL))"))
   @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id], map: "address_link_owner_purpose_address_uq")
@@ -5749,8 +5872,6 @@ model principal {
   attachment_legal_hold_attachment_legal_hold_tenant_id_released_byToprincipal                           attachment_legal_hold[]                   @relation("attachment_legal_hold_tenant_id_released_byToprincipal")
   attachment_legal_hold_event                                                                            attachment_legal_hold_event[]
   attachment_link                                                                                        attachment_link[]
-  attachment_quota_reservation                                                                           attachment_quota_reservation[]
-  attachment_quota_usage                                                                                 attachment_quota_usage[]
   attachment_series_attachment_series_tenant_id_created_byToprincipal                                    attachment_series[]                       @relation("attachment_series_tenant_id_created_byToprincipal")
   attachment_series_attachment_series_tenant_id_status_changed_byToprincipal                             attachment_series[]                       @relation("attachment_series_tenant_id_status_changed_byToprincipal")
   attachment_series_attachment_series_tenant_id_updated_byToprincipal                                    attachment_series[]                       @relation("attachment_series_tenant_id_updated_byToprincipal")
@@ -5775,7 +5896,6 @@ model principal {
   content_item_content_item_tenant_id_created_byToprincipal                                              content_item[]                            @relation("content_item_tenant_id_created_byToprincipal")
   content_item_content_item_tenant_id_status_changed_byToprincipal                                       content_item[]                            @relation("content_item_tenant_id_status_changed_byToprincipal")
   content_item_content_item_tenant_id_updated_byToprincipal                                              content_item[]                            @relation("content_item_tenant_id_updated_byToprincipal")
-  content_item_access_grant                                                                              content_item_access_grant[]
   content_item_link                                                                                      content_item_link[]
   conversation_conversation_tenant_id_created_byToprincipal                                              conversation[]                            @relation("conversation_tenant_id_created_byToprincipal")
   conversation_conversation_tenant_id_deleted_byToprincipal                                              conversation[]                            @relation("conversation_tenant_id_deleted_byToprincipal")
@@ -5840,6 +5960,8 @@ model principal {
   legal_hold_manifest                                                                                    governance_legal_hold_manifest[]
   report_pack_report_pack_tenant_id_created_byToprincipal                                                report_pack[]                             @relation("report_pack_tenant_id_created_byToprincipal")
   report_pack_report_pack_tenant_id_updated_byToprincipal                                                report_pack[]                             @relation("report_pack_tenant_id_updated_byToprincipal")
+  address_event                                                                                          address_event[]
+  address_link                                                                                           address_link[]
   audit_reason_code_audit_reason_code_tenant_id_created_byToprincipal                                    audit_reason_code[]                       @relation("audit_reason_code_tenant_id_created_byToprincipal")
   audit_reason_code_audit_reason_code_tenant_id_status_changed_byToprincipal                             audit_reason_code[]                       @relation("audit_reason_code_tenant_id_status_changed_byToprincipal")
   audit_reason_code_audit_reason_code_tenant_id_updated_byToprincipal                                    audit_reason_code[]                       @relation("audit_reason_code_tenant_id_updated_byToprincipal")
@@ -5974,6 +6096,8 @@ model principal {
   mfa_credential_projection_mfa_credential_projection_created_byToprincipal                              mfa_credential_projection[]               @relation("mfa_credential_projection_created_byToprincipal")
   mfa_credential_projection_mfa_credential_projection_tenant_id_principal_idToprincipal                  mfa_credential_projection[]               @relation("mfa_credential_projection_tenant_id_principal_idToprincipal")
   mfa_credential_projection_mfa_credential_projection_updated_byToprincipal                              mfa_credential_projection[]               @relation("mfa_credential_projection_updated_byToprincipal")
+  usage_reservation_usage_reservation_tenant_id_created_byToprincipal                                    usage_reservation[]                       @relation("usage_reservation_tenant_id_created_byToprincipal")
+  usage_reservation_usage_reservation_tenant_id_updated_byToprincipal                                    usage_reservation[]                       @relation("usage_reservation_tenant_id_updated_byToprincipal")
   compiled_artifact                                                                                      compiled_artifact[]
   content_item_version                                                                                   content_item_version[]
   entity_contract_revision                                                                               entity_contract_revision[]
@@ -6084,6 +6208,25 @@ model principal_profile {
   tenant         tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "principal_profile_tenant_fk")
 
   @@unique([tenant_id, principal_id], map: "principal_profile_tenant_principal_uq")
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model principal_surface_arrangement {
+  id            String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id     String    @db.Uuid
+  principal_id  String    @db.Uuid
+  plane_code    String
+  surface_key   String
+  base_revision BigInt
+  arrangement   Json
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  created_by    String    @db.Uuid
+  updated_at    DateTime? @db.Timestamptz(6)
+  updated_by    String?   @db.Uuid
+
+  @@unique([tenant_id, principal_id, plane_code, surface_key], map: "principal_surface_arrangement_uq")
   @@schema("master")
 }
 
@@ -6458,8 +6601,6 @@ model tenant {
   attachment_legal_hold                                          attachment_legal_hold[]
   attachment_legal_hold_event                                    attachment_legal_hold_event[]
   attachment_link                                                attachment_link[]
-  attachment_quota_reservation                                   attachment_quota_reservation[]
-  attachment_quota_usage                                         attachment_quota_usage[]
   attachment_series                                              attachment_series[]
   comment                                                        comment[]
   comment_draft                                                  comment_draft[]
@@ -6469,9 +6610,7 @@ model tenant {
   comment_reaction                                               comment_reaction[]
   comment_revision                                               comment_revision[]
   content_item                                                   content_item[]
-  content_item_access_grant                                      content_item_access_grant[]
   content_item_link                                              content_item_link[]
-  content_quota_usage                                            content_quota_usage[]
   conversation                                                   conversation[]
   conversation_participant                                       conversation_participant[]
   multipart_upload                                               multipart_upload[]
@@ -6484,10 +6623,12 @@ model tenant {
   digest_staging                                                 digest_staging[]
   notification_delivery                                          notification_delivery[]
   notification_delivery_claim                                    notification_delivery_claim[]
+  notification_email_suppression                                 notification_email_suppression[]
   notification_inbox_state                                       notification_inbox_state[]
   notification_message                                           notification_message[]
   notification_message_attachment                                notification_message_attachment[]
   notification_outbox_state                                      notification_outbox_state[]
+  notification_provider_event                                    notification_provider_event[]
   outbox                                                         outbox[]
   push_subscription                                              push_subscription[]
   webhook_subscription                                           event_webhook_subscription[]
@@ -6505,6 +6646,7 @@ model tenant {
   notification_delivery_attempt                                  notification_delivery_attempt[]
   notification_dlq                                               notification_dlq[]
   address                                                        address[]
+  address_event                                                  address_event[]
   address_link                                                   address_link[]
   audit_reason_code                                              audit_reason_code[]
   brand_profile                                                  brand_profile[]
@@ -6529,6 +6671,7 @@ model tenant {
   template_binding                                               template_binding[]
   canonical_party_tenant_canonical_party_idTocanonical_party     canonical_party?                          @relation("tenant_canonical_party_idTocanonical_party", fields: [canonical_party_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "tenant_canonical_party_fk")
   subscription_plan                                              subscription_plan?                        @relation(fields: [subscription_plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "tenant_subscription_plan_fk")
+  tenant_locale_activation                                       tenant_locale_activation?
   tenant_profile                                                 tenant_profile?
   tenant_relationship_tenant_relationship_from_tenant_idTotenant tenant_relationship[]                     @relation("tenant_relationship_from_tenant_idTotenant")
   tenant_relationship_tenant_relationship_to_tenant_idTotenant   tenant_relationship[]                     @relation("tenant_relationship_to_tenant_idTotenant")
@@ -6543,6 +6686,7 @@ model tenant {
   job_execution_command                                          job_execution_command[]
   record_edit_lock                                               record_edit_lock[]
   release                                                        release[]
+  applied_release_payload                                        applied_release_payload[]
   authorization_epoch                                            authorization_epoch?
   entity_contract                                                entity_contract[]
   entity_descriptor                                              entity_descriptor[]
@@ -6550,6 +6694,8 @@ model tenant {
   entity_number_counter                                          entity_number_counter[]
   mfa_credential_projection                                      mfa_credential_projection[]
   tenant_usage_counter                                           tenant_usage_counter[]
+  usage_reservation                                              usage_reservation[]
+  business_partner_definition_revision                           business_partner_definition_revision[]
   content_item_version                                           content_item_version[]
   entity_snapshot_identity                                       entity_snapshot_identity[]
   template_version                                               template_version[]
@@ -6565,31 +6711,53 @@ model tenant {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tenant_locale_activation {
+  tenant_id         String            @unique(map: "tenant_locale_activation_one_default_uq", where: raw("is_default")) @db.Uuid
+  locale_code       String
+  enabled           Boolean           @default(false)
+  is_default        Boolean           @default(false)
+  is_fallback       Boolean           @default(false)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  created_by        String            @db.Uuid
+  updated_at        DateTime?         @db.Timestamptz(6)
+  updated_by        String?           @db.Uuid
+  ui_locale_catalog ui_locale_catalog @relation(fields: [locale_code], references: [locale_code], onDelete: NoAction, onUpdate: NoAction, map: "tenant_locale_activation_catalog_fk")
+  tenant            tenant            @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tenant_locale_activation_tenant_fk")
+
+  @@id([tenant_id, locale_code])
+  @@index([tenant_id, locale_code], map: "tenant_locale_activation_enabled_idx", where: raw("enabled"))
+  @@schema("master")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tenant_profile {
-  id            String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id     String    @unique(map: "tenant_profile_tenant_uq") @db.Uuid
-  country_code  String?   @db.Char(2)
-  locale_code   String?
-  timezone_code String?
-  language_code String?
-  date_format   String?
-  number_format String?
-  week_start    Int?      @db.SmallInt
-  weekend_days  Int[]     @db.SmallInt
-  enabled_locale_codes String[] @default(["en"])
-  default_locale_code String @default("en")
-  fallback_locale_code String @default("en")
-  locale_catalog_governance Json @default("{}")
-  metadata      Json      @default("{}")
-  created_at    DateTime  @default(now()) @db.Timestamptz(6)
-  created_by    String    @db.Uuid
-  updated_at    DateTime? @db.Timestamptz(6)
-  updated_by    String?   @db.Uuid
-  country       country?  @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_country_fk")
-  language      language? @relation(fields: [language_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_language_fk")
-  locale        locale?   @relation(fields: [locale_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_locale_fk")
-  tenant        tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "tenant_profile_tenant_fk")
-  timezone      timezone? @relation(fields: [timezone_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_timezone_fk")
+  id                        String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                 String    @unique(map: "tenant_profile_tenant_uq") @db.Uuid
+  country_code              String?   @db.Char(2)
+  logo_asset_ref            String?
+  locale_code               String?
+  timezone_code             String?
+  language_code             String?
+  date_format               String?
+  number_format             String?
+  week_start                Int?      @db.SmallInt
+  weekend_days              Int[]     @db.SmallInt
+  metadata                  Json      @default("{}")
+  created_at                DateTime  @default(now()) @db.Timestamptz(6)
+  created_by                String    @db.Uuid
+  updated_at                DateTime? @db.Timestamptz(6)
+  updated_by                String?   @db.Uuid
+  enabled_locale_codes      String[]  @default(["en"])
+  default_locale_code       String    @default("en")
+  fallback_locale_code      String    @default("en")
+  locale_catalog_governance Json      @default("{}")
+  country                   country?  @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_country_fk")
+  language                  language? @relation(fields: [language_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_language_fk")
+  locale                    locale?   @relation(fields: [locale_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_locale_fk")
+  tenant                    tenant    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "tenant_profile_tenant_fk")
+  timezone                  timezone? @relation(fields: [timezone_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "tenant_profile_timezone_fk")
 
   @@schema("master")
 }
@@ -8623,8 +8791,13 @@ model record_export_request {
   started_at         DateTime? @db.Timestamptz(6)
   completed_at       DateTime? @db.Timestamptz(6)
   cancelled_at       DateTime? @db.Timestamptz(6)
+  progress           Json      @default("{}")
+  receipt            Json      @default("{}")
+  error_detail       String?
+  artifact_purged_at DateTime? @db.Timestamptz(6)
 
   @@id([tenant_id, id])
+  @@index([completed_at], map: "record_export_request_cleanup_idx", where: raw("(artifact_key IS NOT NULL)"))
   @@index([tenant_id, actor_principal_id, requested_at(sort: Desc)], map: "record_export_request_owner_idx")
   @@index([tenant_id, status, requested_at], map: "record_export_request_status_idx")
   @@schema("ops")
@@ -8648,37 +8821,74 @@ model record_import_chunk {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model record_import_session {
-  id                  String                @db.Uuid
-  tenant_id           String                @db.Uuid
-  entity_code         String
-  import_operation    String                @default("create")
-  adapter_key         String                @default("legacy.generic.v1")
-  descriptor_hash     String                @default("0000000000000000000000000000000000000000000000000000000000000000")
-  scope_coordinate    Json                  @default("{}")
-  conflict_policy     String                @default("reject")
-  atomicity           String                @default("all_or_nothing")
-  status              String
-  staged_row_count    Int                   @default(0)
-  valid_row_count     Int                   @default(0)
-  invalid_row_count   Int                   @default(0)
-  checksum            String
-  next_chunk_index    Int                   @default(0)
-  validation_rows     Json?
-  validation_summary  Json?
-  error_report_key    String?
-  created_at          DateTime              @db.Timestamptz(6)
-  created_by          String                @db.Uuid
-  cancelled_at        DateTime?             @db.Timestamptz(6)
-  completed_at        DateTime?             @db.Timestamptz(6)
-  updated_at          DateTime?             @db.Timestamptz(6)
-  record_import_chunk record_import_chunk[]
+  id                     String                @db.Uuid
+  tenant_id              String                @db.Uuid
+  entity_code            String
+  status                 String
+  staged_row_count       Int                   @default(0)
+  valid_row_count        Int                   @default(0)
+  invalid_row_count      Int                   @default(0)
+  checksum               String
+  next_chunk_index       Int                   @default(0)
+  validation_rows        Json?
+  validation_summary     Json?
+  error_report_key       String?
+  created_at             DateTime              @db.Timestamptz(6)
+  created_by             String                @db.Uuid
+  cancelled_at           DateTime?             @db.Timestamptz(6)
+  completed_at           DateTime?             @db.Timestamptz(6)
+  updated_at             DateTime?             @db.Timestamptz(6)
+  import_operation       String                @default("create")
+  adapter_key            String                @default("legacy.generic.v1")
+  descriptor_hash        String                @default(dbgenerated("repeat('0'::text, 64)"))
+  scope_coordinate       Json                  @default("{}")
+  conflict_policy        String                @default("reject")
+  atomicity              String                @default("all_or_nothing")
+  progress               Json                  @default("{}")
+  receipt                Json                  @default("{}")
+  error_code             String?
+  error_detail           String?
+  started_at             DateTime?             @db.Timestamptz(6)
+  source_purged_at       DateTime?             @db.Timestamptz(6)
+  chunks_purged_at       DateTime?             @db.Timestamptz(6)
+  error_report_purged_at DateTime?             @db.Timestamptz(6)
+  record_import_chunk    record_import_chunk[]
 
   @@id([tenant_id, id])
+  @@index([created_at], map: "record_import_session_cleanup_idx", where: raw("((source_purged_at IS NULL) OR (error_report_key IS NOT NULL))"))
   @@index([tenant_id, created_by, created_at(sort: Desc)], map: "record_import_session_owner_idx")
   @@index([tenant_id, status, created_at], map: "record_import_session_status_idx")
   @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model record_transfer_retention_policy {
+  tenant_id              String   @id @db.Uuid
+  abandoned_session_days Int      @default(7)
+  source_file_days       Int      @default(7)
+  error_report_days      Int      @default(30)
+  export_artifact_days   Int      @default(30)
+  updated_at             DateTime @default(now()) @db.Timestamptz(6)
+  updated_by             String   @db.Uuid
+
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model athyper_schema_migration_v1 {
+  migration_name  String    @id
+  sha256          String
+  status          String
+  runner_id       String
+  started_at      DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  completed_at    DateTime? @db.Timestamptz(6)
+  failure_message String?
+
+  @@schema("public")
 }
 
 model schema_provisions {
@@ -8779,6 +8989,19 @@ model artifact_compilation {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model business_partner_definition_release_link {
+  publication_release_id               String                               @id @db.Uuid
+  definition_revision_id               String                               @unique(map: "business_partner_definition_release__definition_revision_id_key") @db.Uuid
+  publish_idempotency_key              String                               @unique(map: "business_partner_definition_release_publish_idempotency_key_key")
+  created_at                           DateTime                             @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                           String                               @db.Uuid
+  release                              release                              @relation(fields: [publication_release_id], references: [id], onUpdate: NoAction, map: "publication_bp_definition_release_link_release_fk")
+  business_partner_definition_revision business_partner_definition_revision @relation(fields: [definition_revision_id], references: [id], onUpdate: NoAction, map: "publication_bp_definition_release_link_revision_fk")
+
+  @@schema("publication")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model deployment {
   id                         String                       @id(map: "publication_deployment_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -8854,30 +9077,32 @@ model entity_release_link {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model release {
-  id                      String                 @id(map: "publication_release_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id               String                 @db.Uuid
-  release_key             String
-  release_no              BigInt
-  release_kind            String                 @default("publish")
-  status                  String                 @default("preparing")
-  compatibility_level     String
-  release_hash            String
-  manifest_hash           String
-  minimum_runtime_version String?
-  approved_at             DateTime?              @db.Timestamptz(6)
-  approved_by             String?                @db.Uuid
-  published_at            DateTime?              @db.Timestamptz(6)
-  published_by            String?                @db.Uuid
-  withdrawn_at            DateTime?              @db.Timestamptz(6)
-  withdrawn_by            String?                @db.Uuid
-  created_at              DateTime               @default(now()) @db.Timestamptz(6)
-  created_by              String                 @db.Uuid
-  metadata                Json                   @default("{}")
-  artifact                artifact[]
-  artifact_compilation    artifact_compilation[]
-  entity_release_link     entity_release_link?
-  tenant                  tenant                 @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "publication_release_tenant_fk")
+  id                                       String                                    @id(map: "publication_release_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                String                                    @db.Uuid
+  release_key                              String
+  release_no                               BigInt
+  release_kind                             String                                    @default("publish")
+  status                                   String                                    @default("preparing")
+  compatibility_level                      String
+  release_hash                             String
+  manifest_hash                            String
+  minimum_runtime_version                  String?
+  approved_at                              DateTime?                                 @db.Timestamptz(6)
+  approved_by                              String?                                   @db.Uuid
+  published_at                             DateTime?                                 @db.Timestamptz(6)
+  published_by                             String?                                   @db.Uuid
+  withdrawn_at                             DateTime?                                 @db.Timestamptz(6)
+  withdrawn_by                             String?                                   @db.Uuid
+  created_at                               DateTime                                  @default(now()) @db.Timestamptz(6)
+  created_by                               String                                    @db.Uuid
+  metadata                                 Json                                      @default("{}")
+  artifact                                 artifact[]
+  artifact_compilation                     artifact_compilation[]
+  business_partner_definition_release_link business_partner_definition_release_link?
+  entity_release_link                      entity_release_link?
+  tenant                                   tenant                                    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "publication_release_tenant_fk")
 
   @@unique([release_key, release_no], map: "publication_release_coordinate_uq")
   @@index([status, created_at(sort: Desc)], map: "publication_release_status_idx")
@@ -8904,6 +9129,7 @@ model applied_release {
   failure_code                                                                                   String?
   created_by                                                                                     String                     @default(dbgenerated("SESSION_USER"))
   entity_operation_binding                                                                       entity_operation_binding[]
+  applied_release_payload                                                                        applied_release_payload?
   entity_descriptor                                                                              entity_descriptor[]
   release_activation_event_release_activation_event_applied_release_idToapplied_release          release_activation_event[] @relation("release_activation_event_applied_release_idToapplied_release")
   release_activation_event_release_activation_event_previous_applied_release_idToapplied_release release_activation_event[] @relation("release_activation_event_previous_applied_release_idToapplied_release")
@@ -8911,6 +9137,27 @@ model applied_release {
 
   @@unique([publication_key, source_release_id], map: "runtime_applied_release_source_uq")
   @@index([publication_key, status, source_release_no(sort: Desc)], map: "runtime_applied_release_status_idx")
+  @@schema("runtime_meta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model applied_release_payload {
+  id                     String          @id @db.Uuid
+  applied_release_id     String          @unique @db.Uuid
+  tenant_id              String?         @db.Uuid
+  artifact_kind          String
+  payload_schema_version String
+  payload_hash           String
+  payload_json           Json
+  coordinates            Json            @default("{}")
+  generated_at           DateTime        @db.Timestamptz(6)
+  received_at            DateTime        @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  applied_release        applied_release @relation(fields: [applied_release_id], references: [id], onUpdate: NoAction)
+  tenant                 tenant?         @relation(fields: [tenant_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+
+  @@index([tenant_id, artifact_kind, generated_at(sort: Desc)], map: "runtime_applied_release_payload_lookup_idx")
   @@schema("runtime_meta")
 }
 
@@ -9075,6 +9322,32 @@ model entity_number_counter {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model experience_surface_projection {
+  id                String    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id         String    @db.Uuid
+  plane_code        String
+  surface_key       String
+  layer             String
+  source_release_id String    @db.Uuid
+  source_revision   BigInt
+  definition        Json
+  content_hash      String    @db.Char(64)
+  status            String    @default("active")
+  applied_at        DateTime  @default(now()) @db.Timestamptz(6)
+  applied_by        String    @db.Uuid
+  retired_at        DateTime? @db.Timestamptz(6)
+  retired_by        String?   @db.Uuid
+
+  @@unique([tenant_id, surface_key, layer], map: "experience_surface_projection_active_uq", where: raw("(status = 'active'::text)"))
+  @@unique([tenant_id, id], map: "experience_surface_projection_coordinate_uq")
+  @@unique([tenant_id, source_release_id], map: "experience_surface_projection_source_uq")
+  @@index([tenant_id, surface_key, layer, source_revision(sort: Desc)], map: "experience_surface_projection_lookup_idx", where: raw("(status = 'active'::text)"))
+  @@schema("runtime_meta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model mfa_credential_projection {
   id                                                                    String     @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                             String     @db.Uuid
@@ -9161,6 +9434,37 @@ model tenant_usage_counter {
 
   @@id([tenant_id, usage_metric_id, dimension_code])
   @@index([usage_metric_id, tenant_id], map: "tenant_usage_counter_metric_idx")
+  @@schema("runtime_meta")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model usage_reservation {
+  id                                                          String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                   String               @db.Uuid
+  usage_metric_id                                             String               @db.Uuid
+  dimension_code                                              String               @default("*")
+  resource_type                                               String
+  resource_id                                                 String               @db.Uuid
+  reserved_value                                              BigInt
+  actual_value                                                BigInt?
+  status                                                      String               @default("reserved")
+  expires_at                                                  DateTime             @db.Timestamptz(6)
+  committed_at                                                DateTime?            @db.Timestamptz(6)
+  released_at                                                 DateTime?            @db.Timestamptz(6)
+  created_at                                                  DateTime             @default(now()) @db.Timestamptz(6)
+  created_by                                                  String               @db.Uuid
+  updated_at                                                  DateTime?            @db.Timestamptz(6)
+  updated_by                                                  String?              @db.Uuid
+  principal_usage_reservation_tenant_id_created_byToprincipal principal            @relation("usage_reservation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "usage_reservation_created_by_fk")
+  usage_metric_catalog                                        usage_metric_catalog @relation(fields: [usage_metric_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "usage_reservation_metric_fk")
+  tenant                                                      tenant               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "usage_reservation_tenant_fk")
+  principal_usage_reservation_tenant_id_updated_byToprincipal principal?           @relation("usage_reservation_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "usage_reservation_updated_by_fk")
+
+  @@unique([tenant_id, usage_metric_id, dimension_code, resource_type, resource_id], map: "usage_reservation_resource_uq")
+  @@unique([tenant_id, id], map: "usage_reservation_tenant_id_uq")
+  @@index([tenant_id, expires_at, id], map: "usage_reservation_expiry_idx", where: raw("(status = 'reserved'::text)"))
+  @@index([tenant_id, resource_type, resource_id], map: "usage_reservation_resource_idx")
   @@schema("runtime_meta")
 }
 
@@ -9435,29 +9739,31 @@ model language {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model locale {
-  id                   String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                 String                 @unique(map: "locale_code_uq")
-  name                 String
-  language_code        String
-  country_code         String?                @db.Char(2)
-  script               String?
-  direction            String
-  metadata             Json                   @default("{}")
-  status               String                 @default("active")
-  is_active            Boolean?               @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at    DateTime?              @db.Timestamptz(6)
-  status_changed_by    String?                @db.Uuid
-  created_at           DateTime               @default(now()) @db.Timestamptz(6)
-  created_by           String                 @db.Uuid
-  updated_at           DateTime?              @db.Timestamptz(6)
-  updated_by           String?                @db.Uuid
-  content_item         content_item[]
-  principal_ui_profile principal_ui_profile[]
-  template_binding     template_binding[]
-  tenant_profile       tenant_profile[]
-  country              country?               @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "locale_country_fk")
-  language             language               @relation(fields: [language_code], references: [code], onUpdate: NoAction, map: "locale_language_fk")
-  template_version     template_version[]
+  id                                                             String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                                           String                 @unique(map: "locale_code_uq")
+  name                                                           String
+  language_code                                                  String
+  country_code                                                   String?                @db.Char(2)
+  script                                                         String?
+  direction                                                      String
+  metadata                                                       Json                   @default("{}")
+  status                                                         String                 @default("active")
+  is_active                                                      Boolean?               @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                              DateTime?              @db.Timestamptz(6)
+  status_changed_by                                              String?                @db.Uuid
+  created_at                                                     DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                                                     String                 @db.Uuid
+  updated_at                                                     DateTime?              @db.Timestamptz(6)
+  updated_by                                                     String?                @db.Uuid
+  ui_locale_catalog_ui_locale_catalog_format_locale_codeTolocale ui_locale_catalog[]    @relation("ui_locale_catalog_format_locale_codeTolocale")
+  ui_locale_catalog_ui_locale_catalog_locale_codeTolocale        ui_locale_catalog?     @relation("ui_locale_catalog_locale_codeTolocale")
+  content_item                                                   content_item[]
+  principal_ui_profile                                           principal_ui_profile[]
+  template_binding                                               template_binding[]
+  tenant_profile                                                 tenant_profile[]
+  country                                                        country?               @relation(fields: [country_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "locale_country_fk")
+  language                                                       language               @relation(fields: [language_code], references: [code], onUpdate: NoAction, map: "locale_language_fk")
+  template_version                                               template_version[]
 
   @@index([code], map: "locale_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@index([language_code])
@@ -9484,6 +9790,7 @@ model state_region {
   created_by         String         @db.Uuid
   updated_at         DateTime?      @db.Timestamptz(6)
   updated_by         String?        @db.Uuid
+  address            address[]
   country            country        @relation(fields: [country_code], references: [code], onUpdate: NoAction, map: "state_region_country_fk")
   state_region       state_region?  @relation("state_regionTostate_region", fields: [country_code, parent_code], references: [country_code, code], onUpdate: NoAction, map: "state_region_parent_fk")
   other_state_region state_region[] @relation("state_regionTostate_region")
@@ -9516,6 +9823,7 @@ model timezone {
   updated_by                                     String?                @db.Uuid
   cron_schedule_cron_schedule_timezoneTotimezone cron_schedule[]        @relation("cron_schedule_timezoneTotimezone")
   numbering_policy                               numbering_policy[]
+  address                                        address[]
   principal_ui_profile                           principal_ui_profile[]
   tenant_profile                                 tenant_profile[]
   timezone                                       timezone?              @relation("timezoneTotimezone", fields: [canonical_code], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "timezone_canonical_fk")
@@ -9547,6 +9855,30 @@ model uom {
 
   @@index([code], map: "uom_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("shared")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model business_partner_definition_revision {
+  id                                       String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                String                                    @db.Uuid
+  bundle_code                              String
+  semantic_version                         String
+  bundle_schema_version                    String                                    @default("1.0.0")
+  bundle_json                              Json
+  bundle_hash                              String
+  target_planes                            String[]
+  idempotency_key                          String
+  created_at                               DateTime                                  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                               String                                    @db.Uuid
+  business_partner_definition_release_link business_partner_definition_release_link?
+  tenant                                   tenant                                    @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "business_partner_definition_revision_tenant_fk")
+
+  @@unique([tenant_id, idempotency_key], map: "business_partner_definition_revision_idempotency_uq")
+  @@unique([tenant_id, id], map: "business_partner_definition_revision_tenant_id_uq")
+  @@unique([tenant_id, bundle_code, semantic_version], map: "business_partner_definition_revision_version_uq")
+  @@index([tenant_id, bundle_code, created_at(sort: Desc)], map: "business_partner_definition_revision_created_idx")
+  @@schema("snapshot")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.

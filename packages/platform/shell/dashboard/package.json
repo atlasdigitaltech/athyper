@@ -5,9 +5,10 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": { ".": "./src/index.ts", "./client": "./src/client.tsx", "./module-relevance": "./src/module-relevance.ts", "./workspace-navigation": "./src/workspace-navigation.tsx" },
   "scripts": { "typecheck": "tsc --noEmit" },
   "peerDependencies": { "react": "^19.2.5" },
+  "dependencies": { "@athyper/contract-platform-dashboard": "workspace:*", "@athyper/contract-platform-navigation": "workspace:*", "@athyper/platform-api-client": "workspace:*", "@athyper/platform-icons": "workspace:*" },
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/react": "^19.2.14",

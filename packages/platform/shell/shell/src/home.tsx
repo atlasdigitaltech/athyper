@@ -2,7 +2,7 @@
 
 import { useAtlasAnswer, type AtlasActionAuditEntry, type AtlasGovernedAction, type AtlasRecordCitation } from "@athyper/platform-ai-agent-ui";
 import { AttachmentApiError, createAttachmentApiClient, convertClipboard, serializeForClipboard, type AttachmentProcessingStatus, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
-import { ArrowDownIcon, ArrowUpIcon, Building2Icon, ChevronRightIcon, CloseIcon, FileTextIcon, HistoryIcon, LayoutIcon, Maximize2Icon, PanelRightIcon, PlusIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
+import { ArrowDownIcon, ArrowUpIcon, Building2Icon, ChevronRightIcon, FileTextIcon, HistoryIcon, LibraryBigIcon, Maximize2Icon, PanelRightIcon, PlusIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
 import { useAccessSnapshot } from "@athyper/platform-shell-runtime";
 import { Menu, MenuContent, MenuItem, MenuTrigger, Tooltip } from "@athyper/platform-ui";
 import * as React from "react";
@@ -56,6 +56,15 @@ export interface PlatformHomeProps {
 
 const MAX_RESULTS = 8;
 
+interface ShellHomeIdentity { readonly displayName: string; readonly timeZone: string; }
+const ShellHomeIdentityContext = React.createContext<ShellHomeIdentity>({ displayName: "there", timeZone: "UTC" });
+export function ShellHomeIdentityProvider({ displayName, timeZone, children }: ShellHomeIdentity & { readonly children: React.ReactNode }) { return <ShellHomeIdentityContext.Provider value={{ displayName, timeZone }}>{children}</ShellHomeIdentityContext.Provider>; }
+
+function dayPeriodGreeting(date: Date, timeZone: string): string {
+  const hour = Number(new Intl.DateTimeFormat("en-US", { hour: "2-digit", hourCycle: "h23", timeZone }).format(date));
+  return hour >= 5 && hour < 12 ? "Good morning" : hour >= 12 && hour < 18 ? "Good afternoon" : "Good evening";
+}
+
 export function PlatformHome({ suggestions, searchItems, quickActions, workspaces, citationRoutes = {} }: PlatformHomeProps) {
   const [query, setQuery] = useState("");
   const [personalization, setPersonalization] = useState<HomePersonalization>(DEFAULT_HOME_PERSONALIZATION);
@@ -65,6 +74,9 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   const access = useAccessSnapshot();
   const scope = useShellPersonalizationScope();
   const atlas = useAtlasAnswer();
+  const identity = React.useContext(ShellHomeIdentityContext);
+  const preferredName = identity.displayName.trim().split(/\s+/u)[0] || identity.displayName;
+  const [greeting, setGreeting] = useState(() => dayPeriodGreeting(new Date(), identity.timeZone));
   const normalized = query.trim().toLocaleLowerCase();
   const configuredSources = atlas.experience?.searchSources;
   const allowedSearchItems = useMemo(() => searchItems.filter((item) => isHomeItemAllowed(item, access) && (!configuredSources || configuredSources.some((source) => (source.kind === "navigation" || source.kind === "record") && (!source.routePrefix || item.href.startsWith(source.routePrefix))))), [searchItems, access, configuredSources]);
@@ -97,6 +109,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
     return () => window.removeEventListener("keydown", focus);
   }, [scope.storageKey]);
   useEffect(() => { const agents=atlas.experience?.agents??[]; if(agents.length&&!agents.some((item)=>item.code===selectedAgent))setSelectedAgent(agents[0]!.code); }, [atlas.experience,selectedAgent]);
+  useEffect(() => { const update=()=>setGreeting(dayPeriodGreeting(new Date(),identity.timeZone));update();const timer=window.setInterval(update,60_000);return()=>window.clearInterval(timer); }, [identity.timeZone]);
 
   const commit = (next: HomePersonalization) => {
     setPersonalization(next);
@@ -113,9 +126,9 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
 
   return <section className="athyper-home" aria-labelledby="athyper-home-title">
     <header className="athyper-home__hero">
-      <div className="athyper-home__welcome"><span aria-hidden="true"><SparklesIcon size={22}/></span><div><h1 id="athyper-home-title">What should we work on?</h1></div><nav className="athyper-home__atlas-actions" aria-label="Atlas workspace options"><Tooltip label="Pin Atlas to the right side"><button type="button" aria-label="Pin Atlas to the right side" onClick={()=>window.dispatchEvent(new CustomEvent("athyper:atlas-open",{detail:{pinned:true}}))}><PanelRightIcon size={19}/></button></Tooltip><Tooltip label="Open Atlas in full screen"><a href="/atlas?from=%2Fhome" aria-label="Open Atlas in full screen"><Maximize2Icon size={19}/></a></Tooltip></nav></div>
-      <AtlasPromptComposer ref={composer} draftKey={`${scope.storageKey}:atlas-prompt`} value={query} onChange={setQuery} onSubmit={submit} busy={atlas.status === "answering"} agents={atlas.experience?.agents} selectedAgent={selectedAgent} onAgentChange={setSelectedAgent}/>
-      <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { composer.current?.setText(suggestion); if(configured)setSelectedAgent(configured.agentCode); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Action history</button></div>
+      <div className="athyper-home__welcome"><div className="athyper-home__heading-group"><p className="athyper-home__greeting">{greeting}, {preferredName}.</p><h1 id="athyper-home-title">What can we achieve together?</h1></div><nav className="athyper-home__atlas-actions" aria-label="Atlas workspace options"><Tooltip label="Pin Atlas to the right side"><button type="button" aria-label="Pin Atlas to the right side" onClick={()=>window.dispatchEvent(new CustomEvent("athyper:atlas-open",{detail:{pinned:true}}))}><PanelRightIcon size={19}/></button></Tooltip><Tooltip label="Open Atlas in full screen"><a href="/atlas?from=%2Fhome" aria-label="Open Atlas in full screen"><Maximize2Icon size={19}/></a></Tooltip></nav></div>
+      <AtlasPromptComposer ref={composer} draftKey={`${scope.storageKey}:atlas-prompt`} value={query} onChange={setQuery} onSubmit={submit} onCancel={atlas.cancel} busy={atlas.status === "answering"} agents={atlas.experience?.agents} selectedAgent={selectedAgent} onAgentChange={setSelectedAgent} prompts={configuredPrompts?.length ? configuredPrompts : suggestions.map((prompt)=>({label:prompt,prompt}))}/>
+      <div className="athyper-home__suggestions" aria-label="Suggested searches">{allowedSuggestions.map((suggestion) => {const configured=configuredPrompts?.find((item)=>item.prompt===suggestion);return <button key={configured?.code??suggestion} type="button" onClick={() => { composer.current?.setText(suggestion); if(configured)setSelectedAgent(configured.agentCode); }}>{configured?.label??suggestion}</button>;})}<button className="athyper-home__history-button" type="button" onClick={() => void atlas.loadHistory()}><HistoryIcon size={14}/>Activity history</button></div>
       {atlas.status !== "idle" ? <AtlasAnswerSurface atlas={atlas} citationRoutes={citationRoutes}/> : null}
       {atlas.historyVisible ? <AtlasHistorySurface atlas={atlas}/> : null}
       {normalized ? <section className="athyper-home__results" aria-live="polite" aria-label="Atlas search results"><header><strong>{results.length ? `${results.length} authorized destinations` : "No authorized matching destination"}</strong><small>Results reflect your current permissions</small></header>{results.length ? <ul>{results.map((item) => <li key={`${item.category}-${item.href}`}><a href={item.href} onClick={() => visit(item)}><span><small>{item.category}</small><strong>{item.title}</strong><em>{item.description}</em></span><ChevronRightIcon size={18}/></a></li>)}</ul> : <p>Try another business partner, workflow, profile, publication, or workspace term.</p>}</section> : null}
@@ -137,17 +150,19 @@ export interface AtlasPromptComposerProps {
   readonly value: string;
   readonly onChange: (value: string) => void;
   readonly onSubmit: (value: string, attachmentContext?: { readonly contextId:string; readonly attachmentIds:readonly string[] }) => void;
+  readonly onCancel: () => void;
   readonly busy: boolean;
   readonly agents?: readonly { readonly code: string; readonly name: string }[];
   readonly selectedAgent?: string;
   readonly onAgentChange: (value: string) => void;
+  readonly prompts?: readonly { readonly label: string; readonly prompt: string; readonly agentCode?: string }[];
 }
 
 export const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, AtlasPromptComposerProps>(function AtlasPromptComposer(props, forwardedRef) {
   const editor = useRef<HTMLDivElement>(null);
+  const editorId = React.useId();
   const fileInput=useRef<HTMLInputElement>(null);
   const attachmentContextId=useRef<string|undefined>(undefined);
-  const [expanded, setExpanded] = useState(false);
   const [dragging,setDragging]=useState(false);
   const [formatMessage, setFormatMessage] = useState<string>();
   const [attachments,setAttachments]=useState<readonly AtlasPromptAttachment[]>([]);
@@ -236,13 +251,13 @@ export const AtlasPromptComposer = React.forwardRef<AtlasPromptComposerHandle, A
   const attachmentBusy=attachments.some((item)=>item.status==="uploading"||item.status==="processing"),attachmentError=attachments.some((item)=>item.status==="error");
   const submit = () => { const question = props.value.trim(); if (!question || tooLong || props.busy||attachmentBusy||attachmentError) return; const ready=attachments.flatMap((item)=>item.status==="ready"&&item.attachmentId?[item.attachmentId]:[]);props.onSubmit(question,ready.length&&attachmentContextId.current?{contextId:attachmentContextId.current,attachmentIds:ready}:undefined); };
 
-  return <section className="athyper-home__composer" data-expanded={expanded} data-dragging={dragging} aria-label="Atlas AI prompt composer" onDragEnter={(event)=>{if(event.dataTransfer.types.includes("Files")){event.preventDefault();setDragging(true);}}} onDragOver={(event)=>{if(event.dataTransfer.types.includes("Files")){event.preventDefault();event.dataTransfer.dropEffect="copy";}}} onDragLeave={(event)=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setDragging(false);}} onDrop={(event)=>{event.preventDefault();setDragging(false);if(event.dataTransfer.files.length)void addFiles(event.dataTransfer.files);}}>
+  return <section className="athyper-home__composer" data-dragging={dragging} aria-label="Atlas AI prompt composer" onDragEnter={(event)=>{if(event.dataTransfer.types.includes("Files")){event.preventDefault();setDragging(true);}}} onDragOver={(event)=>{if(event.dataTransfer.types.includes("Files")){event.preventDefault();event.dataTransfer.dropEffect="copy";}}} onDragLeave={(event)=>{if(!event.currentTarget.contains(event.relatedTarget as Node|null))setDragging(false);}} onDrop={(event)=>{event.preventDefault();setDragging(false);if(event.dataTransfer.files.length)void addFiles(event.dataTransfer.files);}}>
     {dragging?<div className="athyper-home__composer-drop" aria-hidden="true"><strong>Drop files here</strong><small>Files are checked and prepared securely.</small></div>:null}
-    <header><span><SearchIcon size={22}/></span><strong>I’m Atlas AI</strong><button type="button" aria-label={expanded ? "Collapse Atlas composer" : "Expand Atlas composer"} aria-pressed={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? <CloseIcon size={16}/> : <LayoutIcon size={16}/>}</button></header>
-    <div ref={editor} id="atlas-home-search" className="athyper-home__composer-editor" role="textbox" aria-label="Ask Atlas AI" aria-multiline="true" aria-invalid={tooLong || undefined} contentEditable={!props.busy} suppressContentEditableWarning data-placeholder="I’m here to help you find answers, take action, and get work done." onInput={synchronize} onPaste={paste}/>
+    <header><span><SearchIcon size={22}/></span><strong>Ask Atlas to search, create, or take action…</strong><Menu><Tooltip label="Prompt library"><MenuTrigger className="athyper-home__composer-library" aria-label="Prompt library" title="Prompt library"><LibraryBigIcon size={17}/></MenuTrigger></Tooltip><MenuContent portal className="athyper-home__prompt-library" aria-label="Prompt library">{props.prompts?.map((item)=><MenuItem key={`${item.agentCode??"default"}:${item.prompt}`} onClick={()=>{setText(item.prompt);if(item.agentCode)props.onAgentChange(item.agentCode);}}><LibraryBigIcon size={16}/><span><strong>{item.label}</strong><small>{item.prompt}</small></span></MenuItem>)}</MenuContent></Menu></header>
+    <div ref={editor} id={editorId} className="athyper-home__composer-editor" role="textbox" aria-label="Ask Atlas to search, create, or take action" aria-multiline="true" aria-invalid={tooLong || undefined} contentEditable={!props.busy} suppressContentEditableWarning data-placeholder="Ask Atlas to search, create, or take action…" onInput={synchronize} onPaste={paste}/>
     {attachments.length?<ul className="athyper-home__composer-attachments" aria-label="Atlas supporting files">{attachments.map((item)=><li key={item.localId} data-status={item.status}><span><strong>{item.fileName}</strong><small>{formatBytes(item.sizeBytes)} · {attachmentStatusLabel(item)}</small></span><button type="button" aria-label={`Remove ${item.fileName}`} disabled={props.busy} onClick={()=>void removeAttachment(item)}><TrashIcon size={14}/></button></li>)}</ul>:null}
     {formatMessage || tooLong ? <p className="athyper-home__composer-message" role={tooLong ? "alert" : "status"}>{tooLong ? `Prompt is ${props.value.length - 4_096} characters over the 4,096 character limit.` : formatMessage}</p> : null}
-    <footer><div><input ref={fileInput} className="athyper-home__composer-file-input" type="file" multiple accept=".pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/plain,text/markdown,text/csv" onChange={(event)=>{if(event.currentTarget.files)void addFiles(event.currentTarget.files);event.currentTarget.value="";}}/><Menu><MenuTrigger className="athyper-home__composer-add" disabled={props.busy} aria-label="Add context" title="Add context"><PlusIcon size={16}/><span>Add</span></MenuTrigger><MenuContent portal className="athyper-home__composer-add-menu" aria-label="Add context"><MenuItem className="athyper-home__composer-add-item" disabled={attachments.length>=5} onClick={()=>fileInput.current?.click()}><FileTextIcon size={17}/><span><strong>Files from device</strong><small>{attachments.length>=5?"You can add up to 5 files.":"PDF, Office, text, or CSV · up to 25 MB"}</small></span></MenuItem><MenuItem className="athyper-home__composer-add-item" disabled><Building2Icon size={17}/><span><strong>Business record…</strong><small>Coming soon</small></span></MenuItem></MenuContent></Menu>{props.agents?.length ? <select aria-label="Atlas agent" value={props.selectedAgent} onChange={(event) => props.onAgentChange(event.currentTarget.value)}>{props.agents.map((agent) => <option key={agent.code} value={agent.code}>{agent.name}</option>)}</select> : null}</div><div>{props.value.length >= 3_600 ? <small>{props.value.length.toLocaleString()} / 4,096</small> : null}<button type="button" className="athyper-home__composer-submit" disabled={!props.value.trim() || tooLong || props.busy||attachmentBusy||attachmentError} onClick={submit}><SparklesIcon size={16}/>{props.busy ? "Thinking…" : attachmentBusy?"Preparing…":"Ask"}</button></div></footer>
+    <footer><div><input ref={fileInput} className="athyper-home__composer-file-input" type="file" multiple accept=".pdf,.txt,.md,.csv,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/plain,text/markdown,text/csv" onChange={(event)=>{if(event.currentTarget.files)void addFiles(event.currentTarget.files);event.currentTarget.value="";}}/><Menu><MenuTrigger className="athyper-home__composer-add" disabled={props.busy} aria-label="Add context" title="Add context"><PlusIcon size={16}/><span>Add context</span></MenuTrigger><MenuContent portal className="athyper-home__composer-add-menu" aria-label="Add context"><MenuItem className="athyper-home__composer-add-item" disabled={attachments.length>=5} onClick={()=>fileInput.current?.click()}><FileTextIcon size={17}/><span><strong>Files from device</strong><small>{attachments.length>=5?"You can add up to 5 files.":"PDF, Office, text, or CSV · up to 25 MB"}</small></span></MenuItem><MenuItem className="athyper-home__composer-add-item" disabled><Building2Icon size={17}/><span><strong>Business record…</strong><small>Coming soon</small></span></MenuItem></MenuContent></Menu>{props.agents?.length ? <select aria-label="Atlas agent" value={props.selectedAgent} onChange={(event) => props.onAgentChange(event.currentTarget.value)}>{props.agents.map((agent) => <option key={agent.code} value={agent.code}>{agent.name}</option>)}</select> : null}</div><div>{props.value.length >= 3_600 ? <small>{props.value.length.toLocaleString()} / 4,096</small> : null}<button type="button" className="athyper-home__composer-submit" aria-label={props.busy?"Stop generating":"Send message"} title={props.busy?"Stop generating":"Send message"} disabled={!props.busy&&(!props.value.trim()||tooLong||attachmentBusy||attachmentError)} onClick={props.busy?props.onCancel:submit}>{props.busy?<span className="athyper-home__composer-stop-icon" aria-hidden="true"/>:<ArrowUpIcon size={18}/>}</button></div></footer>
   </section>;
 });
 
@@ -287,7 +302,7 @@ function RecentWidget({ title, recent, onVisit }: { readonly title?:string; read
 
 export function AtlasAnswerSurface({ atlas, citationRoutes }: { readonly atlas: ReturnType<typeof useAtlasAnswer>; readonly citationRoutes: Readonly<Record<string, string>> }) {
   const active = atlas.status === "answering";
-  return <section className="athyper-home__answer" aria-live="polite" aria-busy={active} aria-labelledby="atlas-answer-title"><header><span aria-hidden="true"><SparklesIcon size={17}/></span><div><strong id="atlas-answer-title">Atlas answer</strong><small>{atlas.publicModelId ? `${atlas.publicModelId} · permission-aware` : "Permission-aware grounded assistance"}</small></div>{active ? <button type="button" onClick={atlas.cancel}>Cancel</button> : null}</header>
+  return <section className="athyper-home__answer" aria-live="polite" aria-busy={active} aria-labelledby="atlas-answer-title"><header><span aria-hidden="true"><SparklesIcon size={17}/></span><div><strong id="atlas-answer-title">Atlas answer</strong><small>{atlas.publicModelId ? `${atlas.publicModelId} · permission-aware` : "Permission-aware grounded assistance"}</small></div></header>
     {atlas.status === "unavailable" || atlas.status === "error" ? <p className="athyper-home__answer-message">{atlas.message}</p> : <><div className="athyper-home__answer-text">{atlas.text || (atlas.actions.length ? "Atlas prepared a governed action for your review." : "Finding authorized sources and preparing an answer…")}</div>{atlas.actions.length ? <div className="athyper-home__actions-preview"><strong>Governed action previews</strong><p>Nothing runs until you review the exact proposal and confirm it.</p>{atlas.actions.map((action) => <GovernedActionPreview key={action.proposalId} action={action} busy={atlas.actionBusy === action.proposalId} onConfirm={() => atlas.confirmAction(action)} onDecline={() => atlas.declineAction(action)}/>) }{atlas.actionMessage ? <p role="status" className="athyper-home__action-message">{atlas.actionMessage}</p> : null}</div> : null}{atlas.status === "complete" ? <div className="athyper-home__citations"><strong>Sources</strong>{atlas.attachmentCitations.length||atlas.citations.length?<ol>{atlas.attachmentCitations.map((citation,index)=><li key={citation.attachmentId}><span>{index+1}. {citation.fileName} · verified attachment</span></li>)}{atlas.citations.map((citation, index) => <li key={`${citation.entityCode}-${citation.recordId}-${citation.revision}`}>{citationLink(citation, citationRoutes, index+atlas.attachmentCitations.length)}</li>)}</ol> : <p>No source citation was returned. Verify the answer and action preview before continuing.</p>}</div> : null}</>}
   </section>;
 }

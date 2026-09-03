@@ -90,7 +90,6 @@ function appFromPath(path) {
 
 function classify(path, manifest) {
   if (path.startsWith("packages/product-deprecated/")
-    || path.startsWith(".codex-phase6-deploy/")
     || path.startsWith("server-backup/")
     || path.startsWith("apps-backup/")
     || path.startsWith("packages-backup/")

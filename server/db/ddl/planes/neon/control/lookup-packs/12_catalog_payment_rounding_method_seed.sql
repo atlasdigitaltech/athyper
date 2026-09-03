@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.payment_rounding_method', 'Payment Rounding Method', 'Rounding algorithm for computed payment amounts (half_up, half_down, bankers, ceiling, floor, truncate). is_extensible=false ??? rounding methods are ISO 80000-1 governed.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.payment_rounding_method', 'Payment Rounding Method', 'Rounding algorithm for computed payment amounts (half_up, half_down, bankers, ceiling, floor, truncate). is_extensible=false — rounding methods are ISO 80000-1 governed.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

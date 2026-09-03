@@ -23,7 +23,7 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('master.dimension_type_category', 'Dimension type category', 'Classification of dimension types: SYSTEM (first-class with dedicated tables), STANDARD (platform-defined reusable), CUSTOM (tenant-created). Platform-governed ??? not tenant-extensible.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.dimension_type_category', 'Dimension type category', 'Classification of dimension types: SYSTEM (first-class with dedicated tables), STANDARD (platform-defined reusable), CUSTOM (tenant-created). Platform-governed — not tenant-extensible.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,

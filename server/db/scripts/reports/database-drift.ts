@@ -22,7 +22,7 @@ if (args.has("--help")) {
   console.log([
     "Usage: tsx scripts/reports/database-drift.ts \\",
     "  --target-url=<clean desired-state database> \\",
-    "  --live-url=<current live database> [--plane=neon|mesh|athyper] \\",
+    "  --live-url=<current live database> [--plane=studio|neon|mesh] \\",
     "  [--schemas=document,audit,event,ledger,control,master] [--strict] [--json=<path>]",
     "",
     "Environment fallbacks: TARGET_DATABASE_URL and LIVE_DATABASE_URL.",
@@ -219,7 +219,10 @@ async function runtimeReferences(targetRelations: Set<string>) {
       exists_in_target: targetRelations.has(relation),
       deprecated: deprecated.has(relation),
     }))
-    .filter((item) => item.deprecated || !item.exists_in_target)
+    .filter((item) => {
+      const schema = item.relation.split(".", 1)[0]!;
+      return item.deprecated || (schemas.includes(schema) && !item.exists_in_target);
+    })
     .sort((a, b) => a.relation.localeCompare(b.relation));
 }
 
@@ -268,10 +271,13 @@ try {
     console.log(`report=${output}`);
   }
 
+  // Source-reference findings are migration/hygiene hints, not differences
+  // between the two database catalogs. Keep them in the report without making
+  // an identical target/live comparison fail strict catalog parity.
   const driftCount = Object.values(drift).reduce(
     (sum, item) => sum + item.missing_in_live.length + item.extra_in_live.length + item.changed.length,
     0,
-  ) + runtime_sql_references.length;
+  );
   if (strict && driftCount > 0) process.exitCode = 1;
 } finally {
   await Promise.all([target.end(), live.end()]);

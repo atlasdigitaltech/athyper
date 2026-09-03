@@ -11,6 +11,8 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@athyper/contract-platform-navigation": "workspace:*",
+    "@athyper/contract-platform-dashboard": "workspace:*",
     "@athyper/platform-gateway-bff-relay": "workspace:*",
     "@athyper/platform-communications-notifications-client": "workspace:*",
     "@athyper/platform-iam-identity-gate": "workspace:*",
@@ -20,6 +22,7 @@
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-query": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
+    "@athyper/platform-shell-dashboard": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
     "@athyper/platform-shell-activity-center-data": "workspace:*",
     "@athyper/product-studio-shell": "workspace:*",

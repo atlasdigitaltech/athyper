@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceLocalePolicyRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceWorkContextRecord } from "@athyper/server-platform-experience/ports";
+import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceLocalePolicyRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceSurfaceProjectionRecord, ExperienceSurfaceReleaseRecord, ExperienceWorkContextRecord, PersonalSurfaceArrangementRecord, RouteSlugRedirectRecord } from "@athyper/server-platform-experience/ports";
 import { sql, type Kysely } from "kysely";
 
 type Database = Kysely<Record<string, never>>;
@@ -85,8 +86,8 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     return this.withContext(context, async (database) => {
     const [planResult, associationResult, permissionResult] = await Promise.all([
       sql<{ active: boolean; revision: string }>`SELECT is_active AS active, COALESCE(updated_at, created_at)::text AS revision FROM control.subscription_plan WHERE id = ${subscriptionPlanId}::uuid LIMIT 1`.execute(database),
-      sql<{ workspaceCode: string; workspaceName: string; workspaceIconKey: string | null; workspaceSortOrder: number; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey: string | null; moduleSortOrder: number; primary: boolean; revision: string }>`
-        SELECT w.code AS "workspaceCode", w.name AS "workspaceName", w.icon_key AS "workspaceIconKey", w.sort_order AS "workspaceSortOrder",
+      sql<{ workspaceCode: string; workspaceName: string; workspaceIconKey: string | null; workspaceSortOrder: number; workspaceSharedInfrastructure: boolean; moduleId: string; moduleCode: string; moduleName: string; moduleIconKey: string | null; moduleSortOrder: number; primary: boolean; revision: string }>`
+        SELECT w.code AS "workspaceCode", w.name AS "workspaceName", w.icon_key AS "workspaceIconKey", w.sort_order AS "workspaceSortOrder", w.is_shared_infrastructure AS "workspaceSharedInfrastructure",
                m.id::text AS "moduleId", m.code AS "moduleCode", m.name AS "moduleName", m.icon_key AS "moduleIconKey",
                wm.sort_order AS "moduleSortOrder", wm.is_primary AS primary,
                concat_ws(':', COALESCE(spm.updated_at, spm.created_at)::text, COALESCE(w.updated_at, w.created_at)::text, COALESCE(m.updated_at, m.created_at)::text, COALESCE(wm.updated_at, wm.created_at)::text) AS revision
@@ -106,7 +107,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     if (!plan) return undefined;
     return {
       planActive: plan.active, planRevision: plan.revision,
-      associations: associationResult.rows.map((row) => ({ workspaceCode: row.workspaceCode, workspaceName: row.workspaceName, ...(row.workspaceIconKey ? { workspaceIconKey: row.workspaceIconKey } : {}), workspaceSortOrder: row.workspaceSortOrder, moduleId: row.moduleId, moduleCode: row.moduleCode, moduleName: row.moduleName, ...(row.moduleIconKey ? { moduleIconKey: row.moduleIconKey } : {}), moduleSortOrder: row.moduleSortOrder, primary: row.primary, revision: row.revision })),
+      associations: associationResult.rows.map((row) => ({ workspaceCode: row.workspaceCode, workspaceName: row.workspaceName, ...(row.workspaceIconKey ? { workspaceIconKey: row.workspaceIconKey } : {}), workspaceSortOrder: row.workspaceSortOrder, workspaceSharedInfrastructure: row.workspaceSharedInfrastructure, moduleId: row.moduleId, moduleCode: row.moduleCode, moduleName: row.moduleName, ...(row.moduleIconKey ? { moduleIconKey: row.moduleIconKey } : {}), moduleSortOrder: row.moduleSortOrder, primary: row.primary, revision: row.revision })),
       permissions: permissionResult.rows,
     };
     });
@@ -324,4 +325,80 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${localeCode},${new Intl.Locale(localeCode).language},${context.principalId}::uuid)
       ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database); });
   }
+
+  async saveSurfaceDraft(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string; layer: "shared" | "tenant"; definition: Readonly<Record<string, unknown>>; contentHash: string; source: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord> {
+    return this.withContext(context, async (database) => {
+      const existing = await sql<{ id: string; revision: number; contentHash:string }>`SELECT id::text AS id,revision::int AS revision,content_hash AS "contentHash" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer} AND status='draft' FOR UPDATE`.execute(database);
+      const current = existing.rows[0];
+      if(current&&input.expectedContentHash!==undefined&&current.contentHash!==input.expectedContentHash)throw Object.assign(new Error("Surface draft changed after it was loaded"),{code:"EXPERIENCE_SURFACE_DRAFT_CONFLICT"});
+      const revision=current?.revision??(await sql<{revision:number}>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} AND layer=${input.layer}`.execute(database)).rows[0]!.revision;
+      const definition={...input.definition,revision},contentHash=createHash("sha256").update(JSON.stringify(definition)).digest("hex");
+      const result = current
+        ? await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET definition=${JSON.stringify(definition)}::jsonb,content_hash=${contentHash},source=${input.source},validation_report='{"valid":true,"issues":[]}'::jsonb,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${current.id}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database)
+        : await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${input.targetPlane},${input.surfaceKey},${input.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},${input.source},${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database);
+      return surfaceRelease(result.rows[0]!);
+    });
+  }
+
+  async listSurfaceReleases(context:VerifiedRequestContext,input:Readonly<{targetPlane:"studio"|"neon"|"mesh";surfaceKey:string}>):Promise<readonly ExperienceSurfaceReleaseRecord[]>{return this.withContext(context,async(database)=>(await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${input.targetPlane} AND surface_key=${input.surfaceKey} ORDER BY revision DESC,created_at DESC LIMIT 50`.execute(database)).rows.map(surfaceRelease));}
+
+  async rollbackSurfaceRelease(context:VerifiedRequestContext,releaseId:string):Promise<ExperienceSurfaceReleaseRecord|undefined>{return this.withContext(context,async(database)=>{const selected=(await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid LIMIT 1`.execute(database)).rows[0];if(!selected)return undefined;await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer} AND status='draft'`.execute(database);const revision=(await sql<{revision:number}>`SELECT COALESCE(MAX(revision),0)::int+1 AS revision FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${selected.targetPlane} AND surface_key=${selected.surfaceKey} AND layer=${selected.layer}`.execute(database)).rows[0]!.revision;const definition={...selected.definition,revision};const contentHash=createHash("sha256").update(JSON.stringify(definition)).digest("hex");const row=(await sql<SurfaceReleaseRow>`INSERT INTO control.experience_surface_release(tenant_id,target_plane,surface_key,layer,revision,status,definition,content_hash,source,created_by) VALUES(${context.tenantId}::uuid,${selected.targetPlane},${selected.surfaceKey},${selected.layer},${revision},'draft',${JSON.stringify(definition)}::jsonb,${contentHash},'human',${context.principalId}::uuid) RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database)).rows[0]!;return surfaceRelease(row);});}
+
+  async publishSurfaceRelease(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord | undefined> {
+    return this.withContext(context, async (database) => {
+      const selected = await sql<SurfaceReleaseRow>`SELECT id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt" FROM control.experience_surface_release WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid FOR UPDATE`.execute(database);
+      const release = selected.rows[0];
+      if (!release) return undefined;
+      if (release.status === "published") return surfaceRelease(release);
+      if (release.status !== "draft") return undefined;
+      await sql`UPDATE control.experience_surface_release SET status='retired',updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${release.targetPlane} AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='published'`.execute(database);
+      const published = await sql<SurfaceReleaseRow>`UPDATE control.experience_surface_release SET status='published',published_at=clock_timestamp(),published_by=${context.principalId}::uuid,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND id=${releaseId}::uuid RETURNING id::text AS id,target_plane AS "targetPlane",surface_key AS "surfaceKey",layer,revision::int,status,definition,content_hash AS "contentHash",source,published_at::text AS "publishedAt"`.execute(database);
+      return surfaceRelease(published.rows[0]!);
+    });
+  }
+
+  async applySurfaceProjection(context: VerifiedRequestContext, release: ExperienceSurfaceReleaseRecord): Promise<void> {
+    await this.withContext(context, async (database) => {
+      const already = await sql<{ present: boolean }>`SELECT EXISTS(SELECT 1 FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND source_release_id=${release.id}::uuid AND status='active') AS present`.execute(database);
+      if (already.rows[0]?.present) return;
+      await sql`UPDATE runtime_meta.experience_surface_projection SET status='retired',retired_at=clock_timestamp(),retired_by=${context.principalId}::uuid WHERE tenant_id=${context.tenantId}::uuid AND surface_key=${release.surfaceKey} AND layer=${release.layer} AND status='active'`.execute(database);
+      await sql`INSERT INTO runtime_meta.experience_surface_projection(tenant_id,plane_code,surface_key,layer,source_release_id,source_revision,definition,content_hash,applied_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${release.surfaceKey},${release.layer},${release.id}::uuid,${release.revision},${JSON.stringify(release.definition)}::jsonb,${release.contentHash},${context.principalId}::uuid) ON CONFLICT(tenant_id,source_release_id) DO NOTHING`.execute(database);
+    });
+  }
+
+  async readSurfaceProjections(context: VerifiedRequestContext, surfaceKey: string): Promise<readonly ExperienceSurfaceProjectionRecord[]> {
+    return this.withContext(context, async (database) => (await sql<{ surfaceKey: string; layer: "shared" | "tenant"; sourceReleaseId: string; sourceRevision: number; definition: Record<string, unknown>; contentHash: string }>`SELECT surface_key AS "surfaceKey",layer,source_release_id::text AS "sourceReleaseId",source_revision::int AS "sourceRevision",definition,content_hash AS "contentHash" FROM runtime_meta.experience_surface_projection WHERE tenant_id=${context.tenantId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} AND status='active' ORDER BY CASE layer WHEN 'shared' THEN 1 ELSE 2 END`.execute(database)).rows);
+  }
+
+  async readPersonalSurfaceArrangement(context: VerifiedRequestContext, surfaceKey: string): Promise<PersonalSurfaceArrangementRecord | undefined> {
+    return this.withContext(context, async (database) => (await sql<PersonalSurfaceArrangementRecord>`SELECT surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey} LIMIT 1`.execute(database)).rows[0]);
+  }
+
+  async savePersonalSurfaceArrangement(context: VerifiedRequestContext, input: PersonalSurfaceArrangementRecord): Promise<PersonalSurfaceArrangementRecord> {
+    return this.withContext(context, async (database) => {
+      const result=await sql<PersonalSurfaceArrangementRecord>`INSERT INTO master.principal_surface_arrangement(tenant_id,principal_id,plane_code,surface_key,base_revision,arrangement,created_by) VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${context.planeKey},${input.surfaceKey},${input.baseRevision},${JSON.stringify(input.arrangement)}::jsonb,${context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,plane_code,surface_key) DO UPDATE SET base_revision=EXCLUDED.base_revision,arrangement=EXCLUDED.arrangement,updated_at=clock_timestamp(),updated_by=EXCLUDED.created_by RETURNING surface_key AS "surfaceKey",base_revision::int AS "baseRevision",arrangement`.execute(database);
+      return result.rows[0]!;
+    });
+  }
+
+  async deletePersonalSurfaceArrangement(context: VerifiedRequestContext, surfaceKey: string): Promise<void> {
+    await this.withContext(context, async (database) => { await sql`DELETE FROM master.principal_surface_arrangement WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid AND plane_code=${context.planeKey} AND surface_key=${surfaceKey}`.execute(database); });
+  }
+
+  async readRouteSlugRedirect(context: VerifiedRequestContext, sourcePath: string, at: Date): Promise<RouteSlugRedirectRecord | undefined> {
+    return this.withContext(context, async (database) => (await sql<RouteSlugRedirectRecord>`SELECT source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus" FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${sourcePath} AND status='active' AND effective_from<=${at} AND (effective_until IS NULL OR effective_until>${at}) LIMIT 1`.execute(database)).rows[0]);
+  }
+
+  async registerRouteSlugRedirect(context: VerifiedRequestContext, input: Readonly<{ catalogKind: "workspace" | "module" | "entity"; catalogCode: string; sourcePath: string; targetPath: string; redirectStatus: 301 | 308; sourceReleaseId: string }>): Promise<RouteSlugRedirectRecord> {
+    return this.withContext(context, async (database) => {
+      const reverse = await sql<{ present:boolean }>`SELECT EXISTS(SELECT 1 FROM control.route_slug_history WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.targetPath} AND target_path=${input.sourcePath} AND status='active') AS present`.execute(database);
+      if(reverse.rows[0]?.present)throw Object.assign(new Error("Route redirect would create a loop"),{code:"EXPERIENCE_ROUTE_REDIRECT_LOOP"});
+      await sql`UPDATE control.route_slug_history SET status='retired',effective_until=clock_timestamp() WHERE tenant_id=${context.tenantId}::uuid AND target_plane=${context.planeKey} AND source_path=${input.sourcePath} AND status='active'`.execute(database);
+      const result=await sql<RouteSlugRedirectRecord>`INSERT INTO control.route_slug_history(tenant_id,target_plane,catalog_kind,catalog_code,source_path,target_path,redirect_status,source_release_id,created_by) VALUES(${context.tenantId}::uuid,${context.planeKey},${input.catalogKind},${input.catalogCode},${input.sourcePath},${input.targetPath},${input.redirectStatus},${input.sourceReleaseId}::uuid,${context.principalId}::uuid) RETURNING source_path AS "sourcePath",target_path AS "targetPath",redirect_status AS "redirectStatus"`.execute(database);
+      return result.rows[0]!;
+    });
+  }
 }
+
+interface SurfaceReleaseRow { readonly id: string; readonly targetPlane: "studio" | "neon" | "mesh"; readonly surfaceKey: string; readonly layer: "shared" | "tenant"; readonly revision: number; readonly status: "draft" | "published" | "retired"; readonly definition: Record<string, unknown>; readonly contentHash: string; readonly source: "human" | "atlas"; readonly publishedAt: string | null; }
+function surfaceRelease(row: SurfaceReleaseRow): ExperienceSurfaceReleaseRecord { return Object.freeze({ id: row.id,targetPlane:row.targetPlane,surfaceKey:row.surfaceKey,layer:row.layer,revision:row.revision,status:row.status,definition:Object.freeze(row.definition),contentHash:row.contentHash,source:row.source,...(row.publishedAt?{publishedAt:row.publishedAt}:{}) }); }

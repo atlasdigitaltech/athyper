@@ -29,12 +29,14 @@ COPY tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runti
 
 # Build workspace dependencies first, then the host
 RUN pnpm --filter "@athyper/platform-i18n" run build
+RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
 RUN pnpm --filter "@athyper/server-adapter-db-neon" run codegen
 RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard
 
 # Deploy the production dependency graph
 RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharing=locked \
@@ -42,7 +44,8 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
     pnpm --filter "@athyper/server-platform-host" --prod deploy --legacy /runtime && \
     pnpm --filter "@athyper/server-db" --prod deploy --legacy /db-runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages /runtime && \
-    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n /runtime
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime
 
 FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime
 

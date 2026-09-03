@@ -79,7 +79,7 @@ test("supplier registration channels are typed and invitation secrets are never 
   );
   assert.match(
     ddlManifest,
-    /19_supplier_registration_permission_reference_seed\.sql/,
+    /14_permission_reference_seed\.sql/,
   );
   for (const permission of [
     "invitation.create",

@@ -227,6 +227,7 @@ function title(item: CommonSectionItem, section: CommonSectionCode) {
     item.displayName ??
     item.formattedAddress ??
     item.registrationTypeCode ??
+    item.memberName ??
     item.schemeCode ??
     item.externalCode ??
     item.code ??
@@ -276,6 +277,20 @@ function fields(
       ["Effective from", item.effectiveFrom],
       ["Effective until", item.effectiveUntil],
     ];
+  if (section === "governance")
+    return [
+      ["Role", item.relationTypeCode],
+      ["Member", item.memberName],
+      ["Member type", item.memberType],
+      ["Business title", item.businessTitle],
+      ["Country", item.memberCountryCode],
+      ["Ownership", percentage(item.ownershipPercent)],
+      ["Voting rights", percentage(item.votingPercent)],
+      ["Beneficial ownership", percentage(item.beneficialOwnershipPercent)],
+      ["Appointed", item.appointedDate],
+      ["End of term", item.endOfTerm],
+      ["Status", item.status],
+    ];
   return [
     ["Type", item.kind],
     ["Scheme", item.schemeCode ?? item.registrationTypeCode],
@@ -292,4 +307,7 @@ function display(value: unknown) {
   if (value === undefined || value === null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);
+}
+function percentage(value: number | undefined) {
+  return value === undefined ? undefined : `${value}%`;
 }

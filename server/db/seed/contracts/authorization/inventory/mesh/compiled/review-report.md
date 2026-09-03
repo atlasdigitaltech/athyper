@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no permissions, 
 
 ## Coverage
 
-- Physical business-data tables: 82 (28 master, 24 document, 30 mesh)
+- Physical business-data tables: 65 (29 master, 5 document, 31 mesh)
 - Reviewed network-topology tables: 9
-- Pending business review: 73
+- Pending business review: 56
 - Proposed operations: 18
 - Proposed lifecycles: 2
 - Studio-to-Mesh provisionable resources: 1
@@ -105,31 +105,13 @@ Required before enforcement:
 
 ## Pending tables
 
-- document.attachment
-- document.attachment_derivative
-- document.attachment_folder
-- document.attachment_legal_hold
-- document.attachment_legal_hold_event
-- document.attachment_link
-- document.attachment_quota_reservation
-- document.attachment_quota_usage
-- document.attachment_series
-- document.comment
-- document.comment_draft
-- document.comment_feed_cursor
-- document.comment_mention
-- document.comment_reaction
-- document.content_item
-- document.content_item_access_grant
-- document.content_item_link
-- document.content_quota_reservation
-- document.content_quota_usage
 - document.conversation
 - document.conversation_participant
 - document.multipart_upload
 - document.multipart_upload_part
 - document.work_item
 - master.address
+- master.address_event
 - master.address_link
 - master.brand_profile
 - master.contact_email
@@ -173,6 +155,7 @@ Required before enforcement:
 - mesh.certification
 - mesh.certification_type
 - mesh.document_acknowledgement
+- mesh.document_business_status_projection
 - mesh.document_envelope
 - mesh.document_event
 - mesh.document_payload
@@ -181,5 +164,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 73 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 56 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

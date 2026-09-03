@@ -56,7 +56,7 @@ test("WP12 keeps STUDIO authority separate from generic all-plane offline payloa
 
 test("WP12 permissions and database guard enforce separation of duties", () => {
   const seed = read(
-    "ddl/planes/studio/authz/15_business_partner_definition_permission_reference_seed.sql",
+    "ddl/planes/studio/authz/14_permission_reference_seed.sql",
   );
   const functions = read("ddl/planes/studio/publication/07_functions.sql");
   const migration = read(

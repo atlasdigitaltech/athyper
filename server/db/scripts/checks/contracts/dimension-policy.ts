@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const repoRoot = resolve(fileURLToPath(new URL("../../../../", import.meta.url)));
+const repoRoot = resolve(fileURLToPath(new URL("../../../../../", import.meta.url)));
 
 async function read(path: string): Promise<string> {
   return readFile(resolve(repoRoot, path), "utf8");

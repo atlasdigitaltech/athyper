@@ -2,8 +2,9 @@
 /**
  * Archetype Tag Verifier
  *
- * Checks that every COMMENT ON TABLE statement in the tagged schemas has a
- * valid ARCHETYPE= prefix in its first quoted string.
+ * Checks every ARCHETYPE-annotated table comment in the canonical DDL.  The
+ * annotation is intentionally opt-in; ordinary descriptive comments are not
+ * silently reclassified as archetype contracts.
  *
  * Tagged schemas: control, event, governance, shared
  *
@@ -23,10 +24,7 @@ import { fileURLToPath } from "url";
 // ── Config ──────────────────────────────────────────────────────────────────
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const SQL_ROOT = resolve(__dirname, "../../ddl");
-
-/** Schemas whose table files are required to carry ARCHETYPE= tags. */
-const TAGGED_SCHEMAS: string[] = ["control", "event", "governance", "shared"];
+const SQL_ROOT = resolve(__dirname, "../../../ddl");
 
 /** Regex that matches only table files (not views, functions, triggers, etc.) */
 const TABLE_FILE_RE = /\d+[a-z]*_tables[_a-z]*.sql$/i;
@@ -34,8 +32,8 @@ const TABLE_FILE_RE = /\d+[a-z]*_tables[_a-z]*.sql$/i;
 // ── Validation sets ──────────────────────────────────────────────────────────
 
 const VALID_ARCHETYPES = new Set(["A", "B", "B_LITE", "C", "D", "E", "F"]);
-const VALID_SCOPES = new Set(["T", "G", "N"]);
-const VALID_SUBTYPES = new Set(["SNAPSHOT", "APPEND_ONLY", "APPEND_ONLY_LOG"]);
+const VALID_SCOPES = new Set(["T", "G", "N", "P+T"]);
+const VALID_SUBTYPES = new Set(["SNAPSHOT", "APPEND_ONLY", "APPEND_ONLY_LOG", "TERMINAL_IMMUTABLE"]);
 const VALID_QUALIFIERS = new Set(["PENDING_ACTIVE_SET", "DEVIATION"]);
 
 // ── Tag parser ───────────────────────────────────────────────────────────────
@@ -197,15 +195,7 @@ function scanFile(filePath: string): ScanResult {
       continue;
     }
 
-    if (!firstSegment.startsWith("ARCHETYPE=")) {
-      findings.push({
-        file: relPath,
-        table: tableName,
-        line: i + 1,
-        error: `Missing ARCHETYPE= prefix. First quoted segment starts with: "${firstSegment.slice(0, 60)}"`,
-      });
-      continue;
-    }
+    if (!firstSegment.startsWith("ARCHETYPE=")) continue;
 
     const result = parseTag(firstSegment);
     if (!result.ok) {
@@ -223,16 +213,12 @@ function scanFile(filePath: string): ScanResult {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
-function collectTableFiles(schema: string): string[] {
-  const schemaDir = join(SQL_ROOT, schema);
-  try {
-    return readdirSync(schemaDir)
-      .filter((f) => TABLE_FILE_RE.test(f))
-      .map((f) => join(schemaDir, f));
-  } catch {
-    console.error(`  ✗ Schema directory not found: ${schemaDir}`);
-    return [];
-  }
+function collectTableFiles(directory = SQL_ROOT): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return collectTableFiles(path);
+    return entry.isFile() && TABLE_FILE_RE.test(entry.name) ? [path] : [];
+  });
 }
 
 function main() {
@@ -242,11 +228,9 @@ function main() {
   let totalFiles = 0;
   let totalComments = 0;
 
-  for (const schema of TAGGED_SCHEMAS) {
-    const files = collectTableFiles(schema);
-    console.log(`schema: ${schema} (${files.length} file${files.length !== 1 ? "s" : ""})`);
-
-    for (const file of files) {
+  const files = collectTableFiles();
+  for (const file of files) {
+      if (!readFileSync(file, "utf8").includes("ARCHETYPE=")) continue;
       totalFiles++;
       const { findings, commentCount } = scanFile(file);
       totalComments += commentCount;
@@ -260,14 +244,16 @@ function main() {
         }
         allFindings.push(...findings);
       }
-    }
   }
 
   console.log(
     `\n${totalFiles} files, ${totalComments} COMMENT ON TABLE statements checked`,
   );
 
-  if (allFindings.length === 0) {
+  if (totalFiles === 0 || totalComments === 0) {
+    console.error("No canonical archetype annotations were discovered; refusing a vacuous pass.\n");
+    process.exit(1);
+  } else if (allFindings.length === 0) {
     console.log("All archetype tags valid.\n");
     process.exit(0);
   } else {

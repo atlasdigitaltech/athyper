@@ -211,8 +211,7 @@ planes/studio/ai/11_grants.sql
 common/master/12_system_authority_reference_seed.sql
 planes/studio/master/12_platform_catalog_reference_seed.sql
 planes/studio/control/12_platform_catalog_reference_seed.sql
-planes/studio/authz/14_publication_permission_reference_seed.sql
-planes/studio/authz/15_business_partner_definition_permission_reference_seed.sql
+planes/studio/authz/14_permission_reference_seed.sql
 common/authz/14_workflow_permission_reference_seed.sql
 common/authz/15_permission_scope_compatibility_seed.sql
 common/authz/16_content_record_acl_reference_seed.sql

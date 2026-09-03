@@ -135,7 +135,7 @@ test("P5 generalizes invitation authority without supplier-only leakage", async 
   );
   assert.match(
     ddlManifest,
-    /21_business_partner_invitation_permission_reference_seed\.sql/,
+    /14_permission_reference_seed\.sql/,
   );
   assert.doesNotMatch(`${tables}\n${migration}`, /\b(?:raw_)?token\b\s+text/i);
   assert.doesNotMatch(`${tables}\n${migration}`, /invitee_email\s+text/i);

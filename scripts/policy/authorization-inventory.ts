@@ -15,7 +15,7 @@ export const AUTHORIZATION_REGISTRY_PATH =
 export const AUTHORIZATION_INVENTORY_PATH =
   "config/governance/authorization-inventory.v1.json";
 export const AUTHORIZATION_SUMMARY_PATH =
-  "docs/architecture/authorization-source-inventory.md";
+  "policy/reports/authorization/inventories/authorization-source-inventory.md";
 
 const SOURCE_EXTENSIONS = new Set([
   ".cjs",
@@ -1535,7 +1535,7 @@ export function buildAuthorizationInventory(
   root = resolve(fileURLToPath(new URL("../..", import.meta.url))),
 ): AuthorizationInventory {
   const registryPath = resolve(root, AUTHORIZATION_REGISTRY_PATH);
-  const registryText = readFileSync(registryPath, "utf8").replaceAll("\r\n", "\n");
+  const registryText = readFileSync(registryPath, "utf8").replace(/^\uFEFF/, "").replaceAll("\r\n", "\n");
   const registry = JSON.parse(registryText) as AuthorizationRegistry;
   const registryFailures = validateRegistry(registry);
   if (registryFailures.length > 0) {

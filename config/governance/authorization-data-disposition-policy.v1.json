@@ -99,7 +99,7 @@
   },
   "runtimeTableOverrides": {
     "public.mesh_schema_provisions": {
-      "definitionPath": "server/db/scripts/provision-mesh.ts",
+      "definitionPath": "server/db/scripts/provisioning/provision-mesh.ts",
       "dataClass": "mesh_provisioning_ledger",
       "disposition": "recreate_empty_in_mesh_then_rebuild_from_executed_manifest",
       "retention": "retain Mesh provision history through migration observation",

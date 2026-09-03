@@ -31,7 +31,7 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
       "../packages/services/master-data/src/business-partner-invitation-routes.ts",
     ),
     read(
-      "ddl/planes/neon/authz/20_customer_onboarding_permission_reference_seed.sql",
+      "ddl/planes/neon/authz/14_permission_reference_seed.sql",
     ),
     read("migrations/manifests/neon.txt"),
     read("ddl/planes/neon/_manifest.txt"),
@@ -76,6 +76,6 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
   assert.match(manifest, /^20260829_neon_customer_onboarding_parity\.sql$/m);
   assert.match(
     ddlManifest,
-    /^planes\/neon\/authz\/20_customer_onboarding_permission_reference_seed\.sql$/m,
+    /^planes\/neon\/authz\/14_permission_reference_seed\.sql$/m,
   );
 });

@@ -7,14 +7,14 @@ const readStudio = (name: string) => readFile(new URL(`../../../../../db/ddl/pla
 
 describe("Studio Publication authority DDL", () => {
   it("seeds governed Publication route permissions on the pub module", async () => {
-    const seed = await readStudio("authz/14_publication_permission_reference_seed.sql");
+    const seed = await readStudio("authz/14_permission_reference_seed.sql");
     const manifest = await readStudio("_manifest.txt");
     for (const permission of ["publication.release.view", "publication.deployment.view", "publication.release.publish", "publication.deployment.retry", "publication.release.rollback"]) expect(seed).toContain(permission);
     expect(seed).toContain("module.code='pub'");
     expect(seed).toContain("'critical',true");
     expect(seed).toContain("'tenant'::authz.scope_kind_d");
     expect(seed).toContain("'exact'::authz.propagation_mode_d");
-    expect(manifest).toContain("planes/studio/authz/14_publication_permission_reference_seed.sql");
+    expect(manifest).toContain("planes/studio/authz/14_permission_reference_seed.sql");
   });
   it("uses canonical planes and immutable command coordinates", async () => {
     const tables = await read("03_tables.sql");

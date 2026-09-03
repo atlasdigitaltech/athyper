@@ -108,6 +108,15 @@ export function lintSeedSource(source: string, file = "seed.sql", activeContract
     });
   };
 
+  const encodingCorruption = source.match(/\uFFFD|\?\?/u);
+  if (encodingCorruption) {
+    add(
+      "content.encoding-corruption",
+      encodingCorruption,
+      "seed text contains a Unicode replacement character or suspicious '???' sequence",
+    );
+  }
+
   for (const key of activeContract.requiredHeaders) {
     if (!metadata.has(key)) add("metadata.missing", null, `missing required header '${key}'`);
   }

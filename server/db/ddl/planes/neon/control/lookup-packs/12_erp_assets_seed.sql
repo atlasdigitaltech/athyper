@@ -23,12 +23,12 @@ END $guard$;
 INSERT INTO control.lookup_domain
   (code, name, description, source_schema, is_extensible, metadata, status, created_by)
 VALUES
-  ('control.depreciation_start_rule', 'Depreciation start rule', 'When depreciation begins for an asset (in_service_date, capitalization_date, next_period). is_extensible=false ??? accounting standard governed.', 'control', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('control.depreciation_start_rule', 'Depreciation start rule', 'When depreciation begins for an asset (in_service_date, capitalization_date, next_period). is_extensible=false — accounting standard governed.', 'control', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('document.asset_txn_type', 'Asset transaction type', 'Lifecycle event types for asset transactions (capitalize, depreciate, etc.). is_extensible=true.', 'document', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.asset_book_type', 'Asset book type', 'Book types for multi-book asset accounting (statutory, tax, management). is_extensible=true ??? tenants may add custom book types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.asset_book_type', 'Asset book type', 'Book types for multi-book asset accounting (statutory, tax, management). is_extensible=true — tenants may add custom book types.', 'master', true, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
   ('master.asset_component.component_type', 'Asset Component Type', 'IAS 16 componentization role for an asset component (major, replacement, inspection). Platform-governed.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.asset_life_override_policy', 'Useful life override policy', 'Whether useful life can be overridden at the asset level (allow, require, forbid). is_extensible=false ??? platform-defined.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
-  ('master.asset_reserve_type', 'Asset reserve type', 'Revaluation/impairment reserve movement types. is_extensible=false ??? reserve types are accounting-governed.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
+  ('master.asset_life_override_policy', 'Useful life override policy', 'Whether useful life can be overridden at the asset level (allow, require, forbid). is_extensible=false — platform-defined.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid),
+  ('master.asset_reserve_type', 'Asset reserve type', 'Revaluation/impairment reserve movement types. is_extensible=false — reserve types are accounting-governed.', 'master', false, '{}'::jsonb, 'active', '00000000-0000-0000-0000-000000000000'::uuid)
 ON CONFLICT (code) DO UPDATE SET
   name = excluded.name, description = excluded.description,
   source_schema = excluded.source_schema, is_extensible = excluded.is_extensible,
