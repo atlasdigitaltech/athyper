@@ -4,6 +4,8 @@ Status: review draft
 Scope: NEON, MESH, Studio, IAM, Object Storage, Atlas AI and Notification Channel
 Decision basis: the governed entity lifecycle ADR, the frontend-first module guidance, the current repository implementation and the Business Partner scratchpad proposals
 
+> This document is the point-in-time repository audit and source proposal. The consolidated capability documentation is indexed at [`business-partner/README.md`](business-partner/README.md). New journey, scope and acceptance decisions should be recorded in that package.
+
 ## Executive decision
 
 Build Business Partner onboarding as one governed journey presented through several bounded experiences, not as a new cross-plane application or a fourth authoritative data plane.

@@ -10,5 +10,6 @@ This directory contains durable architecture decisions, current architecture gui
 
 - `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
 - `business-partner-experience-plan.md` — review draft for the cross-plane Business Partner experience, authority boundaries, UI design, automation roadmap, delivery plan and qualification strategy.
+- `business-partner/README.md` — canonical planning baseline for Business Partner organizations, Supplier and Customer roles, and supplier-provided Workforce journeys.
 
 Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `governance/policy/reports/` when they must remain live; otherwise Git history is the archive.
