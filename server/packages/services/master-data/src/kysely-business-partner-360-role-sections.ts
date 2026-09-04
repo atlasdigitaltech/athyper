@@ -1,7 +1,335 @@
-import {sql,type Transaction} from "kysely";import type {BusinessPartner360CustomerCompanyData,BusinessPartner360OrganizationAssignmentItem,BusinessPartner360RolesScopeData,BusinessPartner360SupplierCompanyData} from "@athyper/server-contract-master-data";import type {BusinessPartner360Repository,BusinessPartner360RoleCompanyRead} from "./business-partner-360-service.js";
-type Tx=Transaction<Record<string,never>>;type Row=Record<string,unknown>;type Input=Parameters<BusinessPartner360Repository<Tx>["readRoleCompanySection"]>[0];
-export async function readBusinessPartner360RoleCompanySection(input:Input,tx:Tx):Promise<BusinessPartner360RoleCompanyRead>{if(input.sectionCode==="roles-scope")return roles(input,tx);if(input.sectionCode==="supplier-company")return supplier(input,tx);return customer(input,tx);}
-async function roles(input:Input,tx:Tx):Promise<BusinessPartner360RoleCompanyRead>{const[roleRows,organizations,legal]=await Promise.all([sql<Row>`SELECT id::text,'supplier' role,supplier_code role_code,status::text FROM master.supplier WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status<>'archived' UNION ALL SELECT id::text,'customer',customer_code,status::text FROM master.customer WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status<>'archived' ORDER BY role,id`.execute(tx),sql<Row>`SELECT id::text,operating_organization_id::text,partner_role::text,status::text,effective_from,effective_until FROM master.business_partner_operating_organization_assignment WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND partner_role IN('supplier','customer') AND (${input.operatingOrganizationId??null}::uuid IS NULL OR operating_organization_id=${input.operatingOrganizationId??null}::uuid) AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) ORDER BY partner_role,operating_organization_id,id`.execute(tx),sql<Row>`SELECT id::text,legal_entity_id::text,effective_from,effective_until FROM master.legal_entity_internal_partner_link WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND (${input.legalEntityId??null}::uuid IS NULL OR legal_entity_id=${input.legalEntityId??null}::uuid) AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) ORDER BY legal_entity_id,id`.execute(tx)]);const data:BusinessPartner360RolesScopeData={scopeState:input.historical?"historical":input.operatingOrganizationId||input.companyCodeId||input.legalEntityId?"scoped":"global",readOnly:input.historical,roles:roleRows.rows.map(row=>({id:text(row,"id"),role:text(row,"role") as "supplier"|"customer",...(optional(row,"role_code")?{roleCode:optional(row,"role_code")} : {}),status:text(row,"status")})),organizationAssignments:organizations.rows.map(mapOrganization),legalEntityAssignments:legal.rows.map(row=>({id:text(row,"id"),legalEntityId:text(row,"legal_entity_id"),effectiveFrom:date(row["effective_from"]),...(row["effective_until"]?{effectiveUntil:date(row["effective_until"])}:{})}))};return result(data,data.roles.length?"ready":"empty",input,"master.business_partner_operating_organization_assignment");}
-async function supplier(input:Input,tx:Tx):Promise<BusinessPartner360RoleCompanyRead>{if(!input.operatingOrganizationId||!input.companyCodeId)return result({scopeState:input.historical?"historical":"missing_scope",readOnly:true} satisfies BusinessPartner360SupplierCompanyData,"empty",input,"master.company_code_supplier_profile");const rows=(await sql<Row>`SELECT supplier.id::text supplier_id,supplier.supplier_code,supplier.supplier_type::text,supplier.status::text supplier_status,assignment.id::text assignment_id,assignment.status::text assignment_status,assignment.effective_from,assignment.effective_until,profile.id::text profile_id,profile.company_code_id::text,profile.currency_code::text,profile.payment_term_id::text,profile.default_accounting_profile_id::text,profile.default_dimension_set_id::text,profile.preferred_remittance_bank_link_id::text,profile.status::text profile_status FROM master.supplier supplier JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=supplier.tenant_id AND assignment.business_partner_id=supplier.business_partner_id AND assignment.partner_role='supplier' AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid LEFT JOIN master.company_code_supplier_profile profile ON profile.tenant_id=supplier.tenant_id AND profile.supplier_id=supplier.id AND profile.company_code_id=${input.companyCodeId}::uuid AND profile.created_at::date<=${input.asOf}::date WHERE supplier.tenant_id=${input.tenantId}::uuid AND supplier.business_partner_id=${input.businessPartnerId}::uuid AND supplier.status<>'archived' AND assignment.status='active' AND assignment.effective_from<=${input.asOf}::date AND(assignment.effective_until IS NULL OR assignment.effective_until>${input.asOf}::date) LIMIT 1`.execute(tx)).rows[0];const data:BusinessPartner360SupplierCompanyData={scopeState:input.historical?"historical":"scoped",readOnly:input.historical,...(rows?{supplier:{id:text(rows,"supplier_id"),code:text(rows,"supplier_code"),type:text(rows,"supplier_type"),status:text(rows,"supplier_status")},organizationAssignment:{id:text(rows,"assignment_id"),operatingOrganizationId:input.operatingOrganizationId,partnerRole:"supplier",status:text(rows,"assignment_status"),effectiveFrom:date(rows["effective_from"]),...(rows["effective_until"]?{effectiveUntil:date(rows["effective_until"])}:{})},...(optional(rows,"profile_id")?{profile:{id:optional(rows,"profile_id")!,companyCodeId:optional(rows,"company_code_id")!,...(optional(rows,"currency_code")?{currencyCode:optional(rows,"currency_code")} : {}),...(optional(rows,"payment_term_id")?{paymentTermId:optional(rows,"payment_term_id")} : {}),...(optional(rows,"default_accounting_profile_id")?{defaultAccountingProfileId:optional(rows,"default_accounting_profile_id")} : {}),...(optional(rows,"default_dimension_set_id")?{defaultDimensionSetId:optional(rows,"default_dimension_set_id")} : {}),...(optional(rows,"preferred_remittance_bank_link_id")?{preferredRemittanceBankLinkId:optional(rows,"preferred_remittance_bank_link_id")} : {}),status:optional(rows,"profile_status")!}}:{})}: {})};return result(data,rows?"ready":"empty",input,"master.company_code_supplier_profile");}
-async function customer(input:Input,tx:Tx):Promise<BusinessPartner360RoleCompanyRead>{if(!input.operatingOrganizationId||!input.companyCodeId)return result({scopeState:input.historical?"historical":"missing_scope",readOnly:true} satisfies BusinessPartner360CustomerCompanyData,"empty",input,"master.company_code_customer_profile");const rows=(await sql<Row>`SELECT customer.id::text customer_id,customer.customer_code,customer.customer_type::text,customer.status::text customer_status,assignment.id::text assignment_id,assignment.status::text assignment_status,assignment.effective_from,assignment.effective_until,profile.id::text profile_id,profile.company_code_id::text,profile.currency_code::text,profile.payment_term_id::text,profile.default_accounting_profile_id::text,profile.default_dimension_set_id::text,profile.statement_cycle_code,profile.status::text profile_status,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',designation.id::text,'type',designation.designation_type::text,'priorityTier',designation.priority_tier,'effectiveFrom',designation.effective_from,'effectiveUntil',designation.effective_until) ORDER BY designation.designation_type,designation.effective_from DESC,designation.id) FROM control.customer_account_designation designation WHERE designation.tenant_id=customer.tenant_id AND designation.customer_id=customer.id AND designation.operating_organization_id=assignment.operating_organization_id AND(designation.company_code_id IS NULL OR designation.company_code_id=${input.companyCodeId}::uuid) AND designation.status='approved' AND designation.effective_from<=${input.asOf}::date AND(designation.effective_until IS NULL OR designation.effective_until>${input.asOf}::date)),'[]'::jsonb) designations FROM master.customer customer JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=customer.tenant_id AND assignment.business_partner_id=customer.business_partner_id AND assignment.partner_role='customer' AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid LEFT JOIN master.company_code_customer_profile profile ON profile.tenant_id=customer.tenant_id AND profile.customer_id=customer.id AND profile.company_code_id=${input.companyCodeId}::uuid AND profile.created_at::date<=${input.asOf}::date WHERE customer.tenant_id=${input.tenantId}::uuid AND customer.business_partner_id=${input.businessPartnerId}::uuid AND customer.status<>'archived' AND assignment.status='active' AND assignment.effective_from<=${input.asOf}::date AND(assignment.effective_until IS NULL OR assignment.effective_until>${input.asOf}::date) LIMIT 1`.execute(tx)).rows[0];const data:BusinessPartner360CustomerCompanyData={scopeState:input.historical?"historical":"scoped",readOnly:input.historical,...(rows?{customer:{id:text(rows,"customer_id"),code:text(rows,"customer_code"),type:text(rows,"customer_type"),status:text(rows,"customer_status"),designations:designationRows(rows["designations"])},organizationAssignment:{id:text(rows,"assignment_id"),operatingOrganizationId:input.operatingOrganizationId,partnerRole:"customer",status:text(rows,"assignment_status"),effectiveFrom:date(rows["effective_from"]),...(rows["effective_until"]?{effectiveUntil:date(rows["effective_until"])}:{})},...(optional(rows,"profile_id")?{profile:{id:optional(rows,"profile_id")!,companyCodeId:optional(rows,"company_code_id")!,...(optional(rows,"currency_code")?{currencyCode:optional(rows,"currency_code")} : {}),...(optional(rows,"payment_term_id")?{paymentTermId:optional(rows,"payment_term_id")} : {}),...(optional(rows,"default_accounting_profile_id")?{defaultAccountingProfileId:optional(rows,"default_accounting_profile_id")} : {}),...(optional(rows,"default_dimension_set_id")?{defaultDimensionSetId:optional(rows,"default_dimension_set_id")} : {}),...(optional(rows,"statement_cycle_code")?{statementCycleCode:optional(rows,"statement_cycle_code")} : {}),status:optional(rows,"profile_status")!}}:{})}: {})};return result(data,rows?"ready":"empty",input,"master.company_code_customer_profile");}
-function designationRows(value:unknown):BusinessPartner360CustomerCompanyData["customer"] extends infer C?C extends {designations:infer D}?D:never:never{const parsed=typeof value==="string"?JSON.parse(value) as unknown:value;if(!Array.isArray(parsed))return[];return parsed.flatMap(item=>{if(!item||typeof item!=="object"||Array.isArray(item))return[];const row=item as Record<string,unknown>;if(typeof row["id"]!=="string"||typeof row["type"]!=="string"||!row["effectiveFrom"])return[];return[{id:row["id"],type:row["type"],...(row["priorityTier"]==null?{}:{priorityTier:Number(row["priorityTier"])}),effectiveFrom:date(row["effectiveFrom"]),...(row["effectiveUntil"]?{effectiveUntil:date(row["effectiveUntil"])}:{})}];});}function mapOrganization(row:Row):BusinessPartner360OrganizationAssignmentItem{return{id:text(row,"id"),operatingOrganizationId:text(row,"operating_organization_id"),partnerRole:text(row,"partner_role") as "supplier"|"customer",status:text(row,"status"),effectiveFrom:date(row["effective_from"]),...(row["effective_until"]?{effectiveUntil:date(row["effective_until"])}:{})};}function result(data:unknown,state:"ready"|"empty"|"partial",input:Input,sourceObject:string):BusinessPartner360RoleCompanyRead{return{data,state,provenance:[{plane:"neon",service:"master-data",sourceObject,observedAt:new Date().toISOString(),schemaVersion:"1"}]};}function text(row:Row,key:string){const value=row[key];if(value===null||value===undefined)throw new Error(`BP_360_REPOSITORY_FIELD_MISSING:${key}`);return String(value);}function optional(row:Row,key:string){const value=row[key];return value===null||value===undefined?undefined:String(value);}function date(value:unknown){return value instanceof Date?value.toISOString().slice(0,10):String(value).slice(0,10);}
+import { sql, type Transaction } from "kysely";
+import type {
+  BusinessPartner360CustomerCompanyData,
+  BusinessPartner360OrganizationAssignmentItem,
+  BusinessPartner360RolesScopeData,
+  BusinessPartner360SupplierCompanyData,
+} from "@athyper/server-contract-master-data";
+import type {
+  BusinessPartner360Repository,
+  BusinessPartner360RoleCompanyRead,
+} from "./business-partner-360-service.js";
+type Tx = Transaction<Record<string, never>>;
+type Row = Record<string, unknown>;
+type Input = Parameters<
+  BusinessPartner360Repository<Tx>["readRoleCompanySection"]
+>[0];
+export async function readBusinessPartner360RoleCompanySection(
+  input: Input,
+  tx: Tx,
+): Promise<BusinessPartner360RoleCompanyRead> {
+  if (input.sectionCode === "roles-scope") return roles(input, tx);
+  if (input.sectionCode === "supplier-company") return supplier(input, tx);
+  return customer(input, tx);
+}
+async function roles(
+  input: Input,
+  tx: Tx,
+): Promise<BusinessPartner360RoleCompanyRead> {
+  const [roleRows, organizations, legal] = await Promise.all([
+    sql<Row>`SELECT id::text,'supplier' role,supplier_code role_code,status::text FROM master.supplier WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status<>'archived' UNION ALL SELECT id::text,'customer',customer_code,status::text FROM master.customer WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status<>'archived' ORDER BY role,id`.execute(
+      tx,
+    ),
+    sql<Row>`SELECT id::text,operating_organization_id::text,partner_role::text,status::text,effective_from,effective_until FROM master.business_partner_operating_organization_assignment WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND partner_role IN('supplier','customer') AND (${input.operatingOrganizationId ?? null}::uuid IS NULL OR operating_organization_id=${input.operatingOrganizationId ?? null}::uuid) AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) ORDER BY partner_role,operating_organization_id,id`.execute(
+      tx,
+    ),
+    sql<Row>`SELECT id::text,legal_entity_id::text,effective_from,effective_until FROM master.legal_entity_internal_partner_link WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND (${input.legalEntityId ?? null}::uuid IS NULL OR legal_entity_id=${input.legalEntityId ?? null}::uuid) AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) ORDER BY legal_entity_id,id`.execute(
+      tx,
+    ),
+  ]);
+  const data: BusinessPartner360RolesScopeData = {
+    scopeState: input.historical
+      ? "historical"
+      : input.operatingOrganizationId ||
+          input.companyCodeId ||
+          input.legalEntityId
+        ? "scoped"
+        : "global",
+    readOnly: input.historical,
+    roles: roleRows.rows.map((row) => ({
+      id: text(row, "id"),
+      role: text(row, "role") as "supplier" | "customer",
+      ...(optional(row, "role_code")
+        ? { roleCode: optional(row, "role_code") }
+        : {}),
+      status: text(row, "status"),
+    })),
+    organizationAssignments: organizations.rows.map(mapOrganization),
+    legalEntityAssignments: legal.rows.map((row) => ({
+      id: text(row, "id"),
+      legalEntityId: text(row, "legal_entity_id"),
+      effectiveFrom: date(row["effective_from"]),
+      ...(row["effective_until"]
+        ? { effectiveUntil: date(row["effective_until"]) }
+        : {}),
+    })),
+  };
+  return result(
+    data,
+    data.roles.length ? "ready" : "empty",
+    input,
+    "master.business_partner_operating_organization_assignment",
+  );
+}
+async function supplier(
+  input: Input,
+  tx: Tx,
+): Promise<BusinessPartner360RoleCompanyRead> {
+  if (!input.operatingOrganizationId || !input.companyCodeId)
+    return result(
+      {
+        scopeState: input.historical ? "historical" : "missing_scope",
+        readOnly: true,
+      } satisfies BusinessPartner360SupplierCompanyData,
+      "empty",
+      input,
+      "master.company_code_supplier_profile",
+    );
+  const rows = (
+    await sql<Row>`SELECT supplier.id::text supplier_id,supplier.supplier_code,supplier.supplier_type::text,supplier.status::text supplier_status,assignment.id::text assignment_id,assignment.status::text assignment_status,assignment.effective_from,assignment.effective_until,profile.id::text profile_id,profile.company_code_id::text,profile.currency_code::text,profile.payment_term_id::text,profile.default_accounting_profile_id::text,profile.default_dimension_set_id::text,profile.preferred_remittance_bank_link_id::text,profile.status::text profile_status FROM master.supplier supplier JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=supplier.tenant_id AND assignment.business_partner_id=supplier.business_partner_id AND assignment.partner_role='supplier' AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid LEFT JOIN master.company_code_supplier_profile profile ON profile.tenant_id=supplier.tenant_id AND profile.supplier_id=supplier.id AND profile.company_code_id=${input.companyCodeId}::uuid AND profile.created_at::date<=${input.asOf}::date WHERE supplier.tenant_id=${input.tenantId}::uuid AND supplier.business_partner_id=${input.businessPartnerId}::uuid AND supplier.status<>'archived' AND assignment.status='active' AND assignment.effective_from<=${input.asOf}::date AND(assignment.effective_until IS NULL OR assignment.effective_until>${input.asOf}::date) LIMIT 1`.execute(
+      tx,
+    )
+  ).rows[0];
+  const data: BusinessPartner360SupplierCompanyData = {
+    scopeState: input.historical ? "historical" : "scoped",
+    readOnly: input.historical,
+    ...(rows
+      ? {
+          supplier: {
+            id: text(rows, "supplier_id"),
+            code: text(rows, "supplier_code"),
+            type: text(rows, "supplier_type"),
+            status: text(rows, "supplier_status"),
+          },
+          organizationAssignment: {
+            id: text(rows, "assignment_id"),
+            operatingOrganizationId: input.operatingOrganizationId,
+            partnerRole: "supplier",
+            status: text(rows, "assignment_status"),
+            effectiveFrom: date(rows["effective_from"]),
+            ...(rows["effective_until"]
+              ? { effectiveUntil: date(rows["effective_until"]) }
+              : {}),
+          },
+          ...(optional(rows, "profile_id")
+            ? {
+                profile: {
+                  id: optional(rows, "profile_id")!,
+                  companyCodeId: optional(rows, "company_code_id")!,
+                  ...(optional(rows, "currency_code")
+                    ? { currencyCode: optional(rows, "currency_code") }
+                    : {}),
+                  ...(optional(rows, "payment_term_id")
+                    ? { paymentTermId: optional(rows, "payment_term_id") }
+                    : {}),
+                  ...(optional(rows, "default_accounting_profile_id")
+                    ? {
+                        defaultAccountingProfileId: optional(
+                          rows,
+                          "default_accounting_profile_id",
+                        ),
+                      }
+                    : {}),
+                  ...(optional(rows, "default_dimension_set_id")
+                    ? {
+                        defaultDimensionSetId: optional(
+                          rows,
+                          "default_dimension_set_id",
+                        ),
+                      }
+                    : {}),
+                  ...(optional(rows, "preferred_remittance_bank_link_id")
+                    ? {
+                        preferredRemittanceBankLinkId: optional(
+                          rows,
+                          "preferred_remittance_bank_link_id",
+                        ),
+                      }
+                    : {}),
+                  status: optional(rows, "profile_status")!,
+                },
+              }
+            : {}),
+        }
+      : {}),
+  };
+  return result(
+    data,
+    rows ? "ready" : "empty",
+    input,
+    "master.company_code_supplier_profile",
+  );
+}
+async function customer(
+  input: Input,
+  tx: Tx,
+): Promise<BusinessPartner360RoleCompanyRead> {
+  if (!input.operatingOrganizationId || !input.companyCodeId)
+    return result(
+      {
+        scopeState: input.historical ? "historical" : "missing_scope",
+        readOnly: true,
+      } satisfies BusinessPartner360CustomerCompanyData,
+      "empty",
+      input,
+      "master.company_code_customer_profile",
+    );
+  const rows = (
+    await sql<Row>`SELECT customer.id::text customer_id,customer.customer_code,customer.customer_type::text,customer.status::text customer_status,assignment.id::text assignment_id,assignment.status::text assignment_status,assignment.effective_from,assignment.effective_until,profile.id::text profile_id,profile.company_code_id::text,profile.currency_code::text,profile.payment_term_id::text,profile.default_accounting_profile_id::text,profile.default_dimension_set_id::text,profile.statement_cycle_code,profile.status::text profile_status,COALESCE((SELECT jsonb_agg(jsonb_build_object('id',designation.id::text,'type',designation.designation_type::text,'priorityTier',designation.priority_tier,'effectiveFrom',designation.effective_from,'effectiveUntil',designation.effective_until) ORDER BY designation.designation_type,designation.effective_from DESC,designation.id) FROM control.customer_account_designation designation WHERE designation.tenant_id=customer.tenant_id AND designation.customer_id=customer.id AND EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' AND scope.operating_organization_id=assignment.operating_organization_id AND scope.effective_from<=${input.asOf}::date AND(scope.effective_until IS NULL OR scope.effective_until>${input.asOf}::date)) AND(NOT EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='company_code' AND scope.scope_mode='include') OR EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' AND scope.company_code_id=${input.companyCodeId}::uuid AND scope.effective_from<=${input.asOf}::date AND(scope.effective_until IS NULL OR scope.effective_until>${input.asOf}::date))) AND designation.status='approved' AND designation.effective_from<=${input.asOf}::date AND(designation.effective_until IS NULL OR designation.effective_until>${input.asOf}::date)),'[]'::jsonb) designations FROM master.customer customer JOIN master.business_partner_operating_organization_assignment assignment ON assignment.tenant_id=customer.tenant_id AND assignment.business_partner_id=customer.business_partner_id AND assignment.partner_role='customer' AND assignment.operating_organization_id=${input.operatingOrganizationId}::uuid LEFT JOIN master.company_code_customer_profile profile ON profile.tenant_id=customer.tenant_id AND profile.customer_id=customer.id AND profile.company_code_id=${input.companyCodeId}::uuid AND profile.created_at::date<=${input.asOf}::date WHERE customer.tenant_id=${input.tenantId}::uuid AND customer.business_partner_id=${input.businessPartnerId}::uuid AND customer.status<>'archived' AND assignment.status='active' AND assignment.effective_from<=${input.asOf}::date AND(assignment.effective_until IS NULL OR assignment.effective_until>${input.asOf}::date) LIMIT 1`.execute(
+      tx,
+    )
+  ).rows[0];
+  const data: BusinessPartner360CustomerCompanyData = {
+    scopeState: input.historical ? "historical" : "scoped",
+    readOnly: input.historical,
+    ...(rows
+      ? {
+          customer: {
+            id: text(rows, "customer_id"),
+            code: text(rows, "customer_code"),
+            type: text(rows, "customer_type"),
+            status: text(rows, "customer_status"),
+            designations: designationRows(rows["designations"]),
+          },
+          organizationAssignment: {
+            id: text(rows, "assignment_id"),
+            operatingOrganizationId: input.operatingOrganizationId,
+            partnerRole: "customer",
+            status: text(rows, "assignment_status"),
+            effectiveFrom: date(rows["effective_from"]),
+            ...(rows["effective_until"]
+              ? { effectiveUntil: date(rows["effective_until"]) }
+              : {}),
+          },
+          ...(optional(rows, "profile_id")
+            ? {
+                profile: {
+                  id: optional(rows, "profile_id")!,
+                  companyCodeId: optional(rows, "company_code_id")!,
+                  ...(optional(rows, "currency_code")
+                    ? { currencyCode: optional(rows, "currency_code") }
+                    : {}),
+                  ...(optional(rows, "payment_term_id")
+                    ? { paymentTermId: optional(rows, "payment_term_id") }
+                    : {}),
+                  ...(optional(rows, "default_accounting_profile_id")
+                    ? {
+                        defaultAccountingProfileId: optional(
+                          rows,
+                          "default_accounting_profile_id",
+                        ),
+                      }
+                    : {}),
+                  ...(optional(rows, "default_dimension_set_id")
+                    ? {
+                        defaultDimensionSetId: optional(
+                          rows,
+                          "default_dimension_set_id",
+                        ),
+                      }
+                    : {}),
+                  ...(optional(rows, "statement_cycle_code")
+                    ? {
+                        statementCycleCode: optional(
+                          rows,
+                          "statement_cycle_code",
+                        ),
+                      }
+                    : {}),
+                  status: optional(rows, "profile_status")!,
+                },
+              }
+            : {}),
+        }
+      : {}),
+  };
+  return result(
+    data,
+    rows ? "ready" : "empty",
+    input,
+    "master.company_code_customer_profile",
+  );
+}
+function designationRows(
+  value: unknown,
+): BusinessPartner360CustomerCompanyData["customer"] extends infer C
+  ? C extends { designations: infer D }
+    ? D
+    : never
+  : never {
+  const parsed =
+    typeof value === "string" ? (JSON.parse(value) as unknown) : value;
+  if (!Array.isArray(parsed)) return [];
+  return parsed.flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const row = item as Record<string, unknown>;
+    if (
+      typeof row["id"] !== "string" ||
+      typeof row["type"] !== "string" ||
+      !row["effectiveFrom"]
+    )
+      return [];
+    return [
+      {
+        id: row["id"],
+        type: row["type"],
+        ...(row["priorityTier"] == null
+          ? {}
+          : { priorityTier: Number(row["priorityTier"]) }),
+        effectiveFrom: date(row["effectiveFrom"]),
+        ...(row["effectiveUntil"]
+          ? { effectiveUntil: date(row["effectiveUntil"]) }
+          : {}),
+      },
+    ];
+  });
+}
+function mapOrganization(
+  row: Row,
+): BusinessPartner360OrganizationAssignmentItem {
+  return {
+    id: text(row, "id"),
+    operatingOrganizationId: text(row, "operating_organization_id"),
+    partnerRole: text(row, "partner_role") as "supplier" | "customer",
+    status: text(row, "status"),
+    effectiveFrom: date(row["effective_from"]),
+    ...(row["effective_until"]
+      ? { effectiveUntil: date(row["effective_until"]) }
+      : {}),
+  };
+}
+function result(
+  data: unknown,
+  state: "ready" | "empty" | "partial",
+  input: Input,
+  sourceObject: string,
+): BusinessPartner360RoleCompanyRead {
+  return {
+    data,
+    state,
+    provenance: [
+      {
+        plane: "neon",
+        service: "master-data",
+        sourceObject,
+        observedAt: new Date().toISOString(),
+        schemaVersion: "1",
+      },
+    ],
+  };
+}
+function text(row: Row, key: string) {
+  const value = row[key];
+  if (value === null || value === undefined)
+    throw new Error(`BP_360_REPOSITORY_FIELD_MISSING:${key}`);
+  return String(value);
+}
+function optional(row: Row, key: string) {
+  const value = row[key];
+  return value === null || value === undefined ? undefined : String(value);
+}
+function date(value: unknown) {
+  return value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : String(value).slice(0, 10);
+}

@@ -430,11 +430,11 @@
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -529,11 +529,11 @@
         "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner_onboarding",
@@ -556,10 +556,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -579,10 +579,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -602,10 +602,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -625,10 +625,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -648,10 +648,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -698,10 +698,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -722,10 +722,10 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-explainability.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -745,10 +745,10 @@
       "hasStatus": false,
       "hasVersion": false,
       "repositoryReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -769,10 +769,10 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner_onboarding",
@@ -3104,13 +3104,13 @@
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
         "../packages/platform/workflow/src/sla-automation.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "writerReferences": [
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
         "../packages/platform/workflow/src/sla-automation.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
@@ -3190,11 +3190,11 @@
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
@@ -3217,11 +3217,11 @@
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
         "../packages/platform/workflow/src/kysely-workflow-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
@@ -3350,11 +3350,11 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/services.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3397,10 +3397,10 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3694,12 +3694,12 @@
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/records/src/kysely-record-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -3723,11 +3723,11 @@
       "repositoryReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -3749,10 +3749,10 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -3800,10 +3800,10 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -3826,10 +3826,10 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -3857,12 +3857,12 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/records/src/kysely-record-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -3909,10 +3909,10 @@
         "../packages/services/master-data/src/business-partner-360-service.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -4031,10 +4031,10 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-commercial-controls.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -4145,7 +4145,7 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -4212,10 +4212,10 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -4279,11 +4279,11 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -4369,10 +4369,10 @@
         "../packages/platform/notifications/src/notification-planner.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4394,10 +4394,10 @@
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4439,10 +4439,10 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../packages/services/master-data/src/kysely-business-partner-360-sections.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "pending_review",
       "slice": "phase1_backlog",
@@ -4508,11 +4508,11 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",
@@ -5133,7 +5133,7 @@
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -5160,7 +5160,7 @@
         "../packages/adapters/experience-postgres/src/index.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [],
       "reviewStatus": "reviewed",
@@ -5533,12 +5533,12 @@
       "hasVersion": false,
       "repositoryReferences": [
         "../apps/platform-host/src/composition/register-services.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "writerReferences": [
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
         "../packages/services/master-data/src/kysely-workforce-request-repository.ts"
       ],
       "reviewStatus": "pending_review",
@@ -6133,11 +6133,11 @@
         "../packages/services/master-data/src/kysely-business-partner-360-repository.ts",
         "../packages/services/master-data/src/kysely-business-partner-360-role-sections.ts",
         "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "writerReferences": [
         "../packages/planes/neon/src/business-partner-import.ts",
-        "../packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+        "../packages/services/master-data/src/kysely-business-partner-case-repository.ts"
       ],
       "reviewStatus": "reviewed",
       "slice": "business_partner",

@@ -1954,7 +1954,8 @@ CREATE TABLE master.business_partner (
             website_url IS NULL
             OR (
                 length(website_url) <= 2048
-                AND website_url ~* '^https?://'
+                AND website_url !~ '[[:space:][:cntrl:]@]'
+                AND website_url ~* '^https://([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?(?::[0-9]{1,5})?(?:[/#?][^[:space:][:cntrl:]]*)?$'
             )
         ),
     CONSTRAINT business_partner_parent_not_self_chk
@@ -1966,10 +1967,9 @@ CREATE TABLE master.business_partner (
     CONSTRAINT business_partner_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object'
                AND octet_length(metadata::text) <= 16384
-               AND NOT (metadata ?| ARRAY[
-                   'status', 'supplierType', 'customerType', 'creditLimit',
-                   'bankAccount', 'taxRegistration', 'qualification'
-               ])),
+               AND metadata - ARRAY['_seed','acceptanceFamily','externalScopeKey',
+                   'sourceSystem','sourceReference','integrationTags','notes',
+                   'importedAt','importBatchId']::text[] = '{}'::jsonb),
     CONSTRAINT business_partner_status_audit_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT business_partner_audit_pair_chk
@@ -2010,6 +2010,7 @@ CREATE TABLE master.supplier (
 
     CONSTRAINT supplier_pkey PRIMARY KEY (id),
     CONSTRAINT supplier_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT supplier_tenant_role_partner_uq UNIQUE (tenant_id, id, business_partner_id),
     CONSTRAINT supplier_business_partner_uq
         UNIQUE (tenant_id, business_partner_id),
     CONSTRAINT supplier_code_fmt_chk
@@ -2017,7 +2018,8 @@ CREATE TABLE master.supplier (
     CONSTRAINT supplier_record_version_chk CHECK (record_version >= 1),
     CONSTRAINT supplier_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384
-               AND NOT (metadata ?| ARRAY['paymentTerms','bankAccount','qualification','readiness','status'])),
+               AND metadata - ARRAY['sourceSystem','sourceReference','integrationTags',
+                   'notes','importedAt','importBatchId']::text[] = '{}'::jsonb),
     CONSTRAINT supplier_status_audit_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT supplier_audit_pair_chk
@@ -2025,7 +2027,7 @@ CREATE TABLE master.supplier (
 );
 
 COMMENT ON TABLE master.supplier IS
-  'Thin Neon procurement/AP role of one business partner. Identity, legal name, addresses, contacts, identifiers and canonical bank ownership resolve through business_partner_id.';
+  'Stable one-lifetime supplier role identity and thin Neon procurement/AP role of one business partner. Lifecycle evidence preserves history; identity, legal name, addresses, contacts, identifiers and canonical bank ownership resolve through business_partner_id.';
 COMMENT ON COLUMN master.supplier.metadata IS
   'Non-authoritative integration metadata only. Payment configuration, readiness, qualification, risk, block state, and commodity assignments are prohibited.';
 
@@ -2048,6 +2050,7 @@ CREATE TABLE master.customer (
 
     CONSTRAINT customer_pkey PRIMARY KEY (id),
     CONSTRAINT customer_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT customer_tenant_role_partner_uq UNIQUE (tenant_id, id, business_partner_id),
     CONSTRAINT customer_business_partner_uq
         UNIQUE (tenant_id, business_partner_id),
     CONSTRAINT customer_code_fmt_chk
@@ -2055,7 +2058,8 @@ CREATE TABLE master.customer (
     CONSTRAINT customer_record_version_chk CHECK (record_version >= 1),
     CONSTRAINT customer_metadata_object_chk
         CHECK (jsonb_typeof(metadata) = 'object' AND octet_length(metadata::text) <= 16384
-               AND NOT (metadata ?| ARRAY['creditLimit','riskClass','keyAccount','paymentTerms','status'])),
+               AND metadata - ARRAY['sourceSystem','sourceReference','integrationTags',
+                   'notes','importedAt','importBatchId']::text[] = '{}'::jsonb),
     CONSTRAINT customer_status_audit_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT customer_audit_pair_chk
@@ -2113,7 +2117,7 @@ COMMENT ON TABLE master.business_partner_alias IS
   'Authoritative normalized, effective-dated legal/trading/former/search names for a Business Partner.';
 
 COMMENT ON TABLE master.customer IS
-  'Thin Neon sales/AR role of one business partner. Identity and legal facts resolve through business_partner_id; company-specific credit and payment configuration remain outside this role.';
+  'Stable one-lifetime customer role identity and thin Neon sales/AR role of one business partner. Lifecycle evidence preserves history; identity and legal facts resolve through business_partner_id; company-specific credit and payment configuration remain outside this role.';
 COMMENT ON COLUMN master.customer.metadata IS
   'Non-authoritative integration metadata only. Designations, credit limits, credit rating, qualification, block state, payment behavior, and ledger analytics are prohibited.';
 

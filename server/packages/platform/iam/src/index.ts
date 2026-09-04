@@ -20,3 +20,6 @@ export * from "./projection-reconciliation.js";
 export * from "./kysely-projection-reconciliation.js";
 export * from "./identity-saga.js";
 export * from "./kysely-identity-saga.js";
+export * from "./external-worker-identity-intent.js";
+export * from "./external-worker-identity-delivery.js";
+export * from "./keycloak-identity-provider.js";

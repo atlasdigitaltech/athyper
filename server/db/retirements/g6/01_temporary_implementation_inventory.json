@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-repository-retirement-action",
+  "surfaceCode": "temporary_implementation_inventory",
+  "actions": [
+    "Delete docs/architecture/plans/governed-entity-lifecycle-implementation-inventory.md through the reviewed release commit.",
+    "Remove active authority references while preserving durable ADR and backlog dispositions.",
+    "Verify recovery using the pre-retirement Git object and release commit recorded by the recovery report."
+  ],
+  "databaseMutation": false
+}

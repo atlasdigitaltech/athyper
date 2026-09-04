@@ -1,10 +1,22 @@
 {
   "schemaVersion": 1,
   "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
-  "activeWorkspacePackageCount": 109,
+  "activeWorkspacePackageCount": 175,
   "rootTests": [
     {
+      "path": "deploy/compose/tests/structure.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "scripts/acceptance/controlled-transfer-disruption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "scripts/performance/qualify-meta-entity.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "scripts/performance/verify-experience-production-gates.test.mjs",
       "runner": "test:performance-guards"
     },
     {
@@ -16,11 +28,31 @@
       "runner": "test:performance-guards"
     },
     {
-      "path": "scripts/policy/meta-entity-certification.test.ts",
+      "path": "scripts/performance/verify-shared-shell-bundle.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "scripts/policy/audit-style-tokens.test.ts",
       "runner": "test:policy"
     },
     {
-      "path": "scripts/policy/meta-entity-contract-coverage.test.ts",
+      "path": "scripts/policy/authorization-inventory.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/frontend-spine-governance.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/generate-server-route-manifest.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/host-capability-registry.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/meta-entity-certification.test.ts",
       "runner": "test:policy"
     },
     {
@@ -28,207 +60,242 @@
       "runner": "test:policy"
     },
     {
-      "path": "scripts/policy/verify-meta-entity-dependencies.test.mjs",
+      "path": "scripts/policy/verify-design-system.test.mjs",
       "runner": "test:policy"
     },
     {
-      "path": "tests/contracts/list-plane-feature-rollout.test.ts",
+      "path": "scripts/policy/verify-docker-toolchain.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/verify-experience-cleanup.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/verify-governance-plane-composition.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/verify-server-docker-workspaces.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/verify-server-rebuild-boundaries.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/policy/verify-theme-token-integrity.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "scripts/rehearsal/record-sanitized-data-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "scripts/release/promote-image-set.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "scripts/verification/staging-email-canary-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "scripts/verification/verify-notification-provider-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tests/contracts/access-consumption-phase9.test.ts",
       "runner": "test:plane-contracts"
     },
     {
-      "path": "tests/contracts/shell-experience-registration.test.ts",
+      "path": "tests/contracts/activity-center-client-contract.test.ts",
       "runner": "test:plane-contracts"
     },
     {
-      "path": "tests/contracts/work-inbox-adapters.test.ts",
+      "path": "tests/contracts/api-client-transport.test.ts",
       "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/app-composition-phase10.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/atlas-grounded-answer.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/auth-session-foundation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/bff-relay-security.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/entity-list-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/first-business-module-readiness.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/frontend-spine-browser-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/frontend-spine-server-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/home-personalization-phase3.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/mesh-network-account-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-operating-organization-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-work-context-contract.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/platform-catalog-experience.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/query-provider-lifecycle.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/server-plane-composition.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/session-store-index-expiry.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/shared-shell-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/three-plane-list-scope.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/trusted-device-authentication.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/foundation/access-gates-phase9.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/activity-center-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-composer-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-prompt-rich-content.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/attachment-client-coordinate.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/brand-icons.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/content-header.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-columns.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-phase1a.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-list-scope-control.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/error-boundaries.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/foundation-render.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/foundation-snapshot.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/header-context-identity.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/i18n-foundation.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/page-foundation.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/primitive-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/public-auth-surface.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/quick-access-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/surface-stack.test.ts",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/theme-contract.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tools/scripts/ddl-service-coverage-policy.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tools/scripts/ddl-service-coverage.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tools/scripts/keycloak-plane-contract.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tools/scripts/reconcile-keycloak-authorization-v2.test.mjs",
+      "runner": "test:tools"
+    },
+    {
+      "path": "tools/scripts/reconcile-keycloak-organization-scope.test.mjs",
+      "runner": "test:tools"
     }
   ],
-  "inactivePackageTestCount": 100,
-  "inactivePackages": [
-    {
-      "package": "packages/shared/business-domain/ui",
-      "packageName": "@athyper/ui",
-      "testFiles": [
-        "packages/shared/business-domain/ui/src/__tests__/exports.test.ts",
-        "packages/shared/business-domain/ui/src/composites/__tests__/date-picker.test.tsx",
-        "packages/shared/business-domain/ui/src/composites/__tests__/date-range-picker.test.tsx",
-        "packages/shared/business-domain/ui/src/composites/__tests__/zoned-date-time-picker.test.tsx",
-        "packages/shared/business-domain/ui/src/composites/floating-selection-bar/__tests__/floating-selection-bar.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/dialog-confirm-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/drawer-form-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/drawer-peek-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/modal-select-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/overlay-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/shells/__tests__/page-shell.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/stack/__tests__/controller.test.tsx",
-        "packages/shared/business-domain/ui/src/surfaces/stack/__tests__/rules.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/data-integration/auth-bff",
-      "packageName": "@athyper/platform-iam-auth-bff",
-      "testFiles": [
-        "packages/shared/data-integration/auth-bff/src/__tests__/error-codes-parity.test.ts",
-        "packages/shared/data-integration/auth-bff/src/__tests__/required-actions-translation.test.ts",
-        "packages/shared/data-integration/auth-bff/src/__tests__/tenant-admin-login-flow.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/data-integration/icons",
-      "packageName": "@athyper/icons",
-      "testFiles": [
-        "packages/shared/data-integration/icons/src/__tests__/registries.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/finance-rules",
-      "packageName": "@athyper/finance-rules",
-      "testFiles": [
-        "packages/shared/finance-rules/src/__tests__/period-gate.test.ts",
-        "packages/shared/finance-rules/src/__tests__/presets.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/cascade",
-      "packageName": "@athyper/cascade",
-      "testFiles": [
-        "packages/shared/runtime-domain/cascade/src/__tests__/inheritance.test.ts",
-        "packages/shared/runtime-domain/cascade/src/__tests__/projection.test.ts",
-        "packages/shared/runtime-domain/cascade/src/__tests__/runtime.test.ts",
-        "packages/shared/runtime-domain/cascade/src/__tests__/source-change-graph.test.ts",
-        "packages/shared/runtime-domain/cascade/src/__tests__/source-change.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/content-ui",
-      "packageName": "@athyper/content-ui",
-      "testFiles": [
-        "packages/shared/runtime-domain/content-ui/src/__tests__/field-row/field-row.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-document-dirty-map.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-document-edit-draft.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-document-page-controller.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-document-scroll-spy.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-lazy-document-sections.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-pin-on-scroll.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/object-page/use-scroll-intent.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/__tests__/wht-pc-validation.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/distributions/distributable-cost.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/lines/__tests__/pi-line-drawer.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/document-components/postings-preview/__tests__/postings-preview-builder.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/__tests__/apportionment-breakup-drawer.integration.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/__tests__/pricing-component-waterfall.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/drawers/__tests__/draft-edit-mode.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/drawers/__tests__/helpers.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/drawers/__tests__/segmented-field-contract.test.tsx",
-        "packages/shared/runtime-domain/content-ui/src/document-components/pricing-components/drawers/__tests__/typography-contract.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/shared/__tests__/use-debounced-value.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/document-components/shared/__tests__/use-edit-affordance.test.ts",
-        "packages/shared/runtime-domain/content-ui/src/purchase-invoice/__tests__/projections.deterministic-override.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/finance-rules",
-      "packageName": "@athyper/finance-rules",
-      "testFiles": [
-        "packages/shared/runtime-domain/finance-rules/src/__tests__/period-gate.test.ts",
-        "packages/shared/runtime-domain/finance-rules/src/__tests__/presets.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/icons",
-      "packageName": "@athyper/icons",
-      "testFiles": [
-        "packages/shared/runtime-domain/icons/src/__tests__/registries.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/temporal",
-      "packageName": "@athyper/temporal",
-      "testFiles": [
-        "packages/shared/runtime-domain/temporal/src/__tests__/temporal.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-domain/ui",
-      "packageName": "@athyper/ui",
-      "testFiles": [
-        "packages/shared/runtime-domain/ui/src/__tests__/exports.test.ts",
-        "packages/shared/runtime-domain/ui/src/composites/__tests__/date-picker.test.tsx",
-        "packages/shared/runtime-domain/ui/src/composites/__tests__/date-range-picker.test.tsx",
-        "packages/shared/runtime-domain/ui/src/composites/__tests__/zoned-date-time-picker.test.tsx",
-        "packages/shared/runtime-domain/ui/src/composites/floating-selection-bar/__tests__/floating-selection-bar.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/dialog-confirm-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/drawer-form-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/drawer-peek-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/modal-select-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/overlay-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/shells/__tests__/page-shell.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/stack/__tests__/controller.test.tsx",
-        "packages/shared/runtime-domain/ui/src/surfaces/stack/__tests__/rules.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/runtime-line-item",
-      "packageName": "@athyper/runtime-line-item",
-      "testFiles": [
-        "packages/shared/runtime-line-item/src/adapters/__tests__/catalog.integration.test.tsx",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/catalog.test.ts",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/manual-invoice-line.integration.test.tsx",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/manual-invoice-line.test.ts",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-po-line.integration.test.tsx",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-po-line.test.ts",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-receipt-line.integration.test.tsx",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-receipt-line.test.ts",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-service-sheet-line.integration.test.tsx",
-        "packages/shared/runtime-line-item/src/adapters/__tests__/open-service-sheet-line.test.ts",
-        "packages/shared/runtime-line-item/src/components/__tests__/meta-field-input.test.tsx",
-        "packages/shared/runtime-line-item/src/embedded/__tests__/embedded-entity-list.test.tsx",
-        "packages/shared/runtime-line-item/src/meta/index.test.ts",
-        "packages/shared/runtime-line-item/src/panels/__tests__/meta-field-panel.test.tsx",
-        "packages/shared/runtime-line-item/src/panels/procure/__tests__/procure-item-panel.test.tsx",
-        "packages/shared/runtime-line-item/src/surface/__tests__/add-item-dropdown.test.tsx",
-        "packages/shared/runtime-line-item/src/surface/__tests__/line-items-selection-bar.test.tsx",
-        "packages/shared/runtime-line-item/src/surface/__tests__/lines-grid.columns.test.tsx",
-        "packages/shared/runtime-line-item/src/surface/__tests__/lines-grid.picker.test.tsx",
-        "packages/shared/runtime-line-item/src/surface/__tests__/lines-grid.source-binding.test.ts",
-        "packages/shared/runtime-line-item/src/surface/__tests__/resolve-line-selection-actions.test.ts",
-        "packages/shared/runtime-line-item/src/variants/__tests__/accounting-panel-modes.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/ui",
-      "packageName": "@athyper/ui",
-      "testFiles": [
-        "packages/shared/ui/src/__tests__/exports.test.ts",
-        "packages/shared/ui/src/composites/__tests__/date-picker.test.tsx",
-        "packages/shared/ui/src/composites/__tests__/date-range-picker.test.tsx",
-        "packages/shared/ui/src/composites/__tests__/zoned-date-time-picker.test.tsx",
-        "packages/shared/ui/src/composites/floating-selection-bar/__tests__/floating-selection-bar.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/dialog-confirm-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/drawer-form-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/drawer-peek-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/modal-select-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/overlay-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/shells/__tests__/page-shell.test.tsx",
-        "packages/shared/ui/src/surfaces/stack/__tests__/controller.test.tsx",
-        "packages/shared/ui/src/surfaces/stack/__tests__/rules.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/ui-platform/finance-rules",
-      "packageName": "@athyper/finance-rules",
-      "testFiles": [
-        "packages/shared/ui-platform/finance-rules/src/__tests__/period-gate.test.ts",
-        "packages/shared/ui-platform/finance-rules/src/__tests__/presets.test.ts"
-      ]
-    },
-    {
-      "package": "packages/shared/ui-platform/temporal",
-      "packageName": "@athyper/temporal",
-      "testFiles": [
-        "packages/shared/ui-platform/temporal/src/__tests__/temporal.test.ts"
-      ]
-    }
-  ]
+  "inactivePackageTestCount": 0,
+  "inactivePackages": []
 }

@@ -134,6 +134,24 @@ CREATE TABLE governance.cycle_task (
     CONSTRAINT cycle_task_version_chk CHECK (version > 0)
 );
 
+CREATE TABLE governance.cycle_subject (
+    id uuid NOT NULL DEFAULT shared.uuidv7(), tenant_id uuid NOT NULL,
+    cycle_run_id uuid NOT NULL, cycle_task_id uuid, subject_role text NOT NULL,
+    entity_case_id uuid, entity_code text, entity_id uuid, snapshot_id uuid, external_reference text,
+    is_primary boolean NOT NULL DEFAULT false,
+    created_at timestamptz NOT NULL DEFAULT now(), created_by uuid NOT NULL,
+    CONSTRAINT cycle_subject_pkey PRIMARY KEY(id), CONSTRAINT cycle_subject_tenant_id_uq UNIQUE(tenant_id,id),
+    CONSTRAINT cycle_subject_coordinate_uq UNIQUE NULLS NOT DISTINCT(tenant_id,cycle_run_id,subject_role,entity_case_id,entity_code,entity_id,snapshot_id,external_reference),
+    CONSTRAINT cycle_subject_role_chk CHECK(subject_role ~ '^[a-z][a-z0-9_.:-]{1,62}$'),
+    CONSTRAINT cycle_subject_one_coordinate_chk CHECK(num_nonnulls(entity_case_id,snapshot_id,external_reference,(CASE WHEN entity_code IS NOT NULL AND entity_id IS NOT NULL THEN entity_id END))=1 AND (entity_code IS NULL)=(entity_id IS NULL)),
+    CONSTRAINT cycle_subject_entity_code_chk CHECK(entity_code IS NULL OR entity_code ~ '^[a-z][a-z0-9_.:-]{1,126}$'),
+    CONSTRAINT cycle_subject_external_chk CHECK(external_reference IS NULL OR (btrim(external_reference)<>'' AND length(external_reference)<=256)),
+    CONSTRAINT cycle_subject_run_fk FOREIGN KEY(tenant_id,cycle_run_id) REFERENCES governance.cycle_run(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_task_fk FOREIGN KEY(tenant_id,cycle_task_id) REFERENCES governance.cycle_task(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_snapshot_fk FOREIGN KEY(tenant_id,snapshot_id) REFERENCES snapshot.entity_snapshot_identity(tenant_id,id) ON DELETE RESTRICT,
+    CONSTRAINT cycle_subject_created_by_fk FOREIGN KEY(tenant_id,created_by) REFERENCES master.principal(tenant_id,id)
+);
+
 CREATE TABLE governance.cycle_task_dependency (
     id uuid NOT NULL DEFAULT shared.uuidv7(),
     tenant_id uuid NOT NULL,

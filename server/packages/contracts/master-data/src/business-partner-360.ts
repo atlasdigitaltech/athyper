@@ -43,7 +43,7 @@ export const BUSINESS_PARTNER_360_PERMISSIONS = Object.freeze({
   person: "neon.relationship.business_partner_person.read",
   personSensitive: "neon.relationship.business_partner_person_sensitive.read",
   workforce: "neon.relationship.business_partner_workforce.read",
-  request: "neon.relationship.business_partner_request.read",
+  request: "neon.relationship.entity_case.read",
   activity: "neon.relationship.business_partner_activity.read",
   network: "neon.relationship.business_partner_network.read",
   amend: "neon.relationship.business_partner_amend.create",
@@ -221,7 +221,7 @@ export interface BusinessPartner360GovernedAction {
   readonly code: BusinessPartner360CompletenessActionCode;
   readonly label: string;
   readonly href: string;
-  readonly authority: "business_partner_request" | "qualification" | "certification";
+  readonly authority: "entity_case" | "qualification" | "certification";
   readonly requestKind?: string;
   readonly permission: string;
 }

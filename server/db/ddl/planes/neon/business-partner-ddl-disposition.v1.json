@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "scope": {
     "schemas": ["document", "master"],
-    "namePattern": "business_partner|supplier|customer"
+    "namePattern": "business_partner|supplier|customer|workforce_iam_projection"
   },
   "compatibilityViews": [
     "document.supplier_registration_invitation",
@@ -22,5 +22,6 @@
     "document.business_partner_request_classification",
     "document.business_partner_request_certification",
     "document.business_partner_request_materialization_item"
-  ]
+  ],
+  "requiredMigrationParityRelations": ["document.workforce_iam_projection"]
 }

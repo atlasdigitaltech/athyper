@@ -5,10 +5,7 @@ import { resolve } from "node:path";
 
 type RelationKind = "table" | "view";
 type Disposition =
-  | "canonical"
-  | "canonical_clean_build_only"
-  | "compatibility_view"
-  | "retired";
+  "canonical" | "canonical_clean_build_only" | "compatibility_view" | "retired";
 
 interface DispositionConfig {
   schemaVersion: number;
@@ -16,6 +13,7 @@ interface DispositionConfig {
   compatibilityViews: string[];
   retiredRelations: string[];
   requiredTypedRequestRelations: string[];
+  requiredMigrationParityRelations: string[];
 }
 
 interface RelationOccurrence {
@@ -102,7 +100,11 @@ const canonicalEntries = await readManifest(
 const migrationEntries = await readManifest(
   resolve(databaseRoot, "migrations/manifests/neon.txt"),
 );
-const canonical = await loadSources(canonicalEntries, resolve(databaseRoot, "ddl"), config);
+const canonical = await loadSources(
+  canonicalEntries,
+  resolve(databaseRoot, "ddl"),
+  config,
+);
 const migrations = await loadSources(
   migrationEntries,
   resolve(databaseRoot, "migrations"),
@@ -119,7 +121,9 @@ const migrationSql = (
 const compatibilityViews = new Set(config.compatibilityViews);
 const retiredRelations = new Set(config.retiredRelations);
 const failures: string[] = [];
-const allRelations = [...new Set([...canonical.keys(), ...migrations.keys()])].sort();
+const allRelations = [
+  ...new Set([...canonical.keys(), ...migrations.keys()]),
+].sort();
 const inventory: InventoryEntry[] = allRelations.map((relation) => {
   const canonicalOccurrences = canonical.get(relation) ?? [];
   const migrationOccurrences = migrations.get(relation) ?? [];
@@ -129,21 +133,35 @@ const inventory: InventoryEntry[] = allRelations.map((relation) => {
   if (compatibilityViews.has(relation)) {
     disposition = "compatibility_view";
     if (canonicalKind !== "view") {
-      failures.push(`${relation} is declared as compatibility but is not a canonical view`);
+      failures.push(
+        `${relation} is declared as compatibility but is not a canonical view`,
+      );
     }
   } else if (canonicalKind === "table") {
-    disposition = migrationOccurrences.length > 0 ? "canonical" : "canonical_clean_build_only";
+    disposition =
+      migrationOccurrences.length > 0
+        ? "canonical"
+        : "canonical_clean_build_only";
   } else if (retiredRelations.has(relation)) {
     disposition = "retired";
     const leaf = relation.split(".")[1]!;
-    if (!new RegExp(`DROP\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:document|master)\\.${leaf}\\b`, "i").test(migrationSql)) {
-      failures.push(`${relation} is declared retired without an active DROP TABLE`);
+    if (
+      !new RegExp(
+        `DROP\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:document|master)\\.${leaf}\\b`,
+        "i",
+      ).test(migrationSql)
+    ) {
+      failures.push(
+        `${relation} is declared retired without an active DROP TABLE`,
+      );
     }
   } else if (canonicalKind === "view") {
     disposition = "canonical_clean_build_only";
   } else {
     disposition = "retired";
-    failures.push(`${relation} exists only in migration history and has no explicit disposition`);
+    failures.push(
+      `${relation} exists only in migration history and has no explicit disposition`,
+    );
   }
 
   return {
@@ -169,7 +187,9 @@ const canonicalLayers = [
   "10_rls.sql",
   "11_grants.sql",
 ].map((file) => resolve(databaseRoot, "ddl/planes/neon/document", file));
-const layerSql = await Promise.all(canonicalLayers.map((path) => readFile(path, "utf8")));
+const layerSql = await Promise.all(
+  canonicalLayers.map((path) => readFile(path, "utf8")),
+);
 const functionSql = await readFile(
   resolve(databaseRoot, "ddl/planes/neon/document/07_functions.sql"),
   "utf8",
@@ -185,7 +205,19 @@ for (const relation of config.requiredTypedRequestRelations) {
     }
   }
 }
-for (const column of ["extension_mode", "extension_fingerprint", "extension_counts"]) {
+for (const relation of config.requiredMigrationParityRelations) {
+  if (canonical.get(relation)?.at(-1)?.kind !== "table") {
+    failures.push(`${relation} is absent from canonical tables`);
+  }
+  if (!migrations.has(relation)) {
+    failures.push(`${relation} has no supported-upgrade migration source`);
+  }
+}
+for (const column of [
+  "extension_mode",
+  "extension_fingerprint",
+  "extension_counts",
+]) {
   if (!layerSql[0]!.includes(column)) {
     failures.push(`document.business_partner_request is missing ${column}`);
   }
@@ -209,8 +241,16 @@ const output = `${JSON.stringify(
       disposition: "ddl/planes/neon/business-partner-ddl-disposition.v1.json",
     },
     counts: inventory.reduce<Record<Disposition, number>>(
-      (counts, entry) => ({ ...counts, [entry.disposition]: counts[entry.disposition] + 1 }),
-      { canonical: 0, canonical_clean_build_only: 0, compatibility_view: 0, retired: 0 },
+      (counts, entry) => ({
+        ...counts,
+        [entry.disposition]: counts[entry.disposition] + 1,
+      }),
+      {
+        canonical: 0,
+        canonical_clean_build_only: 0,
+        compatibility_view: 0,
+        retired: 0,
+      },
     ),
     relations: inventory,
   },
@@ -226,10 +266,14 @@ if (process.argv.includes("--write")) {
   try {
     current = await readFile(inventoryPath, "utf8");
   } catch {
-    failures.push("generated Business Partner DDL inventory is missing; run with --write");
+    failures.push(
+      "generated Business Partner DDL inventory is missing; run with --write",
+    );
   }
   if (current !== output) {
-    failures.push("generated Business Partner DDL inventory is stale; run with --write");
+    failures.push(
+      "generated Business Partner DDL inventory is stale; run with --write",
+    );
   }
 }
 
@@ -240,5 +284,7 @@ if (failures.length > 0) {
   process.stdout.write(
     `PASS ${inventory.length} Business Partner relations have an explicit canonical disposition\n`,
   );
-  process.stdout.write("PASS typed request relations cover every canonical DDL layer\n");
+  process.stdout.write(
+    "PASS typed request relations cover every canonical DDL layer\n",
+  );
 }

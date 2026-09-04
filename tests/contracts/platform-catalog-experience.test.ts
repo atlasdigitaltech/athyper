@@ -70,11 +70,11 @@ test("workspace surfaces render Home and entitled modules as header tabs", async
   ]);
   assert.match(runtime, /visibleModuleCodes=\{entitledModuleCodes\}/);
   assert.match(runtime, /NeonWorkspaceExperience/);
-  assert.match(runtime, /hideHeader=\{surfaceKey==="neon\.home"\}/);
+  assert.match(runtime, /hideHeader=\{surfaceKey\s*===\s*"neon\.home"\}/);
   assert.match(runtime, /useWorkspaceModuleBadges/);
-  assert.match(meshRuntime, /extensions:\{"mesh\.atlas-welcome":AtlasWelcome/);
+  assert.match(meshRuntime, /extensions:\s*(?:Object\.freeze\()?\{\s*"mesh\.atlas-welcome":\s*AtlasWelcome/);
   assert.match(meshRuntime, /WorkspaceModuleTabs/);
-  assert.match(studioRuntime, /extensions:\{"studio\.atlas-welcome":AtlasWelcome/);
+  assert.match(studioRuntime, /extensions:\s*(?:Object\.freeze\()?\{\s*"studio\.atlas-welcome":\s*AtlasWelcome/);
   assert.match(studioRuntime, /WorkspaceModuleTabs/);
   assert.match(navigation, /name:"Home",href:`\/\$\{workspace\.routeSlug\}`/);
   assert.match(navigation, /activeModuleCode\?\?"home"/);

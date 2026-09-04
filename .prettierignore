@@ -1,0 +1,66 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Turbo
+**/.turbo
+
+# Builds
+**/dist/**
+**/build/**
+**/out/**
+**/coverage/**
+
+# Next.js
+.next
+
+# Docker / Mesh
+mesh/data
+mesh/volumes
+mesh/tmp
+
+# Logs
+*.log
+
+# Generated — produced by a generator and byte-exact validated by *:check scripts
+**/generated/**
+**/*.gen.ts
+**/generated-*.ts
+**/*.generated.*
+catalog/generated/**
+policy/reports/**
+
+# IAM config — Keycloak realm exports, login theme resources, FTL templates:
+# externally-managed artifacts, not app source. Substring-validated, not byte.
+stack/config/iam/**
+
+# Prisma
+**/prisma/migrations
+**/prisma/generated
+**/.prisma/**
+
+# Traefik dynamic configuration — non-standard YAML dialect Prettier cannot parse
+stack/config/gateway/**
+
+# Design-system stylesheets are authored in a deliberate compact form (they read
+# as token systems, not verbose CSS) and enforced by policy:style-tokens. Prettier
+# would 10-100x their line count and bury the token diffs.
+packages/**/src/styles.css
+packages/platform/foundation/theme/src/tailwind.css
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+
+# Lock files
+pnpm-lock.yaml
+
+# TypeScript build info
+**/*.tsbuildinfo

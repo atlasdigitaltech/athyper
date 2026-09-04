@@ -4,7 +4,7 @@
   --a-primary:var(--a-brand);--a-primary-foreground:var(--a-brand-foreground);--a-primary-hover:var(--a-brand-hover);--a-selection-strong:var(--a-primary);--a-selection-strong-foreground:var(--a-primary-foreground);--a-selection-subtle:var(--a-brand-soft);--a-selection-subtle-foreground:var(--a-primary);--a-panel-background:var(--a-surface);--a-panel-header-background:var(--a-surface);--a-panel-toolbar-background:var(--a-muted);--a-danger:#b42318;--a-danger-foreground:#fff;
   --a-warning:#b54708;--a-warning-foreground:#fff;--a-success:#067647;--a-success-foreground:#fff;
   --a-focus:#2e90fa;--a-scrim:rgb(15 23 42 / .58);color-scheme:light;
-  --a-contrast:#151515;--a-contrast-foreground:#fff;--a-warning-subtle:#fff8eb;--a-warning-subtle-foreground:#172033;
+  --a-contrast:#151515;--a-contrast-foreground:#fff;--a-warning-subtle:#fff8eb;--a-warning-subtle-foreground:#172033;--a-danger-subtle:#fef3f2;--a-danger-subtle-foreground:#172033;--a-success-subtle:#ecfdf3;--a-success-subtle-foreground:#172033;
   --a-brand:#234b84;--a-brand-foreground:#fff;--a-brand-hover:color-mix(in srgb,var(--a-brand) 82%,black);--a-brand-soft:color-mix(in srgb,var(--a-brand) 8%,white);
   --a-brand-wordmark-filter:none;
   --a-story-start:color-mix(in srgb,var(--a-brand) 24%,black);--a-story-end:color-mix(in srgb,var(--a-brand) 64%,black);--a-story-foreground:var(--a-brand-foreground);--a-story-muted:color-mix(in srgb,var(--a-brand-foreground) 78%,transparent);--a-story-eyebrow:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-wave:color-mix(in srgb,var(--a-brand) 55%,white);--a-story-wave-bright:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-glow:color-mix(in srgb,var(--a-brand) 30%,transparent);--a-story-dot:color-mix(in srgb,var(--a-brand-foreground) 70%,transparent);--a-story-border:color-mix(in srgb,var(--a-story-foreground) 14%,transparent);--a-story-surface:color-mix(in srgb,var(--a-story-foreground) 6%,transparent);--a-story-surface-hover:color-mix(in srgb,var(--a-story-foreground) 10%,transparent);--a-story-surface-active:color-mix(in srgb,var(--a-story-wave) 22%,transparent);--a-story-selection-border:color-mix(in srgb,var(--a-story-wave-bright) 38%,transparent);
@@ -15,7 +15,7 @@
   --a-primary:color-mix(in srgb,var(--a-brand) 32%,white);--a-primary-foreground:color-mix(in srgb,var(--a-brand) 24%,black);--a-primary-hover:var(--a-brand-hover);--a-selection-strong:var(--a-primary);--a-selection-strong-foreground:var(--a-primary-foreground);--a-selection-subtle:var(--a-brand-soft);--a-selection-subtle-foreground:var(--a-primary);--a-panel-background:var(--a-surface);--a-panel-header-background:var(--a-surface-raised);--a-panel-toolbar-background:var(--a-muted);--a-danger:#f97066;--a-danger-foreground:#230402;
   --a-warning:#fec84b;--a-warning-foreground:#241400;--a-success:#47cd89;--a-success-foreground:#031b12;
   --a-focus:#84caff;--a-scrim:rgb(0 0 0 / .72);color-scheme:dark;
-  --a-contrast:#f4f6f8;--a-contrast-foreground:#11151c;--a-warning-subtle:#2b2110;--a-warning-subtle-foreground:#f5f7fa;
+  --a-contrast:#f4f6f8;--a-contrast-foreground:#11151c;--a-warning-subtle:#2b2110;--a-warning-subtle-foreground:#f5f7fa;--a-danger-subtle:#2d1512;--a-danger-subtle-foreground:#f5f7fa;--a-success-subtle:#0c2418;--a-success-subtle-foreground:#f5f7fa;
   --a-brand:#234b84;--a-brand-foreground:#fff;--a-brand-hover:color-mix(in srgb,var(--a-brand) 42%,white);--a-brand-soft:color-mix(in srgb,var(--a-brand) 52%,black);
   --a-brand-wordmark-filter:invert(1);
   --a-story-start:color-mix(in srgb,var(--a-brand) 24%,black);--a-story-end:color-mix(in srgb,var(--a-brand) 64%,black);--a-story-foreground:var(--a-brand-foreground);--a-story-muted:color-mix(in srgb,var(--a-brand-foreground) 78%,transparent);--a-story-eyebrow:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-wave:color-mix(in srgb,var(--a-brand) 55%,white);--a-story-wave-bright:color-mix(in srgb,var(--a-brand) 38%,white);--a-story-glow:color-mix(in srgb,var(--a-brand) 30%,transparent);--a-story-dot:color-mix(in srgb,var(--a-brand-foreground) 70%,transparent);--a-story-border:color-mix(in srgb,var(--a-story-foreground) 14%,transparent);--a-story-surface:color-mix(in srgb,var(--a-story-foreground) 6%,transparent);--a-story-surface-hover:color-mix(in srgb,var(--a-story-foreground) 10%,transparent);--a-story-surface-active:color-mix(in srgb,var(--a-story-wave) 22%,transparent);--a-story-selection-border:color-mix(in srgb,var(--a-story-wave-bright) 38%,transparent);
@@ -26,7 +26,7 @@
   --a-primary:#ff0;--a-primary-foreground:#000;--a-primary-hover:#fff;--a-selection-strong:#ff0;--a-selection-strong-foreground:#000;--a-selection-subtle:#000;--a-selection-subtle-foreground:#ff0;--a-panel-background:#000;--a-panel-header-background:#000;--a-panel-toolbar-background:#171717;--a-danger:#ff6b6b;--a-danger-foreground:#000;
   --a-warning:#ff0;--a-warning-foreground:#000;--a-success:#6f9;--a-success-foreground:#000;
   --a-focus:#0ff;--a-scrim:rgb(0 0 0 / .88);color-scheme:dark;
-  --a-contrast:#ff0;--a-contrast-foreground:#000;--a-warning-subtle:#000;--a-warning-subtle-foreground:#fff;
+  --a-contrast:#ff0;--a-contrast-foreground:#000;--a-warning-subtle:#000;--a-warning-subtle-foreground:#fff;--a-danger-subtle:#000;--a-danger-subtle-foreground:#fff;--a-success-subtle:#000;--a-success-subtle-foreground:#fff;
   --a-brand:#ff0;--a-brand-foreground:#000;--a-brand-hover:#fff;--a-brand-soft:#000;
   --a-brand-wordmark-filter:invert(1);
   --a-story-start:#000;--a-story-end:#000;--a-story-foreground:#fff;--a-story-muted:#fff;--a-story-eyebrow:#ff0;--a-story-wave:#ff0;--a-story-wave-bright:#fff;--a-story-glow:transparent;--a-story-dot:#fff;--a-story-border:#fff;--a-story-surface:#000;--a-story-surface-hover:#171717;--a-story-surface-active:#000;--a-story-selection-border:#ff0;
@@ -35,13 +35,22 @@
   --a-theme-family:atlas-modern;
   --a-font-sans:var(--font-geist-sans,Geist),Inter,ui-sans-serif,system-ui,sans-serif;--a-font-mono:ui-monospace,SFMono-Regular,monospace;
   --a-space-1:.25rem;--a-space-2:.5rem;--a-space-3:.75rem;--a-space-4:1rem;--a-space-5:1.25rem;--a-space-6:1.5rem;--a-space-8:2rem;--a-space-10:2.5rem;
-  --a-font-size-body:.9375rem;--a-font-size-sm:.875rem;--a-font-size-title:1.5rem;--a-line-height-body:1.5;--a-line-height-title:1.25;--a-font-weight-regular:500;--a-font-weight-strong:700;
+  --a-font-size-2xs:.6875rem;--a-font-size-xs:.75rem;--a-font-size-sm:.875rem;--a-font-size-body:.9375rem;--a-font-size-md:1.0625rem;--a-font-size-lg:1.25rem;--a-font-size-title:1.5rem;--a-font-size-display:clamp(1.75rem,1.3rem + 2.2vw,2.5rem);
+  --a-line-height-none:1;--a-line-height-tight:1.2;--a-line-height-snug:1.35;--a-line-height-body:1.5;--a-line-height-relaxed:1.7;--a-line-height-title:1.25;
+  --a-tracking-tighter:-.035em;--a-tracking-tight:-.01em;--a-tracking-normal:0;--a-tracking-wide:.04em;--a-tracking-wider:.09em;
+  --a-font-weight-normal:400;--a-font-weight-regular:500;--a-font-weight-medium:600;--a-font-weight-strong:700;
   --a-radius-sm:.375rem;--a-radius-md:.625rem;--a-radius-lg:.875rem;--a-radius-xl:1rem;--a-radius-round:9999px;
   --a-shadow-raised:0 1px 3px rgb(15 23 42 / .12);--a-shadow-overlay:0 18px 48px rgb(15 23 42 / .24);--a-shadow-prominent:0 1.5rem 4rem rgb(15 23 42 / .14);
+  /* Size-scale elevation companion to the semantic set above (Phase 2). */
+  --a-shadow-sm:0 1px 2px rgb(15 23 42 / .08);--a-shadow-md:0 4px 12px rgb(15 23 42 / .1);--a-shadow-card:0 1px 3px rgb(15 23 42 / .1),0 1px 2px rgb(15 23 42 / .06);
   --a-motion-fast:120ms;--a-motion-normal:180ms;--a-motion-slow:260ms;--a-easing:cubic-bezier(.2,.8,.2,1);
   --a-z-sticky:20;--a-z-overlay:40;--a-z-drawer:50;--a-z-popover:60;--a-z-dialog:70;--a-z-toast:80;
   --a-control-height:2.5rem;--a-touch-target:2.75rem;--a-space:.5rem;--a-page-gap:1.5rem;
   --a-focus-width:3px;--a-focus-offset:2px;--a-border-width:1px;--a-content-sm:32rem;--a-icon-sm:1rem;--a-icon-md:1.25rem;--a-logo-md:1.75rem;--a-opacity-interactive:.88;--a-opacity-disabled:.55;
+  /* Design-token remediation Phase 2: compatibility aliases (each resolves to a token that is already themed, so no per-theme definition is needed). */
+  --a-text:var(--a-foreground);--a-text-muted:var(--a-muted-foreground);--a-accent:var(--a-brand);--a-border-color:var(--a-border);--a-border-strong:var(--a-border);--a-color-surface:var(--a-surface);--a-color-surface-subtle:var(--a-muted);--a-focus-ring:var(--a-focus);--a-ring:var(--a-focus);--a-destructive:var(--a-danger);--a-destructive-subtle:var(--a-danger-subtle);--a-destructive-soft:var(--a-danger-subtle);
+  /* `*-soft` are compatibility aliases for the canonical `*-subtle` status family (opaque pale fills, themed per mode). Prefer `*-subtle` in new code. */
+  --a-danger-soft:var(--a-danger-subtle);--a-success-soft:var(--a-success-subtle);--a-warning-soft:var(--a-warning-subtle);
   background:var(--a-background);color:var(--a-foreground);font-family:var(--a-font-sans);
 }
 :root[data-density="compact"] {--a-control-height:2rem;--a-touch-target:2.75rem;--a-space:.25rem;--a-page-gap:1rem;}

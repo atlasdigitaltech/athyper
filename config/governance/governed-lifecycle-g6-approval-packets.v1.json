@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-compatibility-retirement-approval-register",
+  "requiredRoles": ["surface-owner", "database-owner", "release-owner"],
+  "signatureAlgorithm": "ed25519",
+  "surfaces": [
+    "business_partner_request_family",
+    "business_partner_aliases_cache",
+    "flattened_decision_scope",
+    "workforce_iam_projection",
+    "business_partner_person_group_compatibility",
+    "temporary_implementation_inventory"
+  ],
+  "status": "awaiting_immutable_evidence_and_signed_attestations"
+}

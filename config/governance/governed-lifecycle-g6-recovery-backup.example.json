@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-isolated-production-backup-clone",
+  "sourceBackupIdentity": "backup://production/neon/replace-with-immutable-backup-id",
+  "sourceDatabaseIdentity": "replace-with-production-database-identity",
+  "sourceDatabaseName": "athyper_neon",
+  "sourceSystemIdentifier": "replace-with-production-postgres-system-identifier",
+  "backupCreatedAt": "2026-09-04T00:00:00.000Z",
+  "recoveryPointAt": "2026-09-03T23:59:30.000Z",
+  "restoreStartedAt": "2026-09-04T00:05:00.000Z",
+  "restoredAt": "2026-09-04T00:12:00.000Z",
+  "cloneDatabaseName": "athyper_neon_g6_recovery_rehearsal",
+  "cloneSystemIdentifier": "replace-with-isolated-clone-postgres-system-identifier",
+  "rtoTargetSeconds": 900,
+  "rpoTargetSeconds": 300
+}

@@ -107,7 +107,7 @@ test("P0 materialization tests cover exact replay, conflict, stale version and s
       "packages/services/master-data/src/business-partner-request-service.ts",
     ),
     read(
-      "packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
   ]);
   assert.match(

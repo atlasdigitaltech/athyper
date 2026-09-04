@@ -693,6 +693,12 @@ AS $$
 DECLARE
     v_role master.partner_role_d;
 BEGIN
+    -- The command validates the exact role and normalized scope before inserting
+    -- the head. Compatibility-column validation is intentionally bypassed when
+    -- those retired writer inputs are absent.
+    IF current_setting('app.normalized_decision_scope_write', true) = 'on' THEN
+        RETURN NEW;
+    END IF;
     IF TG_TABLE_NAME = 'business_partner_qualification' THEN
         v_role := NEW.partner_role;
     ELSIF TG_TABLE_NAME = 'supplier_preference_designation' THEN
@@ -823,6 +829,30 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION control.trg_validate_qualification_role_pair()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control,master AS $$
+BEGIN
+    IF NEW.partner_role='supplier' THEN
+        SELECT supplier.id INTO NEW.role_id FROM master.supplier supplier
+         WHERE supplier.tenant_id=NEW.tenant_id
+           AND supplier.business_partner_id=NEW.business_partner_id
+           AND (NEW.role_id IS NULL OR supplier.id=NEW.role_id)
+           AND supplier.status<>'archived';
+    ELSE
+        SELECT customer.id INTO NEW.role_id FROM master.customer customer
+         WHERE customer.tenant_id=NEW.tenant_id
+           AND customer.business_partner_id=NEW.business_partner_id
+           AND (NEW.role_id IS NULL OR customer.id=NEW.role_id)
+           AND customer.status<>'archived';
+    END IF;
+    IF NEW.role_id IS NULL THEN
+        RAISE EXCEPTION 'Qualification role does not belong to the selected Business Partner'
+            USING ERRCODE='foreign_key_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION control.trg_validate_decision_scope()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -869,6 +899,7 @@ SET search_path = pg_catalog, control, master
 AS $$
 DECLARE v_commodity uuid;
 BEGIN
+    IF current_setting('app.normalized_decision_scope_write',true)='on' THEN RETURN NEW; END IF;
     IF TG_TABLE_NAME='business_partner_qualification' THEN
         IF NEW.commodity_capability_id IS NOT NULL THEN SELECT commodity_category_id INTO v_commodity FROM master.business_partner_commodity_capability WHERE tenant_id=NEW.tenant_id AND id=NEW.commodity_capability_id; END IF;
         INSERT INTO control.business_partner_decision_scope(tenant_id,qualification_id,scope_kind,operating_organization_id,company_code_id,commodity_category_id,effective_from,effective_until,created_by)
@@ -894,6 +925,134 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION control.command_create_business_partner_decision(
+    p_tenant_id uuid,p_aggregate_kind text,p_business_partner_id uuid,
+    p_partner_role text,p_role_id uuid,p_operating_organization_id uuid,
+    p_company_code_id uuid,p_commodity_category_id uuid,p_payload jsonb,
+    p_idempotency_key text,p_actor_id uuid
+) RETURNS TABLE(aggregate_kind text,aggregate_id uuid,row_version bigint,replayed boolean,outbox_id uuid)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,control,master,event,shared
+AS $$
+DECLARE
+    v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_execution uuid;
+    v_id uuid:=shared.uuidv7();v_outbox uuid;v_from date;v_until date;
+BEGIN
+    IF current_database()<>'athyper_neon'
+       OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id
+       OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+        RAISE EXCEPTION 'Business Partner decision creation context mismatch' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF p_aggregate_kind NOT IN('qualification','supplier_preference','customer_designation','customer_credit_review')
+       OR jsonb_typeof(COALESCE(p_payload,'{}'::jsonb))<>'object'
+       OR octet_length(COALESCE(p_payload,'{}'::jsonb)::text)>32768
+       OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+        RAISE EXCEPTION 'Invalid Business Partner decision creation command' USING ERRCODE='check_violation';
+    END IF;
+    IF p_aggregate_kind='qualification' AND (p_partner_role NOT IN('supplier','customer') OR p_role_id IS NULL) THEN
+        RAISE EXCEPTION 'Qualification requires an exact commercial role' USING ERRCODE='check_violation';
+    END IF;
+    IF p_aggregate_kind<>'qualification' AND p_operating_organization_id IS NULL THEN
+        RAISE EXCEPTION 'Scoped commercial decision requires an operating organization' USING ERRCODE='check_violation';
+    END IF;
+    IF p_aggregate_kind='customer_credit_review' AND p_company_code_id IS NULL THEN
+        RAISE EXCEPTION 'Customer credit review requires a company code' USING ERRCODE='check_violation';
+    END IF;
+    IF NOT EXISTS(
+      SELECT 1 FROM master.business_partner_operating_organization_assignment assignment
+       WHERE assignment.tenant_id=p_tenant_id AND assignment.business_partner_id=p_business_partner_id
+         AND assignment.partner_role=(CASE WHEN p_aggregate_kind IN('supplier_preference','qualification')
+           THEN COALESCE(p_partner_role,'supplier') ELSE 'customer' END)::master.partner_role_d
+         AND (p_operating_organization_id IS NULL OR assignment.operating_organization_id=p_operating_organization_id)
+         AND assignment.status='active'
+    ) OR (p_company_code_id IS NOT NULL AND NOT EXISTS(
+      SELECT 1 FROM master.operating_organization_company_assignment company
+       WHERE company.tenant_id=p_tenant_id AND company.operating_organization_id=p_operating_organization_id
+         AND company.company_code_id=p_company_code_id AND company.status='active'
+    )) THEN
+      RAISE EXCEPTION 'Business Partner decision scope is not assigned to the exact commercial role' USING ERRCODE='foreign_key_violation';
+    END IF;
+    v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object(
+      'tenantId',p_tenant_id,'aggregateKind',p_aggregate_kind,'businessPartnerId',p_business_partner_id,
+      'partnerRole',p_partner_role,'roleId',p_role_id,'operatingOrganizationId',p_operating_organization_id,
+      'companyCodeId',p_company_code_id,'commodityCategoryId',p_commodity_category_id,
+      'payload',COALESCE(p_payload,'{}'::jsonb),'idempotencyKey',p_idempotency_key,'actorId',p_actor_id
+    )::text,'UTF8'),'sha256'),'hex');
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':bp-decision-create:'||p_idempotency_key,0));
+    SELECT command.* INTO v_existing FROM event.command_execution command
+     WHERE command.tenant_id=p_tenant_id AND command.command_code='business_partner.decision.create'
+       AND command.idempotency_key=p_idempotency_key;
+    IF FOUND THEN
+      IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN
+        RAISE EXCEPTION 'Business Partner decision creation idempotency key was reused' USING ERRCODE='unique_violation';
+      END IF;
+      RETURN QUERY SELECT v_existing.result_payload->>'aggregateKind',
+        (v_existing.result_payload->>'aggregateId')::uuid,(v_existing.result_payload->>'rowVersion')::bigint,
+        true,(v_existing.result_payload->>'outboxId')::uuid; RETURN;
+    END IF;
+    INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,
+      actor_principal_id,source_service,started_at,status_changed_at,status_changed_by,created_by)
+    VALUES(p_tenant_id,'business_partner.decision.create',p_idempotency_key,v_fingerprint,'processing',
+      p_actor_id,'neon-commercial-governance',clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id)
+    RETURNING id INTO v_execution;
+    v_from:=COALESCE(NULLIF(p_payload->>'effectiveFrom','')::date,CURRENT_DATE);
+    v_until:=NULLIF(p_payload->>'effectiveUntil','')::date;
+    PERFORM set_config('app.normalized_decision_scope_write','on',true);
+    IF p_aggregate_kind='qualification' THEN
+      INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,role_id,
+        qualification_type_code,idempotency_key,risk_assessment_id,effective_from,effective_until,next_review_at,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_partner_role::master.partner_role_d,p_role_id,
+        p_payload->>'qualificationTypeCode',p_idempotency_key,NULLIF(p_payload->>'riskAssessmentId','')::uuid,
+        NULLIF(p_payload->>'effectiveFrom','')::date,v_until,NULLIF(p_payload->>'nextReviewAt','')::date,p_actor_id);
+    ELSIF p_aggregate_kind='supplier_preference' THEN
+      INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,
+        effective_from,effective_until,rationale,idempotency_key,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,v_from,v_until,p_payload->>'rationale',p_idempotency_key,p_actor_id);
+    ELSIF p_aggregate_kind='customer_designation' THEN
+      INSERT INTO control.customer_account_designation(id,tenant_id,business_partner_id,customer_id,
+        designation_type,priority_tier,effective_from,effective_until,rationale,idempotency_key,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,(p_payload->>'designationType')::control.customer_account_designation_type_d,
+        NULLIF(p_payload->>'priorityTier','')::smallint,v_from,v_until,p_payload->>'rationale',p_idempotency_key,p_actor_id);
+    ELSE
+      INSERT INTO control.customer_credit_review(id,tenant_id,business_partner_id,customer_id,review_type_code,
+        requested_credit_limit,requested_currency_code,risk_class_code,effective_from,effective_until,idempotency_key,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,COALESCE(p_payload->>'reviewTypeCode','initial'),
+        NULLIF(p_payload->>'requestedCreditLimit','')::numeric,NULLIF(p_payload->>'requestedCurrencyCode','')::character(3),
+        NULLIF(p_payload->>'riskClassCode',''),v_from,v_until,p_idempotency_key,p_actor_id);
+    END IF;
+    PERFORM set_config('app.normalized_decision_scope_write','',true);
+    INSERT INTO control.business_partner_decision_scope(tenant_id,qualification_id,supplier_preference_id,
+      customer_designation_id,credit_review_id,scope_kind,operating_organization_id,company_code_id,
+      commodity_category_id,effective_from,effective_until,created_by)
+    SELECT p_tenant_id,CASE WHEN p_aggregate_kind='qualification' THEN v_id END,
+      CASE WHEN p_aggregate_kind='supplier_preference' THEN v_id END,
+      CASE WHEN p_aggregate_kind='customer_designation' THEN v_id END,
+      CASE WHEN p_aggregate_kind='customer_credit_review' THEN v_id END,
+      scope.kind,scope.org_id,scope.company_id,scope.commodity_id,v_from,v_until,p_actor_id
+    FROM (VALUES
+      ('operating_organization',p_operating_organization_id,NULL::uuid,NULL::uuid),
+      ('company_code',NULL::uuid,p_company_code_id,NULL::uuid),
+      ('commodity_category',NULL::uuid,NULL::uuid,p_commodity_category_id)
+    ) scope(kind,org_id,company_id,commodity_id)
+    WHERE COALESCE(scope.org_id,scope.company_id,scope.commodity_id) IS NOT NULL;
+    IF NOT FOUND THEN
+      INSERT INTO control.business_partner_decision_scope(tenant_id,qualification_id,scope_kind,effective_from,effective_until,created_by)
+      VALUES(p_tenant_id,v_id,'global',v_from,v_until,p_actor_id);
+    END IF;
+    INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,
+      aggregate_id,event_version,actor_id,source,partition_key,payload,created_by)
+    VALUES(p_tenant_id,'neon-business-partner','business_partner.'||p_aggregate_kind||'.created',
+      'bp-decision-create:'||v_id::text,p_aggregate_kind,v_id,p_aggregate_kind,v_id,1,p_actor_id,
+      'neon-commercial-governance',p_tenant_id::text,jsonb_build_object('aggregateKind',p_aggregate_kind,
+      'aggregateId',v_id,'businessPartnerId',p_business_partner_id,'rowVersion',1,'commandExecutionId',v_execution),p_actor_id)
+    RETURNING id INTO v_outbox;
+    UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object(
+      'aggregateKind',p_aggregate_kind,'aggregateId',v_id,'rowVersion',1,'outboxId',v_outbox),
+      completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id
+      WHERE id=v_execution AND status='processing';
+    RETURN QUERY SELECT p_aggregate_kind,v_id,1::bigint,false,v_outbox;
+END $$;
 
 CREATE OR REPLACE FUNCTION control.trg_guard_supplier_preference_designation()
 RETURNS trigger
@@ -4035,6 +4194,7 @@ CREATE OR REPLACE FUNCTION control.command_customer_lifecycle(
     p_operating_organization_id uuid,
     p_company_code_id uuid,
     p_action text,
+    p_expected_version bigint,
     p_reason_code text,
     p_business_date date,
     p_readiness_fingerprint text,
@@ -4042,7 +4202,7 @@ CREATE OR REPLACE FUNCTION control.command_customer_lifecycle(
     p_idempotency_key text,
     p_actor_id uuid
 )
-RETURNS TABLE(customer_id uuid, status text, event_id uuid, replayed boolean)
+RETURNS TABLE(customer_id uuid, status text, resulting_version bigint, event_id uuid, replayed boolean)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = pg_catalog, control, master, shared
@@ -4062,7 +4222,8 @@ BEGIN
         RAISE EXCEPTION 'Customer lifecycle command context does not match tenant and actor'
             USING ERRCODE = 'insufficient_privilege';
     END IF;
-    IF p_action NOT IN ('activate', 'suspend', 'reactivate')
+    IF p_action NOT IN ('activate', 'suspend', 'reactivate', 'deactivate', 'archive')
+       OR p_expected_version < 1
        OR p_reason_code !~ '^[A-Z][A-Z0-9_.-]{2,126}$'
        OR btrim(p_idempotency_key) <> p_idempotency_key
        OR length(p_idempotency_key) NOT BETWEEN 8 AND 200
@@ -4074,11 +4235,18 @@ BEGIN
     v_from_status := CASE p_action
         WHEN 'activate' THEN 'prospect'
         WHEN 'suspend' THEN 'active'
-        ELSE 'suspended'
+        WHEN 'reactivate' THEN 'suspended'
+        WHEN 'archive' THEN 'inactive'
+        ELSE NULL
     END;
-    v_to_status := CASE p_action WHEN 'suspend' THEN 'suspended' ELSE 'active' END;
+    v_to_status := CASE p_action
+        WHEN 'suspend' THEN 'suspended'
+        WHEN 'deactivate' THEN 'inactive'
+        WHEN 'archive' THEN 'archived'
+        ELSE 'active'
+    END;
 
-    IF p_action <> 'suspend' AND (
+    IF p_action NOT IN ('suspend', 'deactivate', 'archive') AND (
         p_readiness_fingerprint IS NULL
         OR p_readiness_fingerprint !~ '^[a-f0-9]{64}$'
         OR p_readiness_evidence->>'decisionFingerprint' IS DISTINCT FROM p_readiness_fingerprint
@@ -4104,6 +4272,7 @@ BEGIN
             'customerId', p_customer_id,
             'operatingOrganizationId', p_operating_organization_id,
             'companyCodeId', p_company_code_id, 'action', p_action,
+            'expectedVersion', p_expected_version,
             'reasonCode', p_reason_code, 'businessDate', p_business_date,
             'readinessFingerprint', p_readiness_fingerprint,
             'readinessEvidence', COALESCE(p_readiness_evidence, '{}'::jsonb),
@@ -4123,7 +4292,7 @@ BEGIN
                 USING ERRCODE = 'unique_violation';
         END IF;
         RETURN QUERY SELECT v_existing.customer_id, v_existing.to_status,
-                            v_existing.id, true;
+                            v_existing.resulting_version, v_existing.id, true;
         RETURN;
     END IF;
 
@@ -4133,8 +4302,21 @@ BEGIN
        AND customer.id = p_customer_id
        AND customer.business_partner_id = p_business_partner_id
      FOR UPDATE;
-    IF NOT FOUND OR v_customer.status::text <> v_from_status THEN
-        RETURN;
+    IF NOT FOUND THEN
+        IF EXISTS (SELECT 1 FROM master.customer customer WHERE customer.id=p_customer_id) THEN
+            RAISE EXCEPTION 'Customer belongs to another tenant or Business Partner'
+                USING ERRCODE='insufficient_privilege';
+        END IF;
+        RAISE EXCEPTION 'Customer was not found' USING ERRCODE='no_data_found';
+    END IF;
+    IF v_customer.record_version <> p_expected_version THEN
+        RAISE EXCEPTION 'Customer version is stale (expected %, actual %)', p_expected_version, v_customer.record_version
+            USING ERRCODE='serialization_failure';
+    END IF;
+    IF (p_action='deactivate' AND v_customer.status::text NOT IN ('active','suspended'))
+       OR (p_action<>'deactivate' AND v_customer.status::text<>v_from_status) THEN
+        RAISE EXCEPTION 'Invalid Customer lifecycle transition: % from %', p_action, v_customer.status
+            USING ERRCODE='object_not_in_prerequisite_state';
     END IF;
     IF NOT EXISTS (
         SELECT 1
@@ -4161,13 +4343,13 @@ BEGIN
     INSERT INTO control.customer_lifecycle_event(
         tenant_id, business_partner_id, customer_id,
         operating_organization_id, company_code_id, action_code,
-        from_status, to_status, reason_code, business_date,
+        from_status, to_status, expected_version, resulting_version, reason_code, business_date,
         readiness_fingerprint, readiness_evidence, idempotency_key,
         command_fingerprint, occurred_by
     ) VALUES (
         p_tenant_id, p_business_partner_id, p_customer_id,
         p_operating_organization_id, p_company_code_id, p_action,
-        v_from_status, v_to_status, p_reason_code, p_business_date,
+        v_customer.status::text, v_to_status, p_expected_version, p_expected_version+1, p_reason_code, p_business_date,
         p_readiness_fingerprint, COALESCE(p_readiness_evidence, '{}'::jsonb),
         p_idempotency_key, v_command_fingerprint, p_actor_id
     ) RETURNING id INTO v_event_id;
@@ -4179,7 +4361,7 @@ BEGIN
      WHERE tenant_id = p_tenant_id AND id = p_customer_id;
     PERFORM set_config('app.customer_lifecycle_event_id', '', true);
 
-    RETURN QUERY SELECT p_customer_id, v_to_status, v_event_id, false;
+    RETURN QUERY SELECT p_customer_id, v_to_status, p_expected_version+1, v_event_id, false;
 END;
 $$;
 
@@ -4201,8 +4383,8 @@ END;
 $$;
 
 COMMENT ON FUNCTION control.command_customer_lifecycle(
-    uuid, uuid, uuid, uuid, uuid, text, text, date, text, jsonb, text, uuid
-) IS 'Sole tenant-bound command authority for Customer activation, suspension, and reactivation; atomically records immutable evidence and projects master.customer.status.';
+    uuid, uuid, uuid, uuid, uuid, text, bigint, text, date, text, jsonb, text, uuid
+) IS 'Sole tenant-bound optimistic command authority for Customer activation, suspension, reactivation, deactivation, and archival; atomically records immutable evidence and projects master.customer.status.';
 
 CREATE OR REPLACE FUNCTION control.trg_guard_mesh_business_partner_profile_projection()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$

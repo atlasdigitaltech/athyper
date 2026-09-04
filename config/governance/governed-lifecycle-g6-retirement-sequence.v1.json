@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-incremental-retirement-sequence",
+  "policy": "one_surface_per_release_no_skips",
+  "surfaces": [
+    {
+      "order": 1,
+      "code": "temporary_implementation_inventory",
+      "migrationKind": "repository_change",
+      "migration": "server/db/retirements/g6/01_temporary_implementation_inventory.json"
+    },
+    {
+      "order": 2,
+      "code": "business_partner_aliases_cache",
+      "migrationKind": "sql",
+      "migration": "server/db/retirements/g6/02_business_partner_aliases_cache.sql"
+    },
+    {
+      "order": 3,
+      "code": "flattened_decision_scope",
+      "migrationKind": "sql",
+      "migration": "server/db/retirements/g6/03_flattened_decision_scope.sql"
+    },
+    {
+      "order": 4,
+      "code": "business_partner_person_group_compatibility",
+      "migrationKind": "sql",
+      "migration": "server/db/retirements/g6/04_business_partner_person_group_compatibility.sql"
+    },
+    {
+      "order": 5,
+      "code": "workforce_iam_projection",
+      "migrationKind": "sql",
+      "migration": "server/db/retirements/g6/05_workforce_iam_projection.sql"
+    },
+    {
+      "order": 6,
+      "code": "business_partner_request_family",
+      "migrationKind": "sql",
+      "migration": "server/db/retirements/g6/06_business_partner_request_family.sql"
+    }
+  ],
+  "requiredPostMigrationProbes": [
+    "negative",
+    "exact_replay",
+    "tenant_isolation",
+    "audit",
+    "privilege"
+  ],
+  "state": {
+    "certifiedThroughOrder": 0,
+    "nextSurface": "temporary_implementation_inventory"
+  },
+  "localDevelopmentState": {
+    "retiredThroughOrder": 6,
+    "nextSurface": null,
+    "completedAt": "2026-09-04T14:31:27+08:00",
+    "evidence": "docs/architecture/reports/g6/local-development-retirement-2026-09-04.json"
+  },
+  "status": "blocked_pending_surface_evidence"
+}

@@ -46,7 +46,7 @@ test("BS360-03 links typed materialization to isolated UI sections and a no-stor
         "db/migrations/20260830_neon_business_partner_typed_request_extensions.sql",
       ),
       read(
-        "packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+        "packages/services/master-data/src/kysely-business-partner-case-repository.ts",
       ),
       read("packages/services/master-data/src/business-partner-360-service.ts"),
       read("packages/services/master-data/src/business-partner-360-routes.ts"),
@@ -110,5 +110,5 @@ test("BS360 summary counts canonical rows instead of selected scope parameters",
   ])
     assert.match(source, new RegExp(table.replaceAll(".", "\\.")));
   assert.doesNotMatch(source, /"supplier-company":input\.companyCodeId\?1:0/);
-  assert.match(source, /"supplier-company":actualCounts\.supplierCompany/);
+  assert.match(source, /"supplier-company":\s*actualCounts\.supplierCompany/);
 });

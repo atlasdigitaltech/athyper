@@ -47,17 +47,17 @@ test("Step 1 seals Business Partner structural and lifecycle domains", async () 
   );
 });
 
-test("Step 1 maps legacy boundary values without weakening the sealed database", async () => {
-  const [requests, imports, ui] = await Promise.all([
-    read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
-    ),
+test("Step 1 rejects retired legacy boundary values without weakening the sealed database", async () => {
+  const [imports, ui] = await Promise.all([
     read("../packages/planes/neon/src/business-partner-import.ts"),
     read("../../packages/planes/neon/business-partner/src/index.tsx"),
   ]);
-  assert.match(requests, /requestedCategory==="individual"\?"person"/);
-  assert.match(requests, /ownershipClass[\s\S]*business_partner_ownership_d/);
   assert.match(imports, /normalizePartnerStructure/);
+  assert.doesNotMatch(imports, /individual[\s\S]*person/);
+  assert.match(
+    imports,
+    /partner_category,ownership_class[\s\S]*'organization'/,
+  );
   assert.doesNotMatch(imports, /partner_category=COALESCE/);
   assert.doesNotMatch(ui, /<option value="person">Person<\/option>/);
   assert.match(ui, /partnerCategory:"organization"/);

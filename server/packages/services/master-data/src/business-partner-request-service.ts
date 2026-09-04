@@ -42,15 +42,16 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, scope(command.operatingOrganizationId, command.companyCodeId));
       const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind, ...(command.requestedRole?{requestedRole:command.requestedRole}:{}) });
       validateSchema(schema);
+      if (!schema.releaseId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(schema.releaseId)) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_SCHEMA_INVALID", "Published request schema release identity is invalid");
       return options.transactions.run("neon", actor(command.context), async (transaction) => {
         const existing = await options.repository.findByIdempotencyKey(command.context.tenantId, command.idempotencyKey, transaction);
         if (existing) {
           if (creationFingerprint(existing) !== commandFingerprint(command, schema)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_IDEMPOTENCY_CONFLICT", "Idempotency key was reused with different request content");
-          return { request: existing, replayed: true };
+          return { request: existing, case: existing, replayed: true };
         }
         const created = await options.repository.create({ tenantId: command.context.tenantId, requestNo: requestNo(), command: withoutContext(command), schema, createdBy: command.context.principalId }, transaction);
-        await effects(options, command.context, transaction, "business_partner.request.created", created, { sourceKind: created.source.kind, requestKind: created.kind });
-        return { request: created, replayed: false };
+        await effects(options, command.context, transaction, "business_partner.case.created", created, { sourceKind: created.source.kind, caseOperation: created.kind });
+        return { request: created, case: created, replayed: false };
       });
     },
     async get(query) {
@@ -101,7 +102,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.update, scope(organizationId, command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined));
         const updated = await options.repository.patch({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, proposedPayload: command.proposedPayload, ...(command.extensions!==undefined?{extensions:command.extensions}:{}), ...(command.operatingOrganizationId ? { operatingOrganizationId: command.operatingOrganizationId } : {}), ...(command.companyCodeId !== undefined ? { companyCodeId: command.companyCodeId } : {}), ...(command.requestedRole !== undefined ? { requestedRole: command.requestedRole } : {}), updatedBy: command.context.principalId }, transaction);
         if (!updated) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version or editable state changed");
-        await effects(options, command.context, transaction, "business_partner.request.updated", updated, { priorVersion: command.expectedVersion });
+        await effects(options, command.context, transaction, "business_partner.case.updated", updated, { priorVersion: command.expectedVersion });
         return updated;
       });
     },
@@ -118,8 +119,8 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         validateValidationResult(validation);
         const request = await options.repository.recordValidation({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, evaluatedBy: command.context.principalId, result: validation }, transaction);
         if (!request) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version or validation state changed");
-        await effects(options, command.context, transaction, "business_partner.request.validated", request, { evaluationId: validation.evaluationId, valid: validation.valid, ruleset: validation.ruleset });
-        return { request, validation };
+        await effects(options, command.context, transaction, "business_partner.case.validated", request, { evaluationId: validation.evaluationId, valid: validation.valid, ruleset: validation.ruleset });
+        return { request, case: request, validation };
       });
     },
     async submit(command) {
@@ -143,7 +144,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         const fingerprint = submissionFingerprint(current, definition);
         const result = await options.repository.submit({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, submittedBy: command.context.principalId, idempotencyKey: command.idempotencyKey, definition, decisionFingerprint: fingerprint, ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}) }, transaction);
         if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version, validation evidence, or submission state changed");
-        await effects(options, command.context, transaction, "business_partner.request.submitted", result.request, { workflowRequestId: result.workflow.requestId, workItemId: result.workflow.workItemId, definition: result.workflow.definition, decisionFingerprint: fingerprint });
+        await effects(options, command.context, transaction, "business_partner.case.submitted", result.request, { cycleRunId: result.workflow.requestId, cycleTaskId: result.workflow.workItemId, definition: result.workflow.definition, decisionFingerprint: fingerprint });
         return result;
       });
     },
@@ -159,7 +160,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         const fingerprint = decisionFingerprint(current, command);
         const result = await options.repository.decide({ tenantId: command.context.tenantId, command: withoutDecisionContext(command), decidedBy: command.context.principalId, decisionFingerprint: fingerprint }, transaction);
         if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_DECISION_CONFLICT", "Request or work-item state/version changed, or the actor is not eligible");
-        if (!result.replayed) await effects(options, command.context, transaction, `business_partner.request.${command.decision === "approve" ? "approved" : command.decision === "reject" ? "rejected" : "returned"}`, result.request, { workflowRequestId: result.workflow.requestId, workItemId: result.workflow.workItemId, decision: command.decision, decisionFingerprint: fingerprint });
+        if (!result.replayed) await effects(options, command.context, transaction, `business_partner.case.${command.decision === "approve" ? "approved" : command.decision === "reject" ? "rejected" : "returned"}`, result.request, { cycleRunId: result.workflow.requestId, cycleTaskId: result.workflow.workItemId, decision: command.decision, decisionFingerprint: fingerprint });
         return result;
       });
     },
@@ -191,7 +192,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
           ...(command.context.correlationId ? { correlationId: command.context.correlationId } : {}),
         }, transaction);
         if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_APPLICATION_CONFLICT", "Request version, approval, validation, duplicate, source, or organization evidence changed before materialization");
-        const appliedEvent=current.kind==="deactivate"?"business_partner.lifecycle.deactivated":current.kind==="reactivate"?"business_partner.lifecycle.reactivated":current.kind==="archive"?"business_partner.lifecycle.archived":current.kind==="change_bank"?"business_partner.bank_verification.requested":"business_partner.request.applied";
+        const appliedEvent=current.kind==="deactivate"?"business_partner.lifecycle.deactivated":current.kind==="reactivate"?"business_partner.lifecycle.reactivated":current.kind==="archive"?"business_partner.lifecycle.archived":current.kind==="change_bank"?"business_partner.bank_verification.requested":"business_partner.case.materialized";
         if (!result.replayed) await effects(options, command.context, transaction, appliedEvent, result.request, {
           businessPartnerId: result.materialization.businessPartnerId,
           resultKind: result.materialization.resultKind,
@@ -308,4 +309,4 @@ function decisionFingerprint(request: BusinessPartnerRequest, command: DecideBus
 function applicationFingerprint(request: BusinessPartnerRequest, command: ApplyBusinessPartnerRequestCommand): string { return hash({ requestId: request.id, requestKind:request.kind, baseRecordVersion:request.baseRecordVersion, expectedVersion: command.expectedVersion, applicationIdempotencyKey: command.idempotencyKey, decisionFingerprint: request.decisionFingerprint, approvedAt: request.approvedAt, approvedBy: request.approvedBy, schema: request.schema, proposedPayload: request.proposedPayload, extensionFingerprint:request.extensionSummary.fingerprint,extensionCounts:request.extensionSummary.counts, validationSummary: request.validationSummary, duplicateSummary: request.duplicateSummary, changeImpact:request.changeImpact, source: request.source, requestedRole: request.requestedRole, operatingOrganizationId: request.operatingOrganizationId, companyCodeId: request.companyCodeId, appliedBy: command.context.principalId }); }
 function withoutDecisionContext(command: DecideBusinessPartnerRequestCommand): Omit<DecideBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
 function withoutApplyContext(command: ApplyBusinessPartnerRequestCommand): Omit<ApplyBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
-async function effects<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>, context: VerifiedRequestContext, transaction: Transaction, eventCode: string, request: BusinessPartnerRequest, metadata: Readonly<Record<string, unknown>>): Promise<void> { const safeMetadata={extensionMode:request.extensionSummary.mode,extensionCounts:request.extensionSummary.counts,...metadata};await options.outbox.append({ tenantId: context.tenantId, topic: "business-partner-onboarding", eventType: eventCode, entityType: "business_partner_request", entityId: request.id, actorId: context.principalId, correlationId: context.correlationId, payload: { requestId: request.id, requestNo: request.requestNo, status: request.status, rowVersion: request.rowVersion, ...safeMetadata } }, transaction); const action=eventCode.endsWith("created")?"create":eventCode.endsWith("approved")?"approve":eventCode.endsWith("rejected")?"reject":"update"; await options.audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "business_partner_request", entityId: request.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata:safeMetadata }, transaction); }
+async function effects<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>, context: VerifiedRequestContext, transaction: Transaction, eventCode: string, request: BusinessPartnerRequest, metadata: Readonly<Record<string, unknown>>): Promise<void> { const safeMetadata={extensionMode:request.extensionSummary.mode,extensionCounts:request.extensionSummary.counts,...metadata};await options.outbox.append({ tenantId: context.tenantId, topic: "business-partner-governed-case", eventType: eventCode, entityType: "entity_case", entityId: request.id, actorId: context.principalId, correlationId: context.correlationId, payload: { caseId: request.id, caseNo: request.requestNo, status: request.status, rowVersion: request.rowVersion, ...safeMetadata } }, transaction); const action=eventCode.endsWith("created")?"create":eventCode.endsWith("approved")?"approve":eventCode.endsWith("rejected")?"reject":"update"; await options.audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "entity_case", entityId: request.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata:safeMetadata }, transaction); }

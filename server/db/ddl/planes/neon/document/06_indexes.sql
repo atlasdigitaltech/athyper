@@ -829,6 +829,7 @@ CREATE INDEX multipart_upload_series_idx
 CREATE INDEX business_partner_invitation_status_idx ON document.business_partner_invitation(tenant_id,status,expires_at);
 CREATE INDEX business_partner_invitation_journey_scope_idx ON document.business_partner_invitation(tenant_id,journey_kind,scope_kind,created_at DESC);
 CREATE UNIQUE INDEX business_partner_invitation_request_uq ON document.business_partner_invitation(tenant_id,business_partner_request_id) WHERE business_partner_request_id IS NOT NULL;
+CREATE UNIQUE INDEX business_partner_invitation_entity_case_uq ON document.business_partner_invitation(tenant_id,entity_case_id) WHERE entity_case_id IS NOT NULL;
 
 CREATE INDEX business_partner_request_status_idx
     ON document.business_partner_request (tenant_id, status, created_at DESC);

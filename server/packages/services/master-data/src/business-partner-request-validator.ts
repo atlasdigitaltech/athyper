@@ -46,7 +46,7 @@ const ruleDefinitions = Object.freeze([
 ] as const);
 
 export const businessPartnerRequestRuleset = Object.freeze({
-  code: "neon.business_partner_request.phase1",
+  code: "neon.business_partner.entity_case.phase1",
   version: 1,
   hash: createHash("sha256").update(JSON.stringify(ruleDefinitions)).digest("hex"),
 });

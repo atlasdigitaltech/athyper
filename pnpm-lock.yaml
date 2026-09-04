@@ -32,6 +32,9 @@ importers:
       jsdom:
         specifier: ^25.0.1
         version: 25.0.1
+      prettier:
+        specifier: ^3.8.1
+        version: 3.9.6
       syncpack:
         specifier: ^14.3.0
         version: 14.3.0
@@ -1819,12 +1822,18 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@mrleebo/prisma-ast':
+        specifier: ^0.13.1
+        version: 0.13.1
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
       '@types/pg':
         specifier: ^8.11.10
         version: 8.20.0
+      prisma:
+        specifier: ^7.7.0
+        version: 7.7.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)
       tsx:
         specifier: ^4.19.2
         version: 4.21.0
@@ -2042,15 +2051,9 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17
     devDependencies:
-      '@mrleebo/prisma-ast':
-        specifier: ^0.13.1
-        version: 0.13.1
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
-      prisma:
-        specifier: ^7.7.0
-        version: 7.7.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -3232,6 +3235,12 @@ importers:
       '@athyper/server-contract-events':
         specifier: workspace:*
         version: link:../../contracts/events
+      '@athyper/server-contract-jobs':
+        specifier: workspace:*
+        version: link:../../contracts/jobs
+      '@athyper/server-contract-secrets':
+        specifier: workspace:*
+        version: link:../../contracts/secrets
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -7088,6 +7097,11 @@ packages:
   postgres@3.4.9:
     resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
     engines: {node: '>=12'}
+
+  prettier@3.9.6:
+    resolution: {integrity: sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   prisma@7.7.0:
     resolution: {integrity: sha512-HlgwRBt1uEFB9LStHL4HLYDvoi4BNu1rYA0hPG0zCAEyK9SaZBqp7E5Rjpc3Qh8Lex/ye/svoHZ0OWoFNhWxuQ==}
@@ -11075,6 +11089,8 @@ snapshots:
   postgres@3.4.7: {}
 
   postgres@3.4.9: {}
+
+  prettier@3.9.6: {}
 
   prisma@7.7.0(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(typescript@6.0.3):
     dependencies:

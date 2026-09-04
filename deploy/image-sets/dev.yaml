@@ -7,12 +7,12 @@ spec:
   sourceRevision: working-tree
   images:
     - id: neon-web
-      reference: athyper/neon-web@sha256:b8a5fdd6c46b884714b6e35ab75e5b111632317457e56bfac6d9480ddcb5ef89
+      reference: athyper/neon-web@sha256:f544bb694c3b4179c5a65dc6295ab73affc1c30a60aa8cd69afebf3786b79ec9
     - id: mesh-web
-      reference: athyper/mesh-web@sha256:e1c7e91335fbb700a895d422f8124809f73ea7446f1267238b214a5047f5b6ba
+      reference: athyper/mesh-web@sha256:b63c940816eb81172f1237ec52f4bdffe43d3cf2a4c6c56397bba6550652ece7
     - id: studio-web
-      reference: athyper/studio-web@sha256:df24f216171152e344f41dec50e083aef436c5db1446e06ad2e8c3928ac033b9
+      reference: athyper/studio-web@sha256:9e01ddcd0088b36cb61bfde8422d1852489a50b5253b0bed1f61fa83a78d20e5
     - id: runtime-server
-      reference: athyper/runtime-server@sha256:eb4204f55a87afc6d9fcadd6955f1bbebed3086cde9dd58d95c788a3065a347c
+      reference: athyper/runtime-server@sha256:51c136a3939026a79cf8b6bae130610c97b1afabc62e4179063cf86326006e3a
     - id: iam
       reference: athyper/keycloak@sha256:22dafd3059be6a19996cb812b82752a149dbfd952e981c8744de8b2502b69e18

@@ -11,7 +11,7 @@ export class LocalBusinessPartnerDefinitionConsumer {
   if(!record(schema))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_REQUEST_SCHEMA_MISSING",key);
   const source=input.sourceKind==="manual"?"internal":input.sourceKind,supported=schema["supportedSources"];
   if(!Array.isArray(supported)||!supported.includes(source))throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_SOURCE_MAPPING_MISSING",source);
-  return{code:`neon.business_partner_request.${key}`,version:active.releaseNo,hash:this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes({bundleHash:active.bundleHash,key,schema}))};
+  return{code:`neon.business_partner_request.${key}`,version:active.releaseNo,hash:this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes({bundleHash:active.bundleHash,key,schema})),releaseId:active.releaseId};
  }
  async workflow(input:{readonly kind:string;readonly requestedRole?:string}){
   const active=await this.active(),journey=journeyFor(input.kind,input.requestedRole),definition=active.bundle.workflowDefinitions[journey];

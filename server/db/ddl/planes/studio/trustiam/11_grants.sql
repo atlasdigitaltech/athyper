@@ -24,12 +24,13 @@ BEGIN
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_trustiam_service') THEN
-        GRANT USAGE ON SCHEMA trustiam TO athyper_trustiam_service;
+        GRANT USAGE ON SCHEMA trustiam,event TO athyper_trustiam_service;
         GRANT SELECT,INSERT,UPDATE ON trustiam.organization,trustiam.organization_provider,
             trustiam.application_projection,trustiam.projection_scope,trustiam.identity_provisioning_request
             TO athyper_trustiam_service;
         GRANT SELECT,INSERT,UPDATE ON trustiam.identity_provisioning_attempt TO athyper_trustiam_service;
         GRANT SELECT,INSERT,UPDATE ON trustiam.identity_projection,trustiam.identity_saga_attempt,trustiam.provider_identity_callback_inbox TO athyper_trustiam_service;
+        GRANT INSERT ON event.outbox TO athyper_trustiam_service;
     END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN

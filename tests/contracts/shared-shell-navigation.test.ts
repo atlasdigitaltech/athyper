@@ -1,18 +1,88 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { canAccessRoute, definePlaneRoutes, deriveBreadcrumbs, deriveShellNavigation, selectLandingRoute } from "../../packages/platform/shell/shell/src/core";
+import {
+  canAccessRoute,
+  definePlaneRoutes,
+  deriveBreadcrumbs,
+  deriveShellNavigation,
+  selectLandingRoute,
+} from "../../packages/platform/shell/shell/src/core";
 
 const registry = definePlaneRoutes([
-  { id: "test.home", moduleCode: "acc", href: "/", label: "Registry finance", iconKey: "home", requiredPermissions: ["finance.read"], requiredFeatures: [], navigation: "primary" },
-  { id: "test.inventory", moduleCode: "inventory", href: "/inventory", label: "Registry inventory", iconKey: "info", requiredPermissions: [], requiredFeatures: ["inventory.ui"], navigation: "secondary" },
-  { id: "test.hidden", moduleCode: "inventory", href: "/inventory/internal", label: "Internal", iconKey: "info", requiredPermissions: [], requiredFeatures: [], navigation: "hidden" },
+  {
+    id: "test.home",
+    moduleCode: "acc",
+    href: "/",
+    label: "Registry finance",
+    iconKey: "home",
+    requiredPermissions: ["finance.read"],
+    requiredFeatures: [],
+    navigation: "primary",
+  },
+  {
+    id: "test.inventory",
+    moduleCode: "inventory",
+    href: "/inventory",
+    label: "Registry inventory",
+    iconKey: "info",
+    requiredPermissions: [],
+    requiredFeatures: ["inventory.ui"],
+    navigation: "secondary",
+  },
+  {
+    id: "test.hidden",
+    moduleCode: "inventory",
+    href: "/inventory/internal",
+    label: "Internal",
+    iconKey: "info",
+    requiredPermissions: [],
+    requiredFeatures: [],
+    navigation: "hidden",
+  },
 ] as const);
-const experience = { permissions: ["finance.read"], features: { "inventory.ui": { enabled: true } }, workspaces: [{ code: "fin", name: "Tenant Finance", iconKey: "home", sortOrder: 20, modules: [{ code: "acc", name: "General Ledger", iconKey: "home", sortOrder: 1, primary: true }] }, { code: "scm", name: "Supply Chain", sortOrder: 30, modules: [{ code: "inventory", name: "Stock", sortOrder: 2, primary: true }, { code: "unknown", name: "Future module", sortOrder: 3, primary: false }] }] } as const;
+const experience = {
+  permissions: ["finance.read"],
+  features: { "inventory.ui": { enabled: true } },
+  workspaces: [
+    {
+      code: "fin",
+      name: "Tenant Finance",
+      iconKey: "home",
+      sortOrder: 20,
+      modules: [
+        {
+          code: "acc",
+          name: "General Ledger",
+          iconKey: "home",
+          sortOrder: 1,
+          primary: true,
+        },
+      ],
+    },
+    {
+      code: "scm",
+      name: "Supply Chain",
+      sortOrder: 30,
+      modules: [
+        { code: "inventory", name: "Stock", sortOrder: 2, primary: true },
+        {
+          code: "unknown",
+          name: "Future module",
+          sortOrder: 3,
+          primary: false,
+        },
+      ],
+    },
+  ],
+} as const;
 
 test("joins registry routes to ordered catalog modules and applies safe label precedence", () => {
   const navigation = deriveShellNavigation(registry, experience);
-  assert.deepEqual(navigation.workspaces.map((item) => item.code), ["fin", "scm"]);
+  assert.deepEqual(
+    navigation.workspaces.map((item) => item.code),
+    ["fin", "scm"],
+  );
   assert.equal(navigation.routes[0]?.label, "General Ledger");
   assert.equal(navigation.routes[1]?.label, "Stock");
   assert.equal(navigation.routes[2]?.label, "Internal");
@@ -22,22 +92,99 @@ test("joins registry routes to ordered catalog modules and applies safe label pr
 test("retains distinct labels for multiple capabilities under one catalog module", () => {
   const navigation = deriveShellNavigation(
     definePlaneRoutes([
-      { id: "studio.operations", moduleCode: "ops", href: "/operations", label: "Operations", iconKey: "info", requiredPermissions: [], requiredFeatures: [], navigation: "primary" },
-      { id: "studio.localization", moduleCode: "ops", href: "/operations/localization", label: "Languages", iconKey: "info", requiredPermissions: ["catalog.manage"], requiredFeatures: [], navigation: "secondary" },
+      {
+        id: "studio.operations",
+        moduleCode: "ops",
+        href: "/operations",
+        label: "Operations",
+        iconKey: "info",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+      },
+      {
+        id: "studio.localization",
+        moduleCode: "ops",
+        href: "/operations/localization",
+        label: "Languages",
+        iconKey: "info",
+        requiredPermissions: ["catalog.manage"],
+        requiredFeatures: [],
+        navigation: "secondary",
+      },
     ] as const),
-    { permissions: ["catalog.manage"], features: {}, workspaces: [{ code: "platform", name: "Platform Operations Studio", sortOrder: 1, modules: [{ code: "ops", name: "Platform Operations", sortOrder: 1, primary: true }] }] },
+    {
+      permissions: ["catalog.manage"],
+      features: {},
+      workspaces: [
+        {
+          code: "platform",
+          name: "Platform Operations Studio",
+          sortOrder: 1,
+          modules: [
+            {
+              code: "ops",
+              name: "Platform Operations",
+              sortOrder: 1,
+              primary: true,
+            },
+          ],
+        },
+      ],
+    },
   );
 
-  assert.deepEqual(navigation.routes.map((route) => route.label), ["Platform Operations", "Languages"]);
+  assert.deepEqual(
+    navigation.routes.map((route) => route.label),
+    ["Platform Operations", "Languages"],
+  );
 });
 
 test("classifies the canonical BP entitlement as the MDG Business Partner product module", () => {
   const navigation = deriveShellNavigation(
-    definePlaneRoutes([{ id: "neon.mdg.business-partner", moduleCode: "bp", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "Master Data Governance", workspaceHref: "/mdg", moduleName: "Business Partner" } }] as const),
-    { permissions: [], features: {}, workspaces: [{ code: "mdg", name: "Master Data Governance", sortOrder: 1, modules: [{ code: "bp", name: "Business Partner", sortOrder: 1, primary: true }] }] },
+    definePlaneRoutes([
+      {
+        id: "neon.mdg.business-partner",
+        moduleCode: "bp",
+        href: "/mdg/business-partner",
+        label: "Business Partner",
+        iconKey: "user",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+        presentation: {
+          workspaceCode: "mdg",
+          workspaceName: "Master Data Governance",
+          workspaceHref: "/mdg",
+          moduleName: "Business Partner",
+        },
+      },
+    ] as const),
+    {
+      permissions: [],
+      features: {},
+      workspaces: [
+        {
+          code: "mdg",
+          name: "Master Data Governance",
+          sortOrder: 1,
+          modules: [
+            {
+              code: "bp",
+              name: "Business Partner",
+              sortOrder: 1,
+              primary: true,
+            },
+          ],
+        },
+      ],
+    },
   );
 
-  assert.deepEqual(navigation.workspaces.map(({ code, name }) => ({ code, name })), [{ code: "mdg", name: "Master Data Governance" }]);
+  assert.deepEqual(
+    navigation.workspaces.map(({ code, name }) => ({ code, name })),
+    [{ code: "mdg", name: "Master Data Governance" }],
+  );
   assert.equal(navigation.workspaces[0]?.href, "/mdg");
   assert.equal(navigation.landingHref, "/mdg");
   assert.equal(navigation.routes[0]?.moduleName, "Business Partner");
@@ -45,16 +192,27 @@ test("classifies the canonical BP entitlement as the MDG Business Partner produc
 });
 
 test("fails closed for missing permissions and disabled or unknown features", () => {
-  const navigation = deriveShellNavigation(registry, { ...experience, permissions: [], features: { "inventory.ui": { enabled: false } } });
-  assert.deepEqual(navigation.routes.map((item) => item.href), ["/inventory/internal"]);
+  const navigation = deriveShellNavigation(registry, {
+    ...experience,
+    permissions: [],
+    features: { "inventory.ui": { enabled: false } },
+  });
+  assert.deepEqual(
+    navigation.routes.map((item) => item.href),
+    ["/inventory/internal"],
+  );
   assert.equal(navigation.landingHref, undefined);
 });
 
 test("reports active server modules without frontend routes", () => {
   const events: unknown[] = [];
-  const navigation = deriveShellNavigation(registry, experience, (event) => events.push(event));
+  const navigation = deriveShellNavigation(registry, experience, (event) =>
+    events.push(event),
+  );
   assert.deepEqual(navigation.unknownActiveModules, ["unknown"]);
-  assert.deepEqual(events, [{ kind: "unknown-active-module", moduleCode: "unknown" }]);
+  assert.deepEqual(events, [
+    { kind: "unknown-active-module", moduleCode: "unknown" },
+  ]);
 });
 
 test("deep links and forbidden routes resolve without an inaccessible default", () => {
@@ -62,32 +220,144 @@ test("deep links and forbidden routes resolve without an inaccessible default", 
   assert.equal(canAccessRoute(navigation, "/inventory/stock/42"), true);
   assert.equal(canAccessRoute(navigation, "/administration"), false);
   assert.equal(selectLandingRoute(navigation, "/administration"), "/");
-  assert.equal(selectLandingRoute(navigation, "/inventory/stock/42"), "/inventory/stock/42");
+  assert.equal(
+    selectLandingRoute(navigation, "/inventory/stock/42"),
+    "/inventory/stock/42",
+  );
 });
 
 test("breadcrumbs preserve workspace and permitted route ancestry", () => {
-  const breadcrumbs = deriveBreadcrumbs(deriveShellNavigation(registry, experience), "/inventory/stock/42");
-  assert.deepEqual(breadcrumbs.map((item) => item.label), ["Supply Chain", "Stock", "Stock", "42"]);
+  const breadcrumbs = deriveBreadcrumbs(
+    deriveShellNavigation(registry, experience),
+    "/inventory/stock/42",
+  );
+  assert.deepEqual(
+    breadcrumbs.map((item) => item.label),
+    ["Supply Chain", "Stock", "Stock", "42"],
+  );
 });
 
 test("workspace dashboards are accessible without exposing modules in the sidebar", () => {
-  const navigation = deriveShellNavigation(definePlaneRoutes([{ id: "mdg.bp", moduleCode: "bp", href: "/mdg/business-partner", label: "Business Partner", iconKey: "user", requiredPermissions: [], requiredFeatures: [], navigation: "primary", presentation: { workspaceCode: "mdg", workspaceName: "Master Data Governance", workspaceHref: "/mdg", moduleName: "Business Partner" } }] as const), { permissions: [], features: {}, workspaces: [{ code: "mdg", name: "Master Data Governance", sortOrder: 1, modules: [{ code: "bp", name: "Business Partner", sortOrder: 1, primary: true }] }] });
+  const navigation = deriveShellNavigation(
+    definePlaneRoutes([
+      {
+        id: "mdg.bp",
+        moduleCode: "bp",
+        href: "/mdg/business-partner",
+        label: "Business Partner",
+        iconKey: "user",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+        presentation: {
+          workspaceCode: "mdg",
+          workspaceName: "Master Data Governance",
+          workspaceHref: "/mdg",
+          moduleName: "Business Partner",
+        },
+      },
+    ] as const),
+    {
+      permissions: [],
+      features: {},
+      workspaces: [
+        {
+          code: "mdg",
+          name: "Master Data Governance",
+          sortOrder: 1,
+          modules: [
+            {
+              code: "bp",
+              name: "Business Partner",
+              sortOrder: 1,
+              primary: true,
+            },
+          ],
+        },
+      ],
+    },
+  );
   assert.equal(canAccessRoute(navigation, "/mdg"), true);
   assert.equal(selectLandingRoute(navigation), "/mdg");
-  assert.deepEqual(deriveBreadcrumbs(navigation, "/mdg").map((item) => [item.label, item.href]), [["Master Data Governance", "/mdg"]]);
-  assert.deepEqual(deriveBreadcrumbs(navigation, "/mdg/business-partner/requests").map((item) => item.href), ["/mdg", "/mdg/business-partner", undefined]);
+  assert.deepEqual(
+    deriveBreadcrumbs(navigation, "/mdg").map((item) => [
+      item.label,
+      item.href,
+    ]),
+    [["Master Data Governance", "/mdg"]],
+  );
+  assert.deepEqual(
+    deriveBreadcrumbs(navigation, "/mdg/business-partner/requests").map(
+      (item) => item.href,
+    ),
+    ["/mdg", "/mdg/business-partner", undefined],
+  );
 });
 
 test("rejects unsafe, duplicate, and traversing route declarations", () => {
-  assert.throws(() => definePlaneRoutes([{ id: "bad.route", moduleCode: "acc", href: "//evil" as `/${string}`, label: "Bad", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }]));
-  assert.throws(() => definePlaneRoutes([{ id: "same.route", moduleCode: "acc", href: "/x", label: "X", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }, { id: "same.route", moduleCode: "buy", href: "/y", label: "Y", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" }]));
+  assert.throws(() =>
+    definePlaneRoutes([
+      {
+        id: "bad.route",
+        moduleCode: "acc",
+        href: "//evil" as `/${string}`,
+        label: "Bad",
+        iconKey: "home",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+      },
+    ]),
+  );
+  assert.throws(() =>
+    definePlaneRoutes([
+      {
+        id: "same.route",
+        moduleCode: "acc",
+        href: "/x",
+        label: "X",
+        iconKey: "home",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+      },
+      {
+        id: "same.route",
+        moduleCode: "buy",
+        href: "/y",
+        label: "Y",
+        iconKey: "home",
+        requiredPermissions: [],
+        requiredFeatures: [],
+        navigation: "primary",
+      },
+    ]),
+  );
 });
 
 test("shared shell keeps global actions and breadcrumbs in compact separate rows", async () => {
   const [source, styles, messages] = await Promise.all([
-    readFile(new URL("../../packages/platform/shell/shell/src/client.tsx", import.meta.url), "utf8"),
-    readFile(new URL("../../packages/platform/shell/shell/src/styles.css", import.meta.url), "utf8"),
-    readFile(new URL("../../packages/platform/shell/shell/src/messages.ts", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/client.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/styles.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/messages.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
   ]);
 
   assert.match(source, /<BusinessContext /);
@@ -99,12 +369,21 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(source, /className="athyper-shell__product-wordmark"/);
   assert.match(source, /className="athyper-shell__plane-badge"/);
   assert.match(source, /className="athyper-shell__rail-toggle"/);
-  assert.match(source, /aria-label=\{t\(collapsed \? "shell\.navigation\.expand" : "shell\.navigation\.collapse"\)\}/);
+  assert.match(
+    source,
+    /aria-label=\{t\(collapsed \? "shell\.navigation\.expand" : "shell\.navigation\.collapse"\)\}/,
+  );
   assert.match(source, /className="athyper-shell__brand-tooltip"/);
   assert.match(source, /className="athyper-shell__navigation-peek"/);
-  assert.match(source, /<QuickAccessRailActions[^>]*onPeek=\{setNavigationPeek\}/);
+  assert.match(
+    source,
+    /<QuickAccessRailActions[^>]*onPeek=\{setNavigationPeek\}/,
+  );
   assert.match(source, /workspace:t\("shell\.quick\.label"\)/);
-  assert.match(source, /data-activity-open=\{headerAction === "notifications" \|\| headerAction === "inbox"\}/);
+  assert.match(
+    source,
+    /data-activity-open=\{headerAction === "notifications" \|\| headerAction === "inbox"\}/,
+  );
   assert.match(source, /<SidebarProfile /);
   assert.match(source, /className="athyper-shell__profile"/);
   assert.match(messages, /"shell\.profile\.organization": "Organization"/);
@@ -129,54 +408,139 @@ test("shared shell keeps global actions and breadcrumbs in compact separate rows
   assert.match(source, /className="athyper-shell__breadcrumbs"/);
   assert.match(styles, /--shell-topbar:3\.5rem/);
   assert.match(styles, /--shell-crumbs:2\.25rem/);
-  assert.match(styles, /athyper-shell__rail-brand\{[^}]*height:var\(--shell-topbar\)/);
-  assert.match(styles, /athyper-shell__rail-toggle\{[^}]*height:var\(--shell-crumbs\)/);
-  assert.match(styles, /product-wordmark img\{position:static;[^}]*object-fit:contain;object-position:left center/);
-  assert.match(styles, /athyper-context-identity--logo-or-name .*max-width:15rem;height:2\.75rem/);
-  assert.match(styles, /max-width:760px.*athyper-context-identity--logo-or-name .*max-width:9\.5rem;height:2\.35rem/);
+  assert.match(
+    styles,
+    /athyper-shell__rail-brand\{[^}]*height:var\(--shell-topbar\)/,
+  );
+  assert.match(
+    styles,
+    /athyper-shell__rail-toggle\{[^}]*height:var\(--shell-crumbs\)/,
+  );
+  assert.match(
+    styles,
+    /product-wordmark img\{position:static;[^}]*object-fit:contain;object-position:left center/,
+  );
+  assert.match(
+    styles,
+    /athyper-context-identity--logo-or-name .*max-width:15rem;height:2\.75rem/,
+  );
+  assert.match(
+    styles,
+    /max-width:760px.*athyper-context-identity--logo-or-name .*max-width:9\.5rem;height:2\.35rem/,
+  );
   assert.match(styles, /\.athyper-shell__action-panel/);
   assert.match(styles, /\.athyper-shell__profile-panel/);
   assert.match(styles, /data-collapsed=true.*athyper-shell__rail-brand/);
   assert.match(styles, /athyper-shell__mobile-brand\{display:flex/);
-  assert.match(styles, /@media\(min-width:761px\).*data-desktop-brand=true.*athyper-shell__desktop-brand/s);
+  assert.match(
+    styles,
+    /@media\(min-width:761px\).*data-desktop-brand=true.*athyper-shell__desktop-brand/s,
+  );
   assert.match(styles, /athyper-shell__desktop-brand\{display:none/);
-  assert.match(styles, /data-desktop-brand=true.*athyper-shell__desktop-brand\{width:17\.5rem/);
-  assert.match(styles, /data-desktop-brand=true.*data-collapsed=true\]\{--shell-rail:3\.5rem/);
-  assert.match(styles, /desktop-brand-link .*product-wordmark img\{[^}]*filter:none/);
-  assert.match(styles, /athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:none/);
-  assert.match(styles, /data-collapsed=true.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:block/);
-  assert.match(styles, /max-width:760px.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame.*display:none/);
-  assert.match(styles, /data-collapsed=true.*athyper-shell__plane-badge\{display:grid/);
-  assert.match(styles, /data-collapsed=true.*athyper-shell__rail-toggle\{justify-content:center/);
-  assert.match(styles, /data-collapsed=true.*athyper-shell__workspace\+\.athyper-shell__workspace/);
+  assert.match(
+    styles,
+    /data-desktop-brand=true.*athyper-shell__desktop-brand\{width:17\.5rem/,
+  );
+  assert.match(
+    styles,
+    /data-desktop-brand=true.*data-collapsed=true\]\{--shell-rail:3\.5rem/,
+  );
+  assert.match(
+    styles,
+    /desktop-brand-link .*product-wordmark img\{[^}]*filter:none/,
+  );
+  assert.match(
+    styles,
+    /athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:none/,
+  );
+  assert.match(
+    styles,
+    /data-collapsed=true.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame\{display:block/,
+  );
+  assert.match(
+    styles,
+    /max-width:760px.*athyper-shell__rail-brand>\.athyper-shell__brand-mark-frame.*display:none/,
+  );
+  assert.match(
+    styles,
+    /data-collapsed=true.*athyper-shell__plane-badge\{display:grid/,
+  );
+  assert.match(
+    styles,
+    /data-collapsed=true.*athyper-shell__rail-toggle\{justify-content:center/,
+  );
+  assert.match(
+    styles,
+    /data-collapsed=true.*athyper-shell__workspace\+\.athyper-shell__workspace/,
+  );
   assert.match(styles, /athyper-shell__navigation-peek\{/);
   assert.match(styles, /athyper-navigation-peek-in/);
   assert.match(styles, /athyper-shell__profile\{/);
   assert.match(styles, /data-collapsed=true.*athyper-shell__profile-summary/);
-  assert.match(styles, /max-width:760px.*athyper-shell__navigation-peek\{display:none/);
-  assert.match(styles, /max-width:760px.*data-activity-open=true.*athyper-shell__breadcrumbs\{display:none\}/);
-  assert.match(styles, /data-variant=activity.*inset-block-start:3\.5rem;height:calc\(100dvh - 3\.5rem\)/);
-  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__rail-toggle/);
-  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__brand-mark-frame/);
-  assert.match(styles, /prefers-reduced-motion:reduce.*athyper-shell__navigation-peek/);
+  assert.match(
+    styles,
+    /max-width:760px.*athyper-shell__navigation-peek\{display:none/,
+  );
+  assert.match(
+    styles,
+    /max-width:760px.*data-activity-open=true.*athyper-shell__breadcrumbs\{display:none\}/,
+  );
+  assert.match(
+    styles,
+    /data-variant=activity.*inset-block-start:3\.5rem;height:calc\(100dvh - 3\.5rem\)/,
+  );
+  assert.match(
+    styles,
+    /prefers-reduced-motion:reduce.*athyper-shell__rail-toggle/,
+  );
+  assert.match(
+    styles,
+    /prefers-reduced-motion:reduce.*athyper-shell__brand-mark-frame/,
+  );
+  assert.match(
+    styles,
+    /prefers-reduced-motion:reduce.*athyper-shell__navigation-peek/,
+  );
 });
 
 test("plane shells prefer named context and use outlined product lockups", async () => {
-  const sources = await Promise.all(["neon", "mesh", "studio"].map((plane) => readFile(new URL(`../../packages/planes/${plane}/shell/src/index.tsx`, import.meta.url), "utf8")));
+  const sources = await Promise.all(
+    ["neon", "mesh", "studio"].map((plane) =>
+      readFile(
+        new URL(
+          `../../packages/planes/${plane}/shell/src/index.tsx`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ),
+  );
   for (const source of sources) {
-    assert.match(source, /planeWordmarkSrc="\/brand\/(neon|mesh|studio)\/identity-lockup\.svg"/);
+    assert.match(
+      source,
+      /planeWordmarkSrc="\/brand\/(neon|mesh|studio)\/identity-lockup\.svg"/,
+    );
   }
   for (const source of sources.slice(1)) {
-    assert.match(source, /bootstrap\.tenant\?\.displayName \?\? bootstrap\.tenantId/);
+    assert.match(
+      source,
+      /bootstrap\.tenant\?\.displayName \?\? bootstrap\.tenantId/,
+    );
     assert.match(source, /bootstrap\.identity\?\.displayName \?\? principalId/);
   }
   assert.match(sources[0]!, /ShellContextSelector/);
   for (const source of sources) assert.match(source, /persistentDesktopBrand/);
   assert.match(sources[0]!, /ShellContextPickerPanel/);
-  assert.doesNotMatch(sources[0]!, /ShellContextSelector className="neon-company-picker"/);
+  assert.doesNotMatch(
+    sources[0]!,
+    /ShellContextSelector className="neon-company-picker"/,
+  );
   assert.match(sources[1]!, /ShellContextSelector/);
   assert.match(sources[1]!, /ShellContextPickerPanel/);
-  assert.doesNotMatch(sources[1]!, /ShellContextSelector className="mesh-account-picker"/);
+  assert.doesNotMatch(
+    sources[1]!,
+    /ShellContextSelector className="mesh-account-picker"/,
+  );
   assert.match(sources[1]!, /logoAssetRef:selected\?\.logoAssetRef/);
   assert.doesNotMatch(sources[1]!, /Derived from Neon access/);
   assert.doesNotMatch(sources[1]!, /Verified Mesh account/);
@@ -185,46 +549,105 @@ test("plane shells prefer named context and use outlined product lockups", async
   assert.match(sources[2]!, /contexts=\{contexts\}/);
 });
 
-test("business-context switchability is based only on resolved authorized contexts", async()=>{
-  const [source,studioLayout]=await Promise.all([
-    readFile(new URL("../../packages/platform/shell/shell/src/client.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../../apps/studio/app/(shell)/layout.tsx",import.meta.url),"utf8"),
+test("business-context switchability is based only on resolved authorized contexts", async () => {
+  const [source, studioLayout] = await Promise.all([
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/client.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL("../../apps/studio/app/(shell)/layout.tsx", import.meta.url),
+      "utf8",
+    ),
   ]);
-  assert.match(source,/interactive=\{status==="ready"&&contexts\.length>1\}/);
-  assert.doesNotMatch(source,/interactive=\{status!=="ready"/);
-  assert.match(studioLayout,/loadShellContexts\(\)/);
-  assert.match(studioLayout,/contexts=\{contexts\}/);
+  assert.match(source, /interactive=\{status==="ready"&&contexts\.length>1\}/);
+  assert.doesNotMatch(source, /interactive=\{status!=="ready"/);
+  assert.match(studioLayout, /loadShellContexts\(\)/);
+  assert.match(studioLayout, /contexts=\{contexts\}/);
 });
 
-test("Atlas home combines a timezone-aware greeting with the primary heading", async()=>{
-  const [shell,home,styles,...experiences]=await Promise.all([
-    readFile(new URL("../../packages/platform/shell/shell/src/client.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../../packages/platform/shell/shell/src/home.tsx",import.meta.url),"utf8"),
-    readFile(new URL("../../packages/platform/shell/shell/src/styles.css",import.meta.url),"utf8"),
-    ...["neon","mesh","studio"].map((plane)=>readFile(new URL(`../../apps/${plane}/lib/experience-runtime.tsx`,import.meta.url),"utf8")),
+test("Atlas home combines a timezone-aware greeting with the primary heading", async () => {
+  const [shell, home, styles, ...experiences] = await Promise.all([
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/client.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/home.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    readFile(
+      new URL(
+        "../../packages/platform/shell/shell/src/styles.css",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    ...["neon", "mesh", "studio"].map((plane) =>
+      readFile(
+        new URL(
+          `../../apps/${plane}/lib/experience-runtime.tsx`,
+          import.meta.url,
+        ),
+        "utf8",
+      ),
+    ),
   ]);
-  assert.doesNotMatch(shell,/breadcrumbs--greeting/);
-  assert.match(shell,/data-home-route=\{homeRoute\}/);
-  assert.match(home,/timeZone \}\)\.format\(date\)/);
-  assert.match(home,/Good morning/);
-  assert.match(home,/What can we achieve together\?/);
-  assert.match(home,/Ask Atlas to search, create, or take action…/);
-  assert.match(home,/>Add context<\/span>/);
-  assert.match(home,/"Send"/);
-  assert.match(home,/>Activity history<\/button>/);
-  for(const experience of experiences){
-    assert.match(experience,/"Review my priorities",\s*"Plan today’s work",\s*"Review pending approvals"/);
+  assert.doesNotMatch(shell, /breadcrumbs--greeting/);
+  assert.match(shell, /data-home-route=\{homeRoute\}/);
+  assert.match(home, /timeZone \}\)\.format\(date\)/);
+  assert.match(home, /Good morning/);
+  assert.match(home, /What can we achieve together\?/);
+  assert.match(home, /Ask Atlas to search, create, or take action…/);
+  assert.match(home, />Add context<\/span>/);
+  assert.match(home, /ArrowUpIcon/);
+  assert.match(home, />Activity history<\/button>/);
+  for (const experience of experiences) {
+    assert.match(
+      experience,
+      /"Review my priorities",\s*"Plan today’s work",\s*"Review pending approvals"/,
+    );
   }
-  assert.match(styles,/athyper-home__greeting\{[^}]*font-size:clamp\(1\.125rem,1\.4vw,1\.25rem\);font-weight:650/);
-  assert.match(home,/LibraryBigIcon/);
-  assert.match(home,/Tooltip label="Prompt library"/);
-  assert.match(home,/className="athyper-home__prompt-library"/);
-  assert.doesNotMatch(home,/Expand Atlas composer/);
-  assert.match(styles,/athyper-home__welcome h1\{[^}]*font-size:clamp\(2\.625rem,3vw,2\.875rem\);font-weight:725/);
-  assert.match(styles,/max-width:600px.*athyper-home__welcome h1\{font-size:clamp\(\.8125rem,4\.2vw,1\.25rem\);[^}]*white-space:nowrap/s);
-  assert.match(styles,/athyper-home__welcome\{gap:\.75rem\}/);
-  assert.doesNotMatch(home,/athyper-home__welcome"><span aria-hidden="true"><SparklesIcon/);
-  assert.match(styles,/max-width:600px.*athyper-home__welcome\{display:grid;grid-template-columns:minmax\(0,1fr\)/s);
-  assert.match(styles,/max-width:600px.*athyper-home__greeting\{font-size:clamp\(\.9375rem,4\.5vw,1\.0625rem\)/s);
-  assert.match(styles,/max-width:600px.*athyper-home__composer>header>strong\{font-size:clamp\(\.4375rem,2\.3vw,\.6875rem\);[^}]*white-space:nowrap/s);
+  assert.match(
+    styles,
+    /athyper-home__greeting\{[^}]*font-size:clamp\(1\.125rem,1\.4vw,1\.25rem\);font-weight:var\(--a-font-weight-medium\)/,
+  );
+  assert.match(home, /LibraryBigIcon/);
+  assert.match(home, /Tooltip label="Prompt library"/);
+  assert.match(home, /className="athyper-home__prompt-library"/);
+  assert.doesNotMatch(home, /Expand Atlas composer/);
+  assert.match(
+    styles,
+    /athyper-home__welcome h1\{[^}]*font-size:clamp\(2\.625rem,3vw,2\.875rem\);font-weight:var\(--a-font-weight-strong\)/,
+  );
+  assert.match(
+    styles,
+    /max-width:600px.*athyper-home__welcome h1\{font-size:clamp\(\.8125rem,4\.2vw,1\.25rem\);[^}]*white-space:nowrap/s,
+  );
+  assert.match(styles, /athyper-home__welcome\{gap:\.75rem\}/);
+  assert.doesNotMatch(
+    home,
+    /athyper-home__welcome"><span aria-hidden="true"><SparklesIcon/,
+  );
+  assert.match(
+    styles,
+    /max-width:600px.*athyper-home__welcome\{display:grid;grid-template-columns:minmax\(0,1fr\)/s,
+  );
+  assert.match(
+    styles,
+    /max-width:600px.*athyper-home__greeting\{font-size:clamp\(\.9375rem,4\.5vw,1\.0625rem\)/s,
+  );
+  assert.match(
+    styles,
+    /max-width:600px.*athyper-home__composer>header>strong\{font-size:clamp\(\.4375rem,2\.3vw,\.6875rem\);[^}]*white-space:nowrap/s,
+  );
 });

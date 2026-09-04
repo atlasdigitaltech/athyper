@@ -54,6 +54,11 @@ BEGIN
             NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
     END IF;
 
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_protected_value_retriever') THEN
+        CREATE ROLE athyper_protected_value_retriever
+            NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+    END IF;
+
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin_atlas_maintenance') THEN
         CREATE ROLE athyperadmin_atlas_maintenance
             NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
@@ -81,5 +86,7 @@ COMMENT ON ROLE athyper_projection_breakglass IS
   'NOLOGIN emergency projection repair role. Membership is assigned externally only for an approved, audited repair window.';
 COMMENT ON ROLE athyper_jobs_service IS
   'NOLOGIN least-privilege role for plane-global scheduling and durable Jobs execution evidence.';
+COMMENT ON ROLE athyper_protected_value_retriever IS
+  'NOLOGIN purpose-bound broker role. It may execute audited protected-value retrieval but has no direct table read.';
 COMMENT ON ROLE athyperadmin_atlas_maintenance IS
   'NOLOGIN least-privilege role for explicitly assigned Atlas maintenance operations.';

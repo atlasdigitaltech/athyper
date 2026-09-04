@@ -30,7 +30,7 @@ COPY tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runti
 # Build workspace dependencies first, then the host
 RUN pnpm --filter "@athyper/platform-i18n" run build
 RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
-RUN pnpm --filter "@athyper/server-adapter-db-neon" run codegen
+RUN pnpm --filter "@athyper/server-adapter-db-neon" run --if-present codegen
 RUN find server -name '*.tsbuildinfo' -delete
 RUN pnpm --filter "@athyper/server-platform-host^..." --if-present run build
 RUN pnpm --filter "@athyper/server-platform-host" run build

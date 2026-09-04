@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g3-mesh-lifecycle-certification",
+  "capturedAt": "2026-09-03T18:01:26.238Z",
+  "database": "athyper_mesh",
+  "sanitized": true,
+  "dataDisposition": "fixtures_deleted",
+  "probes": [
+    {
+      "code": "buyer_registration_exact_replay",
+      "passed": true
+    },
+    {
+      "code": "buyer_registration_counterparty_acceptance",
+      "passed": true
+    },
+    {
+      "code": "supplier_self_registration_sponsor_acceptance",
+      "passed": true
+    },
+    {
+      "code": "discovery_cannot_request_access_capability",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Potential relationships may request profile exchange only"
+    },
+    {
+      "code": "discovery_is_profile_only_and_non_authorizing",
+      "passed": true
+    },
+    {
+      "code": "requester_cannot_self_accept",
+      "passed": true,
+      "sqlState": "55000",
+      "message": "Invalid capability transition or participant"
+    },
+    {
+      "code": "capability_bilateral_acceptance_exact_replay",
+      "passed": true
+    },
+    {
+      "code": "direct_capability_mutation",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "mesh.network_relationship_capability.lifecycle requires its command function"
+    },
+    {
+      "code": "capability_suspension_termination_reonboarding",
+      "passed": true
+    },
+    {
+      "code": "capability_concurrency_one_winner",
+      "passed": true,
+      "accepted": 1,
+      "loserSqlState": "40001"
+    },
+    {
+      "code": "wrong_participant_denied",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Capability is not visible to current participant"
+    },
+    {
+      "code": "registration_atomic_rollback",
+      "passed": true
+    },
+    {
+      "code": "atomic_evidence_audit_outbox",
+      "passed": true,
+      "counts": {
+        "evidence": 4,
+        "outbox": 4,
+        "audit": 4
+      }
+    },
+    {
+      "code": "registration_cross_tenant_rls",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

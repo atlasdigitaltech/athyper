@@ -433,6 +433,15 @@ DO $$ BEGIN
 END $$;
 
 -- S5 removes direct runtime ownership of Business Partner lifecycle fields.
+REVOKE ALL ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+END $$;
+
 DO $$
 BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN

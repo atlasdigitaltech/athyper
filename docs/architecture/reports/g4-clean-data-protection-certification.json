@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g4-data-protection-certification",
+  "capturedAt": "2026-09-03T18:23:39.350Z",
+  "database": "athyper_mesh",
+  "sanitized": true,
+  "dataDisposition": "fixtures_deleted",
+  "probes": [
+    {
+      "code": "rotation_exact_replay_and_crypto_shredding",
+      "passed": true
+    },
+    {
+      "code": "direct_token_mutation_denied",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Bank token rotation requires its command function"
+    },
+    {
+      "code": "purpose_bound_retrieval_exact_replay",
+      "passed": true
+    },
+    {
+      "code": "ordinary_runtime_cannot_retrieve",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "permission denied for function command_retrieve_bank_protected_token"
+    },
+    {
+      "code": "cross_tenant_retrieval_denied",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Disclosure is unavailable, stale, expired or revoked"
+    },
+    {
+      "code": "revoked_retrieval_denied",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Disclosure is unavailable, stale, expired or revoked"
+    },
+    {
+      "code": "unallowlisted_account_metadata",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"network_account\" violates check constraint \"network_account_metadata_allowlist_chk\""
+    },
+    {
+      "code": "unsafe_profile_url_denied",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"network_account_profile\" violates check constraint \"network_account_profile_website_chk\""
+    },
+    {
+      "code": "structured_address_and_hardened_url",
+      "passed": true
+    },
+    {
+      "code": "correlation_maker_checker_denied",
+      "passed": true,
+      "sqlState": "40001",
+      "message": "Correlation resolution is stale, terminal or violates maker-checker"
+    },
+    {
+      "code": "stewarded_correlation_no_first_writer_wins",
+      "passed": true
+    },
+    {
+      "code": "ordinary_evidence_leakage_negative_and_audited",
+      "passed": true
+    }
+  ],
+  "passed": true
+}

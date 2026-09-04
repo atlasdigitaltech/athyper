@@ -11,7 +11,7 @@ export function NeonEntityList({ entityCode }: { readonly entityCode: string }) 
   if (entityCode !== "business_partner") return <EntityListRuntime client={client} entityCode={entityCode}/>;
   const pageActions: readonly EntityListPageAction[] = [
     { href: "/mdg/business-partner/requests", label: "Onboarding requests" },
-    ...(permissions.has("neon.relationship.business_partner_request.create") ? [{ href: "/mdg/business-partner/new", label: "New supplier request", variant: "primary" as const }] : []),
+    ...(permissions.has("neon.relationship.entity_case.create") ? [{ href: "/mdg/business-partner/new", label: "New supplier request", variant: "primary" as const }] : []),
   ];
   return <ScopedBusinessPartnerList client={client} entityCode={entityCode} pageActions={pageActions}/>;
 }

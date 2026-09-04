@@ -23,7 +23,7 @@ test("WP14 governs organization assignment and exact company finance profiles", 
     read("migrations/20260828_neon_business_partner_company_configuration.sql"),
     read("migrations/manifests/neon.txt"),
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read(
       "../packages/services/master-data/src/business-partner-request-validator.ts",
@@ -109,7 +109,7 @@ test("WP13 persists exactly one independently approved supplier or customer role
 
 test("WP13 repository reuses one identity and selects role-compatible organizations", async () => {
   const source = await read(
-    "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+    "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
   );
   assert.match(source, /BUSINESS_PARTNER_ROLE_EXTENSION_ALREADY_OPEN/);
   assert.match(
@@ -118,7 +118,7 @@ test("WP13 repository reuses one identity and selects role-compatible organizati
   );
   assert.match(
     source,
-    /organization\.domain IN \(\$\{role==="supplier"\?"procurement":"sales"\},'both'\)/,
+    /organization\.domain IN \(\$\{role\s*===\s*"supplier"\s*\?\s*"procurement"\s*:\s*"sales"\},'both'\)/,
   );
   assert.match(source, /INSERT INTO master\.supplier/);
   assert.match(source, /INSERT INTO master\.customer/);

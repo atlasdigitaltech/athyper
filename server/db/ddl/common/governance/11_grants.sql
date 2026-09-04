@@ -13,3 +13,6 @@ BEGIN
     END IF;
 END;
 $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+  REVOKE INSERT,UPDATE,DELETE ON governance.cycle_subject FROM athyperapp;
+END IF; END $$;

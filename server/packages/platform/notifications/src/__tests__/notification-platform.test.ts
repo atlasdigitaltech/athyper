@@ -8,15 +8,30 @@ import {
 import { createNotificationOrchestrator } from "../notification-orchestrator.js";
 import { createPushNotificationHandler } from "../push.handler.js";
 import { createNotificationRecipientResolver } from "../recipient-resolver.js";
-import { createNotificationDispatchHandler,createNotificationDispatchScheduler,DISPATCH_NOTIFICATION_JOB,NOTIFICATION_QUEUE } from "../notification-jobs.js";
+import {
+  createNotificationDispatchHandler,
+  createNotificationDispatchScheduler,
+  DISPATCH_NOTIFICATION_JOB,
+  NOTIFICATION_QUEUE,
+} from "../notification-jobs.js";
 
 describe("notification platform", () => {
   it("continues delivery when a listener throws synchronously", async () => {
     const bus = createNotificationEventBus();
     const delivered = vi.fn();
-    bus.subscribe({ tenantId: "tenant-1", principalId: "person-1" }, () => { throw new Error("broken listener"); });
+    bus.subscribe({ tenantId: "tenant-1", principalId: "person-1" }, () => {
+      throw new Error("broken listener");
+    });
     bus.subscribe({ tenantId: "tenant-1", principalId: "person-1" }, delivered);
-    await expect(bus.publish({ type: "notification.read", tenantId: "tenant-1", principalId: "person-1", notificationId: "notice-1", occurredAt: "2026-08-09T00:00:00.000Z" })).resolves.toBeUndefined();
+    await expect(
+      bus.publish({
+        type: "notification.read",
+        tenantId: "tenant-1",
+        principalId: "person-1",
+        notificationId: "notice-1",
+        occurredAt: "2026-08-09T00:00:00.000Z",
+      }),
+    ).resolves.toBeUndefined();
     expect(delivered).toHaveBeenCalledOnce();
   });
 
@@ -24,7 +39,16 @@ describe("notification platform", () => {
     vi.useFakeTimers();
     const subscribe = vi.fn((_scope, _listener) => vi.fn());
     let writes = 0;
-    openNotificationSseStream({ subscriber: { subscribe }, tenantId: "tenant-1", principalId: "person-1", write: () => { if (++writes > 1) throw new Error("closed writer"); }, signal: new AbortController().signal, heartbeatMs: 100 });
+    openNotificationSseStream({
+      subscriber: { subscribe },
+      tenantId: "tenant-1",
+      principalId: "person-1",
+      write: () => {
+        if (++writes > 1) throw new Error("closed writer");
+      },
+      signal: new AbortController().signal,
+      heartbeatMs: 100,
+    });
     expect(() => vi.advanceTimersByTime(100)).not.toThrow();
     vi.useRealTimers();
   });
@@ -42,7 +66,14 @@ describe("notification platform", () => {
       createdAt: "2026-08-09T00:00:00.000Z",
     });
     const handler = createInAppNotificationHandler({
-      repository: { create, list: vi.fn(), countUnread: vi.fn(), markRead: vi.fn(), markAllRead: vi.fn(), dismiss: vi.fn() },
+      repository: {
+        create,
+        list: vi.fn(),
+        countUnread: vi.fn(),
+        markRead: vi.fn(),
+        markAllRead: vi.fn(),
+        dismiss: vi.fn(),
+      },
       publisher: bus,
     });
 
@@ -57,7 +88,10 @@ describe("notification platform", () => {
     });
     expect(create).toHaveBeenCalledOnce();
     expect(listener).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "notification.created", notificationId: "notice-1" }),
+      expect.objectContaining({
+        type: "notification.created",
+        notificationId: "notice-1",
+      }),
     );
   });
 
@@ -136,21 +170,29 @@ describe("notification platform", () => {
         upsert: vi.fn(),
       },
       transports: [
-        { platforms: ["web"], send: vi.fn().mockResolvedValue({ subscriptionExpired: true }) },
-        { platforms: ["android", "ios"], send: vi.fn().mockResolvedValue({ externalId: "fcm-1" }) },
+        {
+          platforms: ["web"],
+          send: vi.fn().mockResolvedValue({ subscriptionExpired: true }),
+        },
+        {
+          platforms: ["android", "ios"],
+          send: vi.fn().mockResolvedValue({ externalId: "fcm-1" }),
+        },
       ],
     });
 
-    await expect(handler.send({
-      channel: "push",
-      recipientAddress: "person-1",
-      recipientId: "person-1",
-      tenantId: "tenant-1",
-      planeKey: "neon",
-      templateKey: "alert",
-      subject: "Alert",
-      payload: { renderedText: "Action required" },
-    })).resolves.toEqual({ externalId: "fcm-1" });
+    await expect(
+      handler.send({
+        channel: "push",
+        recipientAddress: "person-1",
+        recipientId: "person-1",
+        tenantId: "tenant-1",
+        planeKey: "neon",
+        templateKey: "alert",
+        subject: "Alert",
+        payload: { renderedText: "Action required" },
+      }),
+    ).resolves.toEqual({ externalId: "fcm-1" });
     expect(deactivate).toHaveBeenCalledWith({
       tenantId: "tenant-1",
       principalId: "person-1",
@@ -175,11 +217,13 @@ describe("notification platform", () => {
         }),
       },
     });
-    await expect(resolver.resolve({
-      tenantId: "tenant-1",
-      principalId: "person-1",
-      planeKey: "neon",
-    })).resolves.toMatchObject({
+    await expect(
+      resolver.resolve({
+        tenantId: "tenant-1",
+        principalId: "person-1",
+        planeKey: "neon",
+      }),
+    ).resolves.toMatchObject({
       addresses: {
         in_app: "person-1",
         push: "person-1",
@@ -190,9 +234,73 @@ describe("notification platform", () => {
     });
   });
 
-  it("enqueues notification dispatch with a deterministic semantic job id",async()=>{const enqueue=vi.fn().mockResolvedValue("job-1");const scheduler=createNotificationDispatchScheduler({enqueue});const command={planeKey:"neon" as const,tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",channels:["in_app" as const],templateKey:"records.changed",payload:{},idempotencyKey:"event-1:principal-1"};await scheduler.schedule(command);expect(enqueue).toHaveBeenCalledWith(NOTIFICATION_QUEUE,DISPATCH_NOTIFICATION_JOB,command,expect.objectContaining({jobId:expect.stringMatching(/^notification-[a-f0-9]{64}$/),maxAttempts:5}));});
+  it("enqueues notification dispatch with a deterministic semantic job id", async () => {
+    const enqueue = vi.fn().mockResolvedValue("job-1");
+    const scheduler = createNotificationDispatchScheduler({ enqueue });
+    const command = {
+      planeKey: "neon" as const,
+      tenantId: "11111111-1111-4111-8111-111111111111",
+      principalId: "22222222-2222-4222-8222-222222222222",
+      channels: ["in_app" as const],
+      templateKey: "records.changed",
+      payload: {},
+      idempotencyKey: "event-1:principal-1",
+    };
+    await scheduler.schedule(command);
+    expect(enqueue).toHaveBeenCalledWith(
+      NOTIFICATION_QUEUE,
+      DISPATCH_NOTIFICATION_JOB,
+      command,
+      expect.objectContaining({
+        jobId: expect.stringMatching(/^notification-[a-f0-9]{64}$/),
+        maxAttempts: 5,
+      }),
+    );
+  });
 
-  it("fails the BullMQ job when any retryable channel delivery fails",async()=>{const handler=createNotificationDispatchHandler({dispatch:vi.fn().mockResolvedValue({deliveries:[{planeKey:"neon",tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",channel:"email",templateKey:"records.changed",status:"failed",error:"smtp unavailable"}]})});await expect(handler.handle({id:"job-1",name:DISPATCH_NOTIFICATION_JOB,queue:NOTIFICATION_QUEUE,data:{planeKey:"neon",tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",channels:["email"],templateKey:"records.changed",payload:{},idempotencyKey:"event-1:principal-1"},attempt:1,maxAttempts:5,enqueuedAt:new Date().toISOString()},{signal:new AbortController().signal,attempt:1,reportProgress:vi.fn()})).rejects.toThrow("notification deliveries failed");});
+  it("fails the BullMQ job when any retryable channel delivery fails", async () => {
+    const handler = createNotificationDispatchHandler({
+      dispatch: vi.fn().mockResolvedValue({
+        deliveries: [
+          {
+            planeKey: "neon",
+            tenantId: "11111111-1111-4111-8111-111111111111",
+            principalId: "22222222-2222-4222-8222-222222222222",
+            channel: "email",
+            templateKey: "records.changed",
+            status: "failed",
+            error: "smtp unavailable",
+          },
+        ],
+      }),
+    });
+    await expect(
+      handler.handle(
+        {
+          id: "job-1",
+          name: DISPATCH_NOTIFICATION_JOB,
+          queue: NOTIFICATION_QUEUE,
+          data: {
+            planeKey: "neon",
+            tenantId: "11111111-1111-4111-8111-111111111111",
+            principalId: "22222222-2222-4222-8222-222222222222",
+            channels: ["email"],
+            templateKey: "records.changed",
+            payload: {},
+            idempotencyKey: "event-1:principal-1",
+          },
+          attempt: 1,
+          maxAttempts: 5,
+          enqueuedAt: new Date().toISOString(),
+        },
+        {
+          signal: new AbortController().signal,
+          attempt: 1,
+          reportProgress: vi.fn(),
+        },
+      ),
+    ).rejects.toThrow("notification deliveries failed");
+  });
 });
 
 function subscription(platform: "web" | "android", id: string) {

@@ -42,28 +42,38 @@ for (const target of inventory.targets ?? []) {
 }
 for (const code of requiredTargetCodes) failures.push(`cleanup target is not inventoried: ${code}`);
 
-const activeEntries = [
-  "apps/studio/app/(shell)/dashboard/page.tsx",
-  "apps/studio/app/(shell)/setup/page.tsx",
-  "apps/studio/app/(shell)/content/page.tsx",
-  "apps/neon/app/(shell)/dashboard/page.tsx",
-  "apps/neon/app/(shell)/setup/page.tsx",
-  "apps/neon/app/(shell)/content/page.tsx",
-  "apps/mesh/app/(shell)/dashboard/page.tsx",
-  "apps/mesh/app/(shell)/setup/page.tsx",
-  "apps/mesh/app/(shell)/content/page.tsx",
-];
-for (const path of activeEntries) {
-  const source = readFileSync(resolve(root, path), "utf8");
-  if (/coming soon|will appear here|\bReview\b|\bResolve\b|>\s*0\s*</i.test(source)) {
-    failures.push(`${path}: active placeholder or static dashboard copy`);
+const planes = ["studio", "neon", "mesh"];
+
+// The dashboard / setup / content placeholder routes and the catch-all inbox
+// were removed in the unified-shell consolidation (see the "removed" targets
+// above). Guard against a regression: they must not reappear.
+const removedRoutes = planes.flatMap((plane) => [
+  `apps/${plane}/app/(shell)/dashboard/page.tsx`,
+  `apps/${plane}/app/(shell)/setup/page.tsx`,
+  `apps/${plane}/app/(shell)/content/page.tsx`,
+  `apps/${plane}/app/(shell)/inbox/[...requestId]/page.tsx`,
+]);
+for (const path of removedRoutes) {
+  if (existsSync(resolve(root, path))) {
+    failures.push(`${path}: a removed placeholder route has reappeared`);
   }
 }
 
-for (const plane of ["studio", "neon", "mesh"]) {
-  const path = `apps/${plane}/app/(shell)/inbox/[...requestId]/page.tsx`;
-  const source = readFileSync(resolve(root, path), "utf8");
-  if (!source.includes("requestId.join")) failures.push(`${path}: catch-all path is ignored`);
+// The always-present shell entry points must exist and must not ship placeholder
+// copy.
+const activeEntries = planes.flatMap((plane) => [
+  `apps/${plane}/app/(shell)/home/page.tsx`,
+  `apps/${plane}/app/(shell)/inbox/page.tsx`,
+]);
+for (const path of activeEntries) {
+  const absolute = resolve(root, path);
+  if (!existsSync(absolute)) {
+    failures.push(`${path}: expected active shell page is missing`);
+    continue;
+  }
+  if (/coming soon|will appear here/i.test(readFileSync(absolute, "utf8"))) {
+    failures.push(`${path}: active placeholder copy`);
+  }
 }
 
 if (failures.length) {

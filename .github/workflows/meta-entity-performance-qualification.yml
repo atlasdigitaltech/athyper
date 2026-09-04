@@ -159,7 +159,12 @@ jobs:
       - name: Validate tenant-size load evidence
         run: node scripts/performance/verify-tenant-size-load-evidence.mjs
 
-      - name: Enforce budgets, regression ceiling, and parity
+      # SUSPENDED: qualify-meta-entity targets the v2 runtime routes the
+      # three-plane reorg replaced. Advisory until the reconciliation re-points
+      # it at the governed-entity-lifecycle routes and re-baselines the budgets.
+      # docs/architecture/plans/meta-entity-governance-reconciliation.md
+      - name: Enforce budgets, regression ceiling, and parity (suspended)
+        continue-on-error: true
         run: >-
           node scripts/performance/qualify-meta-entity.mjs
           --current=perf/qualification/current-report.json

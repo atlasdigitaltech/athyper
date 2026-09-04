@@ -1182,6 +1182,12 @@ CREATE TRIGGER trg_business_partner_governance_lookup
 BEFORE INSERT OR UPDATE OF relation_type_code
 ON master.business_partner_governance_relation
 FOR EACH ROW EXECUTE FUNCTION master.trg_validate_partner_lookup();
+CREATE CONSTRAINT TRIGGER trg_business_partner_governance_totals
+AFTER INSERT OR UPDATE OF tenant_id, business_partner_id, ownership_pct,
+    voting_pct, beneficial_ownership_pct, status OR DELETE
+ON master.business_partner_governance_relation
+DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION master.trg_enforce_business_partner_governance_totals();
 CREATE TRIGGER trg_business_partner_identifier_lookup
 BEFORE INSERT OR UPDATE OF scheme_code, identifier_value
 ON master.business_partner_identifier

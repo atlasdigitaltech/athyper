@@ -206,7 +206,7 @@ FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_mesh_bank_account_normalize
 BEFORE INSERT OR UPDATE OF code, name, account_holder_name,
-    account_id_value, bic_override
+    protected_value_token, identifier_fingerprint, account_last4, bic_override
 ON mesh.bank_account
 FOR EACH ROW EXECUTE FUNCTION mesh.trg_normalize_bank_identity();
 CREATE TRIGGER trg_mesh_bank_account_guard

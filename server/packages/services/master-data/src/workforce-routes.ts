@@ -1,28 +1,444 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { WorkforceChecklistItem, WorkforceService } from "@athyper/server-contract-master-data";
-import type { Application, NextFunction, Request, RequestHandler, Response } from "express";
+import type {
+  WorkforceChecklistItem,
+  WorkforceService,
+} from "@athyper/server-contract-master-data";
+import type {
+  Application,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+} from "express";
 import { MasterDataError } from "./errors.js";
 
-export function registerWorkforceRoutes(app:Application,options:{readonly authenticate:RequestHandler;readonly readContext:(response:Response)=>VerifiedRequestContext;readonly service:WorkforceService}){
-  const route=(work:(request:Request,context:VerifiedRequestContext,response:Response)=>Promise<unknown>):RequestHandler=>async(request,response,next)=>{response.setHeader("Cache-Control","private, no-store");response.setHeader("Pragma","no-cache");try{const result=await work(request,options.readContext(response),response);if(!response.headersSent)response.json(result);}catch(error){handle(error,response,next);}};
-  app.post("/api/neon/workforce-requests",options.authenticate,route(async(request,context,response)=>{const body=object(request.body),result=await options.service.createRequest({context,idempotencyKey:required(body,"idempotencyKey"),kind:enumeration(body["kind"],["onboard_person","add_employment","change_employment","offboard_employment"] as const),sourceKind:enumeration(body["sourceKind"],["manual","portal","import","api"] as const),targetPersonId:uuidOptional(body["targetPersonId"],"targetPersonId"),targetEmployeeId:uuidOptional(body["targetEmployeeId"],"targetEmployeeId"),targetEmploymentId:uuidOptional(body["targetEmploymentId"],"targetEmploymentId"),legalEntityId:uuid(body["legalEntityId"],"legalEntityId"),companyCodeId:uuidOptional(body["companyCodeId"],"companyCodeId"),orgUnitId:uuidOptional(body["orgUnitId"],"orgUnitId"),positionId:uuidOptional(body["positionId"],"positionId"),protectedProfileContentItemId:uuidOptional(body["protectedProfileContentItemId"],"protectedProfileContentItemId"),requestedChanges:object(body["requestedChanges"])});response.status(result.replayed?200:201);return result;}));
-  app.get("/api/neon/workforce-requests",options.authenticate,route((request,context)=>options.service.listRequests({context,status:enumerationOptional(request.query["status"],["draft","validating","validation_failed","pending_approval","returned","approved","rejected","applying","applied","failed","cancelled","superseded"] as const),companyCodeId:uuidOptional(request.query["companyCodeId"],"companyCodeId"),limit:integerOptional(request.query["limit"])})));
-  app.get("/api/neon/workforce-requests/:requestId",options.authenticate,route((request,context)=>options.service.getRequest({context,requestId:uuid(request.params["requestId"],"requestId")})));
-  app.post("/api/neon/workforce-requests/:requestId/validate",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.validateRequest({context,requestId:uuid(request.params["requestId"],"requestId"),expectedVersion:integer(body["expectedVersion"],"expectedVersion")});}));
-  app.post("/api/neon/workforce-requests/:requestId/submit",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.submitRequest({context,requestId:uuid(request.params["requestId"],"requestId"),expectedVersion:integer(body["expectedVersion"],"expectedVersion"),idempotencyKey:required(body,"idempotencyKey")});}));
-  app.post("/api/neon/workforce-requests/:requestId/decision",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.decideRequest({context,requestId:uuid(request.params["requestId"],"requestId"),workflowRequestId:uuid(body["workflowRequestId"],"workflowRequestId"),workItemId:uuid(body["workItemId"],"workItemId"),expectedRequestVersion:integer(body["expectedRequestVersion"],"expectedRequestVersion"),expectedWorkItemVersion:integer(body["expectedWorkItemVersion"],"expectedWorkItemVersion"),decision:enumeration(body["decision"],["return","reject","approve"] as const),reason:required(body,"reason"),idempotencyKey:required(body,"idempotencyKey")});}));
-  app.post("/api/neon/workforce-requests/:requestId/apply",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.applyRequest({context,requestId:uuid(request.params["requestId"],"requestId"),expectedVersion:integer(body["expectedVersion"],"expectedVersion"),idempotencyKey:required(body,"idempotencyKey")});}));
-  app.get("/api/neon/workforce",options.authenticate,route((request,context)=>options.service.list({context,companyCodeId:uuidOptional(request.query["companyCodeId"],"companyCodeId"),status:textOptional(request.query["status"]),limit:integerOptional(request.query["limit"])})));
-  app.get("/api/neon/workforce/:employeeId",options.authenticate,route((request,context)=>options.service.get({context,employeeId:uuid(request.params["employeeId"],"employeeId")})));
-  app.get("/api/neon/workforce/:employeeId/readiness",options.authenticate,route(async(request,context)=>(await options.service.get({context,employeeId:uuid(request.params["employeeId"],"employeeId")})).readiness));
-  app.get("/api/neon/workforce/:employeeId/onboarding-checklist",options.authenticate,route(async(request,context)=>(await options.service.get({context,employeeId:uuid(request.params["employeeId"],"employeeId")})).onboarding));
-  app.post("/api/neon/workforce/:employeeId/onboarding-checklist/:itemCode/complete",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.completeChecklistItem({context,employeeId:uuid(request.params["employeeId"],"employeeId"),itemCode:required(request.params,"itemCode"),expectedVersion:integer(body["expectedVersion"],"expectedVersion")});}));
-  app.post("/api/neon/workforce/:employeeId/offboarding",options.authenticate,route(async(request,context,response)=>{const body=object(request.body),result=await options.service.offboard({context,employeeId:uuid(request.params["employeeId"],"employeeId"),exitDate:required(body,"exitDate"),reasonCode:required(body,"reasonCode"),resourceChecklist:checklist(body["resourceChecklist"]),idempotencyKey:required(body,"idempotencyKey")});response.status(result.replayed?200:201);return result;}));
-  app.post("/api/neon/workforce/:employeeId/offboarding/:caseId/resources/:itemCode/complete",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.completeOffboardingResource({context,employeeId:uuid(request.params["employeeId"],"employeeId"),caseId:uuid(request.params["caseId"],"caseId"),itemCode:required(request.params,"itemCode"),expectedVersion:integer(body["expectedVersion"],"expectedVersion")});}));
-  app.post("/api/neon/workforce/:employeeId/iam-projection/retry",options.authenticate,route(async(request,context,response)=>{const body=object(request.body),result=await options.service.retryIam({context,employeeId:uuid(request.params["employeeId"],"employeeId"),employerOrganizationId:uuid(body["employerOrganizationId"],"employerOrganizationId"),createPrincipal:Boolean(body["createPrincipal"]),idempotencyKey:required(body,"idempotencyKey")});response.status(result.replayed?200:202);return result;}));
-  app.post("/api/neon/people/:personId/restricted-evidence/read",options.authenticate,route((request,context)=>{const body=object(request.body);return options.service.readPersonEvidence({context,personId:uuid(request.params["personId"],"personId"),purpose:enumeration(body["purpose"],["employment","payroll","benefits","compliance"] as const),fields:stringArray(body["fields"])});}));
-  app.post("/api/neon/workforce-source-adapters/:source",options.authenticate,route(async(request,context,response)=>{const body=object(request.body);const result=await options.service.ingest({context,source:enumeration(request.params["source"],["import","api"] as const),systemCode:required(body,"systemCode"),records:Array.isArray(body["records"])?body["records"].map(sourceRecord):[]});response.status(202);return result;}));
+export function registerWorkforceRoutes(
+  app: Application,
+  options: {
+    readonly authenticate: RequestHandler;
+    readonly readContext: (response: Response) => VerifiedRequestContext;
+    readonly service: WorkforceService;
+  },
+) {
+  const route =
+    (
+      work: (
+        request: Request,
+        context: VerifiedRequestContext,
+        response: Response,
+      ) => Promise<unknown>,
+    ): RequestHandler =>
+    async (request, response, next) => {
+      response.setHeader("Cache-Control", "private, no-store");
+      response.setHeader("Pragma", "no-cache");
+      try {
+        const result = await work(
+          request,
+          options.readContext(response),
+          response,
+        );
+        if (!response.headersSent) response.json(result);
+      } catch (error) {
+        handle(error, response, next);
+      }
+    };
+  app.post(
+    "/api/neon/workforce-requests",
+    options.authenticate,
+    route(async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.createRequest({
+          context,
+          idempotencyKey: required(body, "idempotencyKey"),
+          kind: enumeration(body["kind"], [
+            "onboard_person",
+            "add_employment",
+            "change_employment",
+            "offboard_employment",
+          ] as const),
+          sourceKind: enumeration(body["sourceKind"], [
+            "manual",
+            "portal",
+            "import",
+            "api",
+          ] as const),
+          targetPersonId: uuidOptional(
+            body["targetPersonId"],
+            "targetPersonId",
+          ),
+          targetEmployeeId: uuidOptional(
+            body["targetEmployeeId"],
+            "targetEmployeeId",
+          ),
+          targetEmploymentId: uuidOptional(
+            body["targetEmploymentId"],
+            "targetEmploymentId",
+          ),
+          legalEntityId: uuid(body["legalEntityId"], "legalEntityId"),
+          companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"),
+          orgUnitId: uuidOptional(body["orgUnitId"], "orgUnitId"),
+          positionId: uuidOptional(body["positionId"], "positionId"),
+          protectedProfileContentItemId: uuidOptional(
+            body["protectedProfileContentItemId"],
+            "protectedProfileContentItemId",
+          ),
+          requestedChanges: object(body["requestedChanges"]),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.get(
+    "/api/neon/workforce-requests",
+    options.authenticate,
+    route((request, context) =>
+      options.service.listRequests({
+        context,
+        status: enumerationOptional(request.query["status"], [
+          "draft",
+          "validating",
+          "validation_failed",
+          "pending_approval",
+          "returned",
+          "approved",
+          "rejected",
+          "applying",
+          "applied",
+          "failed",
+          "cancelled",
+          "superseded",
+        ] as const),
+        companyCodeId: uuidOptional(
+          request.query["companyCodeId"],
+          "companyCodeId",
+        ),
+        limit: integerOptional(request.query["limit"]),
+      }),
+    ),
+  );
+  app.get(
+    "/api/neon/workforce-requests/:requestId",
+    options.authenticate,
+    route((request, context) =>
+      options.service.getRequest({
+        context,
+        requestId: uuid(request.params["requestId"], "requestId"),
+      }),
+    ),
+  );
+  app.post(
+    "/api/neon/workforce-requests/:requestId/validate",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.validateRequest({
+        context,
+        requestId: uuid(request.params["requestId"], "requestId"),
+        expectedVersion: integer(body["expectedVersion"], "expectedVersion"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce-requests/:requestId/submit",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.submitRequest({
+        context,
+        requestId: uuid(request.params["requestId"], "requestId"),
+        expectedVersion: integer(body["expectedVersion"], "expectedVersion"),
+        idempotencyKey: required(body, "idempotencyKey"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce-requests/:requestId/decision",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.decideRequest({
+        context,
+        requestId: uuid(request.params["requestId"], "requestId"),
+        workflowRequestId: uuid(body["workflowRequestId"], "workflowRequestId"),
+        workItemId: uuid(body["workItemId"], "workItemId"),
+        expectedRequestVersion: integer(
+          body["expectedRequestVersion"],
+          "expectedRequestVersion",
+        ),
+        expectedWorkItemVersion: integer(
+          body["expectedWorkItemVersion"],
+          "expectedWorkItemVersion",
+        ),
+        decision: enumeration(body["decision"], [
+          "return",
+          "reject",
+          "approve",
+        ] as const),
+        reason: required(body, "reason"),
+        idempotencyKey: required(body, "idempotencyKey"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce-requests/:requestId/apply",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.applyRequest({
+        context,
+        requestId: uuid(request.params["requestId"], "requestId"),
+        expectedVersion: integer(body["expectedVersion"], "expectedVersion"),
+        idempotencyKey: required(body, "idempotencyKey"),
+      });
+    }),
+  );
+  app.get(
+    "/api/neon/workforce",
+    options.authenticate,
+    route((request, context) =>
+      options.service.list({
+        context,
+        companyCodeId: uuidOptional(
+          request.query["companyCodeId"],
+          "companyCodeId",
+        ),
+        status: textOptional(request.query["status"]),
+        limit: integerOptional(request.query["limit"]),
+      }),
+    ),
+  );
+  app.get(
+    "/api/neon/workforce/:employeeId",
+    options.authenticate,
+    route((request, context) =>
+      options.service.get({
+        context,
+        employeeId: uuid(request.params["employeeId"], "employeeId"),
+      }),
+    ),
+  );
+  app.get(
+    "/api/neon/workforce/:employeeId/readiness",
+    options.authenticate,
+    route(
+      async (request, context) =>
+        (
+          await options.service.get({
+            context,
+            employeeId: uuid(request.params["employeeId"], "employeeId"),
+          })
+        ).readiness,
+    ),
+  );
+  app.get(
+    "/api/neon/workforce/:employeeId/onboarding-checklist",
+    options.authenticate,
+    route(
+      async (request, context) =>
+        (
+          await options.service.get({
+            context,
+            employeeId: uuid(request.params["employeeId"], "employeeId"),
+          })
+        ).onboarding,
+    ),
+  );
+  app.post(
+    "/api/neon/workforce/:employeeId/onboarding-checklist/:itemCode/complete",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.completeChecklistItem({
+        context,
+        employeeId: uuid(request.params["employeeId"], "employeeId"),
+        itemCode: required(request.params, "itemCode"),
+        expectedVersion: integer(body["expectedVersion"], "expectedVersion"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce/:employeeId/offboarding",
+    options.authenticate,
+    route(async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.offboard({
+          context,
+          employeeId: uuid(request.params["employeeId"], "employeeId"),
+          exitDate: required(body, "exitDate"),
+          reasonCode: required(body, "reasonCode"),
+          resourceChecklist: checklist(body["resourceChecklist"]),
+          idempotencyKey: required(body, "idempotencyKey"),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/workforce/:employeeId/offboarding/:caseId/resources/:itemCode/complete",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.completeOffboardingResource({
+        context,
+        employeeId: uuid(request.params["employeeId"], "employeeId"),
+        caseId: uuid(request.params["caseId"], "caseId"),
+        itemCode: required(request.params, "itemCode"),
+        expectedVersion: integer(body["expectedVersion"], "expectedVersion"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce/:employeeId/iam-projection/retry",
+    options.authenticate,
+    route(async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.retryIam({
+          context,
+          employeeId: uuid(request.params["employeeId"], "employeeId"),
+          employerOrganizationId: uuid(
+            body["employerOrganizationId"],
+            "employerOrganizationId",
+          ),
+          createPrincipal: Boolean(body["createPrincipal"]),
+          idempotencyKey: required(body, "idempotencyKey"),
+        });
+      response.status(result.replayed ? 200 : 202);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/people/:personId/restricted-evidence/read",
+    options.authenticate,
+    route((request, context) => {
+      const body = object(request.body);
+      return options.service.readPersonEvidence({
+        context,
+        personId: uuid(request.params["personId"], "personId"),
+        purpose: enumeration(body["purpose"], [
+          "employment",
+          "payroll",
+          "benefits",
+          "compliance",
+        ] as const),
+        fields: stringArray(body["fields"]),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/workforce-source-adapters/:source",
+    options.authenticate,
+    route(async (request, context, response) => {
+      const body = object(request.body);
+      const result = await options.service.ingest({
+        context,
+        source: enumeration(request.params["source"], [
+          "import",
+          "api",
+        ] as const),
+        systemCode: required(body, "systemCode"),
+        records: Array.isArray(body["records"])
+          ? body["records"].map(sourceRecord)
+          : [],
+      });
+      response.status(202);
+      return result;
+    }),
+  );
 }
-function sourceRecord(value:unknown){const body=object(value);return{externalId:required(body,"externalId"),idempotencyKey:required(body,"idempotencyKey"),protectedProfileContentItemId:uuid(body["protectedProfileContentItemId"],"protectedProfileContentItemId"),payload:object(body["payload"]),legalEntityId:uuid(body["legalEntityId"],"legalEntityId"),companyCodeId:uuid(body["companyCodeId"],"companyCodeId"),orgUnitId:uuid(body["orgUnitId"],"orgUnitId"),...(body["positionId"]?{positionId:uuid(body["positionId"],"positionId")}:{})};}
-function checklist(value:unknown):readonly WorkforceChecklistItem[]{if(!Array.isArray(value))throw bad("resourceChecklist must be an array");return value.map(item=>object(item) as unknown as WorkforceChecklistItem);}function object(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw bad("JSON object required");return value as Record<string,unknown>;}function required(value:Record<string,unknown>,key:string){const result=textOptional(value[key]);if(!result)throw bad(`${key} is required`);return result;}function textOptional(value:unknown){return typeof value==="string"&&value.trim()?value.trim():undefined;}function stringArray(value:unknown):readonly string[]{if(!Array.isArray(value)||value.some(item=>typeof item!=="string"||!item.trim()))throw bad("fields must be an array of strings");return value.map(item=>(item as string).trim());}function enumeration<T extends string>(value:unknown,allowed:readonly T[]):T{if(typeof value!=="string"||!allowed.includes(value as T))throw bad(`Expected one of: ${allowed.join(", ")}`);return value as T;}function integer(value:unknown,name:string){const result=typeof value==="string"?Number(value):value;if(!Number.isSafeInteger(result)||Number(result)<1)throw bad(`${name} must be a positive integer`);return Number(result);}function integerOptional(value:unknown){return value==null?undefined:integer(value,"limit");}function uuid(value:unknown,name:string){const result=textOptional(value);if(!result||!`-${result}-`.match(/-[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-/i))throw bad(`${name} must be a UUID`);return result;}function uuidOptional(value:unknown,name:string){return value==null?undefined:uuid(value,name);}function bad(message:string){return new MasterDataError(400,"WORKFORCE_INVALID",message);}function handle(error:unknown,response:Response,next:NextFunction){if(!(error instanceof MasterDataError)){next(error);return;}response.status(error.status).type("application/problem+json").json({title:error.code,status:error.status,detail:error.message,code:error.code});}
-function enumerationOptional<T extends string>(value:unknown,allowed:readonly T[]):T|undefined{return value==null||value===""?undefined:enumeration(value,allowed);}
+function sourceRecord(value: unknown) {
+  const body = object(value);
+  return {
+    externalId: required(body, "externalId"),
+    idempotencyKey: required(body, "idempotencyKey"),
+    protectedProfileContentItemId: uuid(
+      body["protectedProfileContentItemId"],
+      "protectedProfileContentItemId",
+    ),
+    payload: object(body["payload"]),
+    legalEntityId: uuid(body["legalEntityId"], "legalEntityId"),
+    companyCodeId: uuid(body["companyCodeId"], "companyCodeId"),
+    orgUnitId: uuid(body["orgUnitId"], "orgUnitId"),
+    ...(body["positionId"]
+      ? { positionId: uuid(body["positionId"], "positionId") }
+      : {}),
+  };
+}
+function checklist(value: unknown): readonly WorkforceChecklistItem[] {
+  if (!Array.isArray(value)) throw bad("resourceChecklist must be an array");
+  return value.map((item) => object(item) as unknown as WorkforceChecklistItem);
+}
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw bad("JSON object required");
+  return value as Record<string, unknown>;
+}
+function required(value: Record<string, unknown>, key: string) {
+  const result = textOptional(value[key]);
+  if (!result) throw bad(`${key} is required`);
+  return result;
+}
+function textOptional(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function stringArray(value: unknown): readonly string[] {
+  if (
+    !Array.isArray(value) ||
+    value.some((item) => typeof item !== "string" || !item.trim())
+  )
+    throw bad("fields must be an array of strings");
+  return value.map((item) => (item as string).trim());
+}
+function enumeration<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T {
+  if (typeof value !== "string" || !allowed.includes(value as T))
+    throw bad(`Expected one of: ${allowed.join(", ")}`);
+  return value as T;
+}
+function integer(value: unknown, name: string) {
+  const result = typeof value === "string" ? Number(value) : value;
+  if (!Number.isSafeInteger(result) || Number(result) < 1)
+    throw bad(`${name} must be a positive integer`);
+  return Number(result);
+}
+function integerOptional(value: unknown) {
+  return value == null ? undefined : integer(value, "limit");
+}
+function uuid(value: unknown, name: string) {
+  const result = textOptional(value);
+  if (
+    !result ||
+    !`-${result}-`.match(
+      /-[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-/i,
+    )
+  )
+    throw bad(`${name} must be a UUID`);
+  return result;
+}
+function uuidOptional(value: unknown, name: string) {
+  return value == null ? undefined : uuid(value, name);
+}
+function bad(message: string) {
+  return new MasterDataError(400, "WORKFORCE_INVALID", message);
+}
+function handle(error: unknown, response: Response, next: NextFunction) {
+  if (!(error instanceof MasterDataError)) {
+    next(error);
+    return;
+  }
+  response.status(error.status).type("application/problem+json").json({
+    title: error.code,
+    status: error.status,
+    detail: error.message,
+    code: error.code,
+  });
+}
+function enumerationOptional<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T | undefined {
+  return value == null || value === ""
+    ? undefined
+    : enumeration(value, allowed);
+}

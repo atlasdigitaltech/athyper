@@ -98,13 +98,13 @@ SELECT definition.id::uuid,definition.canonical_code,'entity_operation',module.i
        'published','00000000-0000-0000-0000-000000000000'::uuid
 FROM control.module module
 CROSS JOIN (VALUES
-  ('3135c400-b974-5368-9812-0655a4406ff9','neon.relationship.business_partner_request.create','medium',false,false),
-  ('7cea8375-f405-58cd-95c1-65d4ff771ca1','neon.relationship.business_partner_request.read','low',false,false),
-  ('f14d31b0-22ac-5fe5-bef7-651234a82b0e','neon.relationship.business_partner_request.update','medium',false,false),
-  ('60d005bc-e28a-513a-9960-eda9ecbc069d','neon.relationship.business_partner_request.validate','medium',false,false),
-  ('7a411617-6503-529a-ab78-4bcf389b606e','neon.relationship.business_partner_request.submit','high',false,true),
-  ('9cdb6092-2e88-5a49-a91b-d649f98766e3','neon.relationship.business_partner_request.decide','high',true,true),
-  ('8e2797f1-ae80-5a00-95c1-65555680bc0e','neon.relationship.business_partner_request.apply','critical',false,true)
+  ('3135c400-b974-5368-9812-0655a4406ff9','neon.relationship.entity_case.create','medium',false,false),
+  ('7cea8375-f405-58cd-95c1-65d4ff771ca1','neon.relationship.entity_case.read','low',false,false),
+  ('f14d31b0-22ac-5fe5-bef7-651234a82b0e','neon.relationship.entity_case.update','medium',false,false),
+  ('60d005bc-e28a-513a-9960-eda9ecbc069d','neon.relationship.entity_case.validate','medium',false,false),
+  ('7a411617-6503-529a-ab78-4bcf389b606e','neon.relationship.entity_case.submit','high',false,true),
+  ('9cdb6092-2e88-5a49-a91b-d649f98766e3','neon.relationship.entity_case.decide','high',true,true),
+  ('8e2797f1-ae80-5a00-95c1-65555680bc0e','neon.relationship.entity_case.materialize','critical',false,true)
 ) AS definition(id,canonical_code,risk_tier,requires_mfa,requires_sod)
 WHERE module.code='fnd' AND module.status='active'
 ON CONFLICT (canonical_code) DO UPDATE SET
@@ -303,7 +303,9 @@ FROM control.module module CROSS JOIN(VALUES
  ('a59ceba9-57f8-5654-8c08-f9998dc30d27','neon.customer.credit.read','medium',false,false),
  ('c39e35d0-659a-5a90-a6a7-c39dbf84b730','neon.customer.lifecycle.activate','critical',true,true),
  ('87075ec5-2c1c-540a-b209-ed1fb0a18c53','neon.customer.lifecycle.suspend','critical',true,true),
- ('e05ed0ea-5b99-5877-ad9a-b23f49bfec3a','neon.customer.lifecycle.reactivate','critical',true,true)
+ ('e05ed0ea-5b99-5877-ad9a-b23f49bfec3a','neon.customer.lifecycle.reactivate','critical',true,true),
+ ('cbbdaef1-8a21-4ed7-a622-957fd6788e29','neon.customer.lifecycle.deactivate','critical',true,true),
+ ('f37228fa-2e7d-45ee-bc92-81abb949e46f','neon.customer.lifecycle.archive','critical',true,true)
  ,('d123781f-9f78-5260-a333-5db597b7135b','neon.customer_registration.invitation.create','high',false,true)
  ,('56c3aba8-13e5-5dc2-acfc-f9028830bdc1','neon.customer_registration.invitation.read','medium',false,false)
  ,('ed3dc9f6-151f-53f7-aee2-91b67a477219','neon.customer_registration.invitation.cancel','high',true,true)
@@ -315,7 +317,7 @@ SELECT id,'operating_organization','subtree','active','00000000-0000-0000-0000-0
 ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
 INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by) SELECT id,'operating_organization','subtree','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission WHERE canonical_code LIKE 'neon.customer_registration.invitation.%' ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
 INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by) SELECT id,'tenant','exact','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission WHERE canonical_code='neon.customer_registration.external.respond' ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
-DO $assert$ BEGIN IF(SELECT count(*) FROM authz.permission WHERE ((canonical_code LIKE 'neon.customer.credit.%' OR canonical_code LIKE 'neon.customer.lifecycle.%') OR canonical_code LIKE 'neon.customer_registration.%') AND status='published')<>10 THEN RAISE EXCEPTION 'Customer onboarding permission count mismatch'; END IF; END $assert$;
+DO $assert$ BEGIN IF(SELECT count(*) FROM authz.permission WHERE ((canonical_code LIKE 'neon.customer.credit.%' OR canonical_code LIKE 'neon.customer.lifecycle.%') OR canonical_code LIKE 'neon.customer_registration.%') AND status='published')<>12 THEN RAISE EXCEPTION 'Customer onboarding permission count mismatch'; END IF; END $assert$;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- business_partner_invitation  (pack: neon.business-partner-invitation-permissions)

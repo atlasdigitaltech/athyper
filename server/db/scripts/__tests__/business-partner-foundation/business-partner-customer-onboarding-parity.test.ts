@@ -10,7 +10,7 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
   const [
     migration,
     tables,
-    requestRepository,
+    roleMaterializer,
     eligibility,
     match,
     routes,
@@ -20,9 +20,7 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
   ] = await Promise.all([
     read("migrations/20260829_neon_customer_onboarding_parity.sql"),
     read("ddl/planes/neon/control/03_tables.sql"),
-    read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
-    ),
+    read("ddl/planes/neon/master/07_g5_business_partner_materializer.sql"),
     read(
       "../packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
     ),
@@ -30,9 +28,7 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
     read(
       "../packages/services/master-data/src/business-partner-invitation-routes.ts",
     ),
-    read(
-      "ddl/planes/neon/authz/14_permission_reference_seed.sql",
-    ),
+    read("ddl/planes/neon/authz/14_permission_reference_seed.sql"),
     read("migrations/manifests/neon.txt"),
     read("ddl/planes/neon/_manifest.txt"),
   ]);
@@ -44,9 +40,12 @@ test("P3 customer onboarding has independent credit, lifecycle, person, invitati
     /GRANT SELECT,INSERT,UPDATE ON control\.customer_credit_review,control\.customer_lifecycle_event/,
   );
   assert.match(tables, /registration approval cannot decide it/i);
-  assert.match(requestRepository, /CUSTOMER_PERSON_POLICY_DENIED/);
-  assert.match(requestRepository, /materializationPolicy:"customer_person_v1"/);
-  assert.match(requestRepository, /materialized_person_id=\$\{person/);
+  assert.match(
+    roleMaterializer,
+    /requested_role NOT IN\('supplier','customer'\)/,
+  );
+  assert.match(roleMaterializer, /'organization','external'/);
+  assert.doesNotMatch(roleMaterializer, /master\.person/);
   assert.match(
     migration,
     /COALESCE\(proposed_payload->>'partnerCategory',proposed_payload->>'partner_category'\) IN\('person','individual'\)/,

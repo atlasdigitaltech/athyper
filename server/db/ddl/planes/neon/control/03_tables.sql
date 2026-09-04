@@ -208,6 +208,7 @@ CREATE TABLE control.business_partner_qualification (
     tenant_id                 uuid                             NOT NULL,
     business_partner_id       uuid                             NOT NULL,
     partner_role              master.partner_role_d            NOT NULL,
+    role_id                   uuid                             NOT NULL,
     operating_organization_id uuid,
     company_code_id           uuid,
     commodity_capability_id   uuid,
@@ -275,7 +276,7 @@ CREATE TABLE control.supplier_preference_designation (
     tenant_id                   uuid                                 NOT NULL,
     business_partner_id         uuid                                 NOT NULL,
     supplier_id                 uuid                                 NOT NULL,
-    operating_organization_id   uuid                                 NOT NULL,
+    operating_organization_id   uuid,
     company_code_id             uuid,
     commodity_category_id       uuid,
     effective_from              date                                 NOT NULL,
@@ -344,7 +345,7 @@ CREATE TABLE control.customer_account_designation (
     tenant_id                   uuid                                          NOT NULL,
     business_partner_id         uuid                                          NOT NULL,
     customer_id                 uuid                                          NOT NULL,
-    operating_organization_id   uuid                                          NOT NULL,
+    operating_organization_id   uuid,
     company_code_id             uuid,
     designation_type            control.customer_account_designation_type_d   NOT NULL,
     priority_tier               smallint,
@@ -2360,8 +2361,8 @@ CREATE TABLE control.customer_credit_review (
     tenant_id                  uuid        NOT NULL,
     business_partner_id        uuid        NOT NULL,
     customer_id                uuid        NOT NULL,
-    operating_organization_id  uuid        NOT NULL,
-    company_code_id            uuid        NOT NULL,
+    operating_organization_id  uuid,
+    company_code_id            uuid,
     review_type_code           text        NOT NULL DEFAULT 'initial',
     requested_credit_limit     numeric(20,4),
     requested_currency_code    character(3),
@@ -2457,6 +2458,8 @@ CREATE TABLE control.customer_lifecycle_event (
     action_code                text        NOT NULL,
     from_status                text        NOT NULL,
     to_status                  text        NOT NULL,
+    expected_version           bigint      NOT NULL,
+    resulting_version          bigint      NOT NULL,
     reason_code                text        NOT NULL,
     business_date              date        NOT NULL,
     readiness_fingerprint      text,
@@ -2467,13 +2470,19 @@ CREATE TABLE control.customer_lifecycle_event (
     occurred_by                uuid        NOT NULL,
     CONSTRAINT customer_lifecycle_event_pkey PRIMARY KEY(id),
     CONSTRAINT customer_lifecycle_event_tenant_id_uq UNIQUE(tenant_id,id),
-    CONSTRAINT customer_lifecycle_event_action_chk CHECK(action_code IN('activate','suspend','reactivate')),
-    CONSTRAINT customer_lifecycle_event_transition_chk CHECK((action_code='activate' AND from_status='prospect' AND to_status='active') OR (action_code='suspend' AND from_status='active' AND to_status='suspended') OR (action_code='reactivate' AND from_status='suspended' AND to_status='active')),
+    CONSTRAINT customer_lifecycle_event_action_chk CHECK(action_code IN('activate','suspend','reactivate','deactivate','archive')),
+    CONSTRAINT customer_lifecycle_event_transition_chk CHECK(
+        (action_code='activate' AND from_status='prospect' AND to_status='active')
+        OR (action_code='suspend' AND from_status='active' AND to_status='suspended')
+        OR (action_code='reactivate' AND from_status='suspended' AND to_status='active')
+        OR (action_code='deactivate' AND from_status IN('active','suspended') AND to_status='inactive')
+        OR (action_code='archive' AND from_status='inactive' AND to_status='archived')),
+    CONSTRAINT customer_lifecycle_event_version_chk CHECK(expected_version>=1 AND resulting_version=expected_version+1),
     CONSTRAINT customer_lifecycle_event_reason_chk CHECK(reason_code ~ '^[A-Z][A-Z0-9_.-]{2,126}$'),
     CONSTRAINT customer_lifecycle_event_fingerprint_chk CHECK(readiness_fingerprint IS NULL OR readiness_fingerprint ~ '^[a-f0-9]{64}$'),
     CONSTRAINT customer_lifecycle_event_command_fingerprint_chk CHECK(command_fingerprint ~ '^[a-f0-9]{64}$'),
     CONSTRAINT customer_lifecycle_event_evidence_chk CHECK(jsonb_typeof(readiness_evidence)='object' AND octet_length(readiness_evidence::text)<=65536),
-    CONSTRAINT customer_lifecycle_event_readiness_chk CHECK(action_code='suspend' OR (readiness_fingerprint IS NOT NULL AND readiness_evidence->>'decisionFingerprint'=readiness_fingerprint AND readiness_evidence->>'eligible'='true')),
+    CONSTRAINT customer_lifecycle_event_readiness_chk CHECK(action_code IN('suspend','deactivate','archive') OR (readiness_fingerprint IS NOT NULL AND readiness_evidence->>'decisionFingerprint'=readiness_fingerprint AND readiness_evidence->>'eligible'='true')),
     CONSTRAINT customer_lifecycle_event_key_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200)
 );
 

@@ -44,7 +44,7 @@ const partner360Sections=Object.freeze([
  {code:"qualifications-certificates",routes:["/api/neon/business-partners/:id/360/qualifications","/api/neon/business-partners/:id/360/certificates"],permission:"neon.relationship.business_partner_qualification.read",fieldPermissions:["neon.relationship.business_partner_certificate.read"],discoverableWhenDenied:false},
  {code:"credit",routes:["/api/neon/business-partners/:id/360/credit"],permission:"neon.relationship.business_partner_credit.read",discoverableWhenDenied:false},
  {code:"workforce",routes:["/api/neon/business-partners/:id/360/workforce"],permission:"neon.relationship.business_partner_workforce.read",fieldPermissions:["neon.relationship.business_partner_person.read"],discoverableWhenDenied:false},
- {code:"requests",routes:["/api/neon/business-partners/:id/360/requests"],permission:"neon.relationship.business_partner_request.read",discoverableWhenDenied:false},
+ {code:"requests",routes:["/api/neon/business-partners/:id/360/requests"],permission:"neon.relationship.entity_case.read",discoverableWhenDenied:false},
  {code:"activity",routes:["/api/neon/business-partners/:id/360/activity"],permission:"neon.relationship.business_partner_activity.read",discoverableWhenDenied:false},
  {code:"business-activity",routes:["/api/neon/business-partners/:id/360/business-activity"],permission:"neon.relationship.business_partner.read",discoverableWhenDenied:false},
  {code:"network",routes:["/api/neon/business-partners/:id/360/network"],permission:"neon.relationship.business_partner_network.read",discoverableWhenDenied:false},

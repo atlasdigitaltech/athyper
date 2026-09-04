@@ -118,7 +118,9 @@ describe("registerAdapters", () => {
       subscribe: vi.fn(),
       close: closeNotificationEvents,
     };
-    const createNotificationEvents = vi.fn().mockReturnValue(notificationEvents);
+    const createNotificationEvents = vi
+      .fn()
+      .mockReturnValue(notificationEvents);
     const hostConfig = config();
     hostConfig.redis = {
       url: "redis://localhost:6379/0",
@@ -237,8 +239,9 @@ describe("registerAdapters", () => {
       replyToAddress: "support@athyper.com",
       environment: "staging",
     });
-    expect(sesConfig.resolveTenantName("11111111-1111-4111-8111-111111111111"))
-      .toMatch(/^t-[a-f0-9]{40}$/);
+    expect(
+      sesConfig.resolveTenantName("11111111-1111-4111-8111-111111111111"),
+    ).toMatch(/^t-[a-f0-9]{40}$/);
     await lifecycle.shutdown("test");
     expect(close).toHaveBeenCalledOnce();
   });
@@ -246,7 +249,9 @@ describe("registerAdapters", () => {
   it("composes the worker SES event source with lifecycle and deferred platform handler", async () => {
     const run = vi.fn().mockResolvedValue(undefined);
     const close = vi.fn();
-    const health = vi.fn().mockResolvedValue({ status: "healthy", latencyMs: 1 });
+    const health = vi
+      .fn()
+      .mockResolvedValue({ status: "healthy", latencyMs: 1 });
     const source = { run, close, health, pollOnce: vi.fn() };
     const createSesEventSource = vi.fn().mockReturnValue(source);
     const hostConfig = config();
@@ -256,12 +261,21 @@ describe("registerAdapters", () => {
       scheduleReconcileMs: 60_000,
       cronwatchBaseUrl: undefined,
       cronwatchPingKey: undefined,
-      workerDatabaseUrls: { studio: undefined, neon: undefined, mesh: undefined },
-      invalidationListenerDatabaseUrls: { studio: undefined, neon: undefined, mesh: undefined },
+      workerDatabaseUrls: {
+        studio: undefined,
+        neon: undefined,
+        mesh: undefined,
+      },
+      invalidationListenerDatabaseUrls: {
+        studio: undefined,
+        neon: undefined,
+        mesh: undefined,
+      },
     };
     hostConfig.sesEvents = {
       region: "ap-southeast-1",
-      queueUrl: "https://sqs.ap-southeast-1.amazonaws.com/123456789012/athyper-stg-ses-events",
+      queueUrl:
+        "https://sqs.ap-southeast-1.amazonaws.com/123456789012/athyper-stg-ses-events",
       waitTimeSeconds: 20,
       visibilityTimeoutSeconds: 60,
       maxMessages: 10,
@@ -270,9 +284,13 @@ describe("registerAdapters", () => {
     const container = createContainer();
     const lifecycle = createLifecycle();
 
-    registerAdapters(container, hostConfig, lifecycle, { createSesEventSource: createSesEventSource as never });
+    registerAdapters(container, hostConfig, lifecycle, {
+      createSesEventSource: createSesEventSource as never,
+    });
     expect(container.adapters.sesEventSource).toBe(source);
-    expect(container.runtimes.health.list()).toContain("notifications.ses-event-source");
+    expect(container.runtimes.health.list()).toContain(
+      "notifications.ses-event-source",
+    );
     const forwarded = vi.fn().mockResolvedValue({ outcome: "acknowledge" });
     container.adapters.sesEventHandler = { process: forwarded };
     const handler = createSesEventSource.mock.calls[0]?.[1];
@@ -313,7 +331,9 @@ describe("registerAdapters", () => {
       createWebPush: vi.fn().mockReturnValue(webPush) as never,
     });
 
-    expect(container.adapters.notificationChannels.get("whatsapp")).toBe(whatsApp);
+    expect(container.adapters.notificationChannels.get("whatsapp")).toBe(
+      whatsApp,
+    );
     expect(container.adapters.pushTransports).toEqual([fcm, webPush]);
   });
 
@@ -365,21 +385,82 @@ describe("registerAdapters", () => {
     const malwareScanner = { scan: vi.fn(), health, close };
     const createMalwareScanner = vi.fn().mockReturnValue(malwareScanner);
     const hostConfig = config();
-    hostConfig.malwareScanning = { host:"virusscan", port:3310, timeoutMs:30_000, maxBytes:104_857_600, onUnavailable:"fail-closed" };
+    hostConfig.malwareScanning = {
+      host: "virusscan",
+      port: 3310,
+      timeoutMs: 30_000,
+      maxBytes: 104_857_600,
+      onUnavailable: "fail-closed",
+    };
     const container = createContainer();
     const lifecycle = createLifecycle();
 
-    registerAdapters(container, hostConfig, lifecycle, { createMalwareScanner: createMalwareScanner as never });
+    registerAdapters(container, hostConfig, lifecycle, {
+      createMalwareScanner: createMalwareScanner as never,
+    });
 
     expect(container.adapters.malwareScanner).toBe(malwareScanner);
-    expect(createMalwareScanner).toHaveBeenCalledWith({ host:"virusscan", port:3310, timeoutMs:30_000, maxBytes:104_857_600 });
+    expect(createMalwareScanner).toHaveBeenCalledWith({
+      host: "virusscan",
+      port: 3310,
+      timeoutMs: 30_000,
+      maxBytes: 104_857_600,
+    });
     await lifecycle.signalReady();
     expect(health).toHaveBeenCalledOnce();
     await lifecycle.shutdown("test");
     expect(close).toHaveBeenCalledOnce();
   });
 
-  it("owns Tika and Meilisearch readiness and shutdown",async()=>{const tikaHealth=vi.fn().mockResolvedValue({status:"healthy"});const tikaClose=vi.fn();const searchHealth=vi.fn().mockResolvedValue({status:"healthy"});const initialize=vi.fn().mockResolvedValue(undefined);const searchClose=vi.fn();const createContentExtractor=vi.fn().mockReturnValue({extract:vi.fn(),health:tikaHealth,close:tikaClose});const createSearchIndex=vi.fn().mockReturnValue({upsert:vi.fn(),remove:vi.fn(),search:vi.fn(),health:searchHealth,initialize,close:searchClose});const hostConfig=config();hostConfig.mode="api";hostConfig.contentExtraction={baseUrl:"http://docparser:9998",timeoutMs:120_000,maxInputBytes:52_428_800,maxTextChars:5_000_000};hostConfig.search={baseUrl:"http://searchcore:7700",apiKey:"secret",indexUid:"documents",timeoutMs:10_000};const container=createContainer();const lifecycle=createLifecycle();registerAdapters(container,hostConfig,lifecycle,{createContentExtractor:createContentExtractor as never,createSearchIndex:createSearchIndex as never});expect(container.adapters.contentExtractor).toBeDefined();expect(container.adapters.searchIndex).toBeDefined();await lifecycle.signalReady();expect(tikaHealth).toHaveBeenCalledOnce();expect(searchHealth).toHaveBeenCalledOnce();expect(initialize).toHaveBeenCalledOnce();await lifecycle.shutdown("test");expect(tikaClose).toHaveBeenCalledOnce();expect(searchClose).toHaveBeenCalledOnce();});
+  it("owns Tika and Meilisearch readiness and shutdown", async () => {
+    const tikaHealth = vi.fn().mockResolvedValue({ status: "healthy" });
+    const tikaClose = vi.fn();
+    const searchHealth = vi.fn().mockResolvedValue({ status: "healthy" });
+    const initialize = vi.fn().mockResolvedValue(undefined);
+    const searchClose = vi.fn();
+    const createContentExtractor = vi.fn().mockReturnValue({
+      extract: vi.fn(),
+      health: tikaHealth,
+      close: tikaClose,
+    });
+    const createSearchIndex = vi.fn().mockReturnValue({
+      upsert: vi.fn(),
+      remove: vi.fn(),
+      search: vi.fn(),
+      health: searchHealth,
+      initialize,
+      close: searchClose,
+    });
+    const hostConfig = config();
+    hostConfig.mode = "api";
+    hostConfig.contentExtraction = {
+      baseUrl: "http://docparser:9998",
+      timeoutMs: 120_000,
+      maxInputBytes: 52_428_800,
+      maxTextChars: 5_000_000,
+    };
+    hostConfig.search = {
+      baseUrl: "http://searchcore:7700",
+      apiKey: "secret",
+      indexUid: "documents",
+      timeoutMs: 10_000,
+    };
+    const container = createContainer();
+    const lifecycle = createLifecycle();
+    registerAdapters(container, hostConfig, lifecycle, {
+      createContentExtractor: createContentExtractor as never,
+      createSearchIndex: createSearchIndex as never,
+    });
+    expect(container.adapters.contentExtractor).toBeDefined();
+    expect(container.adapters.searchIndex).toBeDefined();
+    await lifecycle.signalReady();
+    expect(tikaHealth).toHaveBeenCalledOnce();
+    expect(searchHealth).toHaveBeenCalledOnce();
+    expect(initialize).toHaveBeenCalledOnce();
+    await lifecycle.shutdown("test");
+    expect(tikaClose).toHaveBeenCalledOnce();
+    expect(searchClose).toHaveBeenCalledOnce();
+  });
 
   it("constructs Gotenberg centrally and verifies readiness", async () => {
     const health = vi.fn().mockResolvedValue({ status: "healthy" });
@@ -491,8 +572,18 @@ function config(connectionString?: string): HostConfig {
       maxBytes: 104_857_600,
       onUnavailable: "fail-closed",
     },
-    contentExtraction:{baseUrl:undefined,timeoutMs:120_000,maxInputBytes:52_428_800,maxTextChars:5_000_000},
-    search:{baseUrl:undefined,apiKey:undefined,indexUid:"documents",timeoutMs:10_000},
+    contentExtraction: {
+      baseUrl: undefined,
+      timeoutMs: 120_000,
+      maxInputBytes: 52_428_800,
+      maxTextChars: 5_000_000,
+    },
+    search: {
+      baseUrl: undefined,
+      apiKey: undefined,
+      indexUid: "documents",
+      timeoutMs: 10_000,
+    },
     openTelemetry: {
       endpoint: undefined,
       serviceName: "athyper-platform-host",

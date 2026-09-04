@@ -1027,7 +1027,9 @@ CREATE TABLE mesh.bank_account (
     bank_party_id        uuid,
     account_holder_name  text                            NOT NULL,
     account_id_type      mesh.bank_account_id_type_d     NOT NULL,
-    account_id_value     text                            NOT NULL,
+    protected_value_token text                           NOT NULL,
+    identifier_fingerprint char(64)                      NOT NULL,
+    protection_key_version integer                       NOT NULL,
     account_last4        text                            NOT NULL,
     currency_code        character(3)                    NOT NULL,
     bic_override         text,
@@ -1055,11 +1057,17 @@ CREATE TABLE mesh.bank_account (
         CHECK (code IS NULL OR code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
     CONSTRAINT mesh_bank_account_name_chk CHECK (name IS NULL OR btrim(name) <> ''),
     CONSTRAINT mesh_bank_account_holder_chk CHECK (btrim(account_holder_name) <> ''),
-    CONSTRAINT mesh_bank_account_identifier_chk
-        CHECK (account_id_value ~ '^[A-Z0-9]{4,64}$'),
+    CONSTRAINT mesh_bank_account_token_chk CHECK (
+        length(protected_value_token) BETWEEN 8 AND 512
+        AND protected_value_token ~ '^[A-Za-z0-9][A-Za-z0-9._:/-]+$'
+        AND protected_value_token !~ '(\.\.|//)'
+    ),
+    CONSTRAINT mesh_bank_account_fingerprint_chk
+        CHECK (identifier_fingerprint ~ '^[a-f0-9]{64}$'),
+    CONSTRAINT mesh_bank_account_key_version_chk
+        CHECK (protection_key_version >= 1),
     CONSTRAINT mesh_bank_account_last4_chk
-        CHECK (account_last4 ~ '^[A-Z0-9]{4}$'
-               AND account_last4 = right(account_id_value, 4)),
+        CHECK (account_last4 ~ '^[A-Z0-9]{4}$'),
     CONSTRAINT mesh_bank_account_bank_identity_chk CHECK (
         (bank_party_id IS NOT NULL
          AND bank_name_override IS NULL AND bank_country_override IS NULL)
@@ -1079,15 +1087,19 @@ CREATE TABLE mesh.bank_account (
          AND verification_method IS NOT NULL)
     ),
     CONSTRAINT mesh_bank_account_active_chk CHECK (status <> 'active' OR is_verified),
-    CONSTRAINT mesh_bank_account_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT mesh_bank_account_metadata_chk CHECK (
+        jsonb_typeof(metadata) = 'object' AND pg_column_size(metadata) <= 4096
+    ),
     CONSTRAINT mesh_bank_account_status_pair_chk
         CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
     CONSTRAINT mesh_bank_account_audit_pair_chk
         CHECK ((updated_at IS NULL) = (updated_by IS NULL))
 );
 
-COMMENT ON COLUMN mesh.bank_account.account_id_value IS
-  'Sensitive normalized identifier. athyperapp receives no direct SELECT privilege on this column.';
+COMMENT ON COLUMN mesh.bank_account.protected_value_token IS
+  'Opaque tenant-scoped secret-store token. The raw bank-account identifier is prohibited from MESH tables, snapshots, envelopes, logs and browser responses.';
+COMMENT ON COLUMN mesh.bank_account.identifier_fingerprint IS
+  'Non-reversible, tenant-bound comparison fingerprint; never a retrieval credential.';
 
 CREATE TABLE mesh.bank_account_link (
     id                 uuid        NOT NULL DEFAULT shared.uuidv7(),

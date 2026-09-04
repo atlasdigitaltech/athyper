@@ -774,3 +774,9 @@ BEGIN
     END LOOP;
 END;
 $$;
+ALTER TABLE document.workforce_iam_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.workforce_iam_projection FORCE ROW LEVEL SECURITY;
+CREATE POLICY workforce_iam_projection_tenant
+    ON document.workforce_iam_projection
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());

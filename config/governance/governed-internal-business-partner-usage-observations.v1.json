@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.governed-internal-business-partner-usage-observations",
+  "owner": "Business Partner Governance",
+  "surface": "document.business_partner_request family",
+  "observationPolicy": "evidence_checkpoint_no_fixed_duration",
+  "observations": []
+}

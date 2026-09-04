@@ -19,12 +19,12 @@ const access = createAccessSnapshot({
   permissions: ["neon.relationship.business_partner.read"],
   features: {},
   knownModules: ["fnd"],
-  knownPermissions: ["neon.relationship.business_partner.read", "neon.relationship.business_partner_request.create"],
+  knownPermissions: ["neon.relationship.business_partner.read", "neon.relationship.entity_case.create"],
 });
 
 test("home recommendations fail closed against the current access snapshot", () => {
   const allowed = { href: "/mdg/business-partner/partners", category: "Records", access: { moduleCode: "fnd", requiredPermissions: ["neon.relationship.business_partner.read"] } };
-  const denied = { href: "/mdg/business-partner/new", category: "Action", access: { moduleCode: "fnd", requiredPermissions: ["neon.relationship.business_partner_request.create"] } };
+  const denied = { href: "/mdg/business-partner/new", category: "Action", access: { moduleCode: "fnd", requiredPermissions: ["neon.relationship.entity_case.create"] } };
   assert.equal(isHomeItemAllowed(allowed, access), true);
   assert.equal(isHomeItemAllowed(denied, access), false);
   assert.deepEqual(recommendHomeItems([allowed, denied], access, DEFAULT_HOME_PERSONALIZATION).map(({ item }) => item.href), [allowed.href]);

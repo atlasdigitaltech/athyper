@@ -367,7 +367,11 @@ WITH supplier_role AS (
     bp.parent_business_partner_id,
     bp.description,
     NULL::text AS long_description,
-    bp.aliases,
+    COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
+      FROM master.business_partner_alias alias
+      WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id
+        AND alias.status='active' AND alias.effective_from<=CURRENT_DATE
+        AND(alias.effective_until IS NULL OR alias.effective_until>CURRENT_DATE)),'{}'::text[]) AS aliases,
     '{}'::text[] AS tags,
     '{}'::text[] AS business_types,
     NULL::integer AS founded_year,
@@ -417,7 +421,11 @@ WITH supplier_role AS (
     COALESCE(sr.supplier_active_scope_count, 0) + COALESCE(cr.customer_active_scope_count, 0) AS active_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) + COALESCE(cr.customer_blocked_scope_count, 0) AS blocked_scope_count,
     COALESCE(sr.supplier_blocked_scope_count, 0) > 0 OR COALESCE(cr.customer_blocked_scope_count, 0) > 0 OR sr.supplier_status::text = 'suspended' OR cr.customer_status::text = 'suspended' AS is_blocked,
-    lower(concat_ws(' '::text, bp.code, bp.name, bp.display_name, bp.legal_name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(bp.aliases, ' '::text))) AS search_text,
+    lower(concat_ws(' '::text, bp.code, bp.name, bp.display_name, bp.legal_name, sr.supplier_code, sr.supplier_type, cr.customer_code, cr.customer_type, array_to_string(COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name)
+      FROM master.business_partner_alias alias
+      WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id
+        AND alias.status='active' AND alias.effective_from<=CURRENT_DATE
+        AND(alias.effective_until IS NULL OR alias.effective_until>CURRENT_DATE)),'{}'::text[]), ' '::text))) AS search_text,
     bp.created_at,
     bp.created_by,
     GREATEST(COALESCE(bp.updated_at, bp.created_at), COALESCE(sr.supplier_updated_at, sr.supplier_created_at, bp.created_at), COALESCE(sr.supplier_scope_updated_at, bp.created_at), COALESCE(cr.customer_updated_at, cr.customer_created_at, bp.created_at), COALESCE(cr.customer_scope_updated_at, bp.created_at)) AS updated_at,

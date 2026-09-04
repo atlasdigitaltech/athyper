@@ -17,14 +17,28 @@ export const businessPartnerInvitationPermissions = Object.freeze({
   recover: "neon.business_partner_invitation.recovery.request",
 } as const);
 
-export type BusinessPartnerInvitationJourney = "supplier" | "customer" | "candidate";
-export type BusinessPartnerInvitationRole = "supplier" | "customer" | "workforce";
-export type BusinessPartnerInvitationStatus = "pending" | "accepted" | "cancelled" | "expired" | "superseded";
-export type BusinessPartnerInvitationRegistrationMode = "self_service" | "on_behalf" | "integration";
+export type BusinessPartnerInvitationJourney =
+  "supplier" | "customer" | "candidate";
+export type BusinessPartnerInvitationRole =
+  "supplier" | "customer" | "workforce";
+export type BusinessPartnerInvitationStatus =
+  "pending" | "accepted" | "cancelled" | "expired" | "superseded";
+export type BusinessPartnerInvitationRegistrationMode =
+  "self_service" | "on_behalf" | "integration";
 
 export type BusinessPartnerInvitationScope =
-  | { readonly kind: "commercial"; readonly operatingOrganizationId: string; readonly companyCodeId?: string }
-  | { readonly kind: "workforce"; readonly legalEntityId: string; readonly companyCodeId: string; readonly orgUnitId: string; readonly positionId?: string };
+  | {
+      readonly kind: "commercial";
+      readonly operatingOrganizationId: string;
+      readonly companyCodeId?: string;
+    }
+  | {
+      readonly kind: "workforce";
+      readonly legalEntityId: string;
+      readonly companyCodeId: string;
+      readonly orgUnitId: string;
+      readonly positionId?: string;
+    };
 
 export interface BusinessPartnerInvitation {
   readonly id: string;
@@ -38,7 +52,10 @@ export interface BusinessPartnerInvitation {
   readonly status: BusinessPartnerInvitationStatus;
   readonly expiresAt: string;
   readonly applicantPrincipalId?: string;
+  /** @deprecated Use entityCaseId. Never persisted after G6. */
   readonly businessPartnerRequestId?: string;
+  /** Governed case coordinate for accepted invitations. */
+  readonly entityCaseId?: string;
   readonly acceptedAt?: string;
   readonly cancelledAt?: string;
   readonly supersededAt?: string;
@@ -70,25 +87,92 @@ export interface AcceptBusinessPartnerInvitationCommand {
   readonly proposedPayload: Readonly<Record<string, unknown>>;
 }
 
-export interface BusinessPartnerInvitationIssueResponse { readonly invitation: BusinessPartnerInvitation; readonly token?: string; readonly replayed: boolean }
-export interface BusinessPartnerInvitationAcceptResponse { readonly invitation: BusinessPartnerInvitation; readonly request: BusinessPartnerRequest; readonly replayed: boolean }
+export interface BusinessPartnerInvitationIssueResponse {
+  readonly invitation: BusinessPartnerInvitation;
+  readonly token?: string;
+  readonly replayed: boolean;
+}
+export interface BusinessPartnerInvitationAcceptResponse {
+  readonly invitation: BusinessPartnerInvitation;
+  readonly request: BusinessPartnerRequest;
+  readonly case?: BusinessPartnerRequest;
+  readonly replayed: boolean;
+}
 export interface BusinessPartnerInvitationTemplate {
   readonly journeyKind: BusinessPartnerInvitationJourney;
   readonly requestedRole: BusinessPartnerInvitationRole;
   readonly approvedFields: readonly string[];
-  readonly approvedActions: readonly ("accept" | "status" | "correct" | "evidence")[];
+  readonly approvedActions: readonly (
+    "accept" | "status" | "correct" | "evidence"
+  )[];
 }
 
 export interface BusinessPartnerInvitationService {
-  create(command: CreateBusinessPartnerInvitationCommand): Promise<BusinessPartnerInvitationIssueResponse>;
-  get(input: { readonly context: VerifiedRequestContext; readonly invitationId: string }): Promise<BusinessPartnerInvitation>;
-  resend(input: { readonly context: VerifiedRequestContext; readonly invitationId: string; readonly expectedVersion: number; readonly expiresAt: string }): Promise<BusinessPartnerInvitationIssueResponse>;
-  cancel(input: { readonly context: VerifiedRequestContext; readonly invitationId: string; readonly expectedVersion: number }): Promise<BusinessPartnerInvitation>;
-  accept(command: AcceptBusinessPartnerInvitationCommand): Promise<BusinessPartnerInvitationAcceptResponse>;
-  expireDue(input: { readonly tenantId: string; readonly actorId: string; readonly now?: string; readonly limit?: number }): Promise<readonly BusinessPartnerInvitation[]>;
-  recover(input: { readonly context: VerifiedRequestContext; readonly invitationId: string; readonly newApplicantPrincipalId: string; readonly reason: string; readonly idempotencyKey: string }): Promise<BusinessPartnerInvitation>;
-  externalStatus(input: { readonly context: VerifiedRequestContext; readonly journeyKind: BusinessPartnerInvitationJourney; readonly requestId: string }): Promise<Readonly<{ requestId: string; requestNo: string; status: string; rowVersion: number; validationSummary: Readonly<Record<string,unknown>>; updatedAt?: string }>>;
-  correctReturned(input: { readonly context: VerifiedRequestContext; readonly journeyKind: BusinessPartnerInvitationJourney; readonly requestId: string; readonly expectedVersion: number; readonly proposedPayload: Readonly<Record<string,unknown>> }): Promise<BusinessPartnerRequest>;
-  attachEvidence(input: { readonly context: VerifiedRequestContext; readonly journeyKind: BusinessPartnerInvitationJourney; readonly requestId: string; readonly evidenceKind: string; readonly attachmentId: string; readonly contentHash: string; readonly classificationCode: "internal" | "confidential" | "restricted" }): Promise<Readonly<{ evidenceId: string }>>;
-  template(journeyKind: BusinessPartnerInvitationJourney): BusinessPartnerInvitationTemplate;
+  create(
+    command: CreateBusinessPartnerInvitationCommand,
+  ): Promise<BusinessPartnerInvitationIssueResponse>;
+  get(input: {
+    readonly context: VerifiedRequestContext;
+    readonly invitationId: string;
+  }): Promise<BusinessPartnerInvitation>;
+  resend(input: {
+    readonly context: VerifiedRequestContext;
+    readonly invitationId: string;
+    readonly expectedVersion: number;
+    readonly expiresAt: string;
+  }): Promise<BusinessPartnerInvitationIssueResponse>;
+  cancel(input: {
+    readonly context: VerifiedRequestContext;
+    readonly invitationId: string;
+    readonly expectedVersion: number;
+  }): Promise<BusinessPartnerInvitation>;
+  accept(
+    command: AcceptBusinessPartnerInvitationCommand,
+  ): Promise<BusinessPartnerInvitationAcceptResponse>;
+  expireDue(input: {
+    readonly tenantId: string;
+    readonly actorId: string;
+    readonly now?: string;
+    readonly limit?: number;
+  }): Promise<readonly BusinessPartnerInvitation[]>;
+  recover(input: {
+    readonly context: VerifiedRequestContext;
+    readonly invitationId: string;
+    readonly newApplicantPrincipalId: string;
+    readonly reason: string;
+    readonly idempotencyKey: string;
+  }): Promise<BusinessPartnerInvitation>;
+  externalStatus(input: {
+    readonly context: VerifiedRequestContext;
+    readonly journeyKind: BusinessPartnerInvitationJourney;
+    readonly requestId: string;
+  }): Promise<
+    Readonly<{
+      requestId: string;
+      requestNo: string;
+      status: string;
+      rowVersion: number;
+      validationSummary: Readonly<Record<string, unknown>>;
+      updatedAt?: string;
+    }>
+  >;
+  correctReturned(input: {
+    readonly context: VerifiedRequestContext;
+    readonly journeyKind: BusinessPartnerInvitationJourney;
+    readonly requestId: string;
+    readonly expectedVersion: number;
+    readonly proposedPayload: Readonly<Record<string, unknown>>;
+  }): Promise<BusinessPartnerRequest>;
+  attachEvidence(input: {
+    readonly context: VerifiedRequestContext;
+    readonly journeyKind: BusinessPartnerInvitationJourney;
+    readonly requestId: string;
+    readonly evidenceKind: string;
+    readonly attachmentId: string;
+    readonly contentHash: string;
+    readonly classificationCode: "internal" | "confidential" | "restricted";
+  }): Promise<Readonly<{ evidenceId: string }>>;
+  template(
+    journeyKind: BusinessPartnerInvitationJourney,
+  ): BusinessPartnerInvitationTemplate;
 }

@@ -1,0 +1,216 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-compatibility-retirement-evaluation",
+  "evaluatedAt": "2026-09-04T03:03:34.828Z",
+  "preParity": true,
+  "postParity": false,
+  "allPreflightEligible": false,
+  "retirementCertified": false,
+  "destructiveMigrationAuthorized": false,
+  "results": [
+    {
+      "surfaceCode": "business_partner_request_family",
+      "owner": "Master Data / Business Partner",
+      "disposition": "retire_after_gate",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [
+        "server/packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+        "server/packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/business_partner_request_family.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": false,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": true,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "activeConsumerReferencesZero",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete"
+      ],
+      "migrationAction": "Drop request children, evidence, validation, materialization and header in dependency order after archived evidence export verification."
+    },
+    {
+      "surfaceCode": "business_partner_aliases_cache",
+      "owner": "Master Data / Business Partner Search",
+      "disposition": "retire_after_gate",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/business_partner_aliases_cache.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": true,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": true,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete"
+      ],
+      "migrationAction": "Remove cache synchronization trigger/function dependencies, then drop master.business_partner.aliases."
+    },
+    {
+      "surfaceCode": "flattened_decision_scope",
+      "owner": "Master Data / Commercial Governance",
+      "disposition": "retire_after_gate",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/flattened_decision_scope.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": true,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": true,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete"
+      ],
+      "migrationAction": "Remove compatibility materialization triggers and flattened-column FKs/indexes, then drop the listed columns."
+    },
+    {
+      "surfaceCode": "workforce_iam_projection",
+      "owner": "People / IAM",
+      "disposition": "retire_after_gate",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/workforce_iam_projection.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": true,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": true,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete"
+      ],
+      "migrationAction": "Retire its command, trigger, grants and indexes before dropping document.workforce_iam_projection."
+    },
+    {
+      "surfaceCode": "business_partner_person_group_compatibility",
+      "owner": "Master Data",
+      "disposition": "retire_after_gate",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/business_partner_person_group_compatibility.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": true,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": true,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete"
+      ],
+      "migrationAction": "Preflight historical rows, remove compatibility branches/link authority, and rebuild the enum without person/group values using a forward migration."
+    },
+    {
+      "surfaceCode": "temporary_implementation_inventory",
+      "owner": "Architecture Governance",
+      "disposition": "remove_after_all_items_disposed",
+      "status": "blocked_retained",
+      "activeConsumerFiles": [],
+      "approvalPacketHash": null,
+      "approvalErrors": [
+        "ENOENT: no such file or directory, open '/home/chandravel_natarajan/src/athyper/docs/architecture/reports/g6/approvals/temporary_implementation_inventory.json'"
+      ],
+      "gates": {
+        "observationPresent": false,
+        "authenticProductionEvidence": false,
+        "zeroProductionUsage": false,
+        "minimumConsecutiveZeroUsage": false,
+        "activeConsumerReferencesZero": true,
+        "consumerMigrationComplete": false,
+        "rollbackRehearsalPassed": false,
+        "approvalsComplete": false,
+        "dispositionComplete": false,
+        "cleanUpgradePreParity": true
+      },
+      "blockingReasons": [
+        "observationPresent",
+        "authenticProductionEvidence",
+        "zeroProductionUsage",
+        "minimumConsecutiveZeroUsage",
+        "consumerMigrationComplete",
+        "rollbackRehearsalPassed",
+        "approvalsComplete",
+        "dispositionComplete"
+      ],
+      "migrationAction": "Remove the temporary inventory only after its completeness checker reports zero unresolved items."
+    }
+  ],
+  "note": "This evaluator never executes DDL. A separately reviewed migration may be scheduled only when all preflight gates pass; retirement is certified only after clean/supported-upgrade post-parity also passes."
+}

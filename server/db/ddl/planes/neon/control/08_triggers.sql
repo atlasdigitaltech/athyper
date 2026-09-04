@@ -62,8 +62,13 @@ ON control.business_partner_qualification
 FOR EACH ROW
 EXECUTE FUNCTION control.trg_validate_business_partner_control_lookup();
 
+CREATE TRIGGER trg_business_partner_qualification_15_role_pair
+BEFORE INSERT OR UPDATE OF tenant_id,business_partner_id,partner_role,role_id
+ON control.business_partner_qualification
+FOR EACH ROW EXECUTE FUNCTION control.trg_validate_qualification_role_pair();
+
 CREATE TRIGGER trg_business_partner_qualification_20_scope
-BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role,
+BEFORE INSERT OR UPDATE OF tenant_id, business_partner_id, partner_role, role_id,
     operating_organization_id, company_code_id, commodity_capability_id,
     risk_assessment_id
 ON control.business_partner_qualification

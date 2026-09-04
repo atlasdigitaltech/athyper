@@ -3,7 +3,82 @@ import { loadConfig } from "../config/index.js";
 
 describe("loadConfig", () => {
   const snapshot: Record<string, string | undefined> = {};
-  const keys = ["PORT", "ATHYPER_ENV", "ENVIRONMENT", "NODE_ENV", "LOG_LEVEL", "SHUTDOWN_TIMEOUT_MS", "MODE", "DATABASE_URL", "DATABASE_POOL_MAX", "ATHYPER_PLATFORM_DATABASE_URL", "ATHYPER_PLATFORM_DATABASE_POOL_MAX", "MESH_DATABASE_URL", "MESH_DATABASE_POOL_MAX", "KEYCLOAK_ISSUER_URL", "KEYCLOAK_BASE_URL", "KEYCLOAK_REALM", "KEYCLOAK_CLIENT_ID", "KEYCLOAK_JWKS_CACHE_TTL_MS", "IAM_ISSUER_URL", "IAM_CLIENT_ID", "REDIS_URL", "REDIS_KEY_PREFIX", "REDIS_CONNECT_TIMEOUT_MS", "REDIS_MAX_RETRIES_PER_REQUEST", "S3_ENDPOINT", "S3_PUBLIC_ENDPOINT", "S3_REGION", "S3_BUCKET", "S3_ACCESS_KEY", "S3_SECRET_KEY", "APP_S3_ACCESS_KEY", "APP_S3_SECRET_KEY", "S3_MULTIPART_PART_SIZE_MB", "S3_MULTIPART_QUEUE_SIZE", "S3_MAX_UPLOAD_MB", "S3_PRESIGNED_TTL_SECONDS", "CLAMD_HOST", "CLAMD_PORT", "CLAMD_TIMEOUT_MS", "CLAMD_MAX_BYTES", "CLAMD_ON_UNAVAILABLE", "OTEL_EXPORTER_OTLP_ENDPOINT", "OTEL_SERVICE_NAME", "SERVICE_NAME", "SERVICE_VERSION", "OTEL_AUTO_INSTRUMENTATIONS_ENABLED", "SMTP_HOST", "SMTP_PORT", "SMTP_SECURE", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "TWILIO_MESSAGING_SERVICE_SID", "META_WHATSAPP_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN", "META_WHATSAPP_GRAPH_BASE_URL", "PUSH_FCM_PROJECT_ID", "PUSH_FCM_CLIENT_EMAIL", "PUSH_FCM_PRIVATE_KEY", "VAPID_SUBJECT", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "DOCRENDER_BASE_URL", "DOCRENDER_TIMEOUT_MS", "DOCRENDER_MAX_HTML_BYTES", "DOCRENDER_MAX_PDF_BYTES"];
+  const keys = [
+    "PORT",
+    "ATHYPER_ENV",
+    "ENVIRONMENT",
+    "NODE_ENV",
+    "LOG_LEVEL",
+    "SHUTDOWN_TIMEOUT_MS",
+    "MODE",
+    "DATABASE_URL",
+    "DATABASE_POOL_MAX",
+    "ATHYPER_PLATFORM_DATABASE_URL",
+    "ATHYPER_PLATFORM_DATABASE_POOL_MAX",
+    "MESH_DATABASE_URL",
+    "MESH_DATABASE_POOL_MAX",
+    "KEYCLOAK_ISSUER_URL",
+    "KEYCLOAK_BASE_URL",
+    "KEYCLOAK_REALM",
+    "KEYCLOAK_CLIENT_ID",
+    "KEYCLOAK_JWKS_CACHE_TTL_MS",
+    "KEYCLOAK_ADMIN_BASE_URL",
+    "KEYCLOAK_ADMIN_REALM",
+    "KEYCLOAK_ADMIN_CLIENT_ID",
+    "KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE",
+    "IAM_ISSUER_URL",
+    "IAM_CLIENT_ID",
+    "REDIS_URL",
+    "REDIS_KEY_PREFIX",
+    "REDIS_CONNECT_TIMEOUT_MS",
+    "REDIS_MAX_RETRIES_PER_REQUEST",
+    "S3_ENDPOINT",
+    "S3_PUBLIC_ENDPOINT",
+    "S3_REGION",
+    "S3_BUCKET",
+    "S3_ACCESS_KEY",
+    "S3_SECRET_KEY",
+    "APP_S3_ACCESS_KEY",
+    "APP_S3_SECRET_KEY",
+    "S3_MULTIPART_PART_SIZE_MB",
+    "S3_MULTIPART_QUEUE_SIZE",
+    "S3_MAX_UPLOAD_MB",
+    "S3_PRESIGNED_TTL_SECONDS",
+    "CLAMD_HOST",
+    "CLAMD_PORT",
+    "CLAMD_TIMEOUT_MS",
+    "CLAMD_MAX_BYTES",
+    "CLAMD_ON_UNAVAILABLE",
+    "OTEL_EXPORTER_OTLP_ENDPOINT",
+    "OTEL_SERVICE_NAME",
+    "SERVICE_NAME",
+    "SERVICE_VERSION",
+    "OTEL_AUTO_INSTRUMENTATIONS_ENABLED",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_SECURE",
+    "SMTP_USER",
+    "SMTP_PASS",
+    "SMTP_FROM",
+    "TWILIO_ACCOUNT_SID",
+    "TWILIO_AUTH_TOKEN",
+    "TWILIO_FROM_NUMBER",
+    "TWILIO_MESSAGING_SERVICE_SID",
+    "META_WHATSAPP_API_VERSION",
+    "META_WHATSAPP_PHONE_NUMBER_ID",
+    "META_WHATSAPP_ACCESS_TOKEN",
+    "META_WHATSAPP_GRAPH_BASE_URL",
+    "PUSH_FCM_PROJECT_ID",
+    "PUSH_FCM_CLIENT_EMAIL",
+    "PUSH_FCM_PRIVATE_KEY",
+    "VAPID_SUBJECT",
+    "VAPID_PUBLIC_KEY",
+    "VAPID_PRIVATE_KEY",
+    "DOCRENDER_BASE_URL",
+    "DOCRENDER_TIMEOUT_MS",
+    "DOCRENDER_MAX_HTML_BYTES",
+    "DOCRENDER_MAX_PDF_BYTES",
+  ];
 
   keys.push(
     "EMAIL_PROVIDER",
@@ -25,13 +100,70 @@ describe("loadConfig", () => {
     "AUTH_VERIFY_ENFORCE_REQUIRED_ACTIONS",
     "AUTH_REQUIRED_ACTIONS_MATRIX",
   );
-  keys.push("STUDIO_DATABASE_URL", "STUDIO_DATABASE_POOL_MAX", "STUDIO_WORKER_DATABASE_URL");
-  keys.push("DOCPARSER_URL","DOCPARSER_TIMEOUT_MS","DOCPARSER_MAX_INPUT_BYTES","DOCPARSER_MAX_TEXT_CHARS","SEARCHCORE_URL","SEARCHCORE_MASTER_KEY","SEARCHCORE_DOCUMENT_INDEX","SEARCHCORE_TIMEOUT_MS");
-  keys.push("JOB_SCHEDULE_RECONCILE_MS","CRONWATCH_BASE_URL","CRONWATCH_PING_KEY","NEON_WORKER_DATABASE_URL","ATHYPER_PLATFORM_WORKER_DATABASE_URL","MESH_WORKER_DATABASE_URL","DATABASE_ADMIN_URL");
-  keys.push("PUBLICATION_API_ENABLED","PUBLICATION_COMPILE_ENABLED","PUBLICATION_DISPATCH_ENABLED","PUBLICATION_APPLY_ENABLED","PUBLICATION_RECOVERY_ENABLED","PUBLICATION_TARGET_PLANES","PUBLICATION_REQUIRE_SIGNATURE","PUBLICATION_SIGNING_KEY_ID","PUBLICATION_PRIVATE_KEY_REFERENCE","PUBLICATION_PUBLIC_KEY_REFERENCE","PUBLICATION_RUNTIME_VERSION","PUBLICATION_RECOVERY_INTERVAL_MS","INFISICAL_URL","INFISICAL_TOKEN","INFISICAL_WORKSPACE_ID","INFISICAL_ENVIRONMENT","INFISICAL_SECRET_PATH");
-  keys.push("FINANCE_F2_ENABLED","FINANCE_F3_ENABLED","FINANCE_F4_ENABLED","FINANCE_F5_ENABLED","FINANCE_F6_ENABLED");
-  keys.push("WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED","WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED","WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED","WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED","WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED","WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED","WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED");
-  keys.push("BP360_MESH_LIVE_BASE_URL","BP360_MESH_LIVE_CREDENTIAL_REFERENCE","BP360_MESH_TIMEOUT_MS");
+  keys.push(
+    "STUDIO_DATABASE_URL",
+    "STUDIO_DATABASE_POOL_MAX",
+    "STUDIO_WORKER_DATABASE_URL",
+  );
+  keys.push(
+    "DOCPARSER_URL",
+    "DOCPARSER_TIMEOUT_MS",
+    "DOCPARSER_MAX_INPUT_BYTES",
+    "DOCPARSER_MAX_TEXT_CHARS",
+    "SEARCHCORE_URL",
+    "SEARCHCORE_MASTER_KEY",
+    "SEARCHCORE_DOCUMENT_INDEX",
+    "SEARCHCORE_TIMEOUT_MS",
+  );
+  keys.push(
+    "JOB_SCHEDULE_RECONCILE_MS",
+    "CRONWATCH_BASE_URL",
+    "CRONWATCH_PING_KEY",
+    "NEON_WORKER_DATABASE_URL",
+    "ATHYPER_PLATFORM_WORKER_DATABASE_URL",
+    "MESH_WORKER_DATABASE_URL",
+    "DATABASE_ADMIN_URL",
+  );
+  keys.push(
+    "PUBLICATION_API_ENABLED",
+    "PUBLICATION_COMPILE_ENABLED",
+    "PUBLICATION_DISPATCH_ENABLED",
+    "PUBLICATION_APPLY_ENABLED",
+    "PUBLICATION_RECOVERY_ENABLED",
+    "PUBLICATION_TARGET_PLANES",
+    "PUBLICATION_REQUIRE_SIGNATURE",
+    "PUBLICATION_SIGNING_KEY_ID",
+    "PUBLICATION_PRIVATE_KEY_REFERENCE",
+    "PUBLICATION_PUBLIC_KEY_REFERENCE",
+    "PUBLICATION_RUNTIME_VERSION",
+    "PUBLICATION_RECOVERY_INTERVAL_MS",
+    "INFISICAL_URL",
+    "INFISICAL_TOKEN",
+    "INFISICAL_WORKSPACE_ID",
+    "INFISICAL_ENVIRONMENT",
+    "INFISICAL_SECRET_PATH",
+  );
+  keys.push(
+    "FINANCE_F2_ENABLED",
+    "FINANCE_F3_ENABLED",
+    "FINANCE_F4_ENABLED",
+    "FINANCE_F5_ENABLED",
+    "FINANCE_F6_ENABLED",
+  );
+  keys.push(
+    "WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED",
+    "WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED",
+    "WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED",
+    "WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",
+    "WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",
+    "WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED",
+    "WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED",
+  );
+  keys.push(
+    "BP360_MESH_LIVE_BASE_URL",
+    "BP360_MESH_LIVE_CREDENTIAL_REFERENCE",
+    "BP360_MESH_TIMEOUT_MS",
+  );
 
   beforeEach(() => {
     for (const k of keys) snapshot[k] = process.env[k];
@@ -53,10 +185,23 @@ describe("loadConfig", () => {
     expect(config.port).toBe(4000);
     expect(config.env).toBe("local");
     expect(config.mode).toBe("api");
-    expect(config.database).toEqual({ connectionString: undefined, poolMax: 10 });
-    expect(config.studioDatabase).toEqual({ connectionString: undefined, poolMax: 5 });
-    expect(config.meshDatabase).toEqual({ connectionString: undefined, poolMax: 10 });
-    expect(config.businessPartner360).toEqual({meshLiveBaseUrl:undefined,meshLiveCredentialReference:undefined,meshTimeoutMs:1_500});
+    expect(config.database).toEqual({
+      connectionString: undefined,
+      poolMax: 10,
+    });
+    expect(config.studioDatabase).toEqual({
+      connectionString: undefined,
+      poolMax: 5,
+    });
+    expect(config.meshDatabase).toEqual({
+      connectionString: undefined,
+      poolMax: 10,
+    });
+    expect(config.businessPartner360).toEqual({
+      meshLiveBaseUrl: undefined,
+      meshLiveCredentialReference: undefined,
+      meshTimeoutMs: 1_500,
+    });
     expect(config.keycloak).toEqual({
       issuerUrl: undefined,
       audience: undefined,
@@ -68,6 +213,12 @@ describe("loadConfig", () => {
       requireAuthorizedRole: true,
       enforceRequiredActions: true,
       requiredActionsMatrixJson: undefined,
+    });
+    expect(config.identityProvider).toEqual({
+      keycloakAdminBaseUrl: undefined,
+      keycloakAdminRealm: "master",
+      keycloakAdminClientId: undefined,
+      keycloakAdminCredentialReference: undefined,
     });
     expect(config.redis).toEqual({
       url: undefined,
@@ -95,9 +246,25 @@ describe("loadConfig", () => {
       quotaReservationTtlSeconds: 1_800,
       quotaRetryAfterSeconds: 900,
     });
-    expect(config.contentExtraction).toEqual({baseUrl:undefined,timeoutMs:120_000,maxInputBytes:52_428_800,maxTextChars:5_000_000});
-    expect(config.search).toEqual({baseUrl:undefined,apiKey:undefined,indexUid:"documents",timeoutMs:10_000});
-    expect(config.malwareScanning).toEqual({ host: undefined, port: 3310, timeoutMs: 30_000, maxBytes: 104_857_600, onUnavailable: "fail-closed" });
+    expect(config.contentExtraction).toEqual({
+      baseUrl: undefined,
+      timeoutMs: 120_000,
+      maxInputBytes: 52_428_800,
+      maxTextChars: 5_000_000,
+    });
+    expect(config.search).toEqual({
+      baseUrl: undefined,
+      apiKey: undefined,
+      indexUid: "documents",
+      timeoutMs: 10_000,
+    });
+    expect(config.malwareScanning).toEqual({
+      host: undefined,
+      port: 3310,
+      timeoutMs: 30_000,
+      maxBytes: 104_857_600,
+      onUnavailable: "fail-closed",
+    });
     expect(config.openTelemetry).toEqual({
       endpoint: undefined,
       serviceName: "athyper-platform-host",
@@ -139,7 +306,15 @@ describe("loadConfig", () => {
     expect(config.port).toBe(5000);
   });
 
-  it("defaults every qualified finance slice to disabled",()=>{expect(loadConfig().wave0).toMatchObject({financeF2Enabled:false,financeF3Enabled:false,financeF4Enabled:false,financeF5Enabled:false,financeF6Enabled:false});});
+  it("defaults every qualified finance slice to disabled", () => {
+    expect(loadConfig().wave0).toMatchObject({
+      financeF2Enabled: false,
+      financeF3Enabled: false,
+      financeF4Enabled: false,
+      financeF5Enabled: false,
+      financeF6Enabled: false,
+    });
+  });
 
   it("maps ENVIRONMENT=staging to env=staging", () => {
     process.env["ENVIRONMENT"] = "staging";
@@ -192,8 +367,11 @@ describe("loadConfig", () => {
   });
 
   it("accepts legacy Studio database configuration only as an ingress compatibility alias", () => {
-    process.env["ATHYPER_PLATFORM_DATABASE_URL"] = "postgresql://localhost/athyper_studio";
-    expect(loadConfig().studioDatabase.connectionString).toBe("postgresql://localhost/athyper_studio");
+    process.env["ATHYPER_PLATFORM_DATABASE_URL"] =
+      "postgresql://localhost/athyper_studio";
+    expect(loadConfig().studioDatabase.connectionString).toBe(
+      "postgresql://localhost/athyper_studio",
+    );
   });
 
   it("builds a Keycloak issuer from base URL and realm", () => {
@@ -222,24 +400,38 @@ describe("loadConfig", () => {
     process.env["AUTH_CLAIM_FIRST_CONTEXT"] = "on";
     process.env["AUTH_REQUIRE_AUTHORIZED_ROLE"] = "false";
     process.env["AUTH_VERIFY_ENFORCE_REQUIRED_ACTIONS"] = "false";
-    process.env["AUTH_REQUIRED_ACTIONS_MATRIX"] = "{\"UPDATE_PASSWORD\":[\"/api/\"]}";
+    process.env["AUTH_REQUIRED_ACTIONS_MATRIX"] =
+      '{"UPDATE_PASSWORD":["/api/"]}';
     expect(loadConfig().iam).toEqual({
       defaultRealmKey: "athyper",
       claimContextMode: "on",
       requireAuthorizedRole: false,
       enforceRequiredActions: false,
-      requiredActionsMatrixJson: "{\"UPDATE_PASSWORD\":[\"/api/\"]}",
+      requiredActionsMatrixJson: '{"UPDATE_PASSWORD":["/api/"]}',
     });
   });
 
   it("supports the local IAM issuer compatibility chain", () => {
-    process.env["IAM_ISSUER_URL"] =
-      "https://iam.athyper.local/realms/athyper";
+    process.env["IAM_ISSUER_URL"] = "https://iam.athyper.local/realms/athyper";
     process.env["IAM_CLIENT_ID"] = "athyper-api";
 
     expect(loadConfig().keycloak).toMatchObject({
       issuerUrl: "https://iam.athyper.local/realms/athyper",
       audience: "athyper-api",
+    });
+  });
+
+  it("loads only a complete secret-referenced Keycloak provider configuration", () => {
+    process.env["KEYCLOAK_ADMIN_BASE_URL"] = "https://iam.athyper.test";
+    process.env["KEYCLOAK_ADMIN_CLIENT_ID"] = "athyper-identity-saga";
+    expect(() => loadConfig()).toThrow("KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE");
+    process.env["KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE"] = "secret/keycloak/saga";
+    process.env["KEYCLOAK_ADMIN_REALM"] = "master";
+    expect(loadConfig().identityProvider).toEqual({
+      keycloakAdminBaseUrl: "https://iam.athyper.test",
+      keycloakAdminRealm: "master",
+      keycloakAdminClientId: "athyper-identity-saga",
+      keycloakAdminCredentialReference: "secret/keycloak/saga",
     });
   });
 
@@ -280,7 +472,9 @@ describe("loadConfig", () => {
     process.env["DATABASE_URL"] = "postgresql://app@db/neon";
     expect(() => loadConfig()).toThrow("NEON_WORKER_DATABASE_URL");
     process.env["NEON_WORKER_DATABASE_URL"] = "postgresql://worker@db/neon";
-    expect(loadConfig().jobs.workerDatabaseUrls.neon).toBe("postgresql://worker@db/neon");
+    expect(loadConfig().jobs.workerDatabaseUrls.neon).toBe(
+      "postgresql://worker@db/neon",
+    );
   });
 
   it("reads S3-compatible storage configuration", () => {
@@ -309,7 +503,10 @@ describe("loadConfig", () => {
     process.env["APP_S3_SECRET_KEY"] = "scoped-secret";
     process.env["S3_ACCESS_KEY"] = "root-user";
     process.env["S3_SECRET_KEY"] = "root-secret";
-    expect(loadConfig().objectStorage).toMatchObject({ accessKeyId:"scoped-app", secretAccessKey:"scoped-secret" });
+    expect(loadConfig().objectStorage).toMatchObject({
+      accessKeyId: "scoped-app",
+      secretAccessKey: "scoped-secret",
+    });
   });
 
   it("reads explicit OpenTelemetry configuration", () => {
@@ -378,7 +575,8 @@ describe("loadConfig", () => {
     process.env["SES_FROM"] = "notifications@notify.stg.athyper.com";
     expect(() => loadConfig()).toThrow("SES_EVENT_QUEUE_URL");
 
-    process.env["SES_EVENT_QUEUE_URL"] = "https://sqs.ap-southeast-1.amazonaws.com/111111111111/athyper-stg-events";
+    process.env["SES_EVENT_QUEUE_URL"] =
+      "https://sqs.ap-southeast-1.amazonaws.com/111111111111/athyper-stg-events";
     expect(loadConfig().sesEvents).toMatchObject({
       region: "ap-southeast-1",
       maxMessages: 10,
@@ -436,35 +634,92 @@ describe("loadConfig", () => {
     });
   });
 
-  it("reads Tika and Meilisearch settings",()=>{process.env["DOCPARSER_URL"]="http://docparser:9998";process.env["DOCPARSER_TIMEOUT_MS"]="90000";process.env["SEARCHCORE_URL"]="http://searchcore:7700";process.env["SEARCHCORE_MASTER_KEY"]="secret";process.env["SEARCHCORE_DOCUMENT_INDEX"]="documents_v1";expect(loadConfig()).toMatchObject({contentExtraction:{baseUrl:"http://docparser:9998",timeoutMs:90_000},search:{baseUrl:"http://searchcore:7700",apiKey:"secret",indexUid:"documents_v1"}});});
+  it("reads Tika and Meilisearch settings", () => {
+    process.env["DOCPARSER_URL"] = "http://docparser:9998";
+    process.env["DOCPARSER_TIMEOUT_MS"] = "90000";
+    process.env["SEARCHCORE_URL"] = "http://searchcore:7700";
+    process.env["SEARCHCORE_MASTER_KEY"] = "secret";
+    process.env["SEARCHCORE_DOCUMENT_INDEX"] = "documents_v1";
+    expect(loadConfig()).toMatchObject({
+      contentExtraction: {
+        baseUrl: "http://docparser:9998",
+        timeoutMs: 90_000,
+      },
+      search: {
+        baseUrl: "http://searchcore:7700",
+        apiKey: "secret",
+        indexUid: "documents_v1",
+      },
+    });
+  });
 
   it("reads fail-closed ClamAV settings", () => {
     process.env["CLAMD_HOST"] = "virusscan";
     process.env["CLAMD_PORT"] = "3310";
     process.env["CLAMD_TIMEOUT_MS"] = "45000";
     process.env["CLAMD_MAX_BYTES"] = "20000000";
-    expect(loadConfig().malwareScanning).toEqual({ host:"virusscan", port:3310, timeoutMs:45_000, maxBytes:20_000_000, onUnavailable:"fail-closed" });
+    expect(loadConfig().malwareScanning).toEqual({
+      host: "virusscan",
+      port: 3310,
+      timeoutMs: 45_000,
+      maxBytes: 20_000_000,
+      onUnavailable: "fail-closed",
+    });
   });
 
   it("rejects fail-open malware scanning", () => {
     process.env["CLAMD_ON_UNAVAILABLE"] = "fail-open";
-    expect(() => loadConfig()).toThrow("CLAMD_ON_UNAVAILABLE must be one of fail-closed");
+    expect(() => loadConfig()).toThrow(
+      "CLAMD_ON_UNAVAILABLE must be one of fail-closed",
+    );
   });
 
-  it("reads fail-closed Publication rollout configuration",()=>{
-    process.env["PUBLICATION_APPLY_ENABLED"]="true";process.env["PUBLICATION_TARGET_PLANES"]="studio,neon,mesh";process.env["PUBLICATION_SIGNING_KEY_ID"]="key-v1";process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]="publication/public";process.env["INFISICAL_URL"]="https://secrets.example";process.env["INFISICAL_TOKEN"]="token";process.env["INFISICAL_WORKSPACE_ID"]="workspace";
-    expect(loadConfig()).toMatchObject({publication:{compileEnabled:false,dispatchEnabled:false,applyEnabled:true,targetPlanes:["studio","neon","mesh"],requireSignature:true,signingKeyId:"key-v1",publicKeyReference:"publication/public"},infisical:{endpoint:"https://secrets.example",token:"token",workspaceId:"workspace"}});
+  it("reads fail-closed Publication rollout configuration", () => {
+    process.env["PUBLICATION_APPLY_ENABLED"] = "true";
+    process.env["PUBLICATION_TARGET_PLANES"] = "studio,neon,mesh";
+    process.env["PUBLICATION_SIGNING_KEY_ID"] = "key-v1";
+    process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"] = "publication/public";
+    process.env["INFISICAL_URL"] = "https://secrets.example";
+    process.env["INFISICAL_TOKEN"] = "token";
+    process.env["INFISICAL_WORKSPACE_ID"] = "workspace";
+    expect(loadConfig()).toMatchObject({
+      publication: {
+        compileEnabled: false,
+        dispatchEnabled: false,
+        applyEnabled: true,
+        targetPlanes: ["studio", "neon", "mesh"],
+        requireSignature: true,
+        signingKeyId: "key-v1",
+        publicKeyReference: "publication/public",
+      },
+      infisical: {
+        endpoint: "https://secrets.example",
+        token: "token",
+        workspaceId: "workspace",
+      },
+    });
   });
 
-  it("rejects unsigned or non-canonical Publication configuration",()=>{
-    process.env["PUBLICATION_REQUIRE_SIGNATURE"]="false";expect(()=>loadConfig()).toThrow("PUBLICATION_REQUIRE_SIGNATURE");delete process.env["PUBLICATION_REQUIRE_SIGNATURE"];
-    process.env["PUBLICATION_TARGET_PLANES"]="athyper";expect(()=>loadConfig()).toThrow("invalid plane");
+  it("rejects unsigned or non-canonical Publication configuration", () => {
+    process.env["PUBLICATION_REQUIRE_SIGNATURE"] = "false";
+    expect(() => loadConfig()).toThrow("PUBLICATION_REQUIRE_SIGNATURE");
+    delete process.env["PUBLICATION_REQUIRE_SIGNATURE"];
+    process.env["PUBLICATION_TARGET_PLANES"] = "athyper";
+    expect(() => loadConfig()).toThrow("invalid plane");
   });
 
-  it("reads independently gated control-administration surfaces",()=>{
-    process.env["WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED"]="true";
-    process.env["WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED"]="true";
-    process.env["WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED"]="true";
-    expect(loadConfig().wave0).toMatchObject({controlAdminTenantOverridesEnabled:true,controlAdminCycleConfigEnabled:true,controlAdminLookupRoundingEnabled:false,controlAdminConnectorLifecycleEnabled:false,controlAdminLocalCatalogReadsEnabled:false,controlAdminCatalogAuthoringEnabled:false,controlAdminRuntimeCommandsEnabled:true});
+  it("reads independently gated control-administration surfaces", () => {
+    process.env["WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED"] = "true";
+    process.env["WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED"] = "true";
+    process.env["WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED"] = "true";
+    expect(loadConfig().wave0).toMatchObject({
+      controlAdminTenantOverridesEnabled: true,
+      controlAdminCycleConfigEnabled: true,
+      controlAdminLookupRoundingEnabled: false,
+      controlAdminConnectorLifecycleEnabled: false,
+      controlAdminLocalCatalogReadsEnabled: false,
+      controlAdminCatalogAuthoringEnabled: false,
+      controlAdminRuntimeCommandsEnabled: true,
+    });
   });
 });

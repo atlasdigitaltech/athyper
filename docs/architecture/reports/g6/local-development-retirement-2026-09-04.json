@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-local-development-retirement",
+  "executionContext": "local_development",
+  "status": "complete",
+  "completedAt": "2026-09-04T14:31:27+08:00",
+  "target": {
+    "container": "athyper-dev-db-1",
+    "databaseName": "athyper_neon",
+    "plane": "neon",
+    "systemIdentifier": "7677496988254924839",
+    "identitySha256": "6924eaa77b4bb270451acfb9a4758c96e7f1909c809dc254280526926bdb8873"
+  },
+  "authorization": {
+    "basis": "explicit_repository_owner_local_override",
+    "productionObservationRequired": false,
+    "productionApprovalUsed": false,
+    "productionRetirementAuthorized": false
+  },
+  "recovery": {
+    "kind": "postgres_custom_dump",
+    "location": "athyper-dev-db-1:/tmp/athyper_neon_before_g6_local_retirement.dump",
+    "hostCopy": "/tmp/athyper_neon_before_g6_local_retirement.dump",
+    "sha256": "16189f0344b98e36cbf115c24e63f7b21bdb2fe5c35e2d7ffbe7ad06b662da5d",
+    "catalogVerified": true
+  },
+  "removedData": {
+    "legacyBusinessPartnerRequests": 1,
+    "legacyBusinessPartnerRequestChildRows": 6,
+    "invitationBindings": 0,
+    "recoveryBindings": 0,
+    "acceptanceBindings": 0
+  },
+  "surfaces": [
+    {
+      "order": 1,
+      "code": "temporary_implementation_inventory",
+      "migrationSha256": "0c22e8e1f06827508a23f766a6d7946cb161b8b49ee64c6780f0506a899b2b5c",
+      "result": "retired"
+    },
+    {
+      "order": 2,
+      "code": "business_partner_aliases_cache",
+      "migrationSha256": "3c8ce016685dd4eb4358e4efbe905950194fe66be28197517edae46742fb8cdc",
+      "result": "retired"
+    },
+    {
+      "order": 3,
+      "code": "flattened_decision_scope",
+      "migrationSha256": "0e454557977642b6ec0e99bdc65089c1492189f2b71ed2279f31f00daefdc780",
+      "result": "retired"
+    },
+    {
+      "order": 4,
+      "code": "business_partner_person_group_compatibility",
+      "migrationSha256": "e461fac5492b0413dfd26cbfb530d91cc95440d20df9923ee7776f4e7607704d",
+      "result": "retired"
+    },
+    {
+      "order": 5,
+      "code": "workforce_iam_projection",
+      "migrationSha256": "7b2d5bc8573728e38174f500f3bcdf19eb2bfa693e689be49b2e525417ca67ab",
+      "result": "retired"
+    },
+    {
+      "order": 6,
+      "code": "business_partner_request_family",
+      "migrationSha256": "7b8dc8873410ce6e18e9d8f74f1d344e1cdddc272db48b0d70e0c8ed50089487",
+      "result": "retired"
+    }
+  ],
+  "postconditions": {
+    "aliasesCacheAbsent": true,
+    "flattenedDecisionScopeAbsent": true,
+    "personGroupCompatibilityAbsent": true,
+    "workforceIamProjectionAbsent": true,
+    "businessPartnerRequestFamilyAbsent": true,
+    "normalizedCustomerViewsPresent": true,
+    "businessPartnerApplicationIndexPresent": true
+  },
+  "repairs": [
+    "master.v_business_partner_app_index now derives aliases from master.business_partner_alias",
+    "control.current_customer_account_designation now resolves coordinates from control.business_partner_decision_scope",
+    "control.current_customer_credit_limit now resolves coordinates from control.business_partner_decision_scope"
+  ],
+  "knownConsequences": [
+    "The legacy Business Partner request repository still references the retired relation family and its operations will fail until cut over.",
+    "The Business Partner invitation repository still contains historical request-family branches and those branches will fail until cut over.",
+    "Canonical request-family DDL remains in the source tree and a future database reprovision may recreate the retired local surface."
+  ]
+}

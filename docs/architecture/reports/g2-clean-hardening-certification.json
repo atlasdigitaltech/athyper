@@ -1,0 +1,138 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g2-hardening-certification",
+  "capturedAt": "2026-09-03T17:38:38.613Z",
+  "database": "athyper_neon",
+  "sanitized": true,
+  "dataDisposition": "fixtures_deleted",
+  "probes": [
+    {
+      "code": "qualification_role_derived",
+      "passed": true
+    },
+    {
+      "code": "qualification_wrong_role_pair",
+      "passed": true,
+      "sqlState": "23503",
+      "message": "Qualification role does not belong to the selected Business Partner"
+    },
+    {
+      "code": "supplier_preference_wrong_pair",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "Supplier does not belong to the selected business partner"
+    },
+    {
+      "code": "customer_designation_wrong_pair",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "Customer does not belong to the selected business partner"
+    },
+    {
+      "code": "customer_credit_wrong_pair",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "Customer does not belong to the selected business partner"
+    },
+    {
+      "code": "typed_address_wrong_owner",
+      "passed": true,
+      "sqlState": "23503",
+      "message": "Owner f379f01f-6cf2-427f-865e-3dd8566200ca does not exist in master.customer for owner type 01a06849-0322-7c38-9023-821f2ce065d2 and tenant 00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "code": "typed_contact_wrong_owner",
+      "passed": true,
+      "sqlState": "23503",
+      "message": "Owner f379f01f-6cf2-427f-865e-3dd8566200ca does not exist in master.customer for owner type 01a06849-0322-7c38-9023-821f2ce065d2 and tenant 00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "code": "typed_contact_cross_tenant",
+      "passed": true,
+      "sqlState": "23503",
+      "message": "Owner caf0729c-e696-457a-ba83-b8fac5b316de does not exist in master.business_partner for owner type 01a06849-0321-7db4-b16c-030b8d06e186 and tenant e8fe3ca9-0a9f-44c2-a4ed-320d5ad71018"
+    },
+    {
+      "code": "metadata_unknown_key",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"business_partner\" violates check constraint \"business_partner_metadata_object_chk\""
+    },
+    {
+      "code": "url_http",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"business_partner\" violates check constraint \"business_partner_website_chk\""
+    },
+    {
+      "code": "url_credentials",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"business_partner\" violates check constraint \"business_partner_website_chk\""
+    },
+    {
+      "code": "url_invalid_host",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "new row for relation \"business_partner\" violates check constraint \"business_partner_website_chk\""
+    },
+    {
+      "code": "url_https_dns",
+      "passed": true
+    },
+    {
+      "code": "contact_url_credentials",
+      "passed": true,
+      "sqlState": "23514",
+      "message": "Website contact value must be a credential-free absolute HTTPS URL with a valid DNS host"
+    },
+    {
+      "code": "contact_url_https_dns",
+      "passed": true
+    },
+    {
+      "code": "customer_full_lifecycle_exact_replay",
+      "passed": true,
+      "finalStatus": "archived",
+      "resultingVersion": 6
+    },
+    {
+      "code": "customer_not_found",
+      "passed": true,
+      "sqlState": "P0002",
+      "message": "Customer was not found"
+    },
+    {
+      "code": "customer_wrong_tenant",
+      "passed": true,
+      "sqlState": "42501",
+      "message": "Customer lifecycle command context does not match tenant and actor"
+    },
+    {
+      "code": "customer_stale_version",
+      "passed": true,
+      "sqlState": "40001",
+      "message": "Customer version is stale (expected 99, actual 1)"
+    },
+    {
+      "code": "customer_invalid_transition",
+      "passed": true,
+      "sqlState": "55000",
+      "message": "Invalid Customer lifecycle transition: deactivate from prospect"
+    },
+    {
+      "code": "customer_lifecycle_concurrency_one_winner",
+      "passed": true,
+      "accepted": 1,
+      "rejected": 1,
+      "loserSqlState": "40001"
+    },
+    {
+      "code": "organization_only_history_inventory",
+      "passed": true,
+      "rows": [],
+      "disposition": "retain person/group compatibility for observed import and legacy request consumers; governed materializers remain organization-only"
+    }
+  ],
+  "passed": true
+}

@@ -17,11 +17,23 @@ governance.cycle_run
 governance.cycle_task
     = the required work, ordering, owner, SLA, and completion authority
 
-document.entity_change_case
+document.entity_case
     = the proposed entity mutation and current case head
+
+document.entity_case_command_evidence
+    = immutable command, replay, actor and version evidence
+
+document.entity_case_validation
+    = bounded searchable validation-result projection
+
+document.entity_case_materialization
+    = materialization attempt and outcome projection
 
 snapshot.entity_snapshot_identity + snapshot.entity_snapshot
     = immutable, contract-bound versions of submitted, decided, and materialized state
+
+snapshot.entity_case_snapshot_lineage
+    = immutable case/snapshot/member-to-authority lineage
 
 workflow
     = human approval execution and maker-checker policy
@@ -33,7 +45,7 @@ NEON master/control/document authorities
     = approved operational state
 ```
 
-There will be no new `business_partner_journey` table and no table per form section or questionnaire answer type. Existing governance cycles own journeys. A small generic entity-change case is the only new operational document header required for form-driven entity mutations.
+There will be no new `business_partner_journey` table and no table per form section or questionnaire answer type. Existing governance cycles own journeys. The bounded `entity_case` family is the only new generic operational persistence proposed for form-driven entity mutations; each member still requires the minimal-schema review in the active backlog.
 
 MESH changes the source and disclosure path; it does not change the NEON authority model. The same entity contracts, validation, approval, materialization, audit, and snapshot pipeline apply to internal, MESH, portal, import, and API submissions.
 
@@ -54,25 +66,29 @@ MESH changes the source and disclosure path; it does not change the NEON authori
 
 The target deliberately reuses the platform's current concepts:
 
-| Existing concept | Target responsibility |
-|---|---|
-| `metadata.entity`, field, relation, surface, operation, flow, policy and lifecycle definitions | Semantic model and authoring |
-| `metadata.entity_runtime_profile` | Virtual/facade or table-backed runtime selection |
-| `runtime_meta.entity_contract` and `runtime_meta.entity_descriptor` | Immutable deployed contract and compiled runtime behavior |
-| `control.cycle_type`, phases, task templates, dependencies and template revisions | Published journey templates |
-| `governance.cycle_run`, tasks, dependencies, deviations and certifications | Runtime journey execution |
-| `snapshot.entity_snapshot_identity` and `snapshot.entity_snapshot` | Immutable aggregate versions and hash chains |
-| `mesh.document_envelope`, payload, event and acknowledgement | Cross-tenant exchange |
-| `control.business_partner_mutation_evidence` and `mesh.network_command_evidence` | Plane-local command evidence conforming to one shared contract |
-| `event.outbox` and `audit.audit_log` | Integration and audit effects |
-| `control.business_partner_decision_scope` | Normalized decision scope |
-| `control.mesh_business_partner_account_link` and `master.external_reference` | Governed MESH-to-NEON correlation |
+| Existing concept                                                                               | Target responsibility                                          |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `metadata.entity`, field, relation, surface, operation, flow, policy and lifecycle definitions | Semantic model and authoring                                   |
+| `metadata.entity_runtime_profile`                                                              | Virtual/facade or table-backed runtime selection               |
+| `runtime_meta.entity_contract` and `runtime_meta.entity_descriptor`                            | Immutable deployed contract and compiled runtime behavior      |
+| `control.cycle_type`, phases, task templates, dependencies and template revisions              | Published journey templates                                    |
+| `governance.cycle_run`, tasks, dependencies, deviations and certifications                     | Runtime journey execution                                      |
+| `snapshot.entity_snapshot_identity` and `snapshot.entity_snapshot`                             | Immutable aggregate versions and hash chains                   |
+| `mesh.document_envelope`, payload, event and acknowledgement                                   | Cross-tenant exchange                                          |
+| `control.business_partner_mutation_evidence` and `mesh.network_command_evidence`               | Plane-local command evidence conforming to one shared contract |
+| `event.outbox` and `audit.audit_log`                                                           | Integration and audit effects                                  |
+| `control.business_partner_decision_scope`                                                      | Normalized decision scope                                      |
+| `control.mesh_business_partner_account_link` and `master.external_reference`                   | Governed MESH-to-NEON correlation                              |
 
 ## 4. Minimal additions
 
-### 4.1 `document.entity_change_case`
+### 4.1 `document.entity_case` family
 
-This generic header replaces domain-specific request headers when their purpose is to collect, approve, and materialize an entity proposal.
+This family replaces domain-specific request headers and their duplicated validation, command-evidence and materialization tracking when the purpose is to collect, approve, and materialize an entity proposal. It is not a generic container for sourcing events, contracts, purchase orders or other transactional aggregates.
+
+#### 4.1.1 `document.entity_case`
+
+The header owns the proposal identity and current lifecycle head. It contains no generic proposal payload; proposal content belongs in contract-bound snapshots.
 
 Required coordinates:
 
@@ -115,6 +131,41 @@ Constraints must enforce:
 - command-owned status mutation;
 - bounded codes and no ungoverned metadata payload.
 
+#### 4.1.2 `document.entity_case_command_evidence`
+
+Append-only evidence proves every accepted or rejected case command and exact replay. Required coordinates include tenant, case, command and actor IDs; expected/before/after versions and states; idempotency key; command fingerprint; result code; correlation/causation IDs; sanitized evidence; and occurrence time. Runtime roles receive no direct update or delete privilege.
+
+#### 4.1.3 `document.entity_case_validation`
+
+This is a bounded, append-only searchable projection of validation results, not a second answer store. It records case and snapshot IDs, evaluation/ruleset identity and hash, semantic field path, outcome, severity, message code, sanitized evidence reference and evaluation time/actor. Complete validation input and output remain in immutable snapshots. Cardinality and payload-size limits prevent unbounded validation rows.
+
+#### 4.1.4 `document.entity_case_materialization`
+
+This relation records each requested materialization attempt and its terminal outcome. It contains tenant/case/source-snapshot coordinates, materializer code/version, expected target version, attempt number, status, idempotency/fingerprint, started/completed times, safe failure/support codes and result snapshot ID. It does not store mutable target rows or duplicate snapshot members; detailed member-to-authority mapping belongs in lineage.
+
+#### 4.1.5 `snapshot.entity_case_snapshot_lineage`
+
+This append-only relation connects received, proposal, submitted, decision, result and derived snapshots to one case and to normalized target coordinates. It replaces request materialization-item rows and MESH match/acceptance history where the same generic contract is sufficient.
+
+```sql
+tenant_id
+id
+case_id
+source_snapshot_id
+target_snapshot_id null
+lineage_role
+source_envelope_id null
+source_member_type null
+source_member_id null
+target_entity_code null
+target_entity_id null
+transformation_code null
+transformation_hash null
+created_at/by
+```
+
+Roles include `received`, `transformed`, `proposal`, `submitted`, `approved`, `rejected`, `materialized`, `duplicate_before`, `survivor_before`, `survivor_after`, and `derived_projection`.
+
 ### 4.2 `governance.cycle_subject`
 
 Cycles currently have no normalized, typed subject association. Do not hide this in `cycle_run.data`.
@@ -147,34 +198,11 @@ supplier_onboarding_request.create
 
 The binding identifies the relation, component entity, component surface, contract slice, cardinality, position, widget, and presentation rules. It cannot redefine semantic type, validation, storage, classification, or materialization authority.
 
-### 4.4 `snapshot.entity_snapshot_lineage`
-
-One generic lineage mechanism replaces request materialization rows and MESH match/acceptance history.
-
-```sql
-tenant_id
-id
-source_snapshot_id
-target_snapshot_id
-lineage_role
-source_envelope_id null
-case_id null
-source_member_type null
-source_member_id null
-target_entity_code null
-target_entity_id null
-transformation_code null
-transformation_hash null
-created_at/by
-```
-
-Roles include `received`, `transformed`, `proposal`, `approved`, `materialized`, `duplicate_before`, `survivor_before`, `survivor_after`, and `derived_projection`.
-
-### 4.5 Executable authority register
+### 4.4 Executable authority register
 
 Add a plane-local `governance.authority_register` projected from a reviewed contract artifact. It records aggregate kind, authoritative object, command functions, writable roles, projections, evidence ledger, event types, idempotency contract, retention and prohibited colocations. CI compares it with grants, functions and triggers and fails on drift.
 
-### 4.6 MESH relationship capability
+### 4.5 MESH relationship capability
 
 Add `mesh.network_relationship_capability` so profile exchange, sourcing, procurement, invoicing, payments, and services procurement can be enabled and suspended independently. Registration traffic is allowed only through the narrowly scoped `profile_exchange` onboarding state until the relationship is accepted.
 
@@ -239,15 +267,15 @@ This avoids repeatedly collecting legal name, address, contacts, tax data, certi
 
 For a case, capture meaningful versions rather than every keystroke:
 
-| Snapshot | Meaning |
-|---|---|
-| Base | State against which the proposal was prepared |
+| Snapshot         | Meaning                                         |
+| ---------------- | ----------------------------------------------- |
+| Base             | State against which the proposal was prepared   |
 | Draft checkpoint | Server-side recovery point with short retention |
-| Submitted | Immutable actor assertion |
-| Received | Exact MESH disclosure as received |
-| Transformed | Receiver-contract interpretation |
-| Decision | Approved/rejected data, policy and reasons |
-| Result | Complete aggregate after materialization |
+| Submitted        | Immutable actor assertion                       |
+| Received         | Exact MESH disclosure as received               |
+| Transformed      | Receiver-contract interpretation                |
+| Decision         | Approved/rejected data, policy and reasons      |
+| Result           | Complete aggregate after materialization        |
 
 ### 6.2 Canonicalization and validation
 
@@ -370,7 +398,7 @@ The internal user starts the same case with `source_channel=internal`; MESH coor
 
 ## 9. Customer end-to-end flows
 
-Customer onboarding uses the same `BP_ONBOARDING` cycle family and generic case runtime:
+Customer onboarding uses the same `BP_ONBOARDING` cycle family and `document.entity_case` runtime:
 
 ```text
 customer request or registration intent
@@ -436,31 +464,31 @@ The following are operational/commercial authorities, not redundant form revisio
 - `document.worker_engagement`, operational placement, compliance items, time/expense/invoice authorities;
 - `control.mesh_workforce_claim_inbox` and processing attempts until their generic receiver replacement is certified.
 
-`document.workforce_request` and `document.engagement_onboarding_case` are migration candidates because their collection/orchestration responsibilities converge into entity-change cases and governance cycles.
+`document.workforce_request` and `document.engagement_onboarding_case` are migration candidates because their collection/orchestration responsibilities converge into `document.entity_case` and governance cycles.
 
 For an independent contractor/sole trader, the commercial counterparty remains an organization/sole-trader supplier representation under the organization-only BP policy, while the human performing work remains a Person/external worker connected through the engagement.
 
 ## 11. Authority matrix
 
-| Concern | Sole authority |
-|---|---|
-| Journey progress | `governance.cycle_run` |
-| Required activity | `governance.cycle_task` |
-| Proposed entity mutation | `document.entity_change_case` current head |
-| Historical state | Snapshot identity/payload and lineage |
-| Human approval execution | Workflow |
-| Organization identity | `master.business_partner` |
+| Concern                      | Sole authority                                         |
+| ---------------------------- | ------------------------------------------------------ |
+| Journey progress             | `governance.cycle_run`                                 |
+| Required activity            | `governance.cycle_task`                                |
+| Proposed entity mutation     | `document.entity_case` current head                    |
+| Historical state             | Snapshot identity/payload and lineage                  |
+| Human approval execution     | Workflow                                               |
+| Organization identity        | `master.business_partner`                              |
 | Supplier/customer role state | `master.supplier` / `master.customer` through commands |
-| Qualification | `control.business_partner_qualification` |
-| Preference | `control.supplier_preference_designation` |
-| Customer credit | `control.customer_credit_review` |
-| Customer designation | `control.customer_account_designation` |
-| Person/employee/employment | People/Workforce master objects |
-| External engagement | `document.worker_engagement` |
-| Cross-tenant transport | MESH envelope/event/acknowledgement |
-| MESH relationship/capability | MESH relationship episode and capability |
-| MESH-to-NEON correlation | governed account link + external reference |
-| Immutable mutation evidence | plane-local command evidence contract |
+| Qualification                | `control.business_partner_qualification`               |
+| Preference                   | `control.supplier_preference_designation`              |
+| Customer credit              | `control.customer_credit_review`                       |
+| Customer designation         | `control.customer_account_designation`                 |
+| Person/employee/employment   | People/Workforce master objects                        |
+| External engagement          | `document.worker_engagement`                           |
+| Cross-tenant transport       | MESH envelope/event/acknowledgement                    |
+| MESH relationship/capability | MESH relationship episode and capability               |
+| MESH-to-NEON correlation     | governed account link + external reference             |
+| Immutable mutation evidence  | plane-local command evidence contract                  |
 
 No application service may maintain a second status or decision authority in metadata JSON, a snapshot, an envelope, a 360 projection, or a form answer.
 
@@ -513,20 +541,20 @@ No application service may maintain a second status or decision authority in met
 
 ### 12.5 Canonical DDL and code change map
 
-| Area | Required change |
-|---|---|
-| Common `document` DDL | Add the generic `entity_change_case` header, domains, tenant FKs, indexes, command-authority triggers, RLS and grants. |
-| Common `snapshot` DDL | Add lineage/reference records and contract-bound capture enforcement. |
-| Common `governance` DDL | Add cycle subjects and the executable authority register; retain cycle execution as journey authority. |
-| Studio `metadata` DDL | Add surface-component composition and compiler validation. |
-| `runtime_meta` compiler/projection | Emit case storage, aggregate JSON schema, materialization mappings, field classification and compatibility adapters in the descriptor. |
-| MESH DDL | Add relationship capability, governed exchange document types/field sets, bank protection corrections and receiver-side contract gates. |
-| NEON DDL | Add the BP/customer/workforce hardening items above; migrate legacy request evidence to cases, snapshots and lineage. |
-| Services | Replace direct legacy table repositories with case, cycle, snapshot and receiver ports. |
-| Read side | Update BP 360, workforce views, explainability, health checks and reports before object retirement. |
-| CI/evidence | Add authority drift, catalog parity, source-reference, live security, concurrency, replay, quarantine and rollback gates. |
+| Area                               | Required change                                                                                                                                                                                   |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Common `document` DDL              | Add the `entity_case`, `entity_case_command_evidence`, `entity_case_validation` and `entity_case_materialization` relations with domains, tenant FKs, indexes, command authority, RLS and grants. |
+| Common `snapshot` DDL              | Add `entity_case_snapshot_lineage` and contract-bound capture enforcement.                                                                                                                        |
+| Common `governance` DDL            | Add cycle subjects and the executable authority register; retain cycle execution as journey authority.                                                                                            |
+| Studio `metadata` DDL              | Add surface-component composition and compiler validation.                                                                                                                                        |
+| `runtime_meta` compiler/projection | Emit case storage, aggregate JSON schema, materialization mappings, field classification and compatibility adapters in the descriptor.                                                            |
+| MESH DDL                           | Add relationship capability, governed exchange document types/field sets, bank protection corrections and receiver-side contract gates.                                                           |
+| NEON DDL                           | Add the BP/customer/workforce hardening items above; migrate legacy request evidence to cases, snapshots and lineage.                                                                             |
+| Services                           | Replace direct legacy table repositories with case, cycle, snapshot and receiver ports.                                                                                                           |
+| Read side                          | Update BP 360, workforce views, explainability, health checks and reports before object retirement.                                                                                               |
+| CI/evidence                        | Add authority drift, catalog parity, source-reference, live security, concurrency, replay, quarantine and rollback gates.                                                                         |
 
-The six principal net-new relations are `document.entity_change_case`, `governance.cycle_subject`, `metadata.entity_surface_component_binding`, `snapshot.entity_snapshot_lineage`, `governance.authority_register`, and `mesh.network_relationship_capability`. Everything else should extend or converge an existing authority unless a later evidence-backed review proves a separate operational projection is required.
+The nine proposed net-new relations are `document.entity_case`, `document.entity_case_command_evidence`, `document.entity_case_validation`, `document.entity_case_materialization`, `snapshot.entity_case_snapshot_lineage`, `governance.cycle_subject`, `metadata.entity_surface_component_binding`, `governance.authority_register`, and `mesh.network_relationship_capability`. The active backlog requires a minimal-schema disposition before any is added. Everything else should extend or converge an existing authority unless an evidence-backed review proves a separate operational projection is required.
 
 ### 12.6 End-to-end physical architecture and IAM organization correlation
 
@@ -564,69 +592,69 @@ The correlation has these invariants:
 
 #### 12.6.2 Meaning of “organization” by boundary
 
-| Term | Physical authority | Meaning | Must not be used as |
-|---|---|---|---|
-| Canonical party | Studio `master.canonical_party` | Deduplicated real-world party and reconciliation anchor | Tenant, credential or operational master |
-| IAM organization | Studio `trustiam.organization` plus external provider organization | Desired identity-administration container | Supplier/customer master or authorization grant |
-| Tenant | Plane-local `master.tenant` | Data-isolation and administrative ownership boundary | Real-world-party identifier |
-| Legal entity | NEON `master.legal_entity` | Internal statutory organization | External Business Partner |
-| Operating organization | NEON `master.operating_organization` | Internal procurement/sales responsibility scope | Identity-provider organization |
-| Business Partner | NEON `master.business_partner` | Recipient-local external organization master | Person, tenant or MESH account |
-| Supplier/customer | NEON `master.supplier` / `master.customer` | Commercial role of a Business Partner | Duplicate organization identity |
-| Network account | MESH `mesh.network_account` | Party endpoint for exchange and relationships | Login identity or recipient-local master |
-| Principal | Plane-local `master.principal` | Application actor projected from an identity subject | Organization or Business Partner |
+| Term                   | Physical authority                                                 | Meaning                                                 | Must not be used as                             |
+| ---------------------- | ------------------------------------------------------------------ | ------------------------------------------------------- | ----------------------------------------------- |
+| Canonical party        | Studio `master.canonical_party`                                    | Deduplicated real-world party and reconciliation anchor | Tenant, credential or operational master        |
+| IAM organization       | Studio `trustiam.organization` plus external provider organization | Desired identity-administration container               | Supplier/customer master or authorization grant |
+| Tenant                 | Plane-local `master.tenant`                                        | Data-isolation and administrative ownership boundary    | Real-world-party identifier                     |
+| Legal entity           | NEON `master.legal_entity`                                         | Internal statutory organization                         | External Business Partner                       |
+| Operating organization | NEON `master.operating_organization`                               | Internal procurement/sales responsibility scope         | Identity-provider organization                  |
+| Business Partner       | NEON `master.business_partner`                                     | Recipient-local external organization master            | Person, tenant or MESH account                  |
+| Supplier/customer      | NEON `master.supplier` / `master.customer`                         | Commercial role of a Business Partner                   | Duplicate organization identity                 |
+| Network account        | MESH `mesh.network_account`                                        | Party endpoint for exchange and relationships           | Login identity or recipient-local master        |
+| Principal              | Plane-local `master.principal`                                     | Application actor projected from an identity subject    | Organization or Business Partner                |
 
 An IAM organization normally represents the party administering a tenant or delegated external access. A NEON Business Partner represents an organization the tenant does business with. They may share a canonical party—for example, a supplier self-service IAM organization and the buyer's supplier BP—but that match alone must never provision access. Access additionally requires an active identity binding, an approved application projection, an effective scope, and applicable relationship/engagement policy.
 
 #### 12.6.3 Studio and TrustIAM table/field contract
 
-| Table | Fields that form the contract | Governance rule |
-|---|---|---|
-| `master.canonical_party` | `authority_tenant_id`, `id`, `party_kind`, `legal_name`, `display_name`, `incorporation_country_code`, `verification_status`, `status`, `merged_into_party_id`, `record_version` | `id` is the only plane correlation token. Names are descriptive and cannot be used to join records. Only verified matching/merge commands change party identity. |
-| `master.canonical_party_identifier` | `party_id`, `scheme`, issuer coordinates, `normalized_value`, `value_hash`, `claim_status`, `verification_status`, `evidence_snapshot`, valid time | Matching uses normalized and hashed identifiers under purpose policy. Raw values must be protected according to classification. |
-| `master.canonical_party_relationship` | `from_party_id`, `to_party_id`, `relationship_kind`, `verification_status`, `status`, valid time | Describes real-world group/subsidiary relations; it does not imply MESH connectivity or IAM inheritance. |
-| `master.canonical_party_merge` | losing/surviving IDs, `approved_case_id`, reason, before/after snapshots, approver, effective time | Maker-checker merge evidence and permanent lineage. |
-| `trustiam.organization` | `authority_tenant_id`, `canonical_party_id`, `realm_key`, `external_organization_id`, `organization_alias`, `status`, observed adapter version/time | Desired-state IAM organization. `(realm_key, external_organization_id)` addresses the provider object; alias/display name never identifies authority. |
-| `trustiam.organization_provider` | `organization_id`, `protocol`, `provider_code`, `external_provider_id`, `approved_domains`, `routing_contract`, `status` | Stores routing and approval, never credentials or secrets. Domain ownership is verified before activation. |
-| `trustiam.application_projection` | `organization_id`, `target_plane`, `target_tenant_id`, `desired_version`, `desired_hash`, source case/resource, status, reconciliation status, valid time | Declares desired organization presence in a plane. It does not itself grant access. |
-| `trustiam.projection_scope` | `projection_id`, `scope_kind`, `target_id`, `ceiling_mode`, `network_role_ceiling`, `desired_version`, status | Maximum organizational/network boundary the projection may address. Application grants must be equal to or narrower than this ceiling. |
-| `trustiam.identity_provisioning_request` | `subject_key`, idempotency/fingerprint, realm and normalized identifier, target planes, provider subject, status/version | Creates or reconciles a human/service identity. It remains separate from organization correlation. |
+| Table                                    | Fields that form the contract                                                                                                                                                    | Governance rule                                                                                                                                                  |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `master.canonical_party`                 | `authority_tenant_id`, `id`, `party_kind`, `legal_name`, `display_name`, `incorporation_country_code`, `verification_status`, `status`, `merged_into_party_id`, `record_version` | `id` is the only plane correlation token. Names are descriptive and cannot be used to join records. Only verified matching/merge commands change party identity. |
+| `master.canonical_party_identifier`      | `party_id`, `scheme`, issuer coordinates, `normalized_value`, `value_hash`, `claim_status`, `verification_status`, `evidence_snapshot`, valid time                               | Matching uses normalized and hashed identifiers under purpose policy. Raw values must be protected according to classification.                                  |
+| `master.canonical_party_relationship`    | `from_party_id`, `to_party_id`, `relationship_kind`, `verification_status`, `status`, valid time                                                                                 | Describes real-world group/subsidiary relations; it does not imply MESH connectivity or IAM inheritance.                                                         |
+| `master.canonical_party_merge`           | losing/surviving IDs, `approved_case_id`, reason, before/after snapshots, approver, effective time                                                                               | Maker-checker merge evidence and permanent lineage.                                                                                                              |
+| `trustiam.organization`                  | `authority_tenant_id`, `canonical_party_id`, `realm_key`, `external_organization_id`, `organization_alias`, `status`, observed adapter version/time                              | Desired-state IAM organization. `(realm_key, external_organization_id)` addresses the provider object; alias/display name never identifies authority.            |
+| `trustiam.organization_provider`         | `organization_id`, `protocol`, `provider_code`, `external_provider_id`, `approved_domains`, `routing_contract`, `status`                                                         | Stores routing and approval, never credentials or secrets. Domain ownership is verified before activation.                                                       |
+| `trustiam.application_projection`        | `organization_id`, `target_plane`, `target_tenant_id`, `desired_version`, `desired_hash`, source case/resource, status, reconciliation status, valid time                        | Declares desired organization presence in a plane. It does not itself grant access.                                                                              |
+| `trustiam.projection_scope`              | `projection_id`, `scope_kind`, `target_id`, `ceiling_mode`, `network_role_ceiling`, `desired_version`, status                                                                    | Maximum organizational/network boundary the projection may address. Application grants must be equal to or narrower than this ceiling.                           |
+| `trustiam.identity_provisioning_request` | `subject_key`, idempotency/fingerprint, realm and normalized identifier, target planes, provider subject, status/version                                                         | Creates or reconciles a human/service identity. It remains separate from organization correlation.                                                               |
 
 Every projection event must carry `authority_tenant_id`, `canonical_party_id`, source aggregate/version/hash, target plane/tenant, operation, effective range, correlation/causation IDs and idempotency key. Plane adapters acknowledge desired and observed versions; a mismatch is quarantined rather than silently rebound.
 
 #### 12.6.4 MESH table/field contract
 
-| Table | Required identity/lifecycle fields | Authority and relation to NEON/IAM |
-|---|---|---|
-| `mesh.network_account` | `tenant_id`, `id`, `canonical_party_id`, `account_purpose_code`, `account_code`, names, `network_role`, country/currency, `status` | MESH exchange endpoint. `canonical_party_id` correlates the party; `tenant_id` owns the row; neither authenticates a principal. |
-| `mesh.network_account_identifier` | `network_account_id`, `scheme`, `identifier_value`, issuer, primary/verification/status | Network matching evidence; do not use mutable names or account codes as the NEON BP key. |
-| `mesh.network_account_identity` | account/tenant coordinates, immutable canonical-party/purpose coordinates, evidence/version | Hardened immutable identity head used to detect account-coordinate mutation and replay. |
-| `mesh.network_relationship` and `mesh.network_relationship_identity` | buyer/supplier account and tenant coordinates, kind, status/version, effective time | Cross-tenant relationship episode. It does not create a NEON supplier or an IAM grant. |
-| `mesh.network_relationship_capability` (new) | relationship ID, `capability_code`, requested/approved/effective timestamps, status/version, routing policy, actor/evidence | Gates `profile_exchange`, `sourcing`, `procurement`, `invoicing`, `payments` and `services_procurement` independently. |
-| `mesh.document_envelope` / payload / event / acknowledgement | sender/receiver account, relationship and capability, document/contract/hash, purpose, classification, correlation, idempotency, lifecycle state | Immutable exchange transport and evidence. Payload values remain proposals until a NEON command materializes them. |
-| `mesh.network_account_profile_publication` and event | publisher account, release/field set, recipient/purpose, snapshot/hash, valid time/status | Recipient-specific disclosure projection, not a shared global master. |
-| `mesh.network_command_evidence` | aggregate and command coordinates, before/after version, actor, fingerprint, result | Append-only proof for command-owned MESH lifecycle changes. |
+| Table                                                                | Required identity/lifecycle fields                                                                                                               | Authority and relation to NEON/IAM                                                                                              |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `mesh.network_account`                                               | `tenant_id`, `id`, `canonical_party_id`, `account_purpose_code`, `account_code`, names, `network_role`, country/currency, `status`               | MESH exchange endpoint. `canonical_party_id` correlates the party; `tenant_id` owns the row; neither authenticates a principal. |
+| `mesh.network_account_identifier`                                    | `network_account_id`, `scheme`, `identifier_value`, issuer, primary/verification/status                                                          | Network matching evidence; do not use mutable names or account codes as the NEON BP key.                                        |
+| `mesh.network_account_identity`                                      | account/tenant coordinates, immutable canonical-party/purpose coordinates, evidence/version                                                      | Hardened immutable identity head used to detect account-coordinate mutation and replay.                                         |
+| `mesh.network_relationship` and `mesh.network_relationship_identity` | buyer/supplier account and tenant coordinates, kind, status/version, effective time                                                              | Cross-tenant relationship episode. It does not create a NEON supplier or an IAM grant.                                          |
+| `mesh.network_relationship_capability` (new)                         | relationship ID, `capability_code`, requested/approved/effective timestamps, status/version, routing policy, actor/evidence                      | Gates `profile_exchange`, `sourcing`, `procurement`, `invoicing`, `payments` and `services_procurement` independently.          |
+| `mesh.document_envelope` / payload / event / acknowledgement         | sender/receiver account, relationship and capability, document/contract/hash, purpose, classification, correlation, idempotency, lifecycle state | Immutable exchange transport and evidence. Payload values remain proposals until a NEON command materializes them.              |
+| `mesh.network_account_profile_publication` and event                 | publisher account, release/field set, recipient/purpose, snapshot/hash, valid time/status                                                        | Recipient-specific disclosure projection, not a shared global master.                                                           |
+| `mesh.network_command_evidence`                                      | aggregate and command coordinates, before/after version, actor, fingerprint, result                                                              | Append-only proof for command-owned MESH lifecycle changes.                                                                     |
 
 MESH principals are authorized using the authenticated principal-to-network-account binding and active relationship capability. `canonical_party_id` is used only as a consistency claim. A relationship must fail closed if sender/receiver tenants, accounts, capability, principal binding or immutable identity head disagree.
 
 #### 12.6.5 NEON Business Partner table/field contract
 
-| Aggregate/table | Key fields | Field-level authority |
-|---|---|---|
-| `master.business_partner` | `tenant_id`, `id`, `canonical_party_id`, `representation_purpose_code`, `code`, names/legal attributes, parent, `status`, `record_version` | Organization identity and recipient-local lifecycle. `partner_category='organization'`; code is tenant-local; canonical party is correlation only. Status changes only through governed commands. |
-| `master.supplier` | `tenant_id`, `id`, `business_partner_id`, `supplier_code`, supplier type, `status`, version | Supplier-role state. It does not duplicate BP legal/name fields. |
-| `master.customer` | `tenant_id`, `id`, `business_partner_id`, `customer_code`, customer type, `status`, version | Customer-role state. Credit and designation remain separate control authorities. |
-| `master.business_partner_operating_organization_assignment` | BP/role IDs, `operating_organization_id`, effective range, status | Declares where the internal procurement/sales organization may use the role. It is an authorization/readiness scope, not party identity. |
-| Company supplier/customer profiles | role ID, `company_code_id`, accounting/payment/configuration fields, status/effective range | Company-specific operational setup; no global role status or legal identity duplication. |
-| Normalized BP child tables | BP ID plus stable item ID, type/catalog reference, normalized value, verification, valid time/status | Addresses, contacts, identifiers, tax registrations, classifications, certifications and aliases. Contract fields map here only after approval. |
-| `control.business_partner_qualification` | BP/supplier, process/decision, evidence and effective range | Qualification decision authority. |
-| `control.supplier_preference_designation` | BP/supplier, designation, scope/effective range, decision evidence | Buyer-owned preference authority. |
-| `control.customer_credit_review` | BP/customer, approved amount/currency, scope, decision/effective range | Sole approved credit authority. Request payload may contain requested values only. |
-| `control.customer_account_designation` | BP/customer, designation, scope/effective range, decision evidence | Customer classification/designation authority. |
-| `control.business_partner_decision_scope` | exactly one decision parent plus typed organization/company/commodity/geographic scope, include/exclude, hierarchy version, valid time | Normalized applicability; no expanding nullable scope fields on decision heads. |
-| `control.mesh_business_partner_account_link` | recipient tenant/BP, source tenant/account, recipient account, relationship, role, external reference, decision/status/version | Governed assertion that one MESH account represents a specific recipient-local BP. Approval is required even when canonical-party IDs match. |
-| `master.external_reference` | owner/entity coordinates, source system/external ID, valid time/status | Recipient-local durable external correlation and replay-safe lookup. |
-| `control.business_partner_mutation_evidence` | aggregate/BP, command, from/to state/version, actor, idempotency/fingerprint, evidence | Append-only proof of all authoritative BP and role mutations. |
+| Aggregate/table                                             | Key fields                                                                                                                                 | Field-level authority                                                                                                                                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `master.business_partner`                                   | `tenant_id`, `id`, `canonical_party_id`, `representation_purpose_code`, `code`, names/legal attributes, parent, `status`, `record_version` | Organization identity and recipient-local lifecycle. `partner_category='organization'`; code is tenant-local; canonical party is correlation only. Status changes only through governed commands. |
+| `master.supplier`                                           | `tenant_id`, `id`, `business_partner_id`, `supplier_code`, supplier type, `status`, version                                                | Supplier-role state. It does not duplicate BP legal/name fields.                                                                                                                                  |
+| `master.customer`                                           | `tenant_id`, `id`, `business_partner_id`, `customer_code`, customer type, `status`, version                                                | Customer-role state. Credit and designation remain separate control authorities.                                                                                                                  |
+| `master.business_partner_operating_organization_assignment` | BP/role IDs, `operating_organization_id`, effective range, status                                                                          | Declares where the internal procurement/sales organization may use the role. It is an authorization/readiness scope, not party identity.                                                          |
+| Company supplier/customer profiles                          | role ID, `company_code_id`, accounting/payment/configuration fields, status/effective range                                                | Company-specific operational setup; no global role status or legal identity duplication.                                                                                                          |
+| Normalized BP child tables                                  | BP ID plus stable item ID, type/catalog reference, normalized value, verification, valid time/status                                       | Addresses, contacts, identifiers, tax registrations, classifications, certifications and aliases. Contract fields map here only after approval.                                                   |
+| `control.business_partner_qualification`                    | BP/supplier, process/decision, evidence and effective range                                                                                | Qualification decision authority.                                                                                                                                                                 |
+| `control.supplier_preference_designation`                   | BP/supplier, designation, scope/effective range, decision evidence                                                                         | Buyer-owned preference authority.                                                                                                                                                                 |
+| `control.customer_credit_review`                            | BP/customer, approved amount/currency, scope, decision/effective range                                                                     | Sole approved credit authority. Request payload may contain requested values only.                                                                                                                |
+| `control.customer_account_designation`                      | BP/customer, designation, scope/effective range, decision evidence                                                                         | Customer classification/designation authority.                                                                                                                                                    |
+| `control.business_partner_decision_scope`                   | exactly one decision parent plus typed organization/company/commodity/geographic scope, include/exclude, hierarchy version, valid time     | Normalized applicability; no expanding nullable scope fields on decision heads.                                                                                                                   |
+| `control.mesh_business_partner_account_link`                | recipient tenant/BP, source tenant/account, recipient account, relationship, role, external reference, decision/status/version             | Governed assertion that one MESH account represents a specific recipient-local BP. Approval is required even when canonical-party IDs match.                                                      |
+| `master.external_reference`                                 | owner/entity coordinates, source system/external ID, valid time/status                                                                     | Recipient-local durable external correlation and replay-safe lookup.                                                                                                                              |
+| `control.business_partner_mutation_evidence`                | aggregate/BP, command, from/to state/version, actor, idempotency/fingerprint, evidence                                                     | Append-only proof of all authoritative BP and role mutations.                                                                                                                                     |
 
 The account-link command must enforce all of the following before `status='active'`: the MESH account identity is verified; the relationship and `profile_exchange` capability are effective; the incoming and BP canonical-party claims are either equal or an approved reconciliation case explains the difference; the NEON duplicate decision is complete; source/recipient coordinates agree with the received envelope; and maker-checker evidence exists. A later mismatch sets the link to suspended/quarantined and opens a reconciliation case; it never rewrites the BP automatically.
 
@@ -634,21 +662,21 @@ The account-link command must enforce all of the following before `status='activ
 
 Published field metadata must contain a stable semantic field ID, classification, proposal path, materializer code and authority target. Physical columns are compiler output and may change without changing the semantic ID.
 
-| Semantic field example | Proposal/snapshot path | Approved NEON target | MESH disclosure | IAM use |
-|---|---|---|---|---|
-| Organization legal name | `organization.legalName` | `master.business_partner.legal_name` | Allowed in an approved exchange field set | May populate display text only; never provider key |
-| Display name | `organization.displayName` | `master.business_partner.display_name` | Usually allowed | `trustiam.organization.display_name` is a separately projected copy |
-| Incorporation country | `organization.incorporation.countryCode` | `master.business_partner.registration_country_code` | Allowed by purpose/classification | Matching/reconciliation input only |
-| Registration identifier | `organization.identifiers[$itemId]` | normalized BP identifier child row | Selective disclosure; protect raw value as classified | Canonical-party identifier verification input, not login identifier |
-| Address | `organization.addresses[$itemId]` | BP address/relation child | Recipient-specific field set | No IAM authority |
-| Contact | `organization.contacts[$itemId]` | BP contact person/channel children | Purpose/consent limited | A contact is not automatically an IAM principal |
-| Supplier type | `roles.supplier.typeCode` | `master.supplier.supplier_type` | Optional profile fact | No IAM authority |
-| Customer type | `roles.customer.typeCode` | `master.customer.customer_type` | Optional profile fact | No IAM authority |
-| Qualification answer | `qualification.responses[...]` | immutable snapshots; approved result to `control.business_partner_qualification` | Request/response document only | No IAM authority |
-| Requested credit | `customer.credit.requestedAmount` | request snapshot only | Optional request document | No IAM authority |
-| Approved credit | not writable by external form | `control.customer_credit_review` | Decision acknowledgement may disclose outcome | No IAM authority |
-| Bank account | protected disclosure reference/token | protected bank authority/link after verification | Token/encrypted disclosure only | Prohibited |
-| IAM organization alias/domain | separate IAM onboarding contract | no BP column | Not a BP-profile field | `trustiam.organization` / provider after domain verification |
+| Semantic field example        | Proposal/snapshot path                   | Approved NEON target                                                             | MESH disclosure                                       | IAM use                                                             |
+| ----------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------- |
+| Organization legal name       | `organization.legalName`                 | `master.business_partner.legal_name`                                             | Allowed in an approved exchange field set             | May populate display text only; never provider key                  |
+| Display name                  | `organization.displayName`               | `master.business_partner.display_name`                                           | Usually allowed                                       | `trustiam.organization.display_name` is a separately projected copy |
+| Incorporation country         | `organization.incorporation.countryCode` | `master.business_partner.registration_country_code`                              | Allowed by purpose/classification                     | Matching/reconciliation input only                                  |
+| Registration identifier       | `organization.identifiers[$itemId]`      | normalized BP identifier child row                                               | Selective disclosure; protect raw value as classified | Canonical-party identifier verification input, not login identifier |
+| Address                       | `organization.addresses[$itemId]`        | BP address/relation child                                                        | Recipient-specific field set                          | No IAM authority                                                    |
+| Contact                       | `organization.contacts[$itemId]`         | BP contact person/channel children                                               | Purpose/consent limited                               | A contact is not automatically an IAM principal                     |
+| Supplier type                 | `roles.supplier.typeCode`                | `master.supplier.supplier_type`                                                  | Optional profile fact                                 | No IAM authority                                                    |
+| Customer type                 | `roles.customer.typeCode`                | `master.customer.customer_type`                                                  | Optional profile fact                                 | No IAM authority                                                    |
+| Qualification answer          | `qualification.responses[...]`           | immutable snapshots; approved result to `control.business_partner_qualification` | Request/response document only                        | No IAM authority                                                    |
+| Requested credit              | `customer.credit.requestedAmount`        | request snapshot only                                                            | Optional request document                             | No IAM authority                                                    |
+| Approved credit               | not writable by external form            | `control.customer_credit_review`                                                 | Decision acknowledgement may disclose outcome         | No IAM authority                                                    |
+| Bank account                  | protected disclosure reference/token     | protected bank authority/link after verification                                 | Token/encrypted disclosure only                       | Prohibited                                                          |
+| IAM organization alias/domain | separate IAM onboarding contract         | no BP column                                                                     | Not a BP-profile field                                | `trustiam.organization` / provider after domain verification        |
 
 Materialization follows `missing/null/clear/replace/append/revoke/preserve` semantics from the pinned contract. The adapter writes only its registered targets, records source-member-to-target-row lineage, and emits a result snapshot containing the complete aggregate. No generic JSON-to-column reflection is permitted in an authoritative command.
 
@@ -662,7 +690,7 @@ verified canonical party
   -> signed disclosure envelope
   -> NEON received/transformed/proposal snapshots
   -> duplicate and canonical-party reconciliation
-  -> approved entity-change case
+  -> approved document.entity_case
   -> materialize Business Partner in onboarding state
   -> approve MESH-account-to-BP link
   -> create supplier/customer role in onboarding state
@@ -676,14 +704,14 @@ State propagation is event-driven and monotonic by aggregate version. It is not 
 
 Lifecycle effects are deliberately asymmetric:
 
-| Source event | Required downstream behavior |
-|---|---|
-| Canonical party merged/contested | Suspend new correlation decisions; reconcile projections and links; preserve historical IDs. |
-| IAM organization suspended | Revoke/invalidate associated identity access; do not deactivate the BP or MESH account automatically. |
-| MESH account/relationship/capability suspended | Stop affected exchange routes; quarantine new envelopes; evaluate linked external access. Do not erase the NEON BP. |
-| NEON BP archived | Disable recipient-local commercial use and links according to policy; do not retire the sender's MESH account. |
-| Supplier/customer role suspended | Block that commercial role and dependent access/readiness only; preserve the other role. |
-| Worker engagement/supplier access dependency ended | Deprovision scoped external-worker access and increment the principal authorization epoch. |
+| Source event                                       | Required downstream behavior                                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Canonical party merged/contested                   | Suspend new correlation decisions; reconcile projections and links; preserve historical IDs.                        |
+| IAM organization suspended                         | Revoke/invalidate associated identity access; do not deactivate the BP or MESH account automatically.               |
+| MESH account/relationship/capability suspended     | Stop affected exchange routes; quarantine new envelopes; evaluate linked external access. Do not erase the NEON BP. |
+| NEON BP archived                                   | Disable recipient-local commercial use and links according to policy; do not retire the sender's MESH account.      |
+| Supplier/customer role suspended                   | Block that commercial role and dependent access/readiness only; preserve the other role.                            |
+| Worker engagement/supplier access dependency ended | Deprovision scoped external-worker access and increment the principal authorization epoch.                          |
 
 #### 12.6.8 RLS, grants and field protection
 
@@ -717,30 +745,30 @@ The immediately removable source duplication identified in this area is the repe
 
 ### 13.1 NEON Business Partner request area
 
-| Current object | Disposition | Replacement/gate |
-|---|---|---|
-| `business_partner_invitation` | Retire after identity cutover | Case task + requested MESH relationship + protected expiring access capability |
-| `business_partner_invitation_recovery` | Retire | Access recovery command/evidence |
-| `business_partner_request` | Retire after dual-write | `entity_change_case` + snapshots; temporary read-only compatibility view |
-| Seven typed request child tables | Retire after dual-write | Contract-bound snapshot collections; approved data still materializes to normalized master children |
-| `business_partner_request_evidence` | Converge | Generic case evidence/content references and snapshots |
-| `business_partner_request_validation` | Converge | Contract-pinned validation snapshot plus small searchable failure projection if justified |
-| `business_partner_request_materialization_item` | Retire | `entity_snapshot_lineage` |
-| Three `mesh_business_partner_match/acceptance*` tables | Retire | Receiver attempt, proposal/decision snapshots, lineage and MESH acknowledgement |
-| `supplier_activation_evidence` | Retire | Shared command evidence + readiness decision/result snapshot |
-| `business_partner_duplicate_resolution` | Converge | Generic case plus role-based before/after snapshot lineage |
-| `business_partner_bank_verification` | Retain then move/rename under control | Protected operational verification state; payload evidence in protected snapshot |
-| `supplier_registration_invitation` view | Retire | Remove after zero-use telemetry window |
+| Current object                                         | Disposition                           | Replacement/gate                                                                                    |
+| ------------------------------------------------------ | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `business_partner_invitation`                          | Retire after identity cutover         | Case task + requested MESH relationship + protected expiring access capability                      |
+| `business_partner_invitation_recovery`                 | Retire                                | Access recovery command/evidence                                                                    |
+| `business_partner_request`                             | Retire after dual-write               | `entity_case` + snapshots; temporary read-only compatibility view                                   |
+| Seven typed request child tables                       | Retire after dual-write               | Contract-bound snapshot collections; approved data still materializes to normalized master children |
+| `business_partner_request_evidence`                    | Converge                              | `entity_case_command_evidence`, protected content references and snapshots                          |
+| `business_partner_request_validation`                  | Converge                              | `entity_case_validation` plus contract-pinned validation snapshots                                  |
+| `business_partner_request_materialization_item`        | Retire                                | `entity_case_materialization` + `entity_case_snapshot_lineage`                                      |
+| Three `mesh_business_partner_match/acceptance*` tables | Retire                                | Receiver attempt, proposal/decision snapshots, lineage and MESH acknowledgement                     |
+| `supplier_activation_evidence`                         | Retire                                | Shared command evidence + readiness decision/result snapshot                                        |
+| `business_partner_duplicate_resolution`                | Converge                              | Generic case plus role-based before/after snapshot lineage                                          |
+| `business_partner_bank_verification`                   | Retain then move/rename under control | Protected operational verification state; payload evidence in protected snapshot                    |
+| `supplier_registration_invitation` view                | Retire                                | Remove after zero-use telemetry window                                                              |
 
 ### 13.2 Workforce request area
 
-| Current object | Disposition | Replacement/gate |
-|---|---|---|
-| `workforce_request` | Retire after People case cutover | `entity_change_case` with workforce/person contracts |
-| `workforce_request_validation` | Converge | Generic validation snapshot/projection |
-| `engagement_onboarding_case` | Retire | `governance.cycle_run` + tasks + worker engagement subject |
-| `worker_compliance_item` | Retain/harden | Searchable effective decision authority |
-| Requisition, candidate, work order, SOW, engagement and placement tables | Retain | Operational/commercial authorities; separate future revision-snapshot review |
+| Current object                                                           | Disposition                      | Replacement/gate                                                             |
+| ------------------------------------------------------------------------ | -------------------------------- | ---------------------------------------------------------------------------- |
+| `workforce_request`                                                      | Retire after People case cutover | `entity_case` with workforce/person contracts                                |
+| `workforce_request_validation`                                           | Converge                         | `entity_case_validation` plus validation snapshots                           |
+| `engagement_onboarding_case`                                             | Retire                           | `governance.cycle_run` + tasks + worker engagement subject                   |
+| `worker_compliance_item`                                                 | Retain/harden                    | Searchable effective decision authority                                      |
+| Requisition, candidate, work order, SOW, engagement and placement tables | Retain                           | Operational/commercial authorities; separate future revision-snapshot review |
 
 ### 13.3 Snapshot and MESH projections
 
@@ -791,11 +819,11 @@ This program starts only after the current S5 security/mutation certification is
 
 **Exit:** live negative, concurrency, replay and rollback probes pass on both planes.
 
-### C2 — Studio composition and generic case
+### C2 — Studio composition and entity case
 
 - Add surface component binding.
 - Publish request/registration/qualification/customer/workforce contracts.
-- Add entity-change case and cycle subject.
+- Add the accepted `document.entity_case` family and cycle subject.
 - Compile UI, server validation, materializer mapping and contract tests from one release.
 
 **Exit:** internal round-trip works without typed request-child persistence.
@@ -859,15 +887,15 @@ This program starts only after the current S5 security/mutation certification is
 
 Every database-related script and seed pack must have one explicit disposition:
 
-| Class | Execution rule |
-| --- | --- |
-| Release foundation | Mandatory, in ordered plane DDL manifests |
-| Release upgrade | Mandatory for the applicable baseline, in ordered migration manifests |
-| Release seed | Mandatory, in the selected immutable seed-pack manifest |
-| Environment bootstrap | Selected explicitly by environment profile; never inferred |
-| Development/demo fixture | Forbidden in production profiles |
-| Operational/repair | Manual command with confirmation and evidence; not part of provisioning |
-| Historical/retired | Retained for audit or upgrade history and excluded explicitly |
+| Class                    | Execution rule                                                          |
+| ------------------------ | ----------------------------------------------------------------------- |
+| Release foundation       | Mandatory, in ordered plane DDL manifests                               |
+| Release upgrade          | Mandatory for the applicable baseline, in ordered migration manifests   |
+| Release seed             | Mandatory, in the selected immutable seed-pack manifest                 |
+| Environment bootstrap    | Selected explicitly by environment profile; never inferred              |
+| Development/demo fixture | Forbidden in production profiles                                        |
+| Operational/repair       | Manual command with confirmation and evidence; not part of provisioning |
+| Historical/retired       | Retained for audit or upgrade history and excluded explicitly           |
 
 The coverage check fails when an eligible artifact is absent from a manifest, occurs more than once, has an unknown class, references a missing file, or has a content hash different from the manifest. Included SQL fragments and generated inputs are covered by the resolved-content hash, not only the top-level filename.
 

@@ -1,23 +1,489 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { BusinessPartnerEligibilityService } from "@athyper/server-contract-master-data";
-import type { Application, NextFunction, Request, RequestHandler, Response } from "express";
+import type {
+  Application,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+} from "express";
 import { MasterDataError } from "./errors.js";
 
-export function registerBusinessPartnerEligibilityRoutes(app:Application,options:{readonly authenticate:RequestHandler;readonly readContext:(response:Response)=>VerifiedRequestContext;readonly service:BusinessPartnerEligibilityService;readonly telemetry?:(measurement:{readonly operation:string;readonly outcome:"success"|"denied"|"error";readonly statusCode:number;readonly durationMs:number})=>void}):void{
- const route=(operation:string,work:(request:Request,context:VerifiedRequestContext,response:Response)=>Promise<unknown>):RequestHandler=>async(request,response,next)=>{const startedAt=performance.now();let outcome:"success"|"denied"|"error"="success",statusCode=200;try{const result=await work(request,options.readContext(response),response);if(!response.headersSent)response.json(result);statusCode=response.statusCode;}catch(error){outcome=error instanceof MasterDataError&&error.status===403?"denied":"error";statusCode=error instanceof MasterDataError?error.status:500;handle(error,response,next);}finally{options.telemetry?.({operation,outcome,statusCode,durationMs:performance.now()-startedAt});}};
- app.get("/api/neon/business-partners/:businessPartnerId/eligibility",options.authenticate,route("resolve",(request,context)=>options.service.resolve({context,businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),role:enumeration(request.query["role"],["supplier","customer"] as const),operatingOrganizationId:uuid(request.query["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuidOptional(request.query["companyCodeId"],"companyCodeId"),commodityCategoryId:uuidOptional(request.query["commodityCategoryId"],"commodityCategoryId"),operationCode:required(request.query["operationCode"],"operationCode"),businessDate:required(request.query["businessDate"],"businessDate")})));
- app.post("/api/neon/business-partners/:businessPartnerId/supplier-activation",options.authenticate,route("activate-supplier",async(request,context,response)=>{const body=object(request.body),result=await options.service.activateSupplier({context,businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),operatingOrganizationId:uuid(body["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuidOptional(body["companyCodeId"],"companyCodeId"),commodityCategoryId:uuidOptional(body["commodityCategoryId"],"commodityCategoryId"),businessDate:required(body["businessDate"],"businessDate"),requirePaymentReadiness:booleanOptional(body["requirePaymentReadiness"]),idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});response.status(result.replayed?200:201);return result;}));
- app.post("/api/neon/business-partners/:businessPartnerId/qualifications",options.authenticate,route("create-qualification",async(request,context,response)=>{const body=object(request.body),result=await options.service.createQualification({context,idempotencyKey:required(body["idempotencyKey"],"idempotencyKey"),businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),partnerRole:enumeration(body["partnerRole"],["supplier","customer"] as const),operatingOrganizationId:uuid(body["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuidOptional(body["companyCodeId"],"companyCodeId"),commodityCapabilityId:uuidOptional(body["commodityCapabilityId"],"commodityCapabilityId"),qualificationTypeCode:required(body["qualificationTypeCode"],"qualificationTypeCode"),riskAssessmentId:uuidOptional(body["riskAssessmentId"],"riskAssessmentId"),effectiveFrom:textOptional(body["effectiveFrom"]),effectiveUntil:textOptional(body["effectiveUntil"]),nextReviewAt:textOptional(body["nextReviewAt"])});response.status(result.replayed?200:201);return result;}));
- app.post("/api/neon/business-partner-qualifications/:qualificationId/decisions",options.authenticate,route("decide-qualification",(request,context)=>{const body=object(request.body);return options.service.decideQualification({context,qualificationId:uuid(request.params["qualificationId"],"qualificationId"),expectedVersion:positive(body["expectedVersion"],"expectedVersion"),decision:enumeration(body["decision"],["approved","conditional","rejected","suspended"] as const),reason:required(body["reason"],"reason"),idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});}));
- app.get("/api/neon/business-partners/:businessPartnerId/preferences",options.authenticate,route("list-preferences",(request,context)=>options.service.listPreferences({context,businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),operatingOrganizationId:uuid(request.query["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuidOptional(request.query["companyCodeId"],"companyCodeId"),commodityCategoryId:uuidOptional(request.query["commodityCategoryId"],"commodityCategoryId"),businessDate:required(request.query["businessDate"],"businessDate")})));
- app.post("/api/neon/business-partners/:businessPartnerId/preferences",options.authenticate,route("create-preference",async(request,context,response)=>{const body=object(request.body),result=await options.service.createPreference({context,idempotencyKey:required(body["idempotencyKey"],"idempotencyKey"),businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),supplierId:uuid(body["supplierId"],"supplierId"),operatingOrganizationId:uuid(body["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuidOptional(body["companyCodeId"],"companyCodeId"),commodityCategoryId:uuidOptional(body["commodityCategoryId"],"commodityCategoryId"),effectiveFrom:required(body["effectiveFrom"],"effectiveFrom"),effectiveUntil:textOptional(body["effectiveUntil"]),rationale:required(body["rationale"],"rationale")});response.status(result.replayed?200:201);return result;}));
- app.post("/api/neon/business-partner-preferences/:preferenceId/decisions",options.authenticate,route("decide-preference",(request,context)=>{const body=object(request.body);return options.service.decidePreference({context,preferenceId:uuid(request.params["preferenceId"],"preferenceId"),expectedVersion:positive(body["expectedVersion"],"expectedVersion"),decision:enumeration(body["decision"],["approved","rejected"] as const),reason:required(body["reason"],"reason"),idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});}));
- app.post("/api/neon/business-partner-preferences/:preferenceId/revocations",options.authenticate,route("revoke-preference",(request,context)=>{const body=object(request.body);return options.service.revokePreference({context,preferenceId:uuid(request.params["preferenceId"],"preferenceId"),expectedVersion:positive(body["expectedVersion"],"expectedVersion"),reason:required(body["reason"],"reason"),idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});}));
- app.get("/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",options.authenticate,route("list-customer-credit",(request,context)=>options.service.listCustomerCreditReviews({context,businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),operatingOrganizationId:uuid(request.query["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuid(request.query["companyCodeId"],"companyCodeId")})));
- app.post("/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",options.authenticate,route("create-customer-credit",async(request,context,response)=>{const body=object(request.body),limit=numberOptional(body["requestedCreditLimit"],"requestedCreditLimit"),result=await options.service.createCustomerCreditReview({context,idempotencyKey:required(body["idempotencyKey"],"idempotencyKey"),businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),customerId:uuid(body["customerId"],"customerId"),operatingOrganizationId:uuid(body["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuid(body["companyCodeId"],"companyCodeId"),reviewTypeCode:required(body["reviewTypeCode"],"reviewTypeCode"),...(limit===undefined?{}:{requestedCreditLimit:limit,requestedCurrencyCode:required(body["requestedCurrencyCode"],"requestedCurrencyCode")}),...(textOptional(body["riskClassCode"])?{riskClassCode:textOptional(body["riskClassCode"])}:{}),...(textOptional(body["effectiveFrom"])?{effectiveFrom:textOptional(body["effectiveFrom"])}:{}),...(textOptional(body["effectiveUntil"])?{effectiveUntil:textOptional(body["effectiveUntil"])}:{})});response.status(result.replayed?200:201);return result;}));
- app.post("/api/neon/customer-credit-reviews/:reviewId/decisions",options.authenticate,route("decide-customer-credit",(request,context)=>{const body=object(request.body),approvedLimit=numberOptional(body["approvedCreditLimit"],"approvedCreditLimit");return options.service.decideCustomerCreditReview({context,reviewId:uuid(request.params["reviewId"],"reviewId"),expectedVersion:positive(body["expectedVersion"],"expectedVersion"),decision:enumeration(body["decision"],["approved","conditional","rejected","suspended"] as const),reason:required(body["reason"],"reason"),...(approvedLimit===undefined?{}:{approvedCreditLimit:approvedLimit,approvedCurrencyCode:required(body["approvedCurrencyCode"],"approvedCurrencyCode")}),conditions:Array.isArray(body["conditions"])?body["conditions"].map(object):[],idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});}));
- app.post("/api/neon/business-partners/:businessPartnerId/customer-lifecycle",options.authenticate,route("customer-lifecycle",async(request,context,response)=>{const body=object(request.body),result=await options.service.transitionCustomer({context,businessPartnerId:uuid(request.params["businessPartnerId"],"businessPartnerId"),customerId:uuid(body["customerId"],"customerId"),operatingOrganizationId:uuid(body["operatingOrganizationId"],"operatingOrganizationId"),companyCodeId:uuid(body["companyCodeId"],"companyCodeId"),action:enumeration(body["action"],["activate","suspend","reactivate"] as const),reasonCode:required(body["reasonCode"],"reasonCode"),businessDate:required(body["businessDate"],"businessDate"),idempotencyKey:required(body["idempotencyKey"],"idempotencyKey")});response.status(result.replayed?200:201);return result;}));
+export function registerBusinessPartnerEligibilityRoutes(
+  app: Application,
+  options: {
+    readonly authenticate: RequestHandler;
+    readonly readContext: (response: Response) => VerifiedRequestContext;
+    readonly service: BusinessPartnerEligibilityService;
+    readonly telemetry?: (measurement: {
+      readonly operation: string;
+      readonly outcome: "success" | "denied" | "error";
+      readonly statusCode: number;
+      readonly durationMs: number;
+    }) => void;
+  },
+): void {
+  const route =
+    (
+      operation: string,
+      work: (
+        request: Request,
+        context: VerifiedRequestContext,
+        response: Response,
+      ) => Promise<unknown>,
+    ): RequestHandler =>
+    async (request, response, next) => {
+      const startedAt = performance.now();
+      let outcome: "success" | "denied" | "error" = "success",
+        statusCode = 200;
+      try {
+        const result = await work(
+          request,
+          options.readContext(response),
+          response,
+        );
+        if (!response.headersSent) response.json(result);
+        statusCode = response.statusCode;
+      } catch (error) {
+        outcome =
+          error instanceof MasterDataError && error.status === 403
+            ? "denied"
+            : "error";
+        statusCode = error instanceof MasterDataError ? error.status : 500;
+        handle(error, response, next);
+      } finally {
+        options.telemetry?.({
+          operation,
+          outcome,
+          statusCode,
+          durationMs: performance.now() - startedAt,
+        });
+      }
+    };
+  app.get(
+    "/api/neon/business-partners/:businessPartnerId/eligibility",
+    options.authenticate,
+    route("resolve", (request, context) =>
+      options.service.resolve({
+        context,
+        businessPartnerId: uuid(
+          request.params["businessPartnerId"],
+          "businessPartnerId",
+        ),
+        role: enumeration(request.query["role"], [
+          "supplier",
+          "customer",
+        ] as const),
+        operatingOrganizationId: uuid(
+          request.query["operatingOrganizationId"],
+          "operatingOrganizationId",
+        ),
+        companyCodeId: uuidOptional(
+          request.query["companyCodeId"],
+          "companyCodeId",
+        ),
+        commodityCategoryId: uuidOptional(
+          request.query["commodityCategoryId"],
+          "commodityCategoryId",
+        ),
+        operationCode: required(
+          request.query["operationCode"],
+          "operationCode",
+        ),
+        businessDate: required(request.query["businessDate"], "businessDate"),
+      }),
+    ),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/supplier-activation",
+    options.authenticate,
+    route("activate-supplier", async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.activateSupplier({
+          context,
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"),
+          commodityCategoryId: uuidOptional(
+            body["commodityCategoryId"],
+            "commodityCategoryId",
+          ),
+          businessDate: required(body["businessDate"], "businessDate"),
+          requirePaymentReadiness: booleanOptional(
+            body["requirePaymentReadiness"],
+          ),
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/qualifications",
+    options.authenticate,
+    route("create-qualification", async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.createQualification({
+          context,
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          partnerRole: enumeration(body["partnerRole"], [
+            "supplier",
+            "customer",
+          ] as const),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"),
+          commodityCapabilityId: uuidOptional(
+            body["commodityCapabilityId"],
+            "commodityCapabilityId",
+          ),
+          qualificationTypeCode: required(
+            body["qualificationTypeCode"],
+            "qualificationTypeCode",
+          ),
+          riskAssessmentId: uuidOptional(
+            body["riskAssessmentId"],
+            "riskAssessmentId",
+          ),
+          effectiveFrom: textOptional(body["effectiveFrom"]),
+          effectiveUntil: textOptional(body["effectiveUntil"]),
+          nextReviewAt: textOptional(body["nextReviewAt"]),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/business-partner-qualifications/:qualificationId/decisions",
+    options.authenticate,
+    route("decide-qualification", (request, context) => {
+      const body = object(request.body);
+      return options.service.decideQualification({
+        context,
+        qualificationId: uuid(
+          request.params["qualificationId"],
+          "qualificationId",
+        ),
+        expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+        decision: enumeration(body["decision"], [
+          "approved",
+          "conditional",
+          "rejected",
+          "suspended",
+        ] as const),
+        reason: required(body["reason"], "reason"),
+        idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+      });
+    }),
+  );
+  app.get(
+    "/api/neon/business-partners/:businessPartnerId/preferences",
+    options.authenticate,
+    route("list-preferences", (request, context) =>
+      options.service.listPreferences({
+        context,
+        businessPartnerId: uuid(
+          request.params["businessPartnerId"],
+          "businessPartnerId",
+        ),
+        operatingOrganizationId: uuid(
+          request.query["operatingOrganizationId"],
+          "operatingOrganizationId",
+        ),
+        companyCodeId: uuidOptional(
+          request.query["companyCodeId"],
+          "companyCodeId",
+        ),
+        commodityCategoryId: uuidOptional(
+          request.query["commodityCategoryId"],
+          "commodityCategoryId",
+        ),
+        businessDate: required(request.query["businessDate"], "businessDate"),
+      }),
+    ),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/preferences",
+    options.authenticate,
+    route("create-preference", async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.createPreference({
+          context,
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          supplierId: uuid(body["supplierId"], "supplierId"),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"),
+          commodityCategoryId: uuidOptional(
+            body["commodityCategoryId"],
+            "commodityCategoryId",
+          ),
+          effectiveFrom: required(body["effectiveFrom"], "effectiveFrom"),
+          effectiveUntil: textOptional(body["effectiveUntil"]),
+          rationale: required(body["rationale"], "rationale"),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/business-partner-preferences/:preferenceId/decisions",
+    options.authenticate,
+    route("decide-preference", (request, context) => {
+      const body = object(request.body);
+      return options.service.decidePreference({
+        context,
+        preferenceId: uuid(request.params["preferenceId"], "preferenceId"),
+        expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+        decision: enumeration(body["decision"], [
+          "approved",
+          "rejected",
+        ] as const),
+        reason: required(body["reason"], "reason"),
+        idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/business-partner-preferences/:preferenceId/revocations",
+    options.authenticate,
+    route("revoke-preference", (request, context) => {
+      const body = object(request.body);
+      return options.service.revokePreference({
+        context,
+        preferenceId: uuid(request.params["preferenceId"], "preferenceId"),
+        expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+        reason: required(body["reason"], "reason"),
+        idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+      });
+    }),
+  );
+  app.get(
+    "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
+    options.authenticate,
+    route("list-customer-credit", (request, context) =>
+      options.service.listCustomerCreditReviews({
+        context,
+        businessPartnerId: uuid(
+          request.params["businessPartnerId"],
+          "businessPartnerId",
+        ),
+        operatingOrganizationId: uuid(
+          request.query["operatingOrganizationId"],
+          "operatingOrganizationId",
+        ),
+        companyCodeId: uuid(request.query["companyCodeId"], "companyCodeId"),
+      }),
+    ),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
+    options.authenticate,
+    route("create-customer-credit", async (request, context, response) => {
+      const body = object(request.body),
+        limit = numberOptional(
+          body["requestedCreditLimit"],
+          "requestedCreditLimit",
+        ),
+        result = await options.service.createCustomerCreditReview({
+          context,
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          customerId: uuid(body["customerId"], "customerId"),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          companyCodeId: uuid(body["companyCodeId"], "companyCodeId"),
+          reviewTypeCode: required(body["reviewTypeCode"], "reviewTypeCode"),
+          ...(limit === undefined
+            ? {}
+            : {
+                requestedCreditLimit: limit,
+                requestedCurrencyCode: required(
+                  body["requestedCurrencyCode"],
+                  "requestedCurrencyCode",
+                ),
+              }),
+          ...(textOptional(body["riskClassCode"])
+            ? { riskClassCode: textOptional(body["riskClassCode"]) }
+            : {}),
+          ...(textOptional(body["effectiveFrom"])
+            ? { effectiveFrom: textOptional(body["effectiveFrom"]) }
+            : {}),
+          ...(textOptional(body["effectiveUntil"])
+            ? { effectiveUntil: textOptional(body["effectiveUntil"]) }
+            : {}),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/customer-credit-reviews/:reviewId/decisions",
+    options.authenticate,
+    route("decide-customer-credit", (request, context) => {
+      const body = object(request.body),
+        approvedLimit = numberOptional(
+          body["approvedCreditLimit"],
+          "approvedCreditLimit",
+        );
+      return options.service.decideCustomerCreditReview({
+        context,
+        reviewId: uuid(request.params["reviewId"], "reviewId"),
+        expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+        decision: enumeration(body["decision"], [
+          "approved",
+          "conditional",
+          "rejected",
+          "suspended",
+        ] as const),
+        reason: required(body["reason"], "reason"),
+        ...(approvedLimit === undefined
+          ? {}
+          : {
+              approvedCreditLimit: approvedLimit,
+              approvedCurrencyCode: required(
+                body["approvedCurrencyCode"],
+                "approvedCurrencyCode",
+              ),
+            }),
+        conditions: Array.isArray(body["conditions"])
+          ? body["conditions"].map(object)
+          : [],
+        idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/customer-lifecycle",
+    options.authenticate,
+    route("customer-lifecycle", async (request, context, response) => {
+      const body = object(request.body),
+        result = await options.service.transitionCustomer({
+          context,
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          customerId: uuid(body["customerId"], "customerId"),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          companyCodeId: uuid(body["companyCodeId"], "companyCodeId"),
+          action: enumeration(body["action"], [
+            "activate",
+            "suspend",
+            "reactivate",
+            "deactivate",
+            "archive",
+          ] as const),
+          expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+          reasonCode: required(body["reasonCode"], "reasonCode"),
+          businessDate: required(body["businessDate"], "businessDate"),
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
 }
-function object(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw bad("JSON object required");return value as Record<string,unknown>;}function textOptional(value:unknown){return typeof value==="string"&&value.trim()?value.trim():undefined;}function required(value:unknown,name:string){const result=textOptional(value);if(!result)throw bad(`${name} is required`);return result;}function enumeration<T extends string>(value:unknown,allowed:readonly T[]):T{if(typeof value!=="string"||!allowed.includes(value as T))throw bad(`Expected one of: ${allowed.join(", ")}`);return value as T;}function uuid(value:unknown,name:string){const result=required(value,name);if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(result))throw bad(`${name} must be a UUID`);return result;}function uuidOptional(value:unknown,name:string){return value==null||value===""?undefined:uuid(value,name);}function positive(value:unknown,name:string){const result=typeof value==="string"&&/^\d+$/.test(value)?Number(value):value;if(!Number.isSafeInteger(result)||Number(result)<1)throw bad(`${name} must be positive`);return Number(result);}function bad(message:string){return new MasterDataError(400,"BUSINESS_PARTNER_QUALIFICATION_INVALID",message);}function handle(error:unknown,response:Response,next:NextFunction){if(!(error instanceof MasterDataError)){next(error);return;}response.status(error.status).type("application/problem+json").json({type:`https://athyper.dev/problems/${error.code.toLowerCase()}`,title:error.code,status:error.status,detail:error.message,code:error.code});}
-function booleanOptional(value:unknown):boolean|undefined{if(value===undefined||value===null)return undefined;if(typeof value!=="boolean")throw bad("requirePaymentReadiness must be boolean");return value;}
-function numberOptional(value:unknown,name:string):number|undefined{if(value===undefined||value===null||value==="")return undefined;const result=typeof value==="string"?Number(value):value;if(typeof result!=="number"||!Number.isFinite(result))throw bad(`${name} must be numeric`);return result;}
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw bad("JSON object required");
+  return value as Record<string, unknown>;
+}
+function textOptional(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function required(value: unknown, name: string) {
+  const result = textOptional(value);
+  if (!result) throw bad(`${name} is required`);
+  return result;
+}
+function enumeration<T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+): T {
+  if (typeof value !== "string" || !allowed.includes(value as T))
+    throw bad(`Expected one of: ${allowed.join(", ")}`);
+  return value as T;
+}
+function uuid(value: unknown, name: string) {
+  const result = required(value, name);
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      result,
+    )
+  )
+    throw bad(`${name} must be a UUID`);
+  return result;
+}
+function uuidOptional(value: unknown, name: string) {
+  return value == null || value === "" ? undefined : uuid(value, name);
+}
+function positive(value: unknown, name: string) {
+  const result =
+    typeof value === "string" && /^\d+$/.test(value) ? Number(value) : value;
+  if (!Number.isSafeInteger(result) || Number(result) < 1)
+    throw bad(`${name} must be positive`);
+  return Number(result);
+}
+function bad(message: string) {
+  return new MasterDataError(
+    400,
+    "BUSINESS_PARTNER_QUALIFICATION_INVALID",
+    message,
+  );
+}
+function handle(error: unknown, response: Response, next: NextFunction) {
+  if (!(error instanceof MasterDataError)) {
+    next(error);
+    return;
+  }
+  response
+    .status(error.status)
+    .type("application/problem+json")
+    .json({
+      type: `https://athyper.dev/problems/${error.code.toLowerCase()}`,
+      title: error.code,
+      status: error.status,
+      detail: error.message,
+      code: error.code,
+    });
+}
+function booleanOptional(value: unknown): boolean | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "boolean")
+    throw bad("requirePaymentReadiness must be boolean");
+  return value;
+}
+function numberOptional(value: unknown, name: string): number | undefined {
+  if (value === undefined || value === null || value === "") return undefined;
+  const result = typeof value === "string" ? Number(value) : value;
+  if (typeof result !== "number" || !Number.isFinite(result))
+    throw bad(`${name} must be numeric`);
+  return result;
+}

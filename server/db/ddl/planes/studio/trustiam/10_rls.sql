@@ -13,6 +13,8 @@ CREATE POLICY projection_reconciler_projection_access ON trustiam.application_pr
 CREATE POLICY projection_reconciler_projection_observation ON trustiam.application_projection FOR UPDATE TO athyper_projection_reconciler USING (true) WITH CHECK (true);
 CREATE POLICY trustiam_projection_reconciliation_alert_insert ON event.outbox FOR INSERT TO athyper_projection_reconciler
   WITH CHECK (topic='iam.authority' AND event_type='trustiam.projection.reconciliation.dead_letter' AND source='trustiam-reconciler');
+CREATE POLICY trustiam_identity_saga_evidence_insert ON event.outbox FOR INSERT TO athyper_trustiam_service
+  WITH CHECK (topic='iam.authority' AND event_type IN('trustiam.identity.saga.succeeded','trustiam.identity.saga.failed','trustiam.identity.saga.dead_letter') AND source='trustiam-identity-saga');
 ALTER TABLE trustiam.identity_provisioning_attempt ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trustiam.identity_provisioning_attempt FORCE ROW LEVEL SECURITY;
 CREATE POLICY authority_access ON trustiam.identity_provisioning_attempt FOR ALL USING(authority_tenant_id=shared.current_tenant_id_soft()) WITH CHECK(authority_tenant_id=shared.current_tenant_id());

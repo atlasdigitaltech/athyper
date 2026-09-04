@@ -689,10 +689,9 @@ BEGIN
         NEW.code := nullif(lower(btrim(NEW.code)), '');
         NEW.name := nullif(btrim(NEW.name), '');
         NEW.account_holder_name := btrim(NEW.account_holder_name);
-        NEW.account_id_value := upper(regexp_replace(
-            NEW.account_id_value, '[^A-Za-z0-9]', '', 'g'
-        ));
-        NEW.account_last4 := right(NEW.account_id_value, 4);
+        NEW.protected_value_token := btrim(NEW.protected_value_token);
+        NEW.identifier_fingerprint := lower(NEW.identifier_fingerprint);
+        NEW.account_last4 := upper(btrim(NEW.account_last4));
         NEW.bic_override := nullif(upper(regexp_replace(
             NEW.bic_override, '\s+', '', 'g'
         )), '');
@@ -717,7 +716,8 @@ BEGIN
                 WHERE link.tenant_id = OLD.tenant_id
                   AND link.bank_account_id = OLD.id
            )
-           AND NEW.account_id_value IS DISTINCT FROM OLD.account_id_value
+           AND ROW(NEW.protected_value_token, NEW.identifier_fingerprint)
+               IS DISTINCT FROM ROW(OLD.protected_value_token, OLD.identifier_fingerprint)
        )
        OR NEW.created_at IS DISTINCT FROM OLD.created_at
        OR NEW.created_by IS DISTINCT FROM OLD.created_by THEN

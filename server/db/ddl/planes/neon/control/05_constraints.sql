@@ -934,7 +934,8 @@ ALTER TABLE control.supplier_preference_designation
     ADD CONSTRAINT supplier_preference_designation_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT supplier_preference_designation_supplier_fk
-    FOREIGN KEY (tenant_id, supplier_id) REFERENCES master.supplier (tenant_id, id) ON DELETE RESTRICT,
+    FOREIGN KEY (tenant_id, supplier_id, business_partner_id)
+    REFERENCES master.supplier (tenant_id, id, business_partner_id) ON DELETE RESTRICT,
     ADD CONSTRAINT supplier_preference_designation_org_fk
     FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT supplier_preference_designation_company_fk
@@ -958,7 +959,8 @@ ALTER TABLE control.customer_account_designation
     ADD CONSTRAINT customer_account_designation_partner_fk
     FOREIGN KEY (tenant_id, business_partner_id) REFERENCES master.business_partner (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_customer_fk
-    FOREIGN KEY (tenant_id, customer_id) REFERENCES master.customer (tenant_id, id) ON DELETE RESTRICT,
+    FOREIGN KEY (tenant_id, customer_id, business_partner_id)
+    REFERENCES master.customer (tenant_id, id, business_partner_id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_org_fk
     FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_company_fk
@@ -1056,7 +1058,7 @@ ALTER TABLE control.mesh_bank_account_projection
 ALTER TABLE control.customer_credit_review
   ADD CONSTRAINT customer_credit_review_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT customer_credit_review_customer_fk FOREIGN KEY(tenant_id,customer_id) REFERENCES master.customer(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_credit_review_customer_fk FOREIGN KEY(tenant_id,customer_id,business_partner_id) REFERENCES master.customer(tenant_id,id,business_partner_id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_credit_review_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_credit_review_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_credit_review_requested_currency_fk FOREIGN KEY(requested_currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
@@ -1069,7 +1071,7 @@ ALTER TABLE control.customer_credit_review
 ALTER TABLE control.customer_lifecycle_event
   ADD CONSTRAINT customer_lifecycle_event_tenant_fk FOREIGN KEY(tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_partner_fk FOREIGN KEY(tenant_id,business_partner_id) REFERENCES master.business_partner(tenant_id,id) ON DELETE RESTRICT,
-  ADD CONSTRAINT customer_lifecycle_event_customer_fk FOREIGN KEY(tenant_id,customer_id) REFERENCES master.customer(tenant_id,id) ON DELETE RESTRICT,
+  ADD CONSTRAINT customer_lifecycle_event_customer_fk FOREIGN KEY(tenant_id,customer_id,business_partner_id) REFERENCES master.customer(tenant_id,id,business_partner_id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_org_fk FOREIGN KEY(tenant_id,operating_organization_id) REFERENCES master.operating_organization(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_company_fk FOREIGN KEY(tenant_id,company_code_id) REFERENCES master.company_code(tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT customer_lifecycle_event_actor_fk FOREIGN KEY(tenant_id,occurred_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;

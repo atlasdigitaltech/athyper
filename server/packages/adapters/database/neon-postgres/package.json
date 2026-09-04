@@ -9,15 +9,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "prisma:pull:neon": "node scripts/prisma-pull.mjs --target=neon --schema src/prisma/schema.neon.prisma --force",
-    "prisma:pull:mesh": "node scripts/prisma-pull.mjs --target=mesh --schema src/prisma/schema.mesh.prisma --force",
-    "prisma:pull:studio": "node scripts/prisma-pull.mjs --target=studio --schema src/prisma/schema.studio.prisma --force",
-    "prisma:generate:neon": "node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.neon.prisma",
-    "prisma:generate:mesh": "node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.mesh.prisma",
-    "prisma:generate:studio": "node scripts/kysely-generate-from-ast.mjs --schema src/prisma/schema.studio.prisma",
-    "codegen": "pnpm run prisma:generate:neon && pnpm run prisma:generate:mesh && pnpm run prisma:generate:studio",
-    "db:sync": "pnpm run prisma:pull:neon && pnpm run prisma:pull:mesh && pnpm run prisma:pull:studio && python3 scripts/fix-prisma-relations.py && pnpm run codegen"
+    "test": "vitest run"
   },
   "dependencies": {
     "@athyper/server-adapter-db-core": "workspace:*",
@@ -25,9 +17,7 @@
     "kysely": "^0.28.17"
   },
   "devDependencies": {
-    "@mrleebo/prisma-ast": "^0.13.1",
     "@types/node": "^25.6.0",
-    "prisma": "^7.7.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   }

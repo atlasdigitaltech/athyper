@@ -1,12 +1,312 @@
-import type{VerifiedRequestContext}from"@athyper/server-contract-auth";
-import type{BusinessPartnerEligibilityRepository,CustomerCreditReview,PartnerEligibilityDecision}from"@athyper/server-contract-master-data";
-import{describe,expect,it}from"vitest";
-import{createBusinessPartnerEligibilityService}from"../business-partner-eligibility-service.js";
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type {
+  BusinessPartnerEligibilityRepository,
+  CustomerCreditReview,
+  PartnerEligibilityDecision,
+} from "@athyper/server-contract-master-data";
+import { describe, expect, it } from "vitest";
+import { createBusinessPartnerEligibilityService } from "../business-partner-eligibility-service.js";
 
-const maker={planeKey:"neon",tenantId:"11111111-1111-4111-8111-111111111111",principalId:"22222222-2222-4222-8222-222222222222",requestId:"customer-maker"}as VerifiedRequestContext;
-const approver={...maker,principalId:"33333333-3333-4333-8333-333333333333",requestId:"customer-approver"}as VerifiedRequestContext;
-const bp="44444444-4444-4444-8444-444444444444",customer="55555555-5555-4555-8555-555555555555",organization="66666666-6666-4666-8666-666666666666",company="77777777-7777-4777-8777-777777777777";
+const maker = {
+  planeKey: "neon",
+  tenantId: "11111111-1111-4111-8111-111111111111",
+  principalId: "22222222-2222-4222-8222-222222222222",
+  requestId: "customer-maker",
+} as VerifiedRequestContext;
+const approver = {
+  ...maker,
+  principalId: "33333333-3333-4333-8333-333333333333",
+  requestId: "customer-approver",
+} as VerifiedRequestContext;
+const bp = "44444444-4444-4444-8444-444444444444",
+  customer = "55555555-5555-4555-8555-555555555555",
+  organization = "66666666-6666-4666-8666-666666666666",
+  company = "77777777-7777-4777-8777-777777777777";
 
-function fixture(allow:(input:{readonly permissionCode:string;readonly resource:Readonly<Record<string,unknown>>})=>boolean=()=>true){let review:CustomerCreditReview|undefined,status:"prospect"|"active"|"suspended"="prospect";const events:string[]=[],permissions:string[]=[];const repository={async findCustomerCreditReviewByIdempotencyKey(_tenant:string,key:string){return review&&key==="customer-credit-create-001"?review:null;},async createCustomerCreditReview(input:any){review={id:"88888888-8888-4888-8888-888888888888",tenantId:input.tenantId,businessPartnerId:input.businessPartnerId,customerId:input.customerId,operatingOrganizationId:input.operatingOrganizationId,companyCodeId:input.companyCodeId,reviewTypeCode:input.reviewTypeCode,requestedCreditLimit:input.requestedCreditLimit,requestedCurrencyCode:input.requestedCurrencyCode,effectiveFrom:input.effectiveFrom??"2026-08-29",decision:"pending",conditions:[],rowVersion:1,createdAt:"2026-08-29T00:00:00.000Z",createdBy:input.createdBy};return review;},async getCustomerCreditReview(){return review??null;},async decideCustomerCreditReview(input:any){if(!review||review.rowVersion!==input.expectedVersion)return null;review={...review,decision:input.decision,decisionReason:input.reason,conditions:input.conditions??[],rowVersion:2,reviewedAt:"2026-08-29T01:00:00.000Z",reviewedBy:input.decidedBy,...(["approved","conditional"].includes(input.decision)?{approvedCreditLimit:input.approvedCreditLimit??review.requestedCreditLimit,approvedCurrencyCode:input.approvedCurrencyCode??review.requestedCurrencyCode,approvedAt:"2026-08-29T01:00:00.000Z",approvedBy:input.decidedBy}:{})};return{review,replayed:false};},async listCustomerCreditReviews(){return review?[review]:[];},async resolve(input:any){const raw:Omit<PartnerEligibilityDecision,"decisionFingerprint">={businessPartnerId:input.businessPartnerId,role:"customer",operatingOrganizationId:input.operatingOrganizationId,companyCodeId:input.companyCodeId,operationCode:input.operationCode,businessDate:input.businessDate,eligible:review?.decision==="approved",reasons:review?.decision==="approved"?[]:[{code:"CREDIT_REVIEW_PENDING",severity:"blocking",recordId:review?.id}],qualifications:[],activeBlockIds:[],preferredSupplier:false,effectivePreferenceIds:[]};return raw;},async transitionCustomer(input:any){const from=input.action==="activate"?"prospect":input.action==="suspend"?"active":"suspended";if(status!==from)return null;status=input.action==="suspend"?"suspended":"active";return{customerId:input.customerId,status,eventId:"99999999-9999-4999-8999-999999999999",replayed:false,readiness:input.readiness};}}as unknown as BusinessPartnerEligibilityRepository<object>;const service=createBusinessPartnerEligibilityService({repository,authorizer:{async authorize(input){permissions.push(input.permissionCode);return{allowed:allow(input)};}},transactions:{async run(_plane,_actor,work){return work({});}},audit:{async record(input){events.push(input.eventCode);return{}as never;}},outbox:{async append(input){events.push(input.eventType);}}});return{service,events,permissions,get review(){return review;},get status(){return status;}};}
+function fixture(
+  allow: (input: {
+    readonly permissionCode: string;
+    readonly resource: Readonly<Record<string, unknown>>;
+  }) => boolean = () => true,
+) {
+  let review: CustomerCreditReview | undefined,
+    status: "prospect" | "active" | "suspended" | "inactive" | "archived" =
+      "prospect",
+    version = 1;
+  const events: string[] = [],
+    permissions: string[] = [];
+  const repository = {
+    async findCustomerCreditReviewByIdempotencyKey(
+      _tenant: string,
+      key: string,
+    ) {
+      return review && key === "customer-credit-create-001" ? review : null;
+    },
+    async createCustomerCreditReview(input: any) {
+      review = {
+        id: "88888888-8888-4888-8888-888888888888",
+        tenantId: input.tenantId,
+        businessPartnerId: input.businessPartnerId,
+        customerId: input.customerId,
+        operatingOrganizationId: input.operatingOrganizationId,
+        companyCodeId: input.companyCodeId,
+        reviewTypeCode: input.reviewTypeCode,
+        requestedCreditLimit: input.requestedCreditLimit,
+        requestedCurrencyCode: input.requestedCurrencyCode,
+        effectiveFrom: input.effectiveFrom ?? "2026-08-29",
+        decision: "pending",
+        conditions: [],
+        rowVersion: 1,
+        createdAt: "2026-08-29T00:00:00.000Z",
+        createdBy: input.createdBy,
+      };
+      return review;
+    },
+    async getCustomerCreditReview() {
+      return review ?? null;
+    },
+    async decideCustomerCreditReview(input: any) {
+      if (!review || review.rowVersion !== input.expectedVersion) return null;
+      review = {
+        ...review,
+        decision: input.decision,
+        decisionReason: input.reason,
+        conditions: input.conditions ?? [],
+        rowVersion: 2,
+        reviewedAt: "2026-08-29T01:00:00.000Z",
+        reviewedBy: input.decidedBy,
+        ...(["approved", "conditional"].includes(input.decision)
+          ? {
+              approvedCreditLimit:
+                input.approvedCreditLimit ?? review.requestedCreditLimit,
+              approvedCurrencyCode:
+                input.approvedCurrencyCode ?? review.requestedCurrencyCode,
+              approvedAt: "2026-08-29T01:00:00.000Z",
+              approvedBy: input.decidedBy,
+            }
+          : {}),
+      };
+      return { review, replayed: false };
+    },
+    async listCustomerCreditReviews() {
+      return review ? [review] : [];
+    },
+    async resolve(input: any) {
+      const raw: Omit<PartnerEligibilityDecision, "decisionFingerprint"> = {
+        businessPartnerId: input.businessPartnerId,
+        role: "customer",
+        operatingOrganizationId: input.operatingOrganizationId,
+        companyCodeId: input.companyCodeId,
+        operationCode: input.operationCode,
+        businessDate: input.businessDate,
+        eligible: review?.decision === "approved",
+        reasons:
+          review?.decision === "approved"
+            ? []
+            : [
+                {
+                  code: "CREDIT_REVIEW_PENDING",
+                  severity: "blocking",
+                  recordId: review?.id,
+                },
+              ],
+        qualifications: [],
+        activeBlockIds: [],
+        preferredSupplier: false,
+        effectivePreferenceIds: [],
+      };
+      return raw;
+    },
+    async transitionCustomer(input: any) {
+      const from =
+        input.action === "activate"
+          ? "prospect"
+          : input.action === "suspend"
+            ? "active"
+            : input.action === "reactivate"
+              ? "suspended"
+              : input.action === "archive"
+                ? "inactive"
+                : status;
+      if (status !== from || version !== input.expectedVersion) return null;
+      status =
+        input.action === "suspend"
+          ? "suspended"
+          : input.action === "deactivate"
+            ? "inactive"
+            : input.action === "archive"
+              ? "archived"
+              : "active";
+      version += 1;
+      return {
+        customerId: input.customerId,
+        status,
+        resultingVersion: version,
+        eventId: "99999999-9999-4999-8999-999999999999",
+        replayed: false,
+        readiness: input.readiness,
+      };
+    },
+  } as unknown as BusinessPartnerEligibilityRepository<object>;
+  const service = createBusinessPartnerEligibilityService({
+    repository,
+    authorizer: {
+      async authorize(input) {
+        permissions.push(input.permissionCode);
+        return { allowed: allow(input) };
+      },
+    },
+    transactions: {
+      async run(_plane, _actor, work) {
+        return work({});
+      },
+    },
+    audit: {
+      async record(input) {
+        events.push(input.eventCode);
+        return {} as never;
+      },
+    },
+    outbox: {
+      async append(input) {
+        events.push(input.eventType);
+      },
+    },
+  });
+  return {
+    service,
+    events,
+    permissions,
+    get review() {
+      return review;
+    },
+    get status() {
+      return status;
+    },
+  };
+}
 
-describe("customer onboarding controls",()=>{it("keeps credit approval independent and enforces maker-checker",async()=>{const value=fixture(),created=await value.service.createCustomerCreditReview({context:maker,idempotencyKey:"customer-credit-create-001",businessPartnerId:bp,customerId:customer,operatingOrganizationId:organization,companyCodeId:company,reviewTypeCode:"initial",requestedCreditLimit:25000,requestedCurrencyCode:"MYR",effectiveFrom:"2026-08-29"});expect(created.review.decision).toBe("pending");await expect(value.service.decideCustomerCreditReview({context:maker,reviewId:created.review.id,expectedVersion:1,decision:"approved",reason:"Approved",idempotencyKey:"customer-credit-decision-001"})).rejects.toMatchObject({code:"CUSTOMER_CREDIT_SELF_APPROVAL_FORBIDDEN"});const decided=await value.service.decideCustomerCreditReview({context:approver,reviewId:created.review.id,expectedVersion:1,decision:"approved",reason:"Commercial evidence accepted",idempotencyKey:"customer-credit-decision-001"});expect(decided.review).toMatchObject({decision:"approved",approvedBy:approver.principalId});expect(value.permissions).toEqual(["neon.customer.credit.create","neon.customer.credit.decide"]);});it("denies an unauthorized sales or company scope before persistence",async()=>{const value=fixture(input=>input.resource["operatingOrganizationId"]===organization&&input.resource["companyCodeId"]===company);await expect(value.service.createCustomerCreditReview({context:maker,idempotencyKey:"customer-credit-create-denied",businessPartnerId:bp,customerId:customer,operatingOrganizationId:organization,companyCodeId:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",reviewTypeCode:"initial"})).rejects.toMatchObject({code:"FORBIDDEN",status:403});expect(value.review).toBeUndefined();});it("activates, suspends, and reactivates through scoped lifecycle commands",async()=>{const value=fixture(),credit=await value.service.createCustomerCreditReview({context:maker,idempotencyKey:"customer-credit-create-001",businessPartnerId:bp,customerId:customer,operatingOrganizationId:organization,companyCodeId:company,reviewTypeCode:"initial",requestedCreditLimit:25000,requestedCurrencyCode:"MYR",effectiveFrom:"2026-08-29"});await value.service.decideCustomerCreditReview({context:approver,reviewId:credit.review.id,expectedVersion:1,decision:"approved",reason:"Approved",idempotencyKey:"customer-credit-decision-001"});const base={context:approver,businessPartnerId:bp,customerId:customer,operatingOrganizationId:organization,companyCodeId:company,businessDate:"2026-08-29"};await expect(value.service.transitionCustomer({...base,action:"activate",reasonCode:"CUSTOMER_READY",idempotencyKey:"customer-activate-001"})).resolves.toMatchObject({status:"active"});await expect(value.service.transitionCustomer({...base,action:"suspend",reasonCode:"CREDIT_HOLD",idempotencyKey:"customer-suspend-001"})).resolves.toMatchObject({status:"suspended"});await expect(value.service.transitionCustomer({...base,action:"reactivate",reasonCode:"CREDIT_RESTORED",idempotencyKey:"customer-reactivate-001"})).resolves.toMatchObject({status:"active"});expect(value.events).toContain("customer.portal_iam_projection.requested");});});
+describe("customer onboarding controls", () => {
+  it("keeps credit approval independent and enforces maker-checker", async () => {
+    const value = fixture(),
+      created = await value.service.createCustomerCreditReview({
+        context: maker,
+        idempotencyKey: "customer-credit-create-001",
+        businessPartnerId: bp,
+        customerId: customer,
+        operatingOrganizationId: organization,
+        companyCodeId: company,
+        reviewTypeCode: "initial",
+        requestedCreditLimit: 25000,
+        requestedCurrencyCode: "MYR",
+        effectiveFrom: "2026-08-29",
+      });
+    expect(created.review.decision).toBe("pending");
+    await expect(
+      value.service.decideCustomerCreditReview({
+        context: maker,
+        reviewId: created.review.id,
+        expectedVersion: 1,
+        decision: "approved",
+        reason: "Approved",
+        idempotencyKey: "customer-credit-decision-001",
+      }),
+    ).rejects.toMatchObject({
+      code: "CUSTOMER_CREDIT_SELF_APPROVAL_FORBIDDEN",
+    });
+    const decided = await value.service.decideCustomerCreditReview({
+      context: approver,
+      reviewId: created.review.id,
+      expectedVersion: 1,
+      decision: "approved",
+      reason: "Commercial evidence accepted",
+      idempotencyKey: "customer-credit-decision-001",
+    });
+    expect(decided.review).toMatchObject({
+      decision: "approved",
+      approvedBy: approver.principalId,
+    });
+    expect(value.permissions).toEqual([
+      "neon.customer.credit.create",
+      "neon.customer.credit.decide",
+    ]);
+  });
+  it("denies an unauthorized sales or company scope before persistence", async () => {
+    const value = fixture(
+      (input) =>
+        input.resource["operatingOrganizationId"] === organization &&
+        input.resource["companyCodeId"] === company,
+    );
+    await expect(
+      value.service.createCustomerCreditReview({
+        context: maker,
+        idempotencyKey: "customer-credit-create-denied",
+        businessPartnerId: bp,
+        customerId: customer,
+        operatingOrganizationId: organization,
+        companyCodeId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        reviewTypeCode: "initial",
+      }),
+    ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
+    expect(value.review).toBeUndefined();
+  });
+  it("activates, suspends, and reactivates through scoped lifecycle commands", async () => {
+    const value = fixture(),
+      credit = await value.service.createCustomerCreditReview({
+        context: maker,
+        idempotencyKey: "customer-credit-create-001",
+        businessPartnerId: bp,
+        customerId: customer,
+        operatingOrganizationId: organization,
+        companyCodeId: company,
+        reviewTypeCode: "initial",
+        requestedCreditLimit: 25000,
+        requestedCurrencyCode: "MYR",
+        effectiveFrom: "2026-08-29",
+      });
+    await value.service.decideCustomerCreditReview({
+      context: approver,
+      reviewId: credit.review.id,
+      expectedVersion: 1,
+      decision: "approved",
+      reason: "Approved",
+      idempotencyKey: "customer-credit-decision-001",
+    });
+    const base = {
+      context: approver,
+      businessPartnerId: bp,
+      customerId: customer,
+      operatingOrganizationId: organization,
+      companyCodeId: company,
+      businessDate: "2026-08-29",
+    };
+    await expect(
+      value.service.transitionCustomer({
+        ...base,
+        action: "activate",
+        expectedVersion: 1,
+        reasonCode: "CUSTOMER_READY",
+        idempotencyKey: "customer-activate-001",
+      }),
+    ).resolves.toMatchObject({ status: "active", resultingVersion: 2 });
+    await expect(
+      value.service.transitionCustomer({
+        ...base,
+        action: "suspend",
+        expectedVersion: 2,
+        reasonCode: "CREDIT_HOLD",
+        idempotencyKey: "customer-suspend-001",
+      }),
+    ).resolves.toMatchObject({ status: "suspended", resultingVersion: 3 });
+    await expect(
+      value.service.transitionCustomer({
+        ...base,
+        action: "reactivate",
+        expectedVersion: 3,
+        reasonCode: "CREDIT_RESTORED",
+        idempotencyKey: "customer-reactivate-001",
+      }),
+    ).resolves.toMatchObject({ status: "active", resultingVersion: 4 });
+    expect(value.events).toContain("customer.portal_iam_projection.requested");
+  });
+});

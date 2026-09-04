@@ -41,9 +41,15 @@ test("P7 persists exact desired identity state, fenced attempts, callbacks, and 
   );
   assert.match(triggers, /terminal identity saga evidence is immutable/);
   assert.match(rls, /identity_saga_attempt/);
+  assert.match(rls, /trustiam_identity_saga_evidence_insert/);
+  assert.match(rls, /trustiam\.identity\.saga\.dead_letter/);
   assert.match(
     grants,
     /GRANT SELECT,INSERT,UPDATE ON trustiam\.identity_projection,trustiam\.identity_saga_attempt,trustiam\.provider_identity_callback_inbox TO athyper_trustiam_service/,
+  );
+  assert.match(
+    grants,
+    /GRANT INSERT ON event\.outbox TO athyper_trustiam_service/,
   );
 });
 
@@ -68,4 +74,6 @@ test("P7 keeps provider administration separate from local authorization and bus
     repository,
     /provider_attributes\s*->|provider_attributes\s*#>|jsonb_to_record[^;]+provider_attributes/,
   );
+  assert.match(repository, /appendSagaEvidence/);
+  assert.match(repository, /trustiam\.identity\.saga\.\$\{outcome\}/);
 });

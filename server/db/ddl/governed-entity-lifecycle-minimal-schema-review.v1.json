@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-09-03",
+  "authority": "docs/architecture/decisions/governed-entity-lifecycle.md",
+  "relations": [
+    {
+      "relation": "document.entity_case",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "document.business_partner_request",
+        "document.workforce_request",
+        "governance.cycle_run",
+        "event.command_execution"
+      ],
+      "identityProof": "A proposal needs one tenant/case identity spanning entity kind, operation, target or pre-materialization subject, exact deployed contract and current snapshot; no reviewed authority owns that coordinate.",
+      "lifecycleProof": "Cycle runs orchestrate journeys and command executions track transient delivery, while the case must own draft through submitted, decided and materialized proposal state with optimistic versioning.",
+      "cardinalityProof": "One cycle may contain multiple entity proposals and one proposal may move through multiple cycle tasks, so neither cycle_run nor cycle_task can be the proposal head.",
+      "retentionProof": "The current case head must survive command-execution expiry and remain linked to permanent submitted, decision and result snapshots.",
+      "implementation": "Add one payload-free case head in common document DDL; content remains exclusively in contract-bound snapshots."
+    },
+    {
+      "relation": "document.entity_case_command_evidence",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "event.command_execution",
+        "audit.audit_log",
+        "control.business_partner_mutation_evidence",
+        "mesh.network_command_evidence"
+      ],
+      "identityProof": "Case command evidence needs a stable case FK plus expected/before/after case versions and states; generic command execution and audit rows do not carry this enforceable identity.",
+      "lifecycleProof": "Accepted, rejected and exact-replay outcomes are immutable business evidence, unlike the mutable, expiring event.command_execution processing head.",
+      "cardinalityProof": "A case has many command outcomes, including rejected attempts and replays, while one idempotency coordinate resolves to one original outcome.",
+      "retentionProof": "Evidence follows case/legal retention and cannot inherit event.command_execution's 30-day expiry.",
+      "implementation": "Add an append-only bounded evidence child; continue using event.command_execution for transient command claiming."
+    },
+    {
+      "relation": "document.entity_case_validation",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "document.business_partner_request_validation",
+        "document.workforce_request_validation",
+        "snapshot.entity_snapshot",
+        "audit.audit_log"
+      ],
+      "identityProof": "Searchable findings require case, evaluated snapshot, ruleset release/hash and semantic field path coordinates that snapshots and audit do not index relationally.",
+      "lifecycleProof": "Findings are append-only observations of an immutable snapshot and must never become a second answer store.",
+      "cardinalityProof": "One evaluation has bounded many field findings and a case has many evaluations; legacy validation tables duplicate this per request family.",
+      "retentionProof": "Finding projections follow case retention while full validation input/output remains in the immutable snapshot.",
+      "implementation": "Add one bounded append-only validation projection and converge domain-specific validation children."
+    },
+    {
+      "relation": "document.entity_case_materialization",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "event.command_execution",
+        "document.business_partner_request_materialization_item",
+        "snapshot.entity_snapshot_identity"
+      ],
+      "identityProof": "A materialization attempt needs case, source snapshot, materializer version, attempt number, expected target version and optional result snapshot as one enforceable coordinate.",
+      "lifecycleProof": "Requested/running/succeeded/failed attempt state is distinct from both case lifecycle and generic command transport state.",
+      "cardinalityProof": "A case can have multiple retry attempts but at most one successful outcome for an idempotency fingerprint.",
+      "retentionProof": "Attempt outcomes and safe support codes remain with the case after transient command execution expires.",
+      "implementation": "Add a compact attempt projection; member-to-authority mappings belong in snapshot lineage."
+    },
+    {
+      "relation": "snapshot.entity_case_snapshot_lineage",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "snapshot.entity_snapshot_identity",
+        "document.business_partner_request_materialization_item",
+        "document.mesh_business_partner_match",
+        "document.mesh_business_partner_acceptance"
+      ],
+      "identityProof": "Snapshot predecessor links cover one aggregate chain but cannot identify cross-snapshot transformations, source members, envelopes or normalized target rows.",
+      "lifecycleProof": "Lineage is immutable provenance, independent of the mutable case and materialization attempt heads.",
+      "cardinalityProof": "One source member may produce multiple target authority rows and one target snapshot may derive from multiple source snapshots.",
+      "retentionProof": "Lineage must have permanent evidence retention aligned with the snapshots it connects.",
+      "implementation": "Add an append-only lineage edge with bounded roles and optional member/target coordinates."
+    },
+    {
+      "relation": "governance.cycle_subject",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "governance.cycle_run",
+        "governance.cycle_task",
+        "governance.cycle_run.data"
+      ],
+      "identityProof": "Cycles need typed primary and related subjects before an entity ID exists; cycle_run.data cannot enforce entity, case, external-reference or snapshot identity.",
+      "lifecycleProof": "Subject association persists across task changes and later binds a pre-materialization reference to an entity without changing journey identity.",
+      "cardinalityProof": "A cycle can have one primary and multiple role-distinct related subjects, requiring uniqueness by run, role and subject coordinate.",
+      "retentionProof": "The subject graph follows cycle governance retention and must remain queryable without parsing mutable JSON.",
+      "implementation": "Add a typed cycle child; do not add a separate journey table."
+    },
+    {
+      "relation": "metadata.entity_surface_component_binding",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "metadata.entity_surface",
+        "metadata.entity_surface_section",
+        "metadata.entity_surface_field_binding",
+        "metadata.entity_relation"
+      ],
+      "identityProof": "Existing field binding is constrained to one entity field; relation metadata lacks a positioned source surface and immutable contract-slice binding.",
+      "lifecycleProof": "Composition is authored and released with a surface change set and cannot copy or override the component's semantic contract.",
+      "cardinalityProof": "A surface section may embed multiple positioned components with explicit one/many cardinality and stable binding keys.",
+      "retentionProof": "Bindings follow immutable Studio change-set/release history, unlike runtime case data.",
+      "implementation": "Add a Studio metadata binding child without validation, storage or authority override columns."
+    },
+    {
+      "relation": "governance.authority_register",
+      "disposition": "merged",
+      "existingAuthoritiesReviewed": [
+        "runtime_meta.applied_release_payload",
+        "authz.entity_operation_binding",
+        "server/db/ddl/planes/neon/business-partner-ddl-inventory.generated.json",
+        "policy/reports"
+      ],
+      "identityProof": "Authority declarations are release artifacts, not independently authored runtime rows; their identity is the applied release and payload hash already enforced by runtime_meta.applied_release_payload.",
+      "lifecycleProof": "Stage, activate, supersede and rollback already belong to runtime_meta.applied_release; a second status lifecycle would permit drift.",
+      "cardinalityProof": "One immutable authority-register artifact per plane/release can contain bounded aggregate entries and be compared with grants, functions and triggers by CI.",
+      "retentionProof": "Applied release payloads and generated inventories provide immutable deployment history without an additional table.",
+      "implementation": "Publish an authority_register artifact through runtime_meta.applied_release_payload and extend CI drift checks; reject a governance table."
+    },
+    {
+      "relation": "mesh.network_relationship_capability",
+      "disposition": "accepted",
+      "existingAuthoritiesReviewed": [
+        "mesh.network_relationship",
+        "mesh.network_relationship.metadata",
+        "authz.scope_target",
+        "mesh.document_envelope"
+      ],
+      "identityProof": "A relationship-level status cannot identify independently governed profile_exchange, sourcing, procurement, invoicing, payments and services-procurement permissions.",
+      "lifecycleProof": "Each capability needs requested, active, suspended and ended state with its own approvals, effective range and command evidence.",
+      "cardinalityProof": "One relationship episode has many capability episodes and the same capability may be re-onboarded in non-overlapping effective ranges.",
+      "retentionProof": "Capability history must survive envelope retention and relationship suspension for bilateral authorization evidence.",
+      "implementation": "Add an effective-dated relationship child in G3; G1 defines only the accepted contract boundary."
+    }
+  ]
+}

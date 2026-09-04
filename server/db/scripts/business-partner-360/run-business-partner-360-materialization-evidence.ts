@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { Kysely, PostgresDialect, sql, type Transaction } from "kysely";
 import { Pool } from "pg";
-import { KyselyBusinessPartnerRequestRepository } from "@athyper/server-service-master-data";
+import { KyselyBusinessPartnerCaseRepository } from "@athyper/server-service-master-data";
 import { assertLoopbackDatabaseTarget } from "../lib/database-target.js";
 
 const CONFIRMATION = "RUN-BS360-MATERIALIZATION-EVIDENCE";
@@ -25,7 +25,7 @@ type Tx = Transaction<Database>;
 export interface BusinessPartner360MaterializationEvidence {
   readonly capturedAt: string;
   readonly database: "athyper_neon";
-  readonly repository: "KyselyBusinessPartnerRequestRepository";
+  readonly repository: "KyselyBusinessPartnerCaseRepository";
   readonly rolledBack: true;
   readonly typedJourney: Readonly<{
     requestStatus: "applied";
@@ -69,7 +69,7 @@ export async function runBusinessPartner360MaterializationEvidence(options: {
     max: 1,
   });
   const database = new Kysely<Database>({ dialect: new PostgresDialect({ pool }) });
-  const repository = new KyselyBusinessPartnerRequestRepository();
+  const repository = new KyselyBusinessPartnerCaseRepository();
   let retained: Omit<BusinessPartner360MaterializationEvidence, "capturedAt" | "database" | "repository" | "rolledBack" | "cleanup"> | undefined;
 
   try {
@@ -191,6 +191,7 @@ export async function runBusinessPartner360MaterializationEvidence(options: {
             code: "neon.business_partner_request",
             version: 1,
             hash: hash("bs360-p0-materialization-schema-v1"),
+            releaseId: "00000000-0000-0000-0000-000000000001",
           },
           createdBy: coordinates.actorId,
         }, transaction);
@@ -288,7 +289,7 @@ export async function runBusinessPartner360MaterializationEvidence(options: {
     return {
       capturedAt: new Date().toISOString(),
       database: "athyper_neon",
-      repository: "KyselyBusinessPartnerRequestRepository",
+      repository: "KyselyBusinessPartnerCaseRepository",
       rolledBack: true,
       ...retained,
       cleanup,
@@ -357,10 +358,10 @@ async function createPrerequisites(transaction: Tx, coordinates: Awaited<ReturnT
 }
 
 async function approveThroughRepository(
-  repository: KyselyBusinessPartnerRequestRepository,
+  repository: KyselyBusinessPartnerCaseRepository,
   transaction: Tx,
   coordinates: Awaited<ReturnType<typeof loadCoordinates>>,
-  request: Awaited<ReturnType<KyselyBusinessPartnerRequestRepository["create"]>>,
+  request: Awaited<ReturnType<KyselyBusinessPartnerCaseRepository["create"]>>,
   suffix: string,
 ) {
   const validated = await repository.recordValidation({
@@ -423,7 +424,7 @@ async function approveThroughRepository(
   return decided.request.rowVersion;
 }
 
-async function createLegacyRequest(repository: KyselyBusinessPartnerRequestRepository, transaction: Tx, coordinates: Awaited<ReturnType<typeof loadCoordinates>>) {
+async function createLegacyRequest(repository: KyselyBusinessPartnerCaseRepository, transaction: Tx, coordinates: Awaited<ReturnType<typeof loadCoordinates>>) {
   const inserted = (await sql<{ id: string }>`INSERT INTO document.business_partner_request(
     tenant_id,request_no,request_kind,source_kind,registration_mode,requested_role,operating_organization_id,
     payload_schema_code,payload_schema_version,payload_schema_hash,proposed_payload,extension_mode,extension_counts,

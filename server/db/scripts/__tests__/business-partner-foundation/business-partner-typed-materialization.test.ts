@@ -152,7 +152,7 @@ test("BS360-01 closes restricted JSON and records immutable application coordina
       "migrations/20260902_neon_business_partner_typed_request_catalog_parity.sql",
     ),
     readFile(
-      resolve(sourceRoot, "kysely-business-partner-request-repository.ts"),
+      resolve(sourceRoot, "kysely-business-partner-case-repository.ts"),
       "utf8",
     ),
     readFile(
@@ -166,14 +166,14 @@ test("BS360-01 closes restricted JSON and records immutable application coordina
   assert.match(migration, /materialization evidence is immutable/);
   assert.match(
     repository,
-    /materializeIdentityExtensions\(input,request,text\(partner,"id"\),transaction\)/,
+    /materializeIdentityExtensions\(\s*input,\s*request,\s*text\(partner,\s*"id"\),\s*transaction,?\s*\)/,
   );
   assert.match(
     repository,
     /INSERT INTO document\.business_partner_request_materialization_item/,
   );
   assert.match(repository, /BUSINESS_PARTNER_REQUEST_EXTENSION_DRIFT/);
-  assert.match(repository, /extensionSummary:request\.extensionSummary/);
+  assert.match(repository, /extensionSummary:\s*request\.extensionSummary/);
   assert.match(repository, /protected_value_token/);
   assert.match(service, /extensionSummary:request\.extensionSummary/);
   assert.match(service, /BUSINESS_PARTNER_REQUEST_VOLATILE_VALIDATION_FAILED/);

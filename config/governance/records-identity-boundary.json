@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "scope": "server/packages/services/records/routes",
+  "scope": "server/packages/services/records/src",
   "counts": {
-    "verifyBearer": 58,
-    "resolveTenantId": 56,
-    "directOrgHeader": 28,
-    "principalResolution": 31
+    "verifyBearer": 0,
+    "resolveTenantId": 0,
+    "directOrgHeader": 0,
+    "principalResolution": 0
   },
-  "total": 173,
-  "files": 30
+  "total": 0,
+  "files": 37
 }

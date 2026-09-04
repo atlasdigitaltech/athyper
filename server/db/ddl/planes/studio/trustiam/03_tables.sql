@@ -159,11 +159,12 @@ CREATE TABLE trustiam.identity_projection (
  CONSTRAINT trustiam_identity_projection_pkey PRIMARY KEY(id),
  CONSTRAINT trustiam_identity_projection_tenant_id_uq UNIQUE(authority_tenant_id,id),
  CONSTRAINT trustiam_identity_projection_person_uq UNIQUE(authority_tenant_id,source_plane,source_tenant_id,person_id),
+ CONSTRAINT trustiam_identity_projection_source_uq UNIQUE(authority_tenant_id,source_plane,source_tenant_id,relationship_kind,source_ref),
  CONSTRAINT trustiam_identity_projection_identifier_uq UNIQUE(authority_tenant_id,realm_key,normalized_identifier),
  CONSTRAINT trustiam_identity_projection_version_chk CHECK(desired_version>0 AND (provider_sequence IS NULL OR provider_sequence>0) AND (observed_version IS NULL OR observed_version>0)),
  CONSTRAINT trustiam_identity_projection_hash_chk CHECK(desired_hash~'^[a-f0-9]{64}$' AND (observed_hash IS NULL OR observed_hash~'^[a-f0-9]{64}$')),
- CONSTRAINT trustiam_identity_projection_relationship_chk CHECK(relationship_kind IN('employer','contact')),
- CONSTRAINT trustiam_identity_projection_source_ref_chk CHECK((relationship_kind='employer' AND source_ref LIKE 'employment:%') OR (relationship_kind='contact' AND source_ref LIKE 'business_partner_contact:%')),
+ CONSTRAINT trustiam_identity_projection_relationship_chk CHECK(relationship_kind IN('employer','contact','external_worker')),
+ CONSTRAINT trustiam_identity_projection_source_ref_chk CHECK((relationship_kind='employer' AND source_ref LIKE 'employment:%') OR (relationship_kind='contact' AND source_ref LIKE 'business_partner_contact:%') OR (relationship_kind='external_worker' AND source_ref LIKE 'worker_engagement:%')),
  CONSTRAINT trustiam_identity_projection_realm_chk CHECK(realm_key~'^[a-z][a-z0-9_.-]{1,62}$'),
  CONSTRAINT trustiam_identity_projection_identifier_chk CHECK(btrim(normalized_identifier)<>'' AND length(normalized_identifier)<=320 AND btrim(display_name)<>''),
  CONSTRAINT trustiam_identity_projection_status_chk CHECK(desired_status IN('invited','active','suspended','deprovisioned') AND (observed_status IS NULL OR observed_status IN('invited','active','suspended','deprovisioned'))),
@@ -175,7 +176,7 @@ CREATE TABLE trustiam.identity_projection (
  CONSTRAINT trustiam_identity_projection_error_chk CHECK((reconciliation_status='failed')=(last_error_code IS NOT NULL)),
  CONSTRAINT trustiam_identity_projection_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL))
 );
-COMMENT ON TABLE trustiam.identity_projection IS 'Desired and safely fenced observed identity projection. desired_applications is transport input only; plane-local principal, membership, role and scope tables remain authoritative.';
+COMMENT ON TABLE trustiam.identity_projection IS 'Desired and safely fenced observed identity projection, uniquely correlated to its employment, BP-contact, or worker-engagement authority. desired_applications is transport input only; plane-local principal, membership, role and scope tables remain authoritative.';
 
 CREATE TABLE trustiam.identity_saga_attempt (
  id uuid NOT NULL DEFAULT shared.uuidv7(), authority_tenant_id uuid NOT NULL, identity_projection_id uuid NOT NULL,

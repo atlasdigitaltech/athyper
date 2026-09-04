@@ -11,7 +11,7 @@ test("S2 preserves historical onboarding evidence and moves new request intake t
     read("migrations/20260829_neon_workforce_lifecycle.sql"),
     read("migrations/20260902_neon_business_partner_organization_boundary.sql"),
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read("../packages/services/master-data/src/kysely-workforce-request-repository.ts"),
     read("../packages/contracts/master-data/src/workforce.ts"),
@@ -37,7 +37,7 @@ test("P2 preserves workforce effective-range integrity outside Business Partner 
     read("migrations/20260829_neon_workforce_effective_range_hardening.sql"),
     read("migrations/20260829_neon_workforce_lifecycle.sql"),
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read("../packages/services/master-data/src/workforce-service.ts"),
   ]);

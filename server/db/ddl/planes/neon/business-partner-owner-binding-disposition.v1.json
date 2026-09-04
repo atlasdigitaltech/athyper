@@ -1,0 +1,42 @@
+{
+  "contractVersion": "athyper.business-partner-owner-binding-disposition.v1",
+  "asOf": "2026-09-04",
+  "owner": "Master Data",
+  "disposition": "retain_typed_registry_binding",
+  "reason": "The existing bounded owner-type registry carries exact target schema, target relation, primary key and tenant column identity. Synchronous triggers validate active capability/purpose and the target row in the same tenant before an address or contact binding is stored; separate nullable owner columns would duplicate this authority.",
+  "surfaces": [
+    {
+      "relation": "master.address_link",
+      "capability": "address",
+      "enforcement": [
+        "address_link_owner_type_fk",
+        "master.trg_validate_owner_reference",
+        "trg_address_link_owner_reference"
+      ]
+    },
+    {
+      "relation": "master.contact_link",
+      "capability": "contact",
+      "enforcement": [
+        "contact_link_owner_type_fk",
+        "master.trg_validate_owner_reference",
+        "trg_contact_link_20_owner_reference"
+      ]
+    },
+    {
+      "relation": "master.contact_person_identity_link",
+      "capability": "person_identity",
+      "enforcement": [
+        "contact_person_identity_link_contact_fk",
+        "contact_person_identity_link_person_fk",
+        "trg_contact_person_identity_link_guard"
+      ]
+    }
+  ],
+  "acceptedOwnerTypes": ["business_partner", "supplier", "customer"],
+  "negativeEvidence": [
+    "typed_address_wrong_owner",
+    "typed_contact_wrong_owner"
+  ],
+  "removalGate": "Replacement requires typed child relations with tenant-composite foreign keys, complete consumer migration and equivalent cross-type/cross-tenant live evidence."
+}

@@ -1,5 +1,6 @@
 REVOKE ALL ON snapshot.entity_snapshot_identity FROM PUBLIC;
 REVOKE ALL ON snapshot.entity_snapshot FROM PUBLIC;
+REVOKE ALL ON snapshot.entity_case_snapshot_lineage FROM PUBLIC;
 REVOKE ALL ON
     snapshot.latest_entity_snapshot,
     snapshot.entity_contract_inventory,
@@ -31,6 +32,7 @@ BEGIN
         GRANT SELECT ON
             snapshot.entity_snapshot_identity,
             snapshot.entity_snapshot,
+            snapshot.entity_case_snapshot_lineage,
             snapshot.latest_entity_snapshot,
             snapshot.entity_contract_inventory,
             snapshot.active_flow_template,
@@ -57,6 +59,7 @@ BEGIN
         GRANT ALL PRIVILEGES ON
             snapshot.entity_snapshot_identity,
             snapshot.entity_snapshot,
+            snapshot.entity_case_snapshot_lineage,
             snapshot.latest_entity_snapshot,
             snapshot.entity_contract_inventory,
             snapshot.active_flow_template,

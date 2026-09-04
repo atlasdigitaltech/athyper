@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.governed-lifecycle-g6-retirement",
+  "asOf": "2026-09-04",
+  "localDevelopmentDisposition": {
+    "status": "retired",
+    "completedAt": "2026-09-04T14:31:27+08:00",
+    "productionEvidenceRequired": false,
+    "productionRetirementAuthorized": false,
+    "evidence": "docs/architecture/reports/g6/local-development-retirement-2026-09-04.json"
+  },
+  "minimumConsecutiveZeroUsageDays": 14,
+  "observationPolicy": "evidence_checkpoint_no_fixed_duration",
+  "localDevelopmentPolicy": {
+    "context": "local_development",
+    "productionObservationCheckpointRequired": false,
+    "minimumConsecutiveZeroUsageDays": 0,
+    "authorizesProductionRetirement": false,
+    "replacementGate": "Fresh source inventory must show zero active consumers; migration, rollback, behavioral probes and clean/supported-upgrade parity remain mandatory."
+  },
+  "requiredApprovals": ["surface-owner", "database-owner", "release-owner"],
+  "surfaces": [
+    {
+      "code": "business_partner_request_family",
+      "kind": "relation_family",
+      "coordinates": [
+        "document.business_partner_request",
+        "document.business_partner_request_*"
+      ],
+      "owner": "Master Data / Business Partner",
+      "replacement": "document.entity_case pipeline",
+      "usageMeasure": "Governed/legacy HTTP counters plus read-only activity since the declared cutover checkpoint and registered consumer source inventory.",
+      "compatibilityWindow": "No fixed minimum duration; require a production evidence checkpoint and 14 consecutive days at zero legacy usage after consumer cutover.",
+      "removalGate": "Consumer migration, zero-use window, rollback rehearsal, three approvals and matching clean/upgrade immediate pre-retirement parity must all pass.",
+      "disposition": "retire_after_gate",
+      "migrationAction": "Drop request children, evidence, validation, materialization and header in dependency order after archived evidence export verification.",
+      "consumerMigrationGate": "Every registered service, UI and integration consumer uses document.entity_case and its domain materializers.",
+      "rollbackGate": "Restore rehearsal proves the final pre-retirement backup and forward-fix recovery procedure.",
+      "status": "retained_not_removal_eligible"
+    },
+    {
+      "code": "business_partner_aliases_cache",
+      "kind": "column",
+      "coordinates": ["master.business_partner.aliases"],
+      "owner": "Master Data / Business Partner Search",
+      "replacement": "master.business_partner_alias",
+      "usageMeasure": "Repository source inventory plus pg_stat_statements reads that reference the aliases column, observed for the bounded production window.",
+      "compatibilityWindow": "No fixed minimum duration; require a production evidence checkpoint and 14 consecutive days at zero cache reads after normalized-reader cutover.",
+      "removalGate": "Normalized-reader cutover, zero-use window, cache recovery rehearsal, three approvals and matching clean/upgrade immediate pre-retirement parity must all pass.",
+      "disposition": "retire_after_gate",
+      "migrationAction": "Remove cache synchronization trigger/function dependencies, then drop master.business_partner.aliases.",
+      "consumerMigrationGate": "All readers query effective-dated master.business_partner_alias rows.",
+      "rollbackGate": "Cache-disable and rehydration rehearsal proves forward recovery from normalized alias authority.",
+      "status": "retained_not_removal_eligible"
+    },
+    {
+      "code": "flattened_decision_scope",
+      "kind": "column_family",
+      "coordinates": [
+        "control.business_partner_qualification.operating_organization_id",
+        "control.business_partner_qualification.company_code_id",
+        "control.business_partner_qualification.commodity_capability_id",
+        "control.supplier_preference_designation.operating_organization_id",
+        "control.supplier_preference_designation.company_code_id",
+        "control.supplier_preference_designation.commodity_category_id",
+        "control.customer_account_designation.operating_organization_id",
+        "control.customer_account_designation.company_code_id",
+        "control.customer_credit_review.operating_organization_id",
+        "control.customer_credit_review.company_code_id"
+      ],
+      "owner": "Master Data / Commercial Governance",
+      "replacement": "control.business_partner_decision_scope",
+      "usageMeasure": "Repository source inventory, pg_stat_statements column reads/writes and normalized-versus-flattened dual-write mismatch count.",
+      "compatibilityWindow": "No fixed minimum duration; require a production evidence checkpoint and 14 consecutive days at zero flattened-coordinate use after normalized cutover.",
+      "removalGate": "Normalized command/resolver cutover, zero use and zero mismatch, reconstruction rehearsal, three approvals and matching clean/upgrade immediate pre-retirement parity must all pass.",
+      "disposition": "retire_after_gate",
+      "migrationAction": "Remove compatibility materialization triggers and flattened-column FKs/indexes, then drop the listed columns.",
+      "consumerMigrationGate": "Commands write and resolvers read only normalized decision-scope rows with zero dual-write mismatch.",
+      "rollbackGate": "Normalized-to-flattened reconstruction rehearsal proves reversible data recovery.",
+      "status": "retained_not_removal_eligible"
+    },
+    {
+      "code": "workforce_iam_projection",
+      "kind": "relation",
+      "coordinates": ["document.workforce_iam_projection"],
+      "owner": "People / IAM",
+      "replacement": "governed workforce case plus Studio IAM saga projections",
+      "usageMeasure": "Workforce projection command/consumer counters, activity since the declared cutover checkpoint and outstanding pending/failed compatibility rows.",
+      "compatibilityWindow": "No fixed minimum duration; require a production evidence checkpoint and 14 consecutive days at zero compatibility intake after all workforce consumers migrate.",
+      "removalGate": "Internal/external workforce cutover, zero use, zero outstanding rows, lifecycle restore rehearsal, three approvals and matching clean/upgrade immediate pre-retirement parity must all pass.",
+      "disposition": "retire_after_gate",
+      "migrationAction": "Retire its command, trigger, grants and indexes before dropping document.workforce_iam_projection.",
+      "consumerMigrationGate": "All internal/external workforce producers and consumers use governed case/outbox/IAM saga contracts and no pending or failed compatibility row remains.",
+      "rollbackGate": "Provision, suspend and deprovision restore rehearsal passes without recreating Person, worker or engagement authority.",
+      "status": "retained_not_removal_eligible"
+    },
+    {
+      "code": "business_partner_person_group_compatibility",
+      "kind": "domain_and_branch_family",
+      "coordinates": [
+        "master.business_partner_category_d.person",
+        "master.business_partner_category_d.group",
+        "master.person_business_partner_legacy_link"
+      ],
+      "owner": "Master Data",
+      "replacement": "organization-only master.business_partner plus independent Person/Workforce authority",
+      "usageMeasure": "Historical non-organization row count, legacy-link count, import/request/section source inventory and production branch counters.",
+      "compatibilityWindow": "No fixed minimum duration; require a production evidence checkpoint and 14 consecutive days at zero person/group compatibility use after consumer cutover.",
+      "removalGate": "Zero historical rows/links/use, organization-only consumer cutover, authority restore rehearsal, three approvals and matching clean/upgrade immediate pre-retirement parity must all pass.",
+      "disposition": "retire_after_gate",
+      "migrationAction": "Preflight historical rows, remove compatibility branches/link authority, and rebuild the enum without person/group values using a forward migration.",
+      "consumerMigrationGate": "All listed import, request and section consumers are organization-only and historical non-organization rows are zero.",
+      "rollbackGate": "Historical-coordinate export and restore rehearsal proves no Person/Workforce authority loss.",
+      "status": "retained_not_removal_eligible"
+    },
+    {
+      "code": "temporary_implementation_inventory",
+      "kind": "documentation",
+      "coordinates": [
+        "docs/architecture/plans/governed-entity-lifecycle-implementation-inventory.md"
+      ],
+      "owner": "Architecture Governance",
+      "replacement": "implemented DDL, accepted ADR rejection, or durable backlog disposition for every inventory item",
+      "usageMeasure": "Inventory completeness checker unresolved-item count and repository references treating the inventory as active authority.",
+      "compatibilityWindow": "Retain until every item is disposed and no active runtime/release check depends on the document; production timing does not shorten schema-surface windows.",
+      "removalGate": "Zero unresolved items, zero active authority references, disposition review, rollback through Git history and all required approvals must pass.",
+      "disposition": "remove_after_all_items_disposed",
+      "migrationAction": "Remove the temporary inventory only after its completeness checker reports zero unresolved items.",
+      "consumerMigrationGate": "No active plan or check treats the inventory as runtime authority.",
+      "rollbackGate": "Git history remains the recovery mechanism after documented disposition completeness is certified.",
+      "status": "retained_not_removal_eligible"
+    }
+  ]
+}

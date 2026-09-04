@@ -1,0 +1,18 @@
+{
+  "contractVersion": "athyper.business-partner-organization-only-compatibility.v1",
+  "asOf": "2026-09-04",
+  "owner": "Master Data",
+  "governedWritePolicy": "organization_only",
+  "historicalValidation": {
+    "probe": "organization_only_history_inventory",
+    "cleanBuildNonOrganizationRows": 0,
+    "supportedUpgradeNonOrganizationRows": 0
+  },
+  "compatibilityDisposition": "retained_not_removal_eligible",
+  "knownConsumers": [
+    "server/packages/planes/neon/src/business-partner-import.ts",
+    "server/packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+    "server/packages/services/master-data/src/kysely-business-partner-360-sections.ts"
+  ],
+  "removalGate": "Migrate or reject all historical non-organization rows, cut over every listed consumer, observe zero production use for the G0 compatibility window, then remove person/group domain values and branches in one preflighted migration."
+}

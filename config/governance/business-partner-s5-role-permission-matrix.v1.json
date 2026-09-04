@@ -9,10 +9,15 @@
       "objects": [
         "control.command_business_partner_lifecycle(uuid,text,uuid,text,bigint,text,text,uuid)",
         "control.command_business_partner_decision(uuid,text,uuid,text,bigint,text,text,text,jsonb,uuid)",
-        "control.command_customer_lifecycle(uuid,uuid,uuid,uuid,uuid,text,text,date,text,jsonb,text,uuid)"
+        "control.command_customer_lifecycle(uuid,uuid,uuid,uuid,uuid,text,bigint,text,date,text,jsonb,text,uuid)"
       ],
       "privilege": "EXECUTE",
-      "expected": {"athyperapp": true, "athyperadmin": true, "object_owner": true, "PUBLIC": false}
+      "expected": {
+        "athyperapp": true,
+        "athyperadmin": true,
+        "object_owner": true,
+        "PUBLIC": false
+      }
     },
     {
       "code": "internal_function_execute",
@@ -24,19 +29,34 @@
         "control.trg_record_customer_lifecycle_mutation()"
       ],
       "privilege": "EXECUTE",
-      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false}
+      "expected": {
+        "athyperapp": false,
+        "athyperadmin": false,
+        "object_owner": true,
+        "PUBLIC": false
+      }
     },
     {
       "code": "evidence_read",
       "objects": ["control.business_partner_mutation_evidence"],
       "privilege": "SELECT",
-      "expected": {"athyperapp": true, "athyperadmin": true, "object_owner": true, "PUBLIC": false}
+      "expected": {
+        "athyperapp": true,
+        "athyperadmin": true,
+        "object_owner": true,
+        "PUBLIC": false
+      }
     },
     {
       "code": "evidence_mutation",
       "objects": ["control.business_partner_mutation_evidence"],
       "privilege": "INSERT,UPDATE,DELETE",
-      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "expected": {
+        "athyperapp": false,
+        "athyperadmin": false,
+        "object_owner": true,
+        "PUBLIC": false
+      },
       "runtimeBoundary": "Object-owner UPDATE and DELETE remain blocked by the immutable-evidence trigger; INSERT is reserved for the internal recorder."
     },
     {
@@ -48,7 +68,12 @@
         "master.business_partner_relationship.status"
       ],
       "privilege": "UPDATE",
-      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "expected": {
+        "athyperapp": false,
+        "athyperadmin": false,
+        "object_owner": true,
+        "PUBLIC": false
+      },
       "runtimeBoundary": "Object-owner direct state changes remain blocked by the S5 mutation-authority trigger."
     },
     {
@@ -60,7 +85,12 @@
         "control.customer_credit_review.decision"
       ],
       "privilege": "UPDATE",
-      "expected": {"athyperapp": false, "athyperadmin": false, "object_owner": true, "PUBLIC": false},
+      "expected": {
+        "athyperapp": false,
+        "athyperadmin": false,
+        "object_owner": true,
+        "PUBLIC": false
+      },
       "runtimeBoundary": "Object-owner direct decisions remain blocked by the S5 mutation-authority trigger."
     }
   ],

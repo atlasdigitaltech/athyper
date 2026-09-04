@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 2,
+  "kind": "athyper.g6-compatibility-consumer-inventory",
+  "capturedAt": "2026-09-04T03:44:02.296Z",
+  "scope": ["apps", "packages", "server/apps", "server/packages"],
+  "excluded": [
+    "**/__tests__/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/.next/**",
+    "docs",
+    "server/db/ddl",
+    "server/db/migrations"
+  ],
+  "classification": {
+    "runtime_candidate": "Direct compatibility-coordinate reference in deployable source; requires owner review or cutover.",
+    "test_source": "Test-only reference; retained as evidence but not counted as an active production consumer.",
+    "generated_type": "Generated database shape; regenerate after migration and do not count as a production reader."
+  },
+  "results": [
+    {
+      "surfaceCode": "business_partner_request_family",
+      "referenceFileCount": 3,
+      "activeConsumerFileCount": 2,
+      "files": [
+        "server/packages/services/master-data/src/kysely-business-partner-invitation-repository.ts",
+        "server/packages/services/master-data/src/kysely-business-partner-request-repository.ts"
+      ],
+      "nonRuntimeReferenceFiles": [
+        {
+          "file": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+          "classification": "generated_type"
+        }
+      ]
+    },
+    {
+      "surfaceCode": "business_partner_aliases_cache",
+      "referenceFileCount": 0,
+      "activeConsumerFileCount": 0,
+      "files": [],
+      "nonRuntimeReferenceFiles": []
+    },
+    {
+      "surfaceCode": "flattened_decision_scope",
+      "referenceFileCount": 0,
+      "activeConsumerFileCount": 0,
+      "files": [],
+      "nonRuntimeReferenceFiles": []
+    },
+    {
+      "surfaceCode": "workforce_iam_projection",
+      "referenceFileCount": 1,
+      "activeConsumerFileCount": 0,
+      "files": [],
+      "nonRuntimeReferenceFiles": [
+        {
+          "file": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+          "classification": "generated_type"
+        }
+      ]
+    },
+    {
+      "surfaceCode": "business_partner_person_group_compatibility",
+      "referenceFileCount": 1,
+      "activeConsumerFileCount": 0,
+      "files": [],
+      "nonRuntimeReferenceFiles": [
+        {
+          "file": "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
+          "classification": "generated_type"
+        }
+      ]
+    },
+    {
+      "surfaceCode": "temporary_implementation_inventory",
+      "referenceFileCount": 0,
+      "activeConsumerFileCount": 0,
+      "files": [],
+      "nonRuntimeReferenceFiles": []
+    }
+  ]
+}

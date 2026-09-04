@@ -4,7 +4,7 @@
   "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "codegen": {
-      "inputs": ["src/prisma/**"],
+      "inputs": ["prisma/**"],
       "outputs": ["src/generated/**"]
     },
     "build": {
@@ -15,7 +15,7 @@
     "dev": { "cache": false, "persistent": true },
     "lint": {
       "dependsOn": ["^build"],
-      "inputs": ["src/**", "**/*.ts", "eslint.config.*"]
+      "inputs": ["src/**", "**/*.ts"]
     },
     "typecheck": {
       "dependsOn": ["^build"],

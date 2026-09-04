@@ -83,7 +83,7 @@ test("P0 production repository evidence is local-only, rollback-only, and covers
     "db/scripts/business-partner-360/run-business-partner-360-materialization-evidence.ts",
   );
   for (const value of [
-    "KyselyBusinessPartnerRequestRepository",
+    "KyselyBusinessPartnerCaseRepository",
     "extensionMaterializationCounts",
     "exactReplay",
     "fingerprintConflictRejected",

@@ -62,7 +62,7 @@ test("qualification decisions cannot activate roles and expiry is capability-loc
     repository.indexOf("async resolve"),
   );
   assert.doesNotMatch(decisionBody, /UPDATE master\.(supplier|customer)/);
-  assert.match(repository, /nextReviewAt>=input\.businessDate/);
+  assert.match(repository, /nextReviewAt\s*>=\s*input\.businessDate/);
   assert.match(repository, /command_business_partner_decision/);
   assert.match(repository, /'qualification'.*'expired'/);
   assert.match(service, /SUPPLIER_ACTIVATION_READINESS_FAILED/);
@@ -82,7 +82,7 @@ test("bank readiness requires current verified evidence and preference stays non
     );
   assert.match(repository, /account\.is_verified=true/);
   assert.match(repository, /verificationExpiresAt/);
-  assert.match(repository, /!bankReady\)block\("BANK_NOT_READY"/);
+  assert.match(repository, /!bankReady\s*\)\s*block\("BANK_NOT_READY"/);
   assert.match(service, /SUPPLIER_PREFERENCE_READINESS_FAILED/);
   assert.doesNotMatch(service, /preferredSupplier[\s\S]{0,120}eligible:true/);
 });

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g6-compatibility-cutover-build-evidence",
+  "capturedAt": "2026-09-04T10:46:51+08:00",
+  "scope": "disposable_local",
+  "results": {
+    "canonicalCleanThreePlane": {
+      "status": "passed",
+      "evidence": [
+        "G1_GOVERNED_ENTITY_CASE_LIVE_CONCURRENCY_OK",
+        "G1_GOVERNED_INTERNAL_BUSINESS_PARTNER_HTTP_OK",
+        "SQL_INTEGRATION_OK scripts/tests/integration/governed-business-partner-request-case-backfill.sql",
+        "G5_EXTERNAL_WORKER_IAM_FULL_THREE_PLANE_ROLLBACK_OK",
+        "G5_INTERNAL_WORKFORCE_IAM_FULL_THREE_PLANE_ROLLBACK_OK",
+        "G3_MESH_CERTIFICATION_OK probes=14",
+        "G4_DATA_PROTECTION_OK probes=12",
+        "G5_COMBINED_CLEAN_KEYCLOAK_THREE_PLANE_OK"
+      ]
+    },
+    "supportedUpgradeBusinessPartnerMatrix": {
+      "status": "passed",
+      "baseline": "2026-09-03.1",
+      "evidence": [
+        "G1_GOVERNED_ENTITY_CASE_SUPPORTED_UPGRADE_OK",
+        "SQL_INTEGRATION_OK scripts/tests/integration/governed-business-partner-request-case-backfill.sql",
+        "G3_MESH_CERTIFICATION_OK probes=14",
+        "G4_DATA_PROTECTION_OK probes=12",
+        "G5_BUSINESS_PARTNER_SCENARIO_SUPPORTED_UPGRADE_OK"
+      ]
+    },
+    "sourceAndContractTests": {
+      "status": "passed",
+      "databaseTests": 240,
+      "masterDataTests": 82
+    },
+    "disposablePreRetirementParityRehearsal": {
+      "status": "passed",
+      "catalogEntryCount": 1268,
+      "privilegeEntryCount": 1468,
+      "catalogHash": "603174ddd67840bad2b9601c10e9d30d62b545651fafe30240db6f26f7c01e82",
+      "privilegeHash": "881ff2ef26bbf8fb76b2de2ba4593a6efa2b71371604998c9527d6d1814f88b7",
+      "cleanEvidence": "docs/architecture/reports/g6/clean-pre-retirement.json",
+      "supportedUpgradeEvidence": "docs/architecture/reports/g6/supported-upgrade-pre-retirement.json"
+    }
+  },
+  "limitations": [
+    "This is disposable build evidence, not a production zero-use observation.",
+    "The matching disposable captures are a parity rehearsal, not the immediate production pre- or post-retirement captures required by the removal gate.",
+    "No owner approval is inferred from automated evidence."
+  ]
+}

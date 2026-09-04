@@ -4375,7 +4375,8 @@ CREATE TABLE document.business_partner_invitation (
     requested_operating_organization_id uuid, company_code_id uuid, legal_entity_id uuid, org_unit_id uuid, position_id uuid,
     intended_party_name text NOT NULL, invitee_email_hash text NOT NULL, token_hash text NOT NULL,
     expires_at timestamptz NOT NULL, status text NOT NULL DEFAULT 'pending', resend_count integer NOT NULL DEFAULT 0,
-    last_sent_at timestamptz NOT NULL DEFAULT now(), applicant_principal_id uuid, business_partner_request_id uuid,
+    last_sent_at timestamptz NOT NULL DEFAULT now(), applicant_principal_id uuid,
+    business_partner_request_id uuid, entity_case_id uuid,
     accepted_at timestamptz, cancelled_at timestamptz, superseded_at timestamptz,
     applicant_access_revoked_at timestamptz, applicant_access_revoked_by uuid,
     idempotency_key text NOT NULL, row_version bigint NOT NULL DEFAULT 1,
@@ -4386,10 +4387,42 @@ CREATE TABLE document.business_partner_invitation (
     CONSTRAINT business_partner_invitation_role_chk CHECK((journey_kind='supplier' AND requested_role='supplier') OR (journey_kind='customer' AND requested_role='customer') OR (journey_kind='candidate' AND requested_role='workforce')),
     CONSTRAINT business_partner_invitation_scope_chk CHECK((scope_kind='commercial' AND journey_kind IN('supplier','customer') AND requested_operating_organization_id IS NOT NULL AND legal_entity_id IS NULL AND org_unit_id IS NULL AND position_id IS NULL) OR (scope_kind='workforce' AND journey_kind='candidate' AND requested_operating_organization_id IS NULL AND legal_entity_id IS NOT NULL AND company_code_id IS NOT NULL AND org_unit_id IS NOT NULL)),
     CONSTRAINT business_partner_invitation_hash_chk CHECK(invitee_email_hash~'^[a-f0-9]{64}$' AND token_hash~'^[a-f0-9]{64}$'), CONSTRAINT business_partner_invitation_status_chk CHECK(status IN('pending','accepted','cancelled','expired','superseded')),
-    CONSTRAINT business_partner_invitation_lifecycle_chk CHECK((status='pending' AND applicant_principal_id IS NULL AND business_partner_request_id IS NULL AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND business_partner_request_id IS NOT NULL AND accepted_at IS NOT NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='cancelled' AND accepted_at IS NULL AND cancelled_at IS NOT NULL AND superseded_at IS NULL) OR (status='expired' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='superseded' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NOT NULL)),
+    CONSTRAINT business_partner_invitation_lifecycle_chk CHECK((status='pending' AND applicant_principal_id IS NULL AND business_partner_request_id IS NULL AND entity_case_id IS NULL AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND num_nonnulls(business_partner_request_id,entity_case_id)=1 AND accepted_at IS NOT NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='cancelled' AND accepted_at IS NULL AND cancelled_at IS NOT NULL AND superseded_at IS NULL) OR (status='expired' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NULL) OR (status='superseded' AND accepted_at IS NULL AND cancelled_at IS NULL AND superseded_at IS NOT NULL)),
     CONSTRAINT business_partner_invitation_expiry_chk CHECK(expires_at>created_at), CONSTRAINT business_partner_invitation_name_chk CHECK(length(btrim(intended_party_name)) BETWEEN 1 AND 512), CONSTRAINT business_partner_invitation_idempotency_chk CHECK(btrim(idempotency_key)=idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200), CONSTRAINT business_partner_invitation_version_chk CHECK(row_version>=1 AND resend_count>=0), CONSTRAINT business_partner_invitation_audit_pair_chk CHECK((updated_at IS NULL)=(updated_by IS NULL)), CONSTRAINT business_partner_invitation_access_revocation_chk CHECK((applicant_access_revoked_at IS NULL AND applicant_access_revoked_by IS NULL) OR (status='accepted' AND applicant_principal_id IS NOT NULL AND applicant_access_revoked_at IS NOT NULL AND applicant_access_revoked_by IS NOT NULL))
 );
 COMMENT ON TABLE document.business_partner_invitation IS 'Tenant-bound, expiring, single-use invitation authority for supplier, customer, and candidate onboarding. Only SHA-256 token and email hashes persist; raw secrets must never be stored or logged.';
+
+-- Compatibility disposition G0: retained as the employee-only IAM saga intent
+-- for supported-upgrade parity. G1/G5 may replace it only after measured
+-- consumer cutover; it is deliberately not an employee or principal authority.
+CREATE TABLE document.workforce_iam_projection (
+    id                           uuid        NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id                    uuid        NOT NULL,
+    employee_id                  uuid        NOT NULL,
+    employer_organization_id     uuid        NOT NULL,
+    requested_principal_creation boolean     NOT NULL DEFAULT false,
+    desired_state                text        NOT NULL DEFAULT 'member',
+    observed_state               text        NOT NULL DEFAULT 'pending',
+    attempt_count                integer     NOT NULL DEFAULT 0,
+    last_error_code              text,
+    next_attempt_at              timestamptz NOT NULL DEFAULT now(),
+    idempotency_key              text        NOT NULL,
+    row_version                  bigint      NOT NULL DEFAULT 1,
+    created_at                   timestamptz NOT NULL DEFAULT now(),
+    created_by                   uuid        NOT NULL,
+    updated_at                   timestamptz,
+    updated_by                   uuid,
+    CONSTRAINT workforce_iam_projection_pkey PRIMARY KEY (id),
+    CONSTRAINT workforce_iam_projection_tenant_id_uq UNIQUE (tenant_id, id),
+    CONSTRAINT workforce_iam_projection_employee_uq UNIQUE (tenant_id, employee_id),
+    CONSTRAINT workforce_iam_projection_idempotency_uq UNIQUE (tenant_id, idempotency_key),
+    CONSTRAINT workforce_iam_projection_employee_fk FOREIGN KEY (tenant_id, employee_id) REFERENCES master.employee(tenant_id, id) ON DELETE RESTRICT,
+    CONSTRAINT workforce_iam_projection_state_chk CHECK (desired_state IN ('member', 'suspended', 'deprovisioned') AND observed_state IN ('pending', 'provisioned', 'failed', 'deprovisioned')),
+    CONSTRAINT workforce_iam_projection_attempt_chk CHECK (attempt_count >= 0 AND btrim(idempotency_key) <> ''),
+    CONSTRAINT workforce_iam_projection_audit_chk CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+);
+COMMENT ON TABLE document.workforce_iam_projection IS
+    'COMPATIBILITY; owner=People/IAM; disposition=retain for supported-upgrade parity then replace through governed-case IAM projection after measured zero legacy use. Employee-only saga intent; never Person, employee, or principal authority.';
 
 CREATE TABLE document.business_partner_request (
     id                              uuid        NOT NULL DEFAULT shared.uuidv7(),
@@ -5136,8 +5169,8 @@ CREATE TABLE document.supplier_activation_evidence (
 COMMENT ON TABLE document.supplier_activation_evidence IS 'Immutable evidence for the sole readiness-driven supplier activation command; registration and qualification decisions cannot activate a supplier.';
 
 CREATE TABLE document.business_partner_invitation_recovery(
- id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,request_id uuid NOT NULL,prior_applicant_principal_id uuid NOT NULL,requested_applicant_principal_id uuid NOT NULL,reason text NOT NULL,idempotency_key text NOT NULL,status text NOT NULL DEFAULT 'requested',requested_at timestamptz NOT NULL DEFAULT now(),requested_by uuid NOT NULL,
- CONSTRAINT business_partner_invitation_recovery_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_recovery_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_recovery_idempotency_uq UNIQUE(tenant_id,idempotency_key),CONSTRAINT business_partner_invitation_recovery_status_chk CHECK(status='requested'),CONSTRAINT business_partner_invitation_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),CONSTRAINT business_partner_invitation_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
+ id uuid NOT NULL DEFAULT shared.uuidv7(),tenant_id uuid NOT NULL,invitation_id uuid NOT NULL,request_id uuid,entity_case_id uuid,prior_applicant_principal_id uuid NOT NULL,requested_applicant_principal_id uuid NOT NULL,reason text NOT NULL,idempotency_key text NOT NULL,status text NOT NULL DEFAULT 'requested',requested_at timestamptz NOT NULL DEFAULT now(),requested_by uuid NOT NULL,
+ CONSTRAINT business_partner_invitation_recovery_pkey PRIMARY KEY(id),CONSTRAINT business_partner_invitation_recovery_tenant_id_uq UNIQUE(tenant_id,id),CONSTRAINT business_partner_invitation_recovery_idempotency_uq UNIQUE(tenant_id,idempotency_key),CONSTRAINT business_partner_invitation_recovery_status_chk CHECK(status='requested'),CONSTRAINT business_partner_invitation_recovery_subject_chk CHECK(num_nonnulls(request_id,entity_case_id)=1),CONSTRAINT business_partner_invitation_recovery_reason_chk CHECK(length(btrim(reason)) BETWEEN 1 AND 4000),CONSTRAINT business_partner_invitation_recovery_principal_chk CHECK(prior_applicant_principal_id<>requested_applicant_principal_id)
 );
 COMMENT ON TABLE document.business_partner_invitation_recovery IS 'Immutable idempotent recovery intent. IAM recovers the subject; historic ownership is never rewritten and principals or requests are never duplicated.';
 

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.governed-lifecycle-g6-retirement-observations",
+  "owner": "Architecture Governance",
+  "observationPolicy": "evidence_checkpoint_no_fixed_duration",
+  "minimumConsecutiveZeroUsageDays": 14,
+  "observations": []
+}

@@ -14,38 +14,27 @@
     },
     {
       "code": "settings_clients",
-      "status": "retain_until_observed",
+      "status": "removed",
       "flag": "settings_workspace_v2",
-      "paths": [
-        "apps/studio/app/(shell)/settings/SettingsClient.tsx",
-        "apps/neon/app/(shell)/settings/SettingsClient.tsx",
-        "apps/mesh/app/(shell)/settings/SettingsClient.tsx"
-      ]
+      "paths": []
     },
     {
       "code": "neon_legacy_settings_sections",
-      "status": "retain_until_observed",
+      "status": "removed",
       "flag": "settings_workspace_v2",
-      "paths": [
-        "apps/neon/app/(shell)/settings/_sections"
-      ]
+      "paths": []
     },
     {
       "code": "placeholder_command_hubs",
-      "status": "retain_until_observed",
+      "status": "removed",
       "flag": "unified_shell_v2",
-      "paths": [
-        "packages/planes/studio/command-hub/src/index.tsx",
-        "packages/planes/neon/command-hub/src/index.tsx"
-      ]
+      "paths": []
     },
     {
       "code": "legacy_favorites_container",
-      "status": "retain_until_observed",
+      "status": "removed",
       "flag": "unified_shell_v2",
-      "paths": [
-        "packages/planes/neon/app/src/collaboration/FavoritesPanelContainer.tsx"
-      ]
+      "paths": []
     },
     {
       "code": "finance_setup_poc",

@@ -1,32 +1,60 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
-export const businessPartnerRequestPermissions = Object.freeze({
-  create: "neon.relationship.business_partner_request.create",
-  read: "neon.relationship.business_partner_request.read",
-  update: "neon.relationship.business_partner_request.update",
-  validate: "neon.relationship.business_partner_request.validate",
-  submit: "neon.relationship.business_partner_request.submit",
-  decide: "neon.relationship.business_partner_request.decide",
-  apply: "neon.relationship.business_partner_request.apply",
+export const businessPartnerCasePermissions = Object.freeze({
+  create: "neon.relationship.entity_case.create",
+  read: "neon.relationship.entity_case.read",
+  update: "neon.relationship.entity_case.update",
+  validate: "neon.relationship.entity_case.validate",
+  submit: "neon.relationship.entity_case.submit",
+  decide: "neon.relationship.entity_case.decide",
+  apply: "neon.relationship.entity_case.materialize",
 } as const);
 
-export const businessPartnerPermissions = Object.freeze({ read: "neon.relationship.business_partner.read" } as const);
+/** @deprecated Use businessPartnerCasePermissions. */
+export const businessPartnerRequestPermissions = businessPartnerCasePermissions;
+
+export const businessPartnerPermissions = Object.freeze({
+  read: "neon.relationship.business_partner.read",
+} as const);
 
 export type BusinessPartnerRequestKind =
-  | "new_partner" | "amend_partner" | "add_supplier" | "add_customer"
-  | "assign_organization" | "configure_company" | "change_bank"
-  | "deactivate" | "reactivate" | "archive";
-export type BusinessPartnerRequestSourceKind = "manual" | "portal" | "mesh" | "import" | "api";
-export type BusinessPartnerRegistrationMode = "direct" | "self_service" | "on_behalf" | "integration";
+  | "new_partner"
+  | "amend_partner"
+  | "add_supplier"
+  | "add_customer"
+  | "assign_organization"
+  | "configure_company"
+  | "change_bank"
+  | "deactivate"
+  | "reactivate"
+  | "archive";
+export type BusinessPartnerRequestSourceKind =
+  "manual" | "portal" | "mesh" | "import" | "api";
+export type BusinessPartnerRegistrationMode =
+  "direct" | "self_service" | "on_behalf" | "integration";
 export type BusinessPartnerRequestedRole = "supplier" | "customer";
 export type BusinessPartnerRequestStatus =
-  | "draft" | "validating" | "validation_failed" | "pending_approval"
-  | "returned" | "approved" | "rejected" | "applying" | "applied"
-  | "failed" | "cancelled" | "superseded";
+  | "draft"
+  | "validating"
+  | "validation_failed"
+  | "pending_approval"
+  | "returned"
+  | "approved"
+  | "rejected"
+  | "applying"
+  | "applied"
+  | "failed"
+  | "cancelled"
+  | "superseded";
 export type BusinessPartnerApplicationResultKind =
-  | "partner_role_created" | "partner_amended"
-  | "organization_assigned" | "company_configured" | "bank_verification_started"
-  | "partner_deactivated" | "partner_reactivated" | "partner_archived";
+  | "partner_role_created"
+  | "partner_amended"
+  | "organization_assigned"
+  | "company_configured"
+  | "bank_verification_started"
+  | "partner_deactivated"
+  | "partner_reactivated"
+  | "partner_archived";
 
 export interface BusinessPartnerRequestSource {
   readonly kind: BusinessPartnerRequestSourceKind;
@@ -43,6 +71,8 @@ export interface BusinessPartnerRequestSchemaReference {
   readonly code: string;
   readonly version: number;
   readonly hash: string;
+  /** Immutable STUDIO definition release that published this request schema. */
+  readonly releaseId?: string;
 }
 
 export interface BusinessPartnerRequestExtensionBase {
@@ -78,7 +108,8 @@ export interface BusinessPartnerRequestContactPerson extends BusinessPartnerRequ
 
 export interface BusinessPartnerRequestContactChannel extends BusinessPartnerRequestExtensionBase {
   readonly contactClientItemKey: string;
-  readonly channelType: "email" | "phone" | "fax" | "sms" | "whatsapp" | "website";
+  readonly channelType:
+    "email" | "phone" | "fax" | "sms" | "whatsapp" | "website";
   readonly value: string;
   readonly purpose: string;
   readonly isPrimary?: boolean;
@@ -139,13 +170,28 @@ export interface BusinessPartnerRequestExtensions {
 export interface BusinessPartnerRequestExtensionSummary {
   readonly mode: "typed_v1" | "legacy_untyped";
   readonly fingerprint?: string;
-  readonly counts: Readonly<Record<"addresses" | "contactPersons" | "contactChannels" | "identifiers" | "taxRegistrations" | "classifications" | "certifications", number>>;
+  readonly counts: Readonly<
+    Record<
+      | "addresses"
+      | "contactPersons"
+      | "contactChannels"
+      | "identifiers"
+      | "taxRegistrations"
+      | "classifications"
+      | "certifications",
+      number
+    >
+  >;
 }
 
 export interface BusinessPartnerRequest {
   readonly id: string;
+  /** Canonical governed identity. */
+  readonly caseId?: string;
   readonly tenantId: string;
   readonly requestNo: string;
+  /** Canonical governed display code. */
+  readonly caseNo?: string;
   readonly kind: BusinessPartnerRequestKind;
   readonly source: BusinessPartnerRequestSource;
   readonly registrationMode: BusinessPartnerRegistrationMode;
@@ -197,12 +243,32 @@ export interface BusinessPartnerRequest {
   readonly appliedBy?: string;
   readonly idempotencyKey: string;
   readonly status: BusinessPartnerRequestStatus;
+  /** Native document.entity_case lifecycle status. */
+  readonly caseStatus?:
+    | "draft"
+    | "submitted"
+    | "in_review"
+    | "approved"
+    | "rejected"
+    | "materializing"
+    | "materialized"
+    | "cancelled"
+    | "conflicted";
   readonly rowVersion: number;
   readonly createdAt: string;
   readonly createdBy: string;
   readonly updatedAt?: string;
   readonly updatedBy?: string;
 }
+
+/** Stable case-native contracts for new UI and integration clients. */
+export type BusinessPartnerCase = BusinessPartnerRequest;
+export type CreateBusinessPartnerCaseCommand = CreateBusinessPartnerRequestCommand;
+export type PatchBusinessPartnerCaseCommand = Omit<PatchBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
+export type ValidateBusinessPartnerCaseCommand = Omit<ValidateBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
+export type SubmitBusinessPartnerCaseCommand = Omit<SubmitBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
+export type DecideBusinessPartnerCaseCommand = Omit<DecideBusinessPartnerRequestCommand,"requestId"|"workflowRequestId"|"workItemId"|"expectedRequestVersion"|"expectedWorkItemVersion"> & { readonly caseId:string;readonly cycleRunId:string;readonly cycleTaskId:string;readonly expectedVersion:number;readonly expectedTaskVersion:number };
+export type MaterializeBusinessPartnerCaseCommand = Omit<ApplyBusinessPartnerRequestCommand,"requestId"> & { readonly caseId:string };
 
 export interface CreateBusinessPartnerRequestCommand {
   readonly context: VerifiedRequestContext;
@@ -234,8 +300,10 @@ export interface PatchBusinessPartnerRequestCommand {
   readonly representationEvidenceId?: string | null;
 }
 
-export type BusinessPartnerRequestValidationSeverity = "info" | "warning" | "error";
-export type BusinessPartnerRequestValidationOutcome = "passed" | "failed" | "skipped";
+export type BusinessPartnerRequestValidationSeverity =
+  "info" | "warning" | "error";
+export type BusinessPartnerRequestValidationOutcome =
+  "passed" | "failed" | "skipped";
 
 export interface BusinessPartnerRequestValidationFinding {
   readonly ruleCode: string;
@@ -261,8 +329,12 @@ export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
   readonly workflow?: Readonly<{
-    requestId: string; stageId: string; workItemId: string; workItemVersion: number;
-    workItemStatus: string; definition: BusinessPartnerRequestSchemaReference;
+    requestId: string;
+    stageId: string;
+    workItemId: string;
+    workItemVersion: number;
+    workItemStatus: string;
+    definition: BusinessPartnerRequestSchemaReference;
   }>;
 }
 
@@ -274,6 +346,7 @@ export interface ValidateBusinessPartnerRequestCommand {
 
 export interface ValidateBusinessPartnerRequestResponse {
   readonly request: BusinessPartnerRequest;
+  readonly case?: BusinessPartnerCase;
   readonly validation: BusinessPartnerRequestValidationResult;
 }
 
@@ -288,8 +361,10 @@ export interface BusinessPartnerRequestWorkflowDefinition {
 
 export interface BusinessPartnerRequestWorkflow {
   readonly requestId: string;
+  readonly cycleRunId?: string;
   readonly stageId: string;
   readonly workItemId: string;
+  readonly cycleTaskId?: string;
   readonly definition: BusinessPartnerRequestSchemaReference;
   readonly decisionFingerprint: string;
 }
@@ -303,6 +378,7 @@ export interface SubmitBusinessPartnerRequestCommand {
 
 export interface SubmitBusinessPartnerRequestResponse {
   readonly request: BusinessPartnerRequest;
+  readonly case?: BusinessPartnerCase;
   readonly workflow: BusinessPartnerRequestWorkflow;
   readonly replayed: boolean;
 }
@@ -323,6 +399,7 @@ export interface DecideBusinessPartnerRequestCommand {
 
 export interface DecideBusinessPartnerRequestResponse {
   readonly request: BusinessPartnerRequest;
+  readonly case?: BusinessPartnerCase;
   readonly workflow: BusinessPartnerRequestWorkflow;
   readonly decision: BusinessPartnerRequestDecision;
   readonly decisionFingerprint: string;
@@ -354,6 +431,7 @@ export interface BusinessPartnerRequestMaterialization {
 
 export interface ApplyBusinessPartnerRequestResponse {
   readonly request: BusinessPartnerRequest;
+  readonly case?: BusinessPartnerCase;
   readonly materialization: BusinessPartnerRequestMaterialization;
   readonly replayed: boolean;
 }
@@ -379,27 +457,76 @@ export interface BusinessPartnerAggregateQuery {
 
 export interface BusinessPartnerAggregate {
   readonly businessPartner: Readonly<{
-    id: string; code: string; name: string; displayName?: string; legalName?: string;
-    partnerCategory: string; legalForm?: string; registrationCountryCode?: string;
-    incorporationDate?: string; websiteUrl?: string; description?: string;
-    aliases: readonly string[]; status: string;
-    createdAt: string; updatedAt?: string;
+    id: string;
+    code: string;
+    name: string;
+    displayName?: string;
+    legalName?: string;
+    partnerCategory: string;
+    legalForm?: string;
+    registrationCountryCode?: string;
+    incorporationDate?: string;
+    websiteUrl?: string;
+    description?: string;
+    aliases: readonly string[];
+    status: string;
+    createdAt: string;
+    updatedAt?: string;
   }>;
   readonly suppliers: readonly Readonly<{
-    id: string; supplierCode: string; supplierType: string; status: string;
-    createdAt: string; updatedAt?: string;
+    id: string;
+    supplierCode: string;
+    supplierType: string;
+    status: string;
+    createdAt: string;
+    updatedAt?: string;
   }>[];
   readonly customers: readonly Readonly<{
-    id: string; customerCode: string; customerType: string; status: string;
-    designations: readonly Readonly<{id:string;type:string;priorityTier?:number;effectiveFrom:string;effectiveUntil?:string}>[];
-    createdAt: string; updatedAt?: string;
+    id: string;
+    customerCode: string;
+    customerType: string;
+    status: string;
+    recordVersion: number;
+    designations: readonly Readonly<{
+      id: string;
+      type: string;
+      priorityTier?: number;
+      effectiveFrom: string;
+      effectiveUntil?: string;
+    }>[];
+    createdAt: string;
+    updatedAt?: string;
   }>[];
-  readonly supplierCompanyProfiles: readonly Readonly<{id:string;supplierId:string;companyCodeId:string;currencyCode?:string;paymentTermId?:string;status:string;createdAt:string;updatedAt?:string}>[];
-  readonly customerCompanyProfiles: readonly Readonly<{id:string;customerId:string;companyCodeId:string;currencyCode?:string;paymentTermId?:string;statementCycleCode?:string;status:string;createdAt:string;updatedAt?:string}>[];
+  readonly supplierCompanyProfiles: readonly Readonly<{
+    id: string;
+    supplierId: string;
+    companyCodeId: string;
+    currencyCode?: string;
+    paymentTermId?: string;
+    status: string;
+    createdAt: string;
+    updatedAt?: string;
+  }>[];
+  readonly customerCompanyProfiles: readonly Readonly<{
+    id: string;
+    customerId: string;
+    companyCodeId: string;
+    currencyCode?: string;
+    paymentTermId?: string;
+    statementCycleCode?: string;
+    status: string;
+    createdAt: string;
+    updatedAt?: string;
+  }>[];
   readonly organizationAssignments: readonly Readonly<{
-    id: string; operatingOrganizationId: string; operatingOrganizationCode: string;
-    operatingOrganizationName: string; partnerRole: string; status: string;
-    effectiveFrom: string; effectiveUntil?: string;
+    id: string;
+    operatingOrganizationId: string;
+    operatingOrganizationCode: string;
+    operatingOrganizationName: string;
+    partnerRole: string;
+    status: string;
+    effectiveFrom: string;
+    effectiveUntil?: string;
   }>[];
   readonly onboardingRequests: readonly BusinessPartnerRequest[];
 }

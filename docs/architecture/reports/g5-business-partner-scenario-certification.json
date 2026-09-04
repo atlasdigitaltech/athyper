@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "kind": "athyper.g5-business-partner-scenario-certification",
+  "capturedAt": "2026-09-04T02:58:59+08:00",
+  "sanitized": true,
+  "dataDisposition": "all scenario fixtures rolled back or disposable databases destroyed",
+  "cleanBuild": {
+    "postgresql": "16.13",
+    "neonManifestSha256": "9a275033d8644d058a092ea6c74c536396a7c52349708a51b52b972ef7e841eb",
+    "meshRegistrationCapabilityProbes": 14,
+    "meshDataProtectionProbes": 12,
+    "businessPartnerMatrix": "pass"
+  },
+  "supportedUpgrade": {
+    "baselineVersion": "2026-09-03.1",
+    "baselineGitRevision": "29ec62fa115c776b907a0eba52c67745b6e94abb",
+    "forwardMigrations": [
+      "20260904_neon_governed_lifecycle_g2_hardening.sql",
+      "20260904_neon_governed_business_partner_scenario_materializer.sql",
+      "20260904_mesh_governed_lifecycle_g3.sql",
+      "20260904_mesh_bank_protected_value_upgrade.sql"
+    ],
+    "meshRegistrationCapabilityProbes": 14,
+    "meshDataProtectionProbes": 12,
+    "businessPartnerMatrix": "pass"
+  },
+  "scenarios": {
+    "buyerRequestedSupplier": "pass",
+    "supplierSelfRegistration": "pass",
+    "internalOnlyBusinessPartner": "pass",
+    "customerOnboarding": "pass"
+  },
+  "controls": {
+    "releasePinnedCase": true,
+    "makerChecker": true,
+    "exactReplay": true,
+    "staleVersionRejected": true,
+    "wrongTenantRejected": true,
+    "boundedSelfRegistrationPreflight": true,
+    "meshExchangeEvidenceRequired": true,
+    "purposeBoundDisclosureEvidenceRequired": true,
+    "normalizedRoleAndScopeAuthorities": true,
+    "atomicSnapshotMaterializationEvidenceOutbox": true,
+    "legacyBusinessPartnerRequestWrites": 0
+  },
+  "independentOpenGate": "The G0/G1 production evidence-checkpoint ledger remains empty; this certification neither changes it nor makes retained compatibility surfaces removal-eligible.",
+  "passed": true
+}

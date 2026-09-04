@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-09-04",
+  "controls": [
+    {
+      "control": "composite_role_fk_coverage",
+      "status": "landed",
+      "owner": "Master Data",
+      "evidence": "Qualification stores and validates the exact role_id; preference, customer designation, credit review and customer lifecycle use tenant/role/BP composite foreign keys. Clean and supported-upgrade wrong-pair probes pass.",
+      "exitGate": "Landed in canonical DDL and 20260904 upgrade migration; g2-clean/upgrade-hardening-certification.json prove rejection."
+    },
+    {
+      "control": "typed_address_contact_ownership",
+      "status": "landed",
+      "owner": "Master Data",
+      "evidence": "business-partner-owner-binding-disposition.v1.json retains the bounded owner registry as the typed-binding design. Active type, capability, purpose, target table and target tenant are synchronously enforced for address/contact links; contact-person identity uses composite FKs.",
+      "exitGate": "Clean and supported-upgrade cross-type owner probes pass; replacement requires equivalent typed child integrity."
+    },
+    {
+      "control": "aggregate_governance_percentages",
+      "status": "landed",
+      "owner": "Master Data Governance",
+      "evidence": "Canonical deferred constraint trigger sums active ownership, voting and beneficial ownership percentages; upgrade preflight rejects historical totals above 100.",
+      "exitGate": "Canonical/migration parity and dirty-history plus deferred multi-row tests pass."
+    },
+    {
+      "control": "supplier_customer_role_history",
+      "status": "landed",
+      "owner": "Master Data Architecture",
+      "evidence": "Approved no-history model: supplier/customer are stable one-lifetime role identities with immutable BP binding; lifecycle events and mutation evidence retain history. Re-onboarding changes the stable role state rather than creating an overlapping role episode.",
+      "exitGate": "Canonical comments and unique tenant/BP identity constraints encode the approved design; any episode model requires a new ADR and non-overlap migration."
+    },
+    {
+      "control": "customer_lifecycle_command",
+      "status": "landed",
+      "owner": "Master Data / Customer",
+      "evidence": "The command owns activate, suspend, reactivate, deactivate and archive; uses caller expected_version, exact replay and serialized per-customer execution; returns distinct P0002, 42501, 40001 and 55000 outcomes.",
+      "exitGate": "Clean and supported-upgrade five-transition, exact-replay, negative-outcome and one-winner concurrency probes pass."
+    },
+    {
+      "control": "metadata_allowlists_and_urls",
+      "status": "landed",
+      "owner": "Master Data Security",
+      "evidence": "business-partner-metadata-url-contract.v1.json publishes direct metadata allowlists. BP and contact website values require credential-free absolute HTTPS URLs with DNS hosts; migration preflights historical values.",
+      "exitGate": "Canonical and upgrade constraints/functions plus clean and supported-upgrade rejection probes pass."
+    },
+    {
+      "control": "organization_only_history",
+      "status": "landed",
+      "owner": "Master Data",
+      "evidence": "Governed materialization is organization-only and both disposable histories contain zero non-organization rows. business-partner-organization-only-compatibility.v1.json explicitly retains person/group import and legacy request branches because known consumers remain.",
+      "exitGate": "G2 disposition is complete. Physical domain removal remains gated by G0 consumer cutover and measured zero-use window and is not claimed removal-eligible."
+    },
+    {
+      "control": "s4_s5_certification",
+      "status": "landed",
+      "owner": "Database Security",
+      "evidence": "g2-clean-s4/s5-certification.json and g2-upgrade-s4/s5-certification.json pass on PostgreSQL 16.13; G2 hardening reports add role/owner/URL/lifecycle negative and concurrency coverage.",
+      "exitGate": "All six clean/supported-upgrade reports pass and fixtures are rolled back or deleted."
+    }
+  ]
+}

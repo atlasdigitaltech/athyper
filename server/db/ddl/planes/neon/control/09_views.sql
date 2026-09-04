@@ -27,29 +27,48 @@ COMMENT ON VIEW control.v_risk_source_config IS
 
 CREATE VIEW control.current_customer_account_designation
 WITH (security_invoker = true, security_barrier = true) AS
-SELECT id AS designation_id, tenant_id, business_partner_id, customer_id,
-       operating_organization_id, company_code_id, designation_type,
-       priority_tier, effective_from, effective_until, rationale,
-       approved_at, approved_by, row_version
-  FROM control.customer_account_designation
- WHERE status = 'approved'
-   AND effective_from <= CURRENT_DATE
-   AND (effective_until IS NULL OR effective_until > CURRENT_DATE);
+SELECT designation.id AS designation_id, designation.tenant_id,
+       designation.business_partner_id, designation.customer_id,
+       (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope
+         WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id
+           AND scope.scope_mode='include' AND scope.scope_kind='operating_organization'
+         ORDER BY scope.scope_group,scope.id LIMIT 1) AS operating_organization_id,
+       (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope
+         WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id
+           AND scope.scope_mode='include' AND scope.scope_kind='company_code'
+         ORDER BY scope.scope_group,scope.id LIMIT 1) AS company_code_id,
+       designation.designation_type, designation.priority_tier,
+       designation.effective_from, designation.effective_until,
+       designation.rationale, designation.approved_at,
+       designation.approved_by, designation.row_version
+  FROM control.customer_account_designation designation
+ WHERE designation.status = 'approved'
+   AND designation.effective_from <= CURRENT_DATE
+   AND (designation.effective_until IS NULL OR designation.effective_until > CURRENT_DATE);
 
 COMMENT ON VIEW control.current_customer_account_designation IS
   'Read-only current governed Customer designations; replaces master.customer.is_key_account.';
 
 CREATE VIEW control.current_customer_credit_limit
 WITH (security_invoker = true, security_barrier = true) AS
-SELECT id AS credit_review_id, tenant_id, business_partner_id, customer_id,
-       operating_organization_id, company_code_id, approved_credit_limit,
-       approved_currency_code, decision, effective_from, effective_until,
-       approved_at, approved_by, row_version
-  FROM control.customer_credit_review
- WHERE decision IN ('approved','conditional')
-   AND approved_credit_limit IS NOT NULL
-   AND effective_from <= CURRENT_DATE
-   AND (effective_until IS NULL OR effective_until > CURRENT_DATE);
+SELECT review.id AS credit_review_id, review.tenant_id,
+       review.business_partner_id, review.customer_id,
+       (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope
+         WHERE scope.tenant_id=review.tenant_id AND scope.credit_review_id=review.id
+           AND scope.scope_mode='include' AND scope.scope_kind='operating_organization'
+         ORDER BY scope.scope_group,scope.id LIMIT 1) AS operating_organization_id,
+       (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope
+         WHERE scope.tenant_id=review.tenant_id AND scope.credit_review_id=review.id
+           AND scope.scope_mode='include' AND scope.scope_kind='company_code'
+         ORDER BY scope.scope_group,scope.id LIMIT 1) AS company_code_id,
+       review.approved_credit_limit, review.approved_currency_code,
+       review.decision, review.effective_from, review.effective_until,
+       review.approved_at, review.approved_by, review.row_version
+  FROM control.customer_credit_review review
+ WHERE review.decision IN ('approved','conditional')
+   AND review.approved_credit_limit IS NOT NULL
+   AND review.effective_from <= CURRENT_DATE
+   AND (review.effective_until IS NULL OR review.effective_until > CURRENT_DATE);
 
 COMMENT ON VIEW control.current_customer_credit_limit IS
   'Read-only current credit-limit resolver. Every returned amount is the effective outcome of one approved or conditional credit review.';

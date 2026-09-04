@@ -1,0 +1,46 @@
+{
+  "contractVersion": "athyper.business-partner-metadata-url.v1",
+  "owner": "Master Data Security",
+  "status": "active",
+  "metadata": {
+    "master.business_partner": [
+      "_seed",
+      "acceptanceFamily",
+      "externalScopeKey",
+      "sourceSystem",
+      "sourceReference",
+      "integrationTags",
+      "notes",
+      "importedAt",
+      "importBatchId"
+    ],
+    "master.supplier": [
+      "sourceSystem",
+      "sourceReference",
+      "integrationTags",
+      "notes",
+      "importedAt",
+      "importBatchId"
+    ],
+    "master.customer": [
+      "sourceSystem",
+      "sourceReference",
+      "integrationTags",
+      "notes",
+      "importedAt",
+      "importBatchId"
+    ]
+  },
+  "urlPolicy": {
+    "surfaces": [
+      "master.business_partner.website_url",
+      "master.contact_link.value when channel_type=website"
+    ],
+    "scheme": "https",
+    "absoluteDnsHostRequired": true,
+    "credentialsAllowed": false,
+    "controlCharactersAllowed": false,
+    "maximumBytes": 2048
+  },
+  "changeGate": "A contract-version change, historical-row preflight, clean-build probe, supported-upgrade probe and consumer review are required."
+}

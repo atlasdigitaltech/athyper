@@ -98,6 +98,7 @@ planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
 planes/neon/master/07_functions.sql
+planes/neon/master/07_g5_business_partner_materializer.sql
 common/master/07_functions.sql
 common/snapshot/07_functions.sql
 common/audit/07_functions.sql
@@ -109,6 +110,7 @@ planes/neon/document/07_functions.sql
 common/event/07_functions.sql
 common/governance/07_functions.sql
 common/document/07_functions.sql
+planes/neon/document/07_g6_business_partner_request_case_backfill.sql
 planes/neon/ledger/07_functions.sql
 common/ai/07_functions.sql
 common/shared/08_triggers.sql
@@ -209,4 +211,6 @@ planes/neon/control/12_subscription_plan_reference_seed.sql
 planes/neon/control/12_subscription_plan_module_reference_seed.sql
 planes/neon/control/12_numbering_policy_reference_seed.sql
 planes/neon/control/12_notification_reference_seed.sql
+planes/neon/document/07_entity_case_business_partner_runtime.sql
 common/shared/99_security_definer_hardening.sql
+planes/neon/document/99_g6_request_family_retirement.sql

@@ -34,6 +34,12 @@ export interface HostConfig {
     enforceRequiredActions: boolean;
     requiredActionsMatrixJson: string | undefined;
   };
+  identityProvider: {
+    keycloakAdminBaseUrl: string | undefined;
+    keycloakAdminRealm: string;
+    keycloakAdminClientId: string | undefined;
+    keycloakAdminCredentialReference: string | undefined;
+  };
   redis: {
     url: string | undefined;
     keyPrefix: string | undefined;
@@ -221,10 +227,14 @@ export function loadConfig(): HostConfig {
 
   const port = Number(process.env["PORT"] ?? 4000);
   if (!Number.isFinite(port) || port <= 0) {
-    throw new Error(`PORT must be a positive integer, got: ${process.env["PORT"]}`);
+    throw new Error(
+      `PORT must be a positive integer, got: ${process.env["PORT"]}`,
+    );
   }
 
-  const shutdownTimeoutMs = Number(process.env["SHUTDOWN_TIMEOUT_MS"] ?? 15_000);
+  const shutdownTimeoutMs = Number(
+    process.env["SHUTDOWN_TIMEOUT_MS"] ?? 15_000,
+  );
   if (!Number.isFinite(shutdownTimeoutMs) || shutdownTimeoutMs <= 0) {
     throw new Error(
       `SHUTDOWN_TIMEOUT_MS must be a positive integer, got: ${process.env["SHUTDOWN_TIMEOUT_MS"]}`,
@@ -243,9 +253,18 @@ export function loadConfig(): HostConfig {
   const meshPoolMax = readPositiveInteger("MESH_DATABASE_POOL_MAX", 10);
   const rawStudioDatabaseUrl = readStudioEnvironment("DATABASE_URL");
   const rawMeshDatabaseUrl = process.env["MESH_DATABASE_URL"]?.trim();
-  const bp360MeshLiveBaseUrl=process.env["BP360_MESH_LIVE_BASE_URL"]?.trim(),bp360MeshLiveCredentialReference=process.env["BP360_MESH_LIVE_CREDENTIAL_REFERENCE"]?.trim(),bp360MeshTimeoutMs=readPositiveInteger("BP360_MESH_TIMEOUT_MS",1_500);
-  if(Boolean(bp360MeshLiveBaseUrl)!==Boolean(bp360MeshLiveCredentialReference))throw new Error("BP360 MESH live transport requires both BP360_MESH_LIVE_BASE_URL and BP360_MESH_LIVE_CREDENTIAL_REFERENCE");
-  if(bp360MeshTimeoutMs>3_000)throw new Error("BP360_MESH_TIMEOUT_MS must not exceed 3000");
+  const bp360MeshLiveBaseUrl = process.env["BP360_MESH_LIVE_BASE_URL"]?.trim(),
+    bp360MeshLiveCredentialReference =
+      process.env["BP360_MESH_LIVE_CREDENTIAL_REFERENCE"]?.trim(),
+    bp360MeshTimeoutMs = readPositiveInteger("BP360_MESH_TIMEOUT_MS", 1_500);
+  if (
+    Boolean(bp360MeshLiveBaseUrl) !== Boolean(bp360MeshLiveCredentialReference)
+  )
+    throw new Error(
+      "BP360 MESH live transport requires both BP360_MESH_LIVE_BASE_URL and BP360_MESH_LIVE_CREDENTIAL_REFERENCE",
+    );
+  if (bp360MeshTimeoutMs > 3_000)
+    throw new Error("BP360_MESH_TIMEOUT_MS must not exceed 3000");
   const explicitIssuer =
     process.env["KEYCLOAK_ISSUER_URL"]?.trim() ??
     process.env["IAM_ISSUER_URL"]?.trim();
@@ -267,19 +286,54 @@ export function loadConfig(): HostConfig {
       "Keycloak configuration requires a client ID and either an issuer URL or KEYCLOAK_BASE_URL plus KEYCLOAK_REALM",
     );
   }
-  const jwksCacheTtlMs = readPositiveInteger("KEYCLOAK_JWKS_CACHE_TTL_MS", 600_000);
+  const jwksCacheTtlMs = readPositiveInteger(
+    "KEYCLOAK_JWKS_CACHE_TTL_MS",
+    600_000,
+  );
   const keycloakJwksUrl = process.env["KEYCLOAK_JWKS_URL"]?.trim();
   const claimContextMode = readChoice(
     "AUTH_CLAIM_FIRST_CONTEXT",
     env === "production" ? "enforce" : "shadow",
     ["off", "shadow", "enforce", "on"] as const,
   );
-  const requireAuthorizedRole = readBoolean("AUTH_REQUIRE_AUTHORIZED_ROLE", true);
-  const enforceRequiredActions = readBoolean("AUTH_VERIFY_ENFORCE_REQUIRED_ACTIONS", true);
-  const requiredActionsMatrixJson = process.env["AUTH_REQUIRED_ACTIONS_MATRIX"]?.trim();
+  const requireAuthorizedRole = readBoolean(
+    "AUTH_REQUIRE_AUTHORIZED_ROLE",
+    true,
+  );
+  const enforceRequiredActions = readBoolean(
+    "AUTH_VERIFY_ENFORCE_REQUIRED_ACTIONS",
+    true,
+  );
+  const requiredActionsMatrixJson =
+    process.env["AUTH_REQUIRED_ACTIONS_MATRIX"]?.trim();
+  const keycloakAdminBaseUrl = process.env["KEYCLOAK_ADMIN_BASE_URL"]?.trim();
+  const keycloakAdminClientId = process.env["KEYCLOAK_ADMIN_CLIENT_ID"]?.trim();
+  const keycloakAdminCredentialReference =
+    process.env["KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE"]?.trim();
+  const keycloakAdminRealm =
+    process.env["KEYCLOAK_ADMIN_REALM"]?.trim() || "master";
+  const hasPartialIdentityProvider = Boolean(
+    keycloakAdminBaseUrl ||
+    keycloakAdminClientId ||
+    keycloakAdminCredentialReference,
+  );
+  if (
+    hasPartialIdentityProvider &&
+    !(
+      keycloakAdminBaseUrl &&
+      keycloakAdminClientId &&
+      keycloakAdminCredentialReference
+    )
+  )
+    throw new Error(
+      "Keycloak identity provider requires KEYCLOAK_ADMIN_BASE_URL, KEYCLOAK_ADMIN_CLIENT_ID and KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE",
+    );
   const redisUrl = process.env["REDIS_URL"]?.trim();
   const redisKeyPrefix = process.env["REDIS_KEY_PREFIX"]?.trim();
-  const redisConnectTimeoutMs = readPositiveInteger("REDIS_CONNECT_TIMEOUT_MS", 10_000);
+  const redisConnectTimeoutMs = readPositiveInteger(
+    "REDIS_CONNECT_TIMEOUT_MS",
+    10_000,
+  );
   const redisMaxRetriesPerRequest = readNonNegativeInteger(
     "REDIS_MAX_RETRIES_PER_REQUEST",
     2,
@@ -289,51 +343,98 @@ export function loadConfig(): HostConfig {
     "ALLOW_SHARED_BULLMQ_REDIS",
     env === "local",
   );
-  const bullMqUrl = explicitBullMqUrl || (allowSharedBullMqRedis ? redisUrl : undefined);
+  const bullMqUrl =
+    explicitBullMqUrl || (allowSharedBullMqRedis ? redisUrl : undefined);
   const bullMqConcurrency = readPositiveInteger("JOB_WORKER_CONCURRENCY", 10);
-  const scheduleReconcileMs = readPositiveInteger("JOB_SCHEDULE_RECONCILE_MS", 60_000);
+  const scheduleReconcileMs = readPositiveInteger(
+    "JOB_SCHEDULE_RECONCILE_MS",
+    60_000,
+  );
   const cronwatchBaseUrl = process.env["CRONWATCH_BASE_URL"]?.trim();
   const cronwatchPingKey = process.env["CRONWATCH_PING_KEY"]?.trim();
   const studioWorkerDatabaseUrl = readStudioEnvironment("WORKER_DATABASE_URL");
-  const neonWorkerDatabaseUrl = process.env["NEON_WORKER_DATABASE_URL"]?.trim()
-    ?? process.env["DATABASE_ADMIN_URL"]?.trim();
+  const neonWorkerDatabaseUrl =
+    process.env["NEON_WORKER_DATABASE_URL"]?.trim() ??
+    process.env["DATABASE_ADMIN_URL"]?.trim();
   const meshWorkerDatabaseUrl = process.env["MESH_WORKER_DATABASE_URL"]?.trim();
-  const studioInvalidationListenerUrl = process.env["STUDIO_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
-  const neonInvalidationListenerUrl = process.env["NEON_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
-  const meshInvalidationListenerUrl = process.env["MESH_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+  const studioInvalidationListenerUrl =
+    process.env["STUDIO_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+  const neonInvalidationListenerUrl =
+    process.env["NEON_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
+  const meshInvalidationListenerUrl =
+    process.env["MESH_INVALIDATION_LISTENER_DATABASE_URL"]?.trim();
   if (env === "production" && mode === "worker") {
     const missing = [
-      rawStudioDatabaseUrl && !studioWorkerDatabaseUrl ? "STUDIO_WORKER_DATABASE_URL" : undefined,
-      rawDatabaseUrl && !neonWorkerDatabaseUrl ? "NEON_WORKER_DATABASE_URL" : undefined,
-      rawMeshDatabaseUrl && !meshWorkerDatabaseUrl ? "MESH_WORKER_DATABASE_URL" : undefined,
+      rawStudioDatabaseUrl && !studioWorkerDatabaseUrl
+        ? "STUDIO_WORKER_DATABASE_URL"
+        : undefined,
+      rawDatabaseUrl && !neonWorkerDatabaseUrl
+        ? "NEON_WORKER_DATABASE_URL"
+        : undefined,
+      rawMeshDatabaseUrl && !meshWorkerDatabaseUrl
+        ? "MESH_WORKER_DATABASE_URL"
+        : undefined,
     ].filter((value): value is string => Boolean(value));
     if (missing.length > 0) {
-      throw new Error(`Production worker requires dedicated job database URLs: ${missing.join(", ")}`);
+      throw new Error(
+        `Production worker requires dedicated job database URLs: ${missing.join(", ")}`,
+      );
     }
   }
   const s3Endpoint = process.env["S3_ENDPOINT"]?.trim();
   const s3PublicEndpoint = process.env["S3_PUBLIC_ENDPOINT"]?.trim();
   const s3Bucket = process.env["S3_BUCKET"]?.trim();
-  const s3AccessKeyId = process.env["APP_S3_ACCESS_KEY"]?.trim()
-    ?? (env === "local" ? process.env["S3_ACCESS_KEY"]?.trim() : undefined);
-  const s3SecretAccessKey = process.env["APP_S3_SECRET_KEY"]?.trim()
-    ?? (env === "local" ? process.env["S3_SECRET_KEY"]?.trim() : undefined);
-  if (Boolean(s3AccessKeyId) !== Boolean(s3SecretAccessKey)) throw new Error("Object storage requires both APP_S3_ACCESS_KEY and APP_S3_SECRET_KEY");
+  const s3AccessKeyId =
+    process.env["APP_S3_ACCESS_KEY"]?.trim() ??
+    (env === "local" ? process.env["S3_ACCESS_KEY"]?.trim() : undefined);
+  const s3SecretAccessKey =
+    process.env["APP_S3_SECRET_KEY"]?.trim() ??
+    (env === "local" ? process.env["S3_SECRET_KEY"]?.trim() : undefined);
+  if (Boolean(s3AccessKeyId) !== Boolean(s3SecretAccessKey))
+    throw new Error(
+      "Object storage requires both APP_S3_ACCESS_KEY and APP_S3_SECRET_KEY",
+    );
   const s3Region = process.env["S3_REGION"]?.trim() || "us-east-1";
-  const s3MultipartPartSizeMb = readPositiveInteger("S3_MULTIPART_PART_SIZE_MB", 5);
-  const s3MultipartQueueSize = readPositiveInteger("S3_MULTIPART_QUEUE_SIZE", 4);
+  const s3MultipartPartSizeMb = readPositiveInteger(
+    "S3_MULTIPART_PART_SIZE_MB",
+    5,
+  );
+  const s3MultipartQueueSize = readPositiveInteger(
+    "S3_MULTIPART_QUEUE_SIZE",
+    4,
+  );
   const s3MaxUploadMb = readPositiveInteger("S3_MAX_UPLOAD_MB", 100);
-  const s3PresignedTtlSeconds = readPositiveInteger("S3_PRESIGNED_TTL_SECONDS", 900);
-  const attachmentTenantQuotaGb = readPositiveInteger("ATTACHMENT_TENANT_QUOTA_GB", 10);
-  const attachmentTenantQuotaItems = readPositiveInteger("ATTACHMENT_TENANT_QUOTA_ITEMS", 50_000);
-  const attachmentQuotaReservationTtlSeconds = readPositiveInteger("ATTACHMENT_QUOTA_RESERVATION_TTL_SECONDS", 1_800);
-  const attachmentQuotaRetryAfterSeconds = readPositiveInteger("ATTACHMENT_QUOTA_RETRY_AFTER_SECONDS", 900);
+  const s3PresignedTtlSeconds = readPositiveInteger(
+    "S3_PRESIGNED_TTL_SECONDS",
+    900,
+  );
+  const attachmentTenantQuotaGb = readPositiveInteger(
+    "ATTACHMENT_TENANT_QUOTA_GB",
+    10,
+  );
+  const attachmentTenantQuotaItems = readPositiveInteger(
+    "ATTACHMENT_TENANT_QUOTA_ITEMS",
+    50_000,
+  );
+  const attachmentQuotaReservationTtlSeconds = readPositiveInteger(
+    "ATTACHMENT_QUOTA_RESERVATION_TTL_SECONDS",
+    1_800,
+  );
+  const attachmentQuotaRetryAfterSeconds = readPositiveInteger(
+    "ATTACHMENT_QUOTA_RETRY_AFTER_SECONDS",
+    900,
+  );
   const clamdHost = process.env["CLAMD_HOST"]?.trim();
   const clamdPort = readPositiveInteger("CLAMD_PORT", 3310);
   if (clamdPort > 65_535) throw new Error("CLAMD_PORT must not exceed 65535");
   const clamdTimeoutMs = readPositiveInteger("CLAMD_TIMEOUT_MS", 30_000);
-  const clamdMaxBytes = readPositiveInteger("CLAMD_MAX_BYTES", s3MaxUploadMb * 1_024 * 1_024);
-  const clamdOnUnavailable = readChoice("CLAMD_ON_UNAVAILABLE", "fail-closed", ["fail-closed"] as const);
+  const clamdMaxBytes = readPositiveInteger(
+    "CLAMD_MAX_BYTES",
+    s3MaxUploadMb * 1_024 * 1_024,
+  );
+  const clamdOnUnavailable = readChoice("CLAMD_ON_UNAVAILABLE", "fail-closed", [
+    "fail-closed",
+  ] as const);
   const otlpEndpoint = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();
   const otelServiceName =
     process.env["OTEL_SERVICE_NAME"]?.trim() ||
@@ -354,7 +455,9 @@ export function loadConfig(): HostConfig {
   const sesConfigurationSetName = process.env["SES_CONFIGURATION_SET"]?.trim();
   const sesFromAddress = process.env["SES_FROM"]?.trim();
   const sesReplyToAddress = process.env["SES_REPLY_TO"]?.trim();
-  const hasSesConfig = Boolean(sesRegion || sesConfigurationSetName || sesFromAddress || sesReplyToAddress);
+  const hasSesConfig = Boolean(
+    sesRegion || sesConfigurationSetName || sesFromAddress || sesReplyToAddress,
+  );
   const hasSmtpConfig = Boolean(
     smtpHost || smtpUser || smtpPassword || smtpFromAddress,
   );
@@ -365,7 +468,9 @@ export function loadConfig(): HostConfig {
   );
   if (
     hasSmtpConfig &&
-    (!smtpHost || !smtpFromAddress || Boolean(smtpUser) !== Boolean(smtpPassword))
+    (!smtpHost ||
+      !smtpFromAddress ||
+      Boolean(smtpUser) !== Boolean(smtpPassword))
   ) {
     throw new Error(
       "SMTP configuration requires SMTP_HOST, SMTP_FROM, and both or neither of SMTP_USER and SMTP_PASS",
@@ -374,29 +479,64 @@ export function loadConfig(): HostConfig {
   if (emailProvider === "smtp" && (!smtpHost || !smtpFromAddress)) {
     throw new Error("EMAIL_PROVIDER=smtp requires SMTP_HOST and SMTP_FROM");
   }
-  if (emailProvider === "ses" && (!sesRegion || !sesConfigurationSetName || !sesFromAddress)) {
-    throw new Error("EMAIL_PROVIDER=ses requires SES_REGION, SES_CONFIGURATION_SET, and SES_FROM");
+  if (
+    emailProvider === "ses" &&
+    (!sesRegion || !sesConfigurationSetName || !sesFromAddress)
+  ) {
+    throw new Error(
+      "EMAIL_PROVIDER=ses requires SES_REGION, SES_CONFIGURATION_SET, and SES_FROM",
+    );
   }
   const sesEventQueueUrl = process.env["SES_EVENT_QUEUE_URL"]?.trim();
   const sesEventRegion = process.env["SES_EVENT_REGION"]?.trim() || sesRegion;
-  const sesEventWaitTimeSeconds = readNonNegativeInteger("SES_EVENT_WAIT_SECONDS", 20);
-  const sesEventVisibilityTimeoutSeconds = readPositiveInteger("SES_EVENT_VISIBILITY_TIMEOUT_SECONDS", 60);
+  const sesEventWaitTimeSeconds = readNonNegativeInteger(
+    "SES_EVENT_WAIT_SECONDS",
+    20,
+  );
+  const sesEventVisibilityTimeoutSeconds = readPositiveInteger(
+    "SES_EVENT_VISIBILITY_TIMEOUT_SECONDS",
+    60,
+  );
   const sesEventMaxMessages = readPositiveInteger("SES_EVENT_MAX_MESSAGES", 10);
-  const sesEventFailureBackoffMs = readPositiveInteger("SES_EVENT_FAILURE_BACKOFF_MS", 1_000);
-  if (sesEventWaitTimeSeconds > 20) throw new Error("SES_EVENT_WAIT_SECONDS must not exceed 20");
-  if (sesEventVisibilityTimeoutSeconds > 43_200) throw new Error("SES_EVENT_VISIBILITY_TIMEOUT_SECONDS must not exceed 43200");
-  if (sesEventMaxMessages > 10) throw new Error("SES_EVENT_MAX_MESSAGES must not exceed 10");
-  if (sesEventFailureBackoffMs > 60_000) throw new Error("SES_EVENT_FAILURE_BACKOFF_MS must not exceed 60000");
+  const sesEventFailureBackoffMs = readPositiveInteger(
+    "SES_EVENT_FAILURE_BACKOFF_MS",
+    1_000,
+  );
+  if (sesEventWaitTimeSeconds > 20)
+    throw new Error("SES_EVENT_WAIT_SECONDS must not exceed 20");
+  if (sesEventVisibilityTimeoutSeconds > 43_200)
+    throw new Error(
+      "SES_EVENT_VISIBILITY_TIMEOUT_SECONDS must not exceed 43200",
+    );
+  if (sesEventMaxMessages > 10)
+    throw new Error("SES_EVENT_MAX_MESSAGES must not exceed 10");
+  if (sesEventFailureBackoffMs > 60_000)
+    throw new Error("SES_EVENT_FAILURE_BACKOFF_MS must not exceed 60000");
   if (sesEventQueueUrl) {
     let queueUrl: URL;
-    try { queueUrl = new URL(sesEventQueueUrl); } catch { throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL"); }
-    if (queueUrl.protocol !== "https:") throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL");
-    if (!sesEventRegion) throw new Error("SES_EVENT_REGION or SES_REGION is required with SES_EVENT_QUEUE_URL");
+    try {
+      queueUrl = new URL(sesEventQueueUrl);
+    } catch {
+      throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL");
+    }
+    if (queueUrl.protocol !== "https:")
+      throw new Error("SES_EVENT_QUEUE_URL must be a valid HTTPS URL");
+    if (!sesEventRegion)
+      throw new Error(
+        "SES_EVENT_REGION or SES_REGION is required with SES_EVENT_QUEUE_URL",
+      );
   }
-  if (emailProvider === "ses" && env !== "local" && (!sesEventQueueUrl || !sesEventRegion)) {
-    throw new Error("Native SES requires SES_EVENT_QUEUE_URL and an SES event region outside local environments");
+  if (
+    emailProvider === "ses" &&
+    env !== "local" &&
+    (!sesEventQueueUrl || !sesEventRegion)
+  ) {
+    throw new Error(
+      "Native SES requires SES_EVENT_QUEUE_URL and an SES event region outside local environments",
+    );
   }
-  const metaWhatsAppApiVersion = process.env["META_WHATSAPP_API_VERSION"]?.trim();
+  const metaWhatsAppApiVersion =
+    process.env["META_WHATSAPP_API_VERSION"]?.trim();
   const metaWhatsAppPhoneNumberId =
     process.env["META_WHATSAPP_PHONE_NUMBER_ID"]?.trim();
   const metaWhatsAppAccessToken =
@@ -405,9 +545,9 @@ export function loadConfig(): HostConfig {
     process.env["META_WHATSAPP_GRAPH_BASE_URL"]?.trim();
   const hasMetaWhatsAppConfig = Boolean(
     metaWhatsAppApiVersion ||
-      metaWhatsAppPhoneNumberId ||
-      metaWhatsAppAccessToken ||
-      metaWhatsAppGraphBaseUrl,
+    metaWhatsAppPhoneNumberId ||
+    metaWhatsAppAccessToken ||
+    metaWhatsAppGraphBaseUrl,
   );
   if (
     hasMetaWhatsAppConfig &&
@@ -442,7 +582,10 @@ export function loadConfig(): HostConfig {
     );
   }
   const docRenderBaseUrl = process.env["DOCRENDER_BASE_URL"]?.trim();
-  const docRenderTimeoutMs = readPositiveInteger("DOCRENDER_TIMEOUT_MS", 120_000);
+  const docRenderTimeoutMs = readPositiveInteger(
+    "DOCRENDER_TIMEOUT_MS",
+    120_000,
+  );
   const docRenderMaxHtmlBytes = readPositiveInteger(
     "DOCRENDER_MAX_HTML_BYTES",
     5 * 1_024 * 1_024,
@@ -452,32 +595,81 @@ export function loadConfig(): HostConfig {
     50 * 1_024 * 1_024,
   );
   const docParserBaseUrl = process.env["DOCPARSER_URL"]?.trim();
-  const docParserTimeoutMs = readPositiveInteger("DOCPARSER_TIMEOUT_MS",120_000);
-  const docParserMaxInputBytes = readPositiveInteger("DOCPARSER_MAX_INPUT_BYTES",50*1_024*1_024);
-  const docParserMaxTextChars = readPositiveInteger("DOCPARSER_MAX_TEXT_CHARS",5_000_000);
+  const docParserTimeoutMs = readPositiveInteger(
+    "DOCPARSER_TIMEOUT_MS",
+    120_000,
+  );
+  const docParserMaxInputBytes = readPositiveInteger(
+    "DOCPARSER_MAX_INPUT_BYTES",
+    50 * 1_024 * 1_024,
+  );
+  const docParserMaxTextChars = readPositiveInteger(
+    "DOCPARSER_MAX_TEXT_CHARS",
+    5_000_000,
+  );
   const searchBaseUrl = process.env["SEARCHCORE_URL"]?.trim();
   const searchApiKey = process.env["SEARCHCORE_MASTER_KEY"]?.trim();
-  if(Boolean(searchBaseUrl)!==Boolean(searchApiKey))throw new Error("Search requires both SEARCHCORE_URL and SEARCHCORE_MASTER_KEY");
-  const searchIndexUid = process.env["SEARCHCORE_DOCUMENT_INDEX"]?.trim()||"documents";
-  if(!/^[a-zA-Z0-9_-]{1,128}$/.test(searchIndexUid))throw new Error("SEARCHCORE_DOCUMENT_INDEX is invalid");
-  const searchTimeoutMs = readPositiveInteger("SEARCHCORE_TIMEOUT_MS",10_000);
-  const publicationApiEnabled=readBoolean("PUBLICATION_API_ENABLED",false);
-  const publicationCompileEnabled=readBoolean("PUBLICATION_COMPILE_ENABLED",false);
-  const publicationDispatchEnabled=readBoolean("PUBLICATION_DISPATCH_ENABLED",false);
-  const publicationApplyEnabled=readBoolean("PUBLICATION_APPLY_ENABLED",false);
-  const publicationRecoveryEnabled=readBoolean("PUBLICATION_RECOVERY_ENABLED",false);
-  const publicationTargetPlanes=readPublicationPlanes(process.env["PUBLICATION_TARGET_PLANES"]);
-  if((publicationApiEnabled||publicationCompileEnabled||publicationDispatchEnabled||publicationApplyEnabled||publicationRecoveryEnabled)&&publicationTargetPlanes.length===0)throw new Error("Enabled Publication requires PUBLICATION_TARGET_PLANES");
-  const publicationRequireSignature=readBoolean("PUBLICATION_REQUIRE_SIGNATURE",true);
-  if(!publicationRequireSignature)throw new Error("PUBLICATION_REQUIRE_SIGNATURE must remain true");
-  const publicationSigningKeyId=process.env["PUBLICATION_SIGNING_KEY_ID"]?.trim();
-  const publicationPrivateKeyReference=process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
-  const publicationPublicKeyReference=process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
-  const publicationRuntimeVersion=process.env["PUBLICATION_RUNTIME_VERSION"]?.trim()||process.env["SERVICE_VERSION"]?.trim()||"0.0.0";
-  const publicationRecoveryIntervalMs=readPositiveInteger("PUBLICATION_RECOVERY_INTERVAL_MS",60_000);
-  const infisicalEndpoint=process.env["INFISICAL_URL"]?.trim();
-  const infisicalToken=process.env["INFISICAL_TOKEN"]?.trim();
-  const infisicalWorkspaceId=process.env["INFISICAL_WORKSPACE_ID"]?.trim();
+  if (Boolean(searchBaseUrl) !== Boolean(searchApiKey))
+    throw new Error(
+      "Search requires both SEARCHCORE_URL and SEARCHCORE_MASTER_KEY",
+    );
+  const searchIndexUid =
+    process.env["SEARCHCORE_DOCUMENT_INDEX"]?.trim() || "documents";
+  if (!/^[a-zA-Z0-9_-]{1,128}$/.test(searchIndexUid))
+    throw new Error("SEARCHCORE_DOCUMENT_INDEX is invalid");
+  const searchTimeoutMs = readPositiveInteger("SEARCHCORE_TIMEOUT_MS", 10_000);
+  const publicationApiEnabled = readBoolean("PUBLICATION_API_ENABLED", false);
+  const publicationCompileEnabled = readBoolean(
+    "PUBLICATION_COMPILE_ENABLED",
+    false,
+  );
+  const publicationDispatchEnabled = readBoolean(
+    "PUBLICATION_DISPATCH_ENABLED",
+    false,
+  );
+  const publicationApplyEnabled = readBoolean(
+    "PUBLICATION_APPLY_ENABLED",
+    false,
+  );
+  const publicationRecoveryEnabled = readBoolean(
+    "PUBLICATION_RECOVERY_ENABLED",
+    false,
+  );
+  const publicationTargetPlanes = readPublicationPlanes(
+    process.env["PUBLICATION_TARGET_PLANES"],
+  );
+  if (
+    (publicationApiEnabled ||
+      publicationCompileEnabled ||
+      publicationDispatchEnabled ||
+      publicationApplyEnabled ||
+      publicationRecoveryEnabled) &&
+    publicationTargetPlanes.length === 0
+  )
+    throw new Error("Enabled Publication requires PUBLICATION_TARGET_PLANES");
+  const publicationRequireSignature = readBoolean(
+    "PUBLICATION_REQUIRE_SIGNATURE",
+    true,
+  );
+  if (!publicationRequireSignature)
+    throw new Error("PUBLICATION_REQUIRE_SIGNATURE must remain true");
+  const publicationSigningKeyId =
+    process.env["PUBLICATION_SIGNING_KEY_ID"]?.trim();
+  const publicationPrivateKeyReference =
+    process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
+  const publicationPublicKeyReference =
+    process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
+  const publicationRuntimeVersion =
+    process.env["PUBLICATION_RUNTIME_VERSION"]?.trim() ||
+    process.env["SERVICE_VERSION"]?.trim() ||
+    "0.0.0";
+  const publicationRecoveryIntervalMs = readPositiveInteger(
+    "PUBLICATION_RECOVERY_INTERVAL_MS",
+    60_000,
+  );
+  const infisicalEndpoint = process.env["INFISICAL_URL"]?.trim();
+  const infisicalToken = process.env["INFISICAL_TOKEN"]?.trim();
+  const infisicalWorkspaceId = process.env["INFISICAL_WORKSPACE_ID"]?.trim();
   const twilioAccountSid = process.env["TWILIO_ACCOUNT_SID"]?.trim();
   const twilioAuthToken = process.env["TWILIO_AUTH_TOKEN"]?.trim();
   const twilioFromNumber = process.env["TWILIO_FROM_NUMBER"]?.trim();
@@ -485,9 +677,9 @@ export function loadConfig(): HostConfig {
     process.env["TWILIO_MESSAGING_SERVICE_SID"]?.trim();
   const hasTwilioConfig = Boolean(
     twilioAccountSid ||
-      twilioAuthToken ||
-      twilioFromNumber ||
-      twilioMessagingServiceSid,
+    twilioAuthToken ||
+    twilioFromNumber ||
+    twilioMessagingServiceSid,
   );
   if (
     hasTwilioConfig &&
@@ -518,7 +710,12 @@ export function loadConfig(): HostConfig {
       connectionString: rawMeshDatabaseUrl || undefined,
       poolMax: meshPoolMax,
     },
-    businessPartner360:{meshLiveBaseUrl:bp360MeshLiveBaseUrl||undefined,meshLiveCredentialReference:bp360MeshLiveCredentialReference||undefined,meshTimeoutMs:bp360MeshTimeoutMs},
+    businessPartner360: {
+      meshLiveBaseUrl: bp360MeshLiveBaseUrl || undefined,
+      meshLiveCredentialReference:
+        bp360MeshLiveCredentialReference || undefined,
+      meshTimeoutMs: bp360MeshTimeoutMs,
+    },
     keycloak: {
       issuerUrl: keycloakIssuer,
       audience: keycloakAudience || undefined,
@@ -531,6 +728,13 @@ export function loadConfig(): HostConfig {
       requireAuthorizedRole,
       enforceRequiredActions,
       requiredActionsMatrixJson: requiredActionsMatrixJson || undefined,
+    },
+    identityProvider: {
+      keycloakAdminBaseUrl: keycloakAdminBaseUrl || undefined,
+      keycloakAdminRealm,
+      keycloakAdminClientId: keycloakAdminClientId || undefined,
+      keycloakAdminCredentialReference:
+        keycloakAdminCredentialReference || undefined,
     },
     redis: {
       url: redisUrl || undefined,
@@ -636,37 +840,197 @@ export function loadConfig(): HostConfig {
       maxHtmlBytes: docRenderMaxHtmlBytes,
       maxPdfBytes: docRenderMaxPdfBytes,
     },
-    contentExtraction:{baseUrl:docParserBaseUrl||undefined,timeoutMs:docParserTimeoutMs,maxInputBytes:docParserMaxInputBytes,maxTextChars:docParserMaxTextChars},
-    search:{baseUrl:searchBaseUrl||undefined,apiKey:searchApiKey||undefined,indexUid:searchIndexUid,timeoutMs:searchTimeoutMs},
-    verification:{enabled:readBoolean("PLATFORM_VERIFICATION_ENABLED",env==="local"),grafanaUrl:process.env["PLATFORM_VERIFICATION_GRAFANA_URL"]?.trim()||(env==="local"?"http://127.0.0.1:53902":undefined)},
-    publication:{apiEnabled:publicationApiEnabled,compileEnabled:publicationCompileEnabled,dispatchEnabled:publicationDispatchEnabled,applyEnabled:publicationApplyEnabled,recoveryEnabled:publicationRecoveryEnabled,targetPlanes:publicationTargetPlanes,requireSignature:true,signingKeyId:publicationSigningKeyId||undefined,privateKeyReference:publicationPrivateKeyReference||undefined,publicKeyReference:publicationPublicKeyReference||undefined,runtimeVersion:publicationRuntimeVersion,recoveryIntervalMs:publicationRecoveryIntervalMs},
-    infisical:{endpoint:infisicalEndpoint||undefined,token:infisicalToken||undefined,workspaceId:infisicalWorkspaceId||undefined,environment:process.env["INFISICAL_ENVIRONMENT"]?.trim()||env,secretPath:process.env["INFISICAL_SECRET_PATH"]?.trim()||"/publication"},
-    wave0:{financeRoutesEnabled:readBoolean("WAVE0_FINANCE_ROUTES_ENABLED",false),financeF2Enabled:readBoolean("FINANCE_F2_ENABLED",false),financeF3Enabled:readBoolean("FINANCE_F3_ENABLED",false),financeF4Enabled:readBoolean("FINANCE_F4_ENABLED",false),financeF5Enabled:readBoolean("FINANCE_F5_ENABLED",false),financeF6Enabled:readBoolean("FINANCE_F6_ENABLED",false),governanceRoutesEnabled:readBoolean("WAVE0_GOVERNANCE_ROUTES_ENABLED",false),controlAdminTenantOverridesEnabled:readBoolean("WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED",false),controlAdminLookupRoundingEnabled:readBoolean("WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED",false),controlAdminConnectorLifecycleEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED",false),controlAdminCycleConfigEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",false),controlAdminLocalCatalogReadsEnabled:readBoolean("WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",false),controlAdminCatalogAuthoringEnabled:readBoolean("WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED",false),controlAdminRuntimeCommandsEnabled:readBoolean("WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED",false),recordSnapshotRoutesEnabled:readBoolean("WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",false),recordTransferPublicApiEnabled:readBoolean("RECORD_TRANSFER_PUBLIC_API_ENABLED",false),businessPartnerDeliveryEnabled:readBoolean("BUSINESS_PARTNER_MESH_DELIVERY_ENABLED",false),businessPartnerReconciliationEnabled:readBoolean("BUSINESS_PARTNER_MESH_RECONCILIATION_ENABLED",false),authorizationManagementRoutesEnabled:readBoolean("AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",false),authorizationManagementMutationsEnabled:readBoolean("AUTHORIZATION_MANAGEMENT_MUTATIONS_ENABLED",false),authorizationManagementMode:readChoice("AUTHORIZATION_V2_MODE","legacy",["legacy","shadow","enforce"] as const),authorizationGoldenEvaluatorCorpusQualified:readBoolean("AUTHORIZATION_GOLDEN_EVALUATOR_CORPUS_QUALIFIED",false),authorizationDdlEpochIntegrationQualified:readBoolean("AUTHORIZATION_DDL_EPOCH_INTEGRATION_QUALIFIED",false),authorizationWriterSwitchQualified:readBoolean("AUTHORIZATION_WRITER_SWITCH_QUALIFIED",false)},
-    atlas:{enabled:readBoolean("ATLAS_AGENT_ENABLED",false),toolsEnabled:readBoolean("ATLAS_AGENT_TOOLS_ENABLED",false),persistenceEnabled:readBoolean("ATLAS_CONVERSATION_PERSISTENCE_ENABLED",false)},
+    contentExtraction: {
+      baseUrl: docParserBaseUrl || undefined,
+      timeoutMs: docParserTimeoutMs,
+      maxInputBytes: docParserMaxInputBytes,
+      maxTextChars: docParserMaxTextChars,
+    },
+    search: {
+      baseUrl: searchBaseUrl || undefined,
+      apiKey: searchApiKey || undefined,
+      indexUid: searchIndexUid,
+      timeoutMs: searchTimeoutMs,
+    },
+    verification: {
+      enabled: readBoolean("PLATFORM_VERIFICATION_ENABLED", env === "local"),
+      grafanaUrl:
+        process.env["PLATFORM_VERIFICATION_GRAFANA_URL"]?.trim() ||
+        (env === "local" ? "http://127.0.0.1:53902" : undefined),
+    },
+    publication: {
+      apiEnabled: publicationApiEnabled,
+      compileEnabled: publicationCompileEnabled,
+      dispatchEnabled: publicationDispatchEnabled,
+      applyEnabled: publicationApplyEnabled,
+      recoveryEnabled: publicationRecoveryEnabled,
+      targetPlanes: publicationTargetPlanes,
+      requireSignature: true,
+      signingKeyId: publicationSigningKeyId || undefined,
+      privateKeyReference: publicationPrivateKeyReference || undefined,
+      publicKeyReference: publicationPublicKeyReference || undefined,
+      runtimeVersion: publicationRuntimeVersion,
+      recoveryIntervalMs: publicationRecoveryIntervalMs,
+    },
+    infisical: {
+      endpoint: infisicalEndpoint || undefined,
+      token: infisicalToken || undefined,
+      workspaceId: infisicalWorkspaceId || undefined,
+      environment: process.env["INFISICAL_ENVIRONMENT"]?.trim() || env,
+      secretPath:
+        process.env["INFISICAL_SECRET_PATH"]?.trim() || "/publication",
+    },
+    wave0: {
+      financeRoutesEnabled: readBoolean("WAVE0_FINANCE_ROUTES_ENABLED", false),
+      financeF2Enabled: readBoolean("FINANCE_F2_ENABLED", false),
+      financeF3Enabled: readBoolean("FINANCE_F3_ENABLED", false),
+      financeF4Enabled: readBoolean("FINANCE_F4_ENABLED", false),
+      financeF5Enabled: readBoolean("FINANCE_F5_ENABLED", false),
+      financeF6Enabled: readBoolean("FINANCE_F6_ENABLED", false),
+      governanceRoutesEnabled: readBoolean(
+        "WAVE0_GOVERNANCE_ROUTES_ENABLED",
+        false,
+      ),
+      controlAdminTenantOverridesEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED",
+        false,
+      ),
+      controlAdminLookupRoundingEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED",
+        false,
+      ),
+      controlAdminConnectorLifecycleEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED",
+        false,
+      ),
+      controlAdminCycleConfigEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",
+        false,
+      ),
+      controlAdminLocalCatalogReadsEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",
+        false,
+      ),
+      controlAdminCatalogAuthoringEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_CATALOG_AUTHORING_ENABLED",
+        false,
+      ),
+      controlAdminRuntimeCommandsEnabled: readBoolean(
+        "WAVE0_CONTROL_ADMIN_RUNTIME_COMMANDS_ENABLED",
+        false,
+      ),
+      recordSnapshotRoutesEnabled: readBoolean(
+        "WAVE0_RECORD_SNAPSHOT_ROUTES_ENABLED",
+        false,
+      ),
+      recordTransferPublicApiEnabled: readBoolean(
+        "RECORD_TRANSFER_PUBLIC_API_ENABLED",
+        false,
+      ),
+      businessPartnerDeliveryEnabled: readBoolean(
+        "BUSINESS_PARTNER_MESH_DELIVERY_ENABLED",
+        false,
+      ),
+      businessPartnerReconciliationEnabled: readBoolean(
+        "BUSINESS_PARTNER_MESH_RECONCILIATION_ENABLED",
+        false,
+      ),
+      authorizationManagementRoutesEnabled: readBoolean(
+        "AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",
+        false,
+      ),
+      authorizationManagementMutationsEnabled: readBoolean(
+        "AUTHORIZATION_MANAGEMENT_MUTATIONS_ENABLED",
+        false,
+      ),
+      authorizationManagementMode: readChoice(
+        "AUTHORIZATION_V2_MODE",
+        "legacy",
+        ["legacy", "shadow", "enforce"] as const,
+      ),
+      authorizationGoldenEvaluatorCorpusQualified: readBoolean(
+        "AUTHORIZATION_GOLDEN_EVALUATOR_CORPUS_QUALIFIED",
+        false,
+      ),
+      authorizationDdlEpochIntegrationQualified: readBoolean(
+        "AUTHORIZATION_DDL_EPOCH_INTEGRATION_QUALIFIED",
+        false,
+      ),
+      authorizationWriterSwitchQualified: readBoolean(
+        "AUTHORIZATION_WRITER_SWITCH_QUALIFIED",
+        false,
+      ),
+    },
+    atlas: {
+      enabled: readBoolean("ATLAS_AGENT_ENABLED", false),
+      toolsEnabled: readBoolean("ATLAS_AGENT_TOOLS_ENABLED", false),
+      persistenceEnabled: readBoolean(
+        "ATLAS_CONVERSATION_PERSISTENCE_ENABLED",
+        false,
+      ),
+    },
   };
   assertAuthorizationManagementHostQualification(config.wave0);
   return config;
 }
 
 /** Refuse process startup instead of silently entering an unqualified enforce mode. */
-export function assertAuthorizationManagementHostQualification(config: Pick<HostConfig["wave0"], "authorizationManagementMode" | "authorizationGoldenEvaluatorCorpusQualified" | "authorizationDdlEpochIntegrationQualified" | "authorizationWriterSwitchQualified">): void {
-  if (config.authorizationManagementMode === "enforce" && (!config.authorizationGoldenEvaluatorCorpusQualified || !config.authorizationDdlEpochIntegrationQualified || !config.authorizationWriterSwitchQualified)) {
+export function assertAuthorizationManagementHostQualification(
+  config: Pick<
+    HostConfig["wave0"],
+    | "authorizationManagementMode"
+    | "authorizationGoldenEvaluatorCorpusQualified"
+    | "authorizationDdlEpochIntegrationQualified"
+    | "authorizationWriterSwitchQualified"
+  >,
+): void {
+  if (
+    config.authorizationManagementMode === "enforce" &&
+    (!config.authorizationGoldenEvaluatorCorpusQualified ||
+      !config.authorizationDdlEpochIntegrationQualified ||
+      !config.authorizationWriterSwitchQualified)
+  ) {
     throw new Error("AUTHORIZATION_V2_ENFORCE_NOT_QUALIFIED");
   }
 }
 
-function readPublicationPlanes(value:string|undefined):readonly("studio"|"neon"|"mesh")[]{if(!value?.trim())return[];const planes=[...new Set(value.split(",").map(item=>item.trim().toLowerCase()).filter(Boolean))];for(const plane of planes){if(plane!=="studio"&&plane!=="neon"&&plane!=="mesh")throw new Error(`PUBLICATION_TARGET_PLANES contains invalid plane: ${plane}`);}return planes as ("studio"|"neon"|"mesh")[];}
+function readPublicationPlanes(
+  value: string | undefined,
+): readonly ("studio" | "neon" | "mesh")[] {
+  if (!value?.trim()) return [];
+  const planes = [
+    ...new Set(
+      value
+        .split(",")
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  ];
+  for (const plane of planes) {
+    if (plane !== "studio" && plane !== "neon" && plane !== "mesh")
+      throw new Error(
+        `PUBLICATION_TARGET_PLANES contains invalid plane: ${plane}`,
+      );
+  }
+  return planes as ("studio" | "neon" | "mesh")[];
+}
 
 /** Studio is canonical; the legacy names are accepted only at environment ingress for one release. */
-function readStudioEnvironment(suffix: "DATABASE_URL" | "WORKER_DATABASE_URL"): string | undefined {
-  return process.env[`STUDIO_${suffix}`]?.trim()
-    ?? process.env[`ATHYPER_PLATFORM_${suffix}`]?.trim();
+function readStudioEnvironment(
+  suffix: "DATABASE_URL" | "WORKER_DATABASE_URL",
+): string | undefined {
+  return (
+    process.env[`STUDIO_${suffix}`]?.trim() ??
+    process.env[`ATHYPER_PLATFORM_${suffix}`]?.trim()
+  );
 }
 
 function readPositiveInteger(name: string, fallback: number): number {
   const value = Number(process.env[name] ?? fallback);
   if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`${name} must be a positive integer, got: ${process.env[name]}`);
+    throw new Error(
+      `${name} must be a positive integer, got: ${process.env[name]}`,
+    );
   }
   return value;
 }
@@ -674,7 +1038,9 @@ function readPositiveInteger(name: string, fallback: number): number {
 function readNonNegativeInteger(name: string, fallback: number): number {
   const value = Number(process.env[name] ?? fallback);
   if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`${name} must be a non-negative integer, got: ${process.env[name]}`);
+    throw new Error(
+      `${name} must be a non-negative integer, got: ${process.env[name]}`,
+    );
   }
   return value;
 }

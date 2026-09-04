@@ -13,7 +13,7 @@ test("P1 preserves historical result invariants while application dispatch is or
     ),
     read("ddl/planes/neon/document/03_tables.sql"),
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read(
       "../packages/services/master-data/src/business-partner-request-service.ts",
@@ -56,17 +56,23 @@ test("P1 preserves historical result invariants while application dispatch is or
   );
   assert.match(
     repository,
-    /request\.kind==="amend_partner"[\s\S]*applyPartnerAmendment/,
+    /request\.kind\s*===\s*"amend_partner"[\s\S]*applyPartnerAmendment/,
   );
   assert.match(
     repository,
-    /request\.kind==="change_bank"[\s\S]*orchestrateBankVerification/,
+    /request\.kind\s*===\s*"change_bank"[\s\S]*orchestrateBankVerification/,
   );
-  assert.doesNotMatch(repository, /if\(request\.kind==="change_employment"\)return applyEmploymentChange/);
-  assert.doesNotMatch(repository, /if\(request\.requestedRole==="workforce"\)return applyWorkforceOnboarding/);
+  assert.doesNotMatch(
+    repository,
+    /if\(request\.kind==="change_employment"\)return applyEmploymentChange/,
+  );
+  assert.doesNotMatch(
+    repository,
+    /if\(request\.requestedRole==="workforce"\)return applyWorkforceOnboarding/,
+  );
   assert.match(
     repository,
-    /\["deactivate","reactivate","archive"\][\s\S]*applyPartnerLifecycle/,
+    /\[\s*"deactivate",\s*"reactivate",\s*"archive"\s*\][\s\S]*applyPartnerLifecycle/,
   );
   assert.match(service, /BUSINESS_PARTNER_REQUEST_KIND_UNSUPPORTED/);
   assert.match(
@@ -78,7 +84,7 @@ test("P1 preserves historical result invariants while application dispatch is or
 test("P1 application retries, stale targets, scope drift, and rollback share one boundary", async () => {
   const [repository, service, migration] = await Promise.all([
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read(
       "../packages/services/master-data/src/business-partner-request-service.ts",
@@ -89,7 +95,7 @@ test("P1 application retries, stale targets, scope drift, and rollback share one
   ]);
   assert.match(
     repository,
-    /applicationResult\(input\.tenantId,input\.command\.requestId,input\.command\.idempotencyKey,input\.applicationFingerprint/,
+    /applicationResult\(\s*input\.tenantId,\s*input\.command\.requestId,\s*input\.command\.idempotencyKey,\s*input\.applicationFingerprint/,
   );
   assert.match(
     repository,
@@ -97,7 +103,7 @@ test("P1 application retries, stale targets, scope drift, and rollback share one
   );
   assert.match(
     repository,
-    /record_version\)!==request\.baseRecordVersion[\s\S]*BUSINESS_PARTNER_REQUEST_STALE_BASE_VERSION/,
+    /record_version\)\s*!==\s*request\.baseRecordVersion[\s\S]*BUSINESS_PARTNER_REQUEST_STALE_BASE_VERSION/,
   );
   assert.match(repository, /BUSINESS_PARTNER_REQUEST_SCOPE_INCOMPATIBLE/);
   assert.match(repository, /BUSINESS_PARTNER_BANK_SCOPE_CHANGED/);
@@ -119,7 +125,7 @@ test("P1 lifecycle and category correction preserve history", async () => {
       "migrations/20260829_neon_business_partner_request_application_invariants.sql",
     ),
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read("ddl/planes/neon/master/07_functions.sql"),
   ]);
@@ -129,7 +135,7 @@ test("P1 lifecycle and category correction preserve history", async () => {
   );
   assert.match(
     repository,
-    /snapshotType:"business_partner\.lifecycle"[\s\S]*dependencyEvidence/,
+    /snapshotType:\s*"business_partner\.lifecycle"[\s\S]*dependencyEvidence/,
   );
   assert.doesNotMatch(repository, /applyEmploymentChange/);
   assert.doesNotMatch(repository, /person\.business_partner_id/);
@@ -151,7 +157,7 @@ test("P1 lifecycle and category correction preserve history", async () => {
 test("P1 change_bank only starts the dedicated verification authority", async () => {
   const [repository, bankService, migration] = await Promise.all([
     read(
-      "../packages/services/master-data/src/kysely-business-partner-request-repository.ts",
+      "../packages/services/master-data/src/kysely-business-partner-case-repository.ts",
     ),
     read(
       "../packages/planes/neon/src/business-partner-account-bank-linkage.ts",

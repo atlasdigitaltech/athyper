@@ -1,22 +1,368 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import { compliancePermissions, type LegalHoldResourceKind, type LegalHoldService, type ReportPackService } from "@athyper/server-contract-governance";
-import { defineRouteContract, registerContractRoute } from "@athyper/server-runtime-http";
+import {
+  compliancePermissions,
+  type LegalHoldResourceKind,
+  type LegalHoldService,
+  type ReportPackService,
+} from "@athyper/server-contract-governance";
+import {
+  defineRouteContract,
+  registerContractRoute,
+} from "@athyper/server-runtime-http";
 import type { Application, RequestHandler, Response } from "express";
 
-export function registerGovernanceComplianceRoutes(application:Application,options:{readonly authenticate:RequestHandler;readonly readContext:(response:Response)=>VerifiedRequestContext;readonly legalHolds:LegalHoldService;readonly reportPacks:ReportPackService}):void{
-  const context=(response:Response)=>options.readContext(response);
-  registerContractRoute(application,contracts.holdCreate,options.authenticate,async(request,response,next)=>{try{const body=object(request.body);response.status(201).json(await options.legalHolds.createDraft({context:context(response),code:required(body["code"]),name:required(body["name"]),...(text(body["description"])?{description:text(body["description"])!}:{}),...(text(body["legalAuthority"])?{legalAuthority:text(body["legalAuthority"])!}:{}),...(text(body["issuedAt"])?{issuedAt:date(body["issuedAt"])}:{}),...(text(body["ownerPrincipalId"])?{ownerPrincipalId:uuid(body["ownerPrincipalId"])}:{})}));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.holdGet,options.authenticate,async(request,response,next)=>{try{response.json(await options.legalHolds.get(context(response),uuid(request.params["holdId"])));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.resourceAdd,options.authenticate,async(request,response,next)=>{try{const body=object(request.body);response.status(201).json(await options.legalHolds.addResource({context:context(response),holdId:uuid(request.params["holdId"]),resource:{kind:choice(body["kind"],resourceKinds),...(text(body["schema"])?{schema:text(body["schema"])!}:{}),...(text(body["entity"])?{entity:text(body["entity"])!}:{}),...(text(body["resourceId"])?{resourceId:uuid(body["resourceId"])}:{}),...(text(body["uri"])?{uri:text(body["uri"])!}:{}),...(text(body["contentHash"])?{contentHash:hash(body["contentHash"])}:{})}}));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.resourceRemove,options.authenticate,async(request,response,next)=>{try{await options.legalHolds.removeResource(context(response),uuid(request.params["holdId"]),uuid(request.params["resourceId"]));response.status(204).end();}catch(error){next(error);}});
-  for(const [contract,action] of [[contracts.holdActivate,"activate"],[contracts.holdRelease,"release"]] as const)registerContractRoute(application,contract,options.authenticate,async(request,response,next)=>{try{const body=object(request.body??{}),requested=text(body[action==="activate"?"effectiveAt":"releasedAt"]);response.json(await options.legalHolds[action](context(response),uuid(request.params["holdId"]),requested?date(requested):undefined));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.reportCreate,options.authenticate,async(request,response,next)=>{try{const body=object(request.body),source=body["source"]===undefined?undefined:object(body["source"]);response.status(202).json(await options.reportPacks.request({context:context(response),reportTypeCode:required(body["reportTypeCode"]),code:required(body["code"]),name:required(body["name"]),...(source?{source:{entityCode:required(source["entityCode"]),entityId:uuid(source["entityId"])}}:{}),parameters:object(body["parameters"]??{}),...(text(body["supersedesReportPackId"])?{supersedesReportPackId:uuid(body["supersedesReportPackId"])}:{})}));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.reportGet,options.authenticate,async(request,response,next)=>{try{response.json(await options.reportPacks.get(context(response),uuid(request.params["reportPackId"])));}catch(error){next(error);}});
-  registerContractRoute(application,contracts.reportDownload,options.authenticate,async(request,response,next)=>{try{response.json(await options.reportPacks.download(context(response),uuid(request.params["reportPackId"])));}catch(error){next(error);}});
+export function registerGovernanceComplianceRoutes(
+  application: Application,
+  options: {
+    readonly authenticate: RequestHandler;
+    readonly readContext: (response: Response) => VerifiedRequestContext;
+    readonly legalHolds: LegalHoldService;
+    readonly reportPacks: ReportPackService;
+  },
+): void {
+  const context = (response: Response) => options.readContext(response);
+  registerContractRoute(
+    application,
+    contracts.holdCreate,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const body = object(request.body);
+        response.status(201).json(
+          await options.legalHolds.createDraft({
+            context: context(response),
+            code: required(body["code"]),
+            name: required(body["name"]),
+            ...(text(body["description"])
+              ? { description: text(body["description"])! }
+              : {}),
+            ...(text(body["legalAuthority"])
+              ? { legalAuthority: text(body["legalAuthority"])! }
+              : {}),
+            ...(text(body["issuedAt"])
+              ? { issuedAt: date(body["issuedAt"]) }
+              : {}),
+            ...(text(body["ownerPrincipalId"])
+              ? { ownerPrincipalId: uuid(body["ownerPrincipalId"]) }
+              : {}),
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  registerContractRoute(
+    application,
+    contracts.holdGet,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        response.json(
+          await options.legalHolds.get(
+            context(response),
+            uuid(request.params["holdId"]),
+          ),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  registerContractRoute(
+    application,
+    contracts.resourceAdd,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const body = object(request.body);
+        response.status(201).json(
+          await options.legalHolds.addResource({
+            context: context(response),
+            holdId: uuid(request.params["holdId"]),
+            resource: {
+              kind: choice(body["kind"], resourceKinds),
+              ...(text(body["schema"])
+                ? { schema: text(body["schema"])! }
+                : {}),
+              ...(text(body["entity"])
+                ? { entity: text(body["entity"])! }
+                : {}),
+              ...(text(body["resourceId"])
+                ? { resourceId: uuid(body["resourceId"]) }
+                : {}),
+              ...(text(body["uri"]) ? { uri: text(body["uri"])! } : {}),
+              ...(text(body["contentHash"])
+                ? { contentHash: hash(body["contentHash"]) }
+                : {}),
+            },
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  registerContractRoute(
+    application,
+    contracts.resourceRemove,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        await options.legalHolds.removeResource(
+          context(response),
+          uuid(request.params["holdId"]),
+          uuid(request.params["resourceId"]),
+        );
+        response.status(204).end();
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  for (const [contract, action] of [
+    [contracts.holdActivate, "activate"],
+    [contracts.holdRelease, "release"],
+  ] as const)
+    registerContractRoute(
+      application,
+      contract,
+      options.authenticate,
+      async (request, response, next) => {
+        try {
+          const body = object(request.body ?? {}),
+            requested = text(
+              body[action === "activate" ? "effectiveAt" : "releasedAt"],
+            );
+          response.json(
+            await options.legalHolds[action](
+              context(response),
+              uuid(request.params["holdId"]),
+              requested ? date(requested) : undefined,
+            ),
+          );
+        } catch (error) {
+          next(error);
+        }
+      },
+    );
+  registerContractRoute(
+    application,
+    contracts.reportCreate,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const body = object(request.body),
+          source =
+            body["source"] === undefined ? undefined : object(body["source"]);
+        response.status(202).json(
+          await options.reportPacks.request({
+            context: context(response),
+            reportTypeCode: required(body["reportTypeCode"]),
+            code: required(body["code"]),
+            name: required(body["name"]),
+            ...(source
+              ? {
+                  source: {
+                    entityCode: required(source["entityCode"]),
+                    entityId: uuid(source["entityId"]),
+                  },
+                }
+              : {}),
+            parameters: object(body["parameters"] ?? {}),
+            ...(text(body["supersedesReportPackId"])
+              ? {
+                  supersedesReportPackId: uuid(body["supersedesReportPackId"]),
+                }
+              : {}),
+          }),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  registerContractRoute(
+    application,
+    contracts.reportGet,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        response.json(
+          await options.reportPacks.get(
+            context(response),
+            uuid(request.params["reportPackId"]),
+          ),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+  registerContractRoute(
+    application,
+    contracts.reportDownload,
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        response.json(
+          await options.reportPacks.download(
+            context(response),
+            uuid(request.params["reportPackId"]),
+          ),
+        );
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 }
 
-const schema={type:"object",additionalProperties:true}as const,responses={200:{description:"Governance compliance result",body:schema},201:{description:"Created",body:schema},202:{description:"Accepted",body:schema},204:{description:"Removed"},400:{description:"Invalid request"},401:{description:"Authentication required"},403:{description:"Forbidden"},404:{description:"Not found"},409:{description:"Invalid transition"}}as const;
-function contract(method:"get"|"post"|"delete",path:string,operationId:string,summary:string,permission:string){return defineRouteContract({method,path,operationId,summary,tags:["Governance compliance"],authenticated:true,permission,...(method==="post"?{request:{body:schema}}:{}),responses});}
-const contracts={holdCreate:contract("post","/api/governance/legal-holds","governance.legalHold.create","Create a legal hold",compliancePermissions.legalHoldManage),holdGet:contract("get","/api/governance/legal-holds/:holdId","governance.legalHold.get","Get a legal hold",compliancePermissions.legalHoldManage),resourceAdd:contract("post","/api/governance/legal-holds/:holdId/resources","governance.legalHold.addResource","Add a held resource",compliancePermissions.legalHoldManage),resourceRemove:contract("delete","/api/governance/legal-holds/:holdId/resources/:resourceId","governance.legalHold.removeResource","Remove a draft held resource",compliancePermissions.legalHoldManage),holdActivate:contract("post","/api/governance/legal-holds/:holdId/activate","governance.legalHold.activate","Activate a legal hold",compliancePermissions.legalHoldManage),holdRelease:contract("post","/api/governance/legal-holds/:holdId/release","governance.legalHold.release","Release a legal hold",compliancePermissions.legalHoldManage),reportCreate:contract("post","/api/governance/report-packs","governance.reportPack.request","Request a report pack",compliancePermissions.reportPackGenerate),reportGet:contract("get","/api/governance/report-packs/:reportPackId","governance.reportPack.get","Get a report pack",compliancePermissions.reportPackGenerate),reportDownload:contract("get","/api/governance/report-packs/:reportPackId/download","governance.reportPack.download","Download a verified report pack",compliancePermissions.reportPackGenerate)}as const;
-const resourceKinds=["partition","table_record","document","snapshot","compiled_artifact","storage_object","backup_object","audit_export"]as const satisfies readonly LegalHoldResourceKind[];
-function object(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw new TypeError("JSON object required");return value as Record<string,unknown>;}function text(value:unknown):string|undefined{return typeof value==="string"&&value.trim()?value.trim():undefined;}function required(value:unknown):string{const result=text(value);if(!result)throw new TypeError("Required string missing");return result;}function uuid(value:unknown):string{const result=text(value);if(!result||!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(result))throw new TypeError("UUID required");return result;}function date(value:unknown):string{const parsed=new Date(String(value));if(Number.isNaN(parsed.getTime()))throw new TypeError("ISO timestamp required");return parsed.toISOString();}function choice<T extends string>(value:unknown,allowed:readonly T[]):T{const result=text(value);if(!result||!allowed.includes(result as T))throw new TypeError(`Expected one of: ${allowed.join(", ")}`);return result as T;}function hash(value:unknown):string{const result=text(value)?.toLowerCase();if(!result||!/^[0-9a-f]{64}$/u.test(result))throw new TypeError("SHA-256 required");return result;}
+const schema = { type: "object", additionalProperties: true } as const,
+  responses = {
+    200: { description: "Governance compliance result", body: schema },
+    201: { description: "Created", body: schema },
+    202: { description: "Accepted", body: schema },
+    204: { description: "Removed" },
+    400: { description: "Invalid request" },
+    401: { description: "Authentication required" },
+    403: { description: "Forbidden" },
+    404: { description: "Not found" },
+    409: { description: "Invalid transition" },
+  } as const;
+function contract(
+  method: "get" | "post" | "delete",
+  path: string,
+  operationId: string,
+  summary: string,
+  permission: string,
+) {
+  return defineRouteContract({
+    method,
+    path,
+    operationId,
+    summary,
+    tags: ["Governance compliance"],
+    authenticated: true,
+    permission,
+    ...(method === "post" ? { request: { body: schema } } : {}),
+    responses,
+  });
+}
+const contracts = {
+  holdCreate: contract(
+    "post",
+    "/api/governance/legal-holds",
+    "governance.legalHold.create",
+    "Create a legal hold",
+    compliancePermissions.legalHoldManage,
+  ),
+  holdGet: contract(
+    "get",
+    "/api/governance/legal-holds/:holdId",
+    "governance.legalHold.get",
+    "Get a legal hold",
+    compliancePermissions.legalHoldManage,
+  ),
+  resourceAdd: contract(
+    "post",
+    "/api/governance/legal-holds/:holdId/resources",
+    "governance.legalHold.addResource",
+    "Add a held resource",
+    compliancePermissions.legalHoldManage,
+  ),
+  resourceRemove: contract(
+    "delete",
+    "/api/governance/legal-holds/:holdId/resources/:resourceId",
+    "governance.legalHold.removeResource",
+    "Remove a draft held resource",
+    compliancePermissions.legalHoldManage,
+  ),
+  holdActivate: contract(
+    "post",
+    "/api/governance/legal-holds/:holdId/activate",
+    "governance.legalHold.activate",
+    "Activate a legal hold",
+    compliancePermissions.legalHoldManage,
+  ),
+  holdRelease: contract(
+    "post",
+    "/api/governance/legal-holds/:holdId/release",
+    "governance.legalHold.release",
+    "Release a legal hold",
+    compliancePermissions.legalHoldManage,
+  ),
+  reportCreate: contract(
+    "post",
+    "/api/governance/report-packs",
+    "governance.reportPack.request",
+    "Request a report pack",
+    compliancePermissions.reportPackGenerate,
+  ),
+  reportGet: contract(
+    "get",
+    "/api/governance/report-packs/:reportPackId",
+    "governance.reportPack.get",
+    "Get a report pack",
+    compliancePermissions.reportPackGenerate,
+  ),
+  reportDownload: contract(
+    "get",
+    "/api/governance/report-packs/:reportPackId/download",
+    "governance.reportPack.download",
+    "Download a verified report pack",
+    compliancePermissions.reportPackGenerate,
+  ),
+} as const;
+const resourceKinds = [
+  "partition",
+  "table_record",
+  "document",
+  "snapshot",
+  "compiled_artifact",
+  "storage_object",
+  "backup_object",
+  "audit_export",
+] as const satisfies readonly LegalHoldResourceKind[];
+function object(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new TypeError("JSON object required");
+  return value as Record<string, unknown>;
+}
+function text(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function required(value: unknown): string {
+  const result = text(value);
+  if (!result) throw new TypeError("Required string missing");
+  return result;
+}
+function uuid(value: unknown): string {
+  const result = text(value);
+  if (
+    !result ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu.test(
+      result,
+    )
+  )
+    throw new TypeError("UUID required");
+  return result;
+}
+function date(value: unknown): string {
+  const parsed = new Date(String(value));
+  if (Number.isNaN(parsed.getTime()))
+    throw new TypeError("ISO timestamp required");
+  return parsed.toISOString();
+}
+function choice<T extends string>(value: unknown, allowed: readonly T[]): T {
+  const result = text(value);
+  if (!result || !allowed.includes(result as T))
+    throw new TypeError(`Expected one of: ${allowed.join(", ")}`);
+  return result as T;
+}
+function hash(value: unknown): string {
+  const result = text(value)?.toLowerCase();
+  if (!result || !/^[0-9a-f]{64}$/u.test(result))
+    throw new TypeError("SHA-256 required");
+  return result;
+}

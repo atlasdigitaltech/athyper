@@ -349,6 +349,7 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
 DO $$ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
         GRANT USAGE ON SCHEMA document TO athyperapp;
@@ -533,6 +534,7 @@ DO $$ BEGIN
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_candidate_submission() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_contingent_work_order() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_engagement() TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_revision() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_compliance_item() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_header() TO athyperapp;
@@ -552,5 +554,25 @@ DO $$ BEGIN
      document.service_sheet_source_allocation
    TO athyperadmin;
    GRANT SELECT ON document.external_claim_reconciliation_v TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;
  END IF;
+END $$;
+REVOKE ALL ON document.workforce_iam_projection FROM PUBLIC;
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
+        GRANT SELECT, INSERT, UPDATE ON document.workforce_iam_projection TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
+        GRANT ALL ON document.workforce_iam_projection TO athyperadmin;
+    END IF;
+END
+$$;
+REVOKE ALL ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) TO athyperapp; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.command_workforce_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin; END IF;
+  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.command_internal_workforce_identity_intent(uuid,uuid,text,boolean,text,uuid,uuid) TO athyperadmin; END IF;
 END $$;

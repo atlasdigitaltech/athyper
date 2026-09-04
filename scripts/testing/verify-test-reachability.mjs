@@ -3,7 +3,10 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..", "..");
-const reportPath = resolve(root, "policy/reports/test-reachability-retirement.json");
+const reportPath = resolve(
+  root,
+  "policy/reports/test-reachability-retirement.json",
+);
 const writeReport = process.argv.includes("--write");
 const checkReport = process.argv.includes("--check") || !writeReport;
 const TEST_FILE = /\.test\.(?:ts|tsx|mjs)$/;
@@ -24,6 +27,11 @@ const ROOT_RUNNERS = [
     commandFragment: "tests/contracts/",
   },
   {
+    directory: "tests/foundation",
+    runner: "test:foundation",
+    commandFragment: "tests/foundation/",
+  },
+  {
     directory: "scripts/policy",
     runner: "test:policy",
     commandFragment: "scripts/policy/",
@@ -33,11 +41,42 @@ const ROOT_RUNNERS = [
     runner: "test:performance-guards",
     commandFragment: "scripts/performance/",
   },
+  {
+    directory: "tools/scripts",
+    runner: "test:tools",
+    commandFragment: "tools/scripts/",
+  },
+  {
+    directory: "scripts/verification",
+    runner: "test:operations",
+    commandFragment: "scripts/verification/",
+  },
+  {
+    directory: "scripts/release",
+    runner: "test:operations",
+    commandFragment: "scripts/release/",
+  },
+  {
+    directory: "scripts/rehearsal",
+    runner: "test:operations",
+    commandFragment: "scripts/rehearsal/",
+  },
+  {
+    directory: "scripts/acceptance",
+    runner: "test:operations",
+    commandFragment: "scripts/acceptance/",
+  },
+  {
+    directory: "deploy/compose/tests",
+    runner: "test:operations",
+    commandFragment: "deploy/compose/tests/",
+  },
 ];
 
 const normalize = (value) => value.replaceAll("\\", "/");
 const relativePath = (value) => normalize(relative(root, value));
-const toDirectoryKey = (value) => normalize(resolve(value)).replace(/\/$/, "").toLowerCase();
+const toDirectoryKey = (value) =>
+  normalize(resolve(value)).replace(/\/$/, "").toLowerCase();
 
 function discoverTestFiles(directory) {
   const entries = readdirSync(directory, { withFileTypes: true });
@@ -54,14 +93,22 @@ function discoverTestFiles(directory) {
 }
 
 function activeWorkspaceDirectories() {
-  const command = process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "pnpm";
-  const args = process.platform === "win32"
-    ? ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --parseable"]
-    : ["list", "-r", "--depth", "-1", "--parseable"];
-  const result = spawnSync(command, args, { cwd: root, encoding: "utf8", shell: false });
+  const command =
+    process.platform === "win32" ? (process.env.ComSpec ?? "cmd.exe") : "pnpm";
+  const args =
+    process.platform === "win32"
+      ? ["/d", "/s", "/c", "pnpm.cmd list -r --depth -1 --parseable"]
+      : ["list", "-r", "--depth", "-1", "--parseable"];
+  const result = spawnSync(command, args, {
+    cwd: root,
+    encoding: "utf8",
+    shell: false,
+  });
 
   if (result.status !== 0) {
-    throw new Error(`Unable to enumerate pnpm workspaces: ${result.stderr || result.stdout}`);
+    throw new Error(
+      `Unable to enumerate pnpm workspaces: ${result.stderr || result.stdout}`,
+    );
   }
 
   return new Set(
@@ -78,7 +125,10 @@ function manifestAt(directory) {
   const manifestPath = join(directory, "package.json");
   if (!existsSync(manifestPath)) return null;
   if (!manifestCache.has(manifestPath)) {
-    manifestCache.set(manifestPath, JSON.parse(readFileSync(manifestPath, "utf8")));
+    manifestCache.set(
+      manifestPath,
+      JSON.parse(readFileSync(manifestPath, "utf8")),
+    );
   }
   return manifestCache.get(manifestPath);
 }
@@ -95,7 +145,11 @@ function nearestPackageDirectory(file) {
 }
 
 function rootRunnerFor(path) {
-  return ROOT_RUNNERS.find(({ directory }) => path === directory || path.startsWith(`${directory}/`))?.runner ?? null;
+  return (
+    ROOT_RUNNERS.find(
+      ({ directory }) => path === directory || path.startsWith(`${directory}/`),
+    )?.runner ?? null
+  );
 }
 
 const rootManifest = manifestAt(root);
@@ -104,7 +158,9 @@ const errors = [];
 const rootTests = [];
 const inactiveByPackage = new Map();
 
-for (const file of discoverTestFiles(root).sort((left, right) => left.localeCompare(right))) {
+for (const file of discoverTestFiles(root).sort((left, right) =>
+  left.localeCompare(right),
+)) {
   const packageDirectory = nearestPackageDirectory(file);
   const path = relativePath(file);
 
@@ -116,7 +172,9 @@ for (const file of discoverTestFiles(root).sort((left, right) => left.localeComp
   if (packageDirectory === root) {
     const runner = rootRunnerFor(path);
     if (!runner) {
-      errors.push(`${path}: root-owned tests must live under tests/contracts, scripts/policy, or scripts/performance`);
+      errors.push(
+        `${path}: root-owned tests must live under tests/contracts, scripts/policy, or scripts/performance`,
+      );
       continue;
     }
     rootTests.push({ path, runner });
@@ -127,7 +185,9 @@ for (const file of discoverTestFiles(root).sort((left, right) => left.localeComp
   const packagePath = relativePath(packageDirectory);
   if (activeDirectories.has(toDirectoryKey(packageDirectory))) {
     if (!manifest.scripts?.test) {
-      errors.push(`${path}: active workspace package ${packagePath} has no test script`);
+      errors.push(
+        `${path}: active workspace package ${packagePath} has no test script`,
+      );
     }
     continue;
   }
@@ -154,47 +214,65 @@ if (!rootCommand) {
   errors.push("package.json is missing test:root");
 } else {
   for (const { runner } of ROOT_RUNNERS) {
-    if (!rootCommand.includes(runner)) errors.push(`test:root does not invoke ${runner}`);
+    if (!rootCommand.includes(runner))
+      errors.push(`test:root does not invoke ${runner}`);
   }
-  if (!rootCommand.includes("test:reachability")) errors.push("test:root does not invoke test:reachability");
+  if (!rootCommand.includes("test:reachability"))
+    errors.push("test:root does not invoke test:reachability");
 }
 const repoCommand = rootManifest.scripts?.["test:repo"];
 if (!repoCommand) {
   errors.push("package.json is missing test:repo");
 } else {
   for (const runner of ["test:workspace", "test:root"]) {
-    if (!repoCommand.includes(runner)) errors.push(`test:repo does not invoke ${runner}`);
+    if (!repoCommand.includes(runner))
+      errors.push(`test:repo does not invoke ${runner}`);
   }
 }
-if (!rootManifest.scripts?.["test:reachability"]) errors.push("package.json is missing test:reachability");
+if (!rootManifest.scripts?.["test:reachability"])
+  errors.push("package.json is missing test:reachability");
 if (rootManifest.scripts?.test !== "pnpm test:repo") {
   errors.push("test must delegate to pnpm test:repo");
 }
 
 const report = {
   schemaVersion: 1,
-  purpose: "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
+  purpose:
+    "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
   activeWorkspacePackageCount: activeDirectories.size,
   rootTests,
-  inactivePackageTestCount: [...inactiveByPackage.values()].reduce((count, item) => count + item.testFiles.length, 0),
-  inactivePackages: [...inactiveByPackage.values()].sort((left, right) => left.package.localeCompare(right.package)),
+  inactivePackageTestCount: [...inactiveByPackage.values()].reduce(
+    (count, item) => count + item.testFiles.length,
+    0,
+  ),
+  inactivePackages: [...inactiveByPackage.values()].sort((left, right) =>
+    left.package.localeCompare(right.package),
+  ),
 };
 const serializedReport = `${JSON.stringify(report, null, 2)}\n`;
 
 if (errors.length > 0) {
-  throw new Error(`Test reachability verification failed:\n${errors.map((error) => `- ${error}`).join("\n")}`);
+  throw new Error(
+    `Test reachability verification failed:\n${errors.map((error) => `- ${error}`).join("\n")}`,
+  );
 }
 
 if (writeReport) {
   writeFileSync(reportPath, serializedReport);
-  console.log(`Wrote ${relativePath(reportPath)} with ${report.inactivePackageTestCount} excluded test files.`);
+  console.log(
+    `Wrote ${relativePath(reportPath)} with ${report.inactivePackageTestCount} excluded test files.`,
+  );
 } else if (checkReport) {
   if (!existsSync(reportPath)) {
-    throw new Error(`Missing retirement report: ${relativePath(reportPath)}. Run pnpm test:reachability:update.`);
+    throw new Error(
+      `Missing retirement report: ${relativePath(reportPath)}. Run pnpm test:reachability:update.`,
+    );
   }
   const committedReport = readFileSync(reportPath, "utf8");
   if (committedReport !== serializedReport) {
-    throw new Error(`Retirement report is stale: ${relativePath(reportPath)}. Run pnpm test:reachability:update.`);
+    throw new Error(
+      `Retirement report is stale: ${relativePath(reportPath)}. Run pnpm test:reachability:update.`,
+    );
   }
 }
 
