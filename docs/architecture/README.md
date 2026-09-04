@@ -12,9 +12,6 @@ This directory contains durable architecture decisions, current architecture gui
 
 ## Active plans
 
-- `plans/governed-lifecycle-g6-approval-packets.md` — approval architecture for compatibility retirement.
-- `plans/governed-lifecycle-g6-incremental-retirement.md` — controlled incremental retirement sequence.
-- `plans/governed-lifecycle-g6-production-observation.md` — outstanding production observation contract.
-- `plans/governed-lifecycle-g6-recovery-rehearsal.md` — isolated recovery rehearsal contract.
+- `plans/governed-lifecycle-g6.md` — complete observation, recovery, approval, retirement, and certification plan for G6 compatibility surfaces.
 
 Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `policy/reports/` when they must remain live; otherwise Git history is the archive.
