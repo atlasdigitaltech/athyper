@@ -1,14 +1,20 @@
 # Architecture documentation
 
-This directory contains only durable architecture decisions and active implementation plans.
+This directory contains durable architecture decisions, current architecture guidance, and active architecture-governance plans. Generated evidence and completed delivery records belong in Git history, not in the live architecture tree.
 
 ## Canonical decision
 
 - `decisions/governed-entity-lifecycle.md` — target lifecycle for Business Partner, supplier, customer and workforce changes across Studio, Governance, MESH, snapshots, workflow and NEON.
 
+## Current guidance
+
+- `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
+
 ## Active plans
 
-- `plans/governed-entity-lifecycle-backlog.md` — remaining work and closure gates.
-- `plans/governed-entity-lifecycle-implementation-inventory.md` — temporary detailed DDL/UI implementation inventory; remove after its items are implemented, rejected by an ADR, or represented in the backlog.
+- `plans/governed-lifecycle-g6-approval-packets.md` — approval architecture for compatibility retirement.
+- `plans/governed-lifecycle-g6-incremental-retirement.md` — controlled incremental retirement sequence.
+- `plans/governed-lifecycle-g6-production-observation.md` — outstanding production observation contract.
+- `plans/governed-lifecycle-g6-recovery-rehearsal.md` — isolated recovery rehearsal contract.
 
-Generated inventories, test evidence, completion reports and dated review narratives do not belong here. Versioned governance inventories live under `policy/reports/authorization/inventories/`; durable completion evidence lives under `policy/reports/`.
+Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `policy/reports/` when they must remain live; otherwise Git history is the archive.
