@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 ## Coverage
 
-- Physical tables: 302 (145 master, 157 document)
+- Physical tables: 307 (145 master, 162 document)
 - Reviewed tables: 45
-- Pending business review: 257
+- Pending business review: 262
 - Proposed operations: 43
 - Proposed lifecycles: 6
 - Studio-to-Neon organization resource contracts: 3
@@ -213,6 +213,10 @@ Required before enforcement:
 - document.employee_tax_declaration
 - document.employee_tax_declaration_line
 - document.engagement_onboarding_case
+- document.entity_case
+- document.entity_case_command_evidence
+- document.entity_case_materialization
+- document.entity_case_validation
 - document.external_candidate_evaluation
 - document.external_candidate_submission
 - document.external_expense_item
@@ -306,6 +310,7 @@ Required before enforcement:
 - document.worker_operational_placement
 - document.workflow_request
 - document.workflow_stage
+- document.workforce_iam_projection
 - document.workforce_request
 - document.workforce_request_validation
 - document.workforce_requisition
@@ -436,5 +441,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 257 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 262 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

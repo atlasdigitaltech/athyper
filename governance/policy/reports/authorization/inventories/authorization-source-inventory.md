@@ -3,7 +3,7 @@
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
 Registry SHA-256: `ce0f89057da260dde40fe4cc6360f93067bcd70b36ec5ea24b12dc23ea76c00c`
-Files scanned / authorization-bearing: 2739 / 526
+Files scanned / authorization-bearing: 2743 / 526
 Registered authorization objects: 466
 Aggregated object references: 822
 Writer references: 68
@@ -1349,7 +1349,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/compiled/table-authorization-coverage.v1.json | 1498, 1518, 1538, 1558, 1578, 1598, 1618, 1638, 1658, 1678, 1698, 1718, 1768, 1812, 1862, 1912, 1962, 2012, 2072, 2080, 2088, 2098, 2113, 2121, 2129, 2137, 2146 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/promotion/qualification-template.v1.json | 7, 26, 43, 60, 77, 94, 111, 130, 149, 166, 185, 202, 221, 238, 257, 274, 293, 312 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json | 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30, 31, 32, 33, 34, 42, 43, 44, 45, 53, 54, 55, 56, 57 |
-| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json | 6450, 6467, 6484, 6501, 6518, 6535, 6552, 6569, 6586, 6603, 6620, 6637, 6654, 6671, 6688, 6705, 6722, 6739, 6756, 6773, 6790, 6807, 6824, 6841, 6858, 6875, 6892, 6909, 6926, 6943, 6960, 6977, 6994, 7011, 7028, 7045, 7062, 7079, 7098, 7117, 7134, 7151, 7168, 7197, 7207, 7223, 7231, 7241, 7257, 7265, 7274, 7290, 7298, 7307, 7316, 7332, 7340, 7349, 7358, 7374, 7382, 7391, 7400 |
+| `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json | 6464, 6481, 6498, 6515, 6532, 6549, 6566, 6583, 6600, 6617, 6634, 6651, 6668, 6685, 6702, 6719, 6736, 6753, 6770, 6787, 6804, 6821, 6838, 6855, 6872, 6889, 6906, 6923, 6940, 6957, 6974, 6991, 7008, 7025, 7042, 7059, 7076, 7093, 7112, 7131, 7148, 7165, 7182, 7211, 7221, 7237, 7245, 7255, 7271, 7279, 7288, 7304, 7312, 7321, 7330, 7346, 7354, 7363, 7372, 7388, 7396, 7405, 7414 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion-qualification.v1.json | 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/operation-bindings.v1.candidate.json | 11, 19, 27, 35, 43, 51, 59, 67, 75, 83, 91, 99, 107, 115, 123, 131, 139, 147, 155, 163, 171, 179, 187, 195, 203, 211, 219, 227, 235, 243, 251, 259, 267, 275, 283, 291, 299, 307, 315, 323, 331, 339, 347 |
 | `permissionCode` | runtime | server/db/seed/contracts/authorization/inventory/neon/promotion/qualification-template.v1.json | 7, 26, 43, 60, 79, 96, 115, 132, 149, 168, 185, 202, 221, 238, 257, 276, 293, 312, 329, 348, 365, 384, 403, 420, 439, 456, 475, 492, 511, 530, 547, 564, 581, 600, 617, 636, 653, 670, 689, 708, 725, 744, 761 |
@@ -1518,7 +1518,7 @@ Capture DDLs:
 | `permissions` | ddl | server/db/ddl/common/authz/07_functions.sql | 578 |
 | `permissions` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 53, 191 |
 | `permissions` | runtime | server/db/ddl/governed-entity-lifecycle-minimal-schema-review.v1.json | 133 |
-| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 326, 348, 381, 398, 405 |
+| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 326, 348, 381, 398, 405, 457, 505 |
 | `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1990 |
 | `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |

@@ -1,10 +1,10 @@
 # Business Partner capability documentation
 
-Status: canonical planning baseline
+Status: Phase 0 architecture accepted; later product scope decisions remain open
 
 Scope: Business Partner organizations, Supplier and Customer commercial roles, and supplier-provided Workforce
 
-This documentation defines the product and architecture baseline that must be agreed before an implementation build plan is committed. It consolidates the repository audit in
+This documentation defines the product, architecture and evidence-backed execution baseline. It consolidates the repository audit in
 [`../business-partner-experience-plan.md`](../business-partner-experience-plan.md), the governed lifecycle ADR, and the detailed working proposals reviewed on 2026-09-04.
 
 It does not claim that every described capability is implemented or production-qualified. Current-state claims must be backed by repository or target-environment evidence.
@@ -33,10 +33,16 @@ The word **workforce** is also used for internal employees operating the product
 | [Supplier Workforce journeys](supplier-workforce-journeys.md) | Requisition, candidate disclosure, engagement, placement and deprovisioning |
 | [Acceptance scenarios](acceptance-scenarios.md) | Stable scenario identifiers, expected outcomes and cross-cutting quality requirements |
 | [Decision register](decision-register.md) | Decisions already made, decisions requiring approval, and known source inconsistencies |
+| [Implementation status](implementation-status.md) | Point-in-time repository evidence by capability and delivery level |
+| [Build plan](build-plan.md) | Workstreams, scenario mapping and the first executable vertical slice |
+| [Phase 0 baseline](phase-0-baseline.md) | Frontend health, route/catalog/operation inventory, relay corrections and release status |
+| [Protected documents](protected-documents.md) | Classification floors and target-environment storage qualification checklist |
+| [Notification matrix](notifications.md) | Event, recipient, delivery, template and deep-link policy |
 
 Supporting sources:
 
 - [`../decisions/governed-entity-lifecycle.md`](../decisions/governed-entity-lifecycle.md) remains normative for the governed entity lifecycle.
+- [`../decisions/business-partner-phase-0.md`](../decisions/business-partner-phase-0.md) records the accepted authority, applicant, workflow UI, document, notification and release decisions.
 - [`../business-partner-experience-plan.md`](../business-partner-experience-plan.md) is the point-in-time repository audit and experience proposal.
 - [`../frontend-first-business-module.md`](../frontend-first-business-module.md) governs frontend module composition.
 
@@ -75,11 +81,11 @@ Every journey specification identifies:
 - required UI experiences without treating UI visibility as authorization;
 - stable acceptance-scenario identifiers.
 
-The future build plan must trace every work item to at least one acceptance scenario. A screen, route or component is not complete merely because it renders.
+The build plan traces workstreams and the first vertical slice to acceptance scenarios. A screen, route or component is not complete merely because it renders.
 
-## Proposed delivery dependency
+## Delivery dependency summary
 
-This is sequencing guidance, not yet an estimated build plan:
+This is the dependency summary; detailed workstreams and relative sizing are in [build-plan.md](build-plan.md):
 
 ```text
 Baseline and approved contracts
@@ -94,14 +100,13 @@ Baseline and approved contracts
 
 Customer work may proceed in parallel with Supplier lifecycle work after the common foundation is proven. Supplier-provided Workforce must not begin as a Business Partner extension; it depends on an approved supplier relationship and the People/Workforce authority model.
 
-## Readiness for build planning
+## Readiness for implementation commitment
 
-This documentation is ready to drive a build plan when:
+The proposed build plan is ready to become an implementation commitment when:
 
-- the decisions marked `required` in the decision register are approved;
-- disputed current-state claims have been checked against code and live tests;
+- the decisions required for the selected release slice are approved;
+- the remaining disputed product semantics have accountable-owner decisions;
 - product owners approve the journey outcomes and personas;
 - security and privacy approve applicant, candidate and protected-profile boundaries;
 - every Phase 1 candidate scenario has an accountable owner and test fixture;
 - the target release boundary is chosen: internal supplier, invited supplier, Customer, or supplier Workforce.
-

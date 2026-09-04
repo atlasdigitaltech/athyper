@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-04T09:54:13.460Z",
+  "generatedAt": "2026-09-04T12:49:35.886Z",
   "categoryValues": [
     "Shared contract",
     "Shared platform",
@@ -74,6 +74,16 @@
       {
         "path": "packages/contracts/platform/authorization",
         "name": "@athyper/contract-platform-authorization",
+        "owner": "Contract Platform",
+        "classification": "Shared contract",
+        "dependencyBudget": {
+          "runtime": 0,
+          "workspace": 0
+        }
+      },
+      {
+        "path": "packages/contracts/platform/entity-runtime",
+        "name": "@athyper/contract-platform-entity-runtime",
         "owner": "Contract Platform",
         "classification": "Shared contract",
         "dependencyBudget": {
@@ -189,6 +199,16 @@
         "dependencyBudget": {
           "runtime": 20,
           "workspace": 3
+        }
+      },
+      {
+        "path": "packages/platform/entity/runtime/workflow-ui",
+        "name": "@athyper/platform-entity-workflow-ui",
+        "owner": "UI Platform",
+        "classification": "Shared platform",
+        "dependencyBudget": {
+          "runtime": 0,
+          "workspace": 0
         }
       },
       {

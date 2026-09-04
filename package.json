@@ -133,6 +133,7 @@
     "policy:docker-toolchain": "node tooling/scripts/policy/verify-docker-toolchain.mjs",
     "policy:canonical-packages": "node tooling/scripts/policy/verify-canonical-package-rules.mjs",
     "policy:frontend-spine": "node tooling/scripts/policy/verify-frontend-spine-governance.mjs",
+    "policy:business-partner-phase0": "node tooling/scripts/policy/verify-business-partner-phase0.mjs",
     "policy:foundation-phase1": "node tooling/scripts/policy/verify-foundation-phase1.mjs",
     "policy:api-client-phase2": "node tooling/scripts/policy/verify-api-client-phase2.mjs",
     "policy:auth-session-phase3": "node tooling/scripts/policy/verify-auth-session-phase3.mjs",
@@ -195,7 +196,7 @@
     "policy:performance-phase-history": "node tooling/scripts/policy/verify-performance-phase-history.mjs",
     "document-open-rollout-ci-gate": "tsx --tsconfig apps/neon/tsconfig.json tooling/scripts/document-open-rollout-ci-gate.mjs",
     "document-open-rollout-snapshot-export": "tsx --tsconfig apps/neon/tsconfig.json tooling/scripts/document-open-rollout-snapshot-export.mjs",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:server-rebuild-boundaries && pnpm inventory:server-rebuild:check && pnpm inventory:authorization:check && pnpm inventory:authorization-data-disposition:check && pnpm routes:server-manifest:check && pnpm policy:server-docker-workspaces && pnpm policy:docker-toolchain && pnpm policy:canonical-packages && pnpm policy:frontend-spine && pnpm policy:frontend-spine-dod && pnpm policy:foundation-phase1 && pnpm policy:api-client-phase2 && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:runtime-api-paths"
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:server-rebuild-boundaries && pnpm inventory:server-rebuild:check && pnpm inventory:authorization:check && pnpm inventory:authorization-data-disposition:check && pnpm routes:server-manifest:check && pnpm policy:server-docker-workspaces && pnpm policy:docker-toolchain && pnpm policy:canonical-packages && pnpm policy:frontend-spine && pnpm policy:business-partner-phase0 && pnpm policy:frontend-spine-dod && pnpm policy:foundation-phase1 && pnpm policy:api-client-phase2 && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:runtime-api-paths"
   },
   "pnpm": {
     "overrides": {

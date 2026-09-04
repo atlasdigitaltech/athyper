@@ -1,3 +1,5 @@
+export * from "./governed-workflow";
+
 export type EntitySurfaceFieldKind = "string" | "text" | "integer" | "decimal" | "money" | "boolean" | "date" | "datetime" | "uuid" | "enum" | "reference" | "json";
 export interface EntitySurfaceFieldV1 { readonly key: string; readonly label: string; readonly kind: EntitySurfaceFieldKind; readonly required: boolean; readonly readOnly: boolean; readonly options?: readonly Readonly<{ value: string; label: string }>[]; }
 export interface EntitySurfaceRevisionV1 { readonly release: number; readonly descriptorHash: string; readonly surfaceHash: string; }

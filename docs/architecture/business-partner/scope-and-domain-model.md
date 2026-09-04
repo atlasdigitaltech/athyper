@@ -166,5 +166,4 @@ These are experience concepts, not permission to create a second status column o
 - Publishing protected Person data as organization profile data.
 - Treating notification delivery as workflow completion.
 - A new Atlas conversation or confirmation container.
-- Production certification based solely on local code coverage.
-
+- Production qualification based solely on local code coverage.

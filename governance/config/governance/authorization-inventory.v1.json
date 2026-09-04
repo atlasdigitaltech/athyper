@@ -38,7 +38,7 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 2739,
+    "filesScanned": 2743,
     "authorizationFiles": 526,
     "registeredObjects": 466,
     "objectReferences": 822,
@@ -10120,7 +10120,7 @@
     {
       "path": "server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql",
       "artifactClass": "ddl",
-      "sha256": "c93265fb23dbea808a5c269294b64bafa6bd967a363f5c3506176f7610085b5b"
+      "sha256": "c79bcaec1061250dc31841508ba359e12fbccb33fc3078f005b2808cff42d73d"
     },
     {
       "path": "server/db/ddl/planes/neon/control/05_constraints.sql",
@@ -10815,7 +10815,7 @@
     {
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
-      "sha256": "8df2194131f9ae53f3a53f47066d94faed59c547bdb29e3bfdbf0c12371ab921"
+      "sha256": "cdabcec22810d5c5de9a55a89d42a2ebd50c4c9f83dbd686ea44c50db3cc1609"
     },
     {
       "path": "server/db/seed/contracts/authorization/inventory/neon/promotion-qualification.v1.json",
@@ -12000,7 +12000,7 @@
     {
       "path": "tests/contracts/platform-catalog-experience.test.ts",
       "artifactClass": "test",
-      "sha256": "2578504589f12d95ad500cf7cc39fc2c86674778d84bc7a70ba00e02bd1eaea5"
+      "sha256": "67200b2219557a4ebf5ecd47d58d396d086d54abc5cd43b44116f1eb0b4b7aaf"
     },
     {
       "path": "tests/contracts/query-provider-lifecycle.test.ts",
@@ -13514,19 +13514,19 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 4136,
+      "line": 4169,
       "lines": [
-        4136,
-        4155,
-        6894,
-        6911,
-        6928,
-        6945,
-        6962,
-        6979,
-        6996,
-        7322,
-        7490
+        4169,
+        4187,
+        6908,
+        6925,
+        6942,
+        6959,
+        6976,
+        6993,
+        7010,
+        7336,
+        7504
       ]
     },
     {
@@ -13955,19 +13955,19 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 5034,
+      "line": 5051,
       "lines": [
-        5034,
-        5050,
-        6775,
-        6792,
-        6809,
-        6826,
-        6843,
-        6860,
-        6877,
-        7280,
-        7454
+        5051,
+        5067,
+        6789,
+        6806,
+        6823,
+        6840,
+        6857,
+        6874,
+        6891,
+        7294,
+        7468
       ]
     },
     {
@@ -14407,25 +14407,25 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 5127,
+      "line": 5144,
       "lines": [
-        5127,
-        5143,
-        5170,
-        5797,
-        6034,
-        7013,
-        7030,
-        7047,
-        7064,
-        7081,
-        7100,
-        7119,
-        7136,
-        7153,
-        7170,
-        7364,
-        7521
+        5144,
+        5160,
+        5186,
+        5812,
+        6049,
+        7027,
+        7044,
+        7061,
+        7078,
+        7095,
+        7114,
+        7133,
+        7150,
+        7167,
+        7184,
+        7378,
+        7535
       ]
     },
     {
@@ -14939,10 +14939,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 6200,
+      "line": 6214,
       "lines": [
-        6200,
-        7805
+        6214,
+        7824
       ]
     },
     {
@@ -15320,10 +15320,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 6219,
+      "line": 6233,
       "lines": [
-        6219,
-        7806
+        6233,
+        7825
       ]
     },
     {
@@ -15689,10 +15689,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 6326,
+      "line": 6340,
       "lines": [
-        6326,
-        7811
+        6340,
+        7830
       ]
     },
     {
@@ -18271,10 +18271,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 5618,
+      "line": 5632,
       "lines": [
-        5618,
-        7781
+        5632,
+        7800
       ]
     },
     {
@@ -19026,10 +19026,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 5649,
+      "line": 5664,
       "lines": [
-        5649,
-        7782
+        5664,
+        7801
       ]
     },
     {
@@ -19456,10 +19456,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 5697,
+      "line": 5712,
       "lines": [
-        5697,
-        7784
+        5712,
+        7803
       ]
     },
     {
@@ -21439,10 +21439,10 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 6280,
+      "line": 6294,
       "lines": [
-        6280,
-        7809
+        6294,
+        7828
       ]
     },
     {
@@ -28690,69 +28690,69 @@
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
       "lines": [
-        6450,
-        6467,
-        6484,
-        6501,
-        6518,
-        6535,
-        6552,
-        6569,
-        6586,
-        6603,
-        6620,
-        6637,
-        6654,
-        6671,
-        6688,
-        6705,
-        6722,
-        6739,
-        6756,
-        6773,
-        6790,
-        6807,
-        6824,
-        6841,
-        6858,
-        6875,
-        6892,
-        6909,
-        6926,
-        6943,
-        6960,
-        6977,
-        6994,
-        7011,
-        7028,
-        7045,
-        7062,
-        7079,
-        7098,
-        7117,
-        7134,
-        7151,
-        7168,
-        7197,
-        7207,
-        7223,
-        7231,
-        7241,
-        7257,
-        7265,
-        7274,
-        7290,
-        7298,
-        7307,
-        7316,
-        7332,
-        7340,
-        7349,
-        7358,
-        7374,
-        7382,
-        7391,
-        7400
+        6464,
+        6481,
+        6498,
+        6515,
+        6532,
+        6549,
+        6566,
+        6583,
+        6600,
+        6617,
+        6634,
+        6651,
+        6668,
+        6685,
+        6702,
+        6719,
+        6736,
+        6753,
+        6770,
+        6787,
+        6804,
+        6821,
+        6838,
+        6855,
+        6872,
+        6889,
+        6906,
+        6923,
+        6940,
+        6957,
+        6974,
+        6991,
+        7008,
+        7025,
+        7042,
+        7059,
+        7076,
+        7093,
+        7112,
+        7131,
+        7148,
+        7165,
+        7182,
+        7211,
+        7221,
+        7237,
+        7245,
+        7255,
+        7271,
+        7279,
+        7288,
+        7304,
+        7312,
+        7321,
+        7330,
+        7346,
+        7354,
+        7363,
+        7372,
+        7388,
+        7396,
+        7405,
+        7414
       ]
     },
     {
@@ -30671,7 +30671,9 @@
         348,
         381,
         398,
-        405
+        405,
+        457,
+        505
       ]
     },
     {
@@ -37634,9 +37636,9 @@
       "riskLevel": "medium",
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
-      "line": 6688,
+      "line": 6702,
       "lines": [
-        6688
+        6702
       ]
     },
     {
@@ -37766,9 +37768,9 @@
       "riskLevel": "medium",
       "path": "server/db/seed/contracts/authorization/inventory/neon/compiled/table-authorization-coverage.v1.json",
       "artifactClass": "runtime",
-      "line": 6705,
+      "line": 6719,
       "lines": [
-        6705
+        6719
       ]
     },
     {

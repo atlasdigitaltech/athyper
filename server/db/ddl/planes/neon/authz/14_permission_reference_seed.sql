@@ -429,3 +429,80 @@ INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mod
 SELECT id,'legal_entity','subtree','active','00000000-0000-0000-0000-000000000000'::uuid FROM authz.permission
 WHERE canonical_code IN('neon.workforce.request.create','neon.workforce.request.read','neon.workforce.request.validate','neon.workforce.request.submit','neon.workforce.request.decide','neon.workforce.request.apply')
 ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active';
+
+-- Canonical catalog ownership. The consolidated permission sections above seed
+-- against Foundation for dependency-safe bootstrap, then move Business Partner
+-- permissions through the governed suspended state to the mdg.bp product module.
+DO $preflight$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM control.module
+    WHERE code = 'bp' AND status = 'active'
+  ) THEN
+    RAISE EXCEPTION 'Business Partner permission ownership requires the active mdg.bp module';
+  END IF;
+  IF EXISTS (
+    SELECT 1 FROM authz.permission
+    WHERE status = 'retired' AND (
+         canonical_code LIKE 'neon.relationship.business_partner%'
+      OR canonical_code LIKE 'neon.business_partner%'
+      OR canonical_code LIKE 'neon.supplier.preference.%'
+      OR canonical_code LIKE 'neon.supplier_registration.%'
+      OR canonical_code LIKE 'neon.customer_registration.%'
+      OR canonical_code LIKE 'neon.customer.credit.%'
+      OR canonical_code LIKE 'neon.customer.lifecycle.%'
+      OR canonical_code LIKE 'neon.workforce.invitation.%'
+    )
+  ) THEN
+    RAISE EXCEPTION 'Retired Business Partner permissions cannot be rebound to mdg.bp';
+  END IF;
+END
+$preflight$;
+
+DO $rebind$
+DECLARE
+  target record;
+BEGIN
+  FOR target IN
+    SELECT permission.id, permission.status
+    FROM authz.permission permission
+    WHERE permission.module_id IS DISTINCT FROM (SELECT id FROM control.module WHERE code = 'bp')
+      AND (
+           permission.canonical_code LIKE 'neon.relationship.business_partner%'
+        OR permission.canonical_code LIKE 'neon.business_partner%'
+        OR permission.canonical_code LIKE 'neon.supplier.preference.%'
+        OR permission.canonical_code LIKE 'neon.supplier_registration.%'
+        OR permission.canonical_code LIKE 'neon.customer_registration.%'
+        OR permission.canonical_code LIKE 'neon.customer.credit.%'
+        OR permission.canonical_code LIKE 'neon.customer.lifecycle.%'
+        OR permission.canonical_code LIKE 'neon.workforce.invitation.%'
+      )
+  LOOP
+    IF target.status = 'published' THEN
+      UPDATE authz.permission SET status = 'suspended' WHERE id = target.id;
+    END IF;
+    UPDATE authz.permission
+    SET module_id = (SELECT id FROM control.module WHERE code = 'bp'),
+        updated_at = now(),
+        updated_by = '00000000-0000-0000-0000-000000000000'::uuid
+    WHERE id = target.id;
+    IF target.status = 'published' THEN
+      UPDATE authz.permission SET status = 'published' WHERE id = target.id;
+    END IF;
+  END LOOP;
+END
+$rebind$;
+
+DO $assertions$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM authz.permission permission
+    JOIN control.module module ON module.id = permission.module_id
+    WHERE permission.canonical_code LIKE 'neon.relationship.business_partner%'
+      AND module.code <> 'bp'
+  ) THEN
+    RAISE EXCEPTION 'Business Partner permissions remain outside mdg.bp';
+  END IF;
+END
+$assertions$;

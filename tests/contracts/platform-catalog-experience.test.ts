@@ -190,15 +190,17 @@ test("tenant publication wins over shared defaults while personal changes stay s
 });
 
 test("canonical Neon DDL assigns BP permissions to the bp module", async () => {
+  const catalog = await readFile(new URL("../../server/db/ddl/planes/neon/master/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
   const seed = await readFile(new URL("../../server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql", import.meta.url), "utf8");
-  assert.match(seed, /'bp', 'Business Partner'/);
+  assert.match(catalog, /'bp', 'Business Partner Management'/);
   assert.match(seed, /canonical_code LIKE 'neon\.relationship\.business_partner%'/);
   assert.match(seed, /module\.code <> 'bp'/);
 });
 
 test("canonical Studio DDL aligns the exp and pcat catalog modules", async () => {
-  const seed = await readFile(new URL("../../server/db/ddl/planes/studio/control/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
-  assert.match(seed, /'exp','Experience & Navigation Design'/);
-  assert.match(seed, /'pcat','Platform Catalog Management'/);
-  assert.match(seed, /<> 33/);
+  const master = await readFile(new URL("../../server/db/ddl/planes/studio/master/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
+  const control = await readFile(new URL("../../server/db/ddl/planes/studio/control/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
+  assert.match(master, /'exp','Experience & Navigation Design'/);
+  assert.match(master, /'pcat','Platform Catalog Management'/);
+  assert.match(control, /<> 33/);
 });

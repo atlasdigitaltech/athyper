@@ -34,8 +34,8 @@ The first releasable vertical slice should be an invitation-backed supplier onbo
 | Object Storage | Staging, quotas, malware scan, hashing, activation, signed downloads, retention and legal holds exist. | Reuse the attachment lifecycle. Add a Business Partner evidence experience; never expose object keys. | Production storage configuration and protected-document handling must be qualified. |
 | Atlas AI | The global dock/full-screen workspace, grounded answers, citations, proposals, confirmation and server-side reauthorization exist. | Extend the existing dock with structured Business Partner context and a shared governed preview. Do not create another Atlas dock. | Start with read-only explanations and readiness guidance, then assisted mutations. |
 | Notification Channel | In-app, email, SMS, push and WhatsApp infrastructure, preferences, SSE and provider adapters exist. | Add Business Partner event-to-recipient/template/deep-link policies. | Provider readiness is environment-specific and has not been proven by this audit. |
-| Frontend governance | Module typechecks and tests pass, but the frontend spine dependency-budget policy currently fails in several packages. | Repair or deliberately re-baseline dependency budgets before adding packages. | This is a phase-zero gate, not cleanup to defer until release. |
-| Production certification | Local implementation evidence is strong, but the production certification script reports missing runbooks and qualification evidence. | Describe the capability as implemented/partially qualified, not production certified. | Production release remains blocked until evidence and operational gates pass. |
+| Frontend governance | Module typechecks and tests pass. Phase 0 explicitly budgets the contract and workflow UI packages at 0/0, and the frontend-spine policy passes. | Keep dependency growth behind an owned governance change. | The Phase 0 frontend gate is green; unrelated aggregate repository policy drift remains outside this baseline. |
+| Production qualification | Local implementation evidence is strong, but the release qualification report lists missing runbooks and environment evidence. | Describe the capability as implemented/partially qualified; do not imply target-environment approval. | Production release remains blocked until evidence and operational gates pass. |
 
 ## Corrections to the scratchpad proposal
 
@@ -44,7 +44,7 @@ The useful ideas in the scratchpad should be retained, with four architectural c
 1. Treat Studio, MESH and NEON as the three authoritative planes. IAM, Object Storage, notifications and Atlas are shared capabilities with narrowly defined authority.
 2. Extend the existing shell Atlas workspace. A second `AtlasDock` would split conversation, proposal and confirmation behavior.
 3. Do not create `packages/planes/shared/business-partner-kit`. Plane-to-plane sharing obscures ownership. Generic case/evidence components belong in the platform entity runtime after their contracts are proven; plane packages retain adapters and domain language.
-4. Do not claim G0-G5 or production certification from local code coverage alone. Release certification requires the missing runbooks, environment evidence and operational sign-offs.
+4. Do not imply that G0-G5 are production-qualified from local code coverage alone. Release qualification requires the missing runbooks, environment evidence and operational sign-offs.
 
 ## Architecture
 
@@ -523,7 +523,7 @@ Deliverables:
 - Inventory current routes, operations and catalog entries; identify missing allowlist entries without adding ad hoc fetch paths.
 - Define protected-document classification and production storage qualification checklist.
 - Define the Business Partner event/recipient/template matrix.
-- Replace “production certified” language with accurate release status.
+- Replace ambiguous release claims with accurate, evidence-backed status.
 
 Exit gate: architecture decisions accepted, policy checks green, contracts compile, threat-model actions owned, and no new package violates plane boundaries.
 
@@ -586,7 +586,7 @@ Deliverables:
 - Draft-only Atlas authoring assistance with evaluation and provenance.
 - Missing rollout/qualification runbooks and production evidence.
 
-Exit gate: a signed definition release is approved, published, consumed by compatible runtimes, rollback/recovery is rehearsed and the full production certification gate passes.
+Exit gate: a signed definition release is approved, published, consumed by compatible runtimes, rollback/recovery is rehearsed and the full production qualification gate passes.
 
 ## Initial implementation backlog
 
@@ -677,7 +677,7 @@ No screen may introduce raw `fetch`, a second API client, a second notification 
 - Target environment IAM, storage and notification-provider readiness checks pass with retained evidence.
 - E2E production-like fixtures execute rather than skip.
 - Observability dashboards, alerts, support runbook, rollback and data-reconciliation procedures are approved.
-- Business Partner production certification reports success with all required evidence present.
+- The Business Partner production qualification report passes with all required evidence present.
 
 ## Metrics and operational signals
 
@@ -719,7 +719,7 @@ Never optimize completion rate by weakening validation, disclosure, maker/checke
 6. Approve evidence classification, region, encryption/key ownership, retention and legal-hold policy.
 7. Approve matching thresholds, golden corpus, false-merge tolerance and steward roles.
 8. Approve the AI rollout order: grounded read-only help before extraction and any command proposals.
-9. Assign owners and dates for production certification runbooks and environment evidence.
+9. Assign owners and dates for production qualification runbooks and environment evidence.
 
 ## Definition of ready for implementation
 
@@ -756,7 +756,7 @@ Point-in-time verification performed for this audit:
 - NEON/MESH boundary policy passed.
 - Atlas grounded-answer contract tests passed: 5 tests.
 - Notification provider-readiness unit tests passed: 4 tests. Environment provider readiness was not executed because it requires an explicit staging or production target.
-- Frontend spine policy failed because multiple package dependency budgets are already over their configured limits.
-- Business Partner production certification reported blocked because required production rollout/qualification runbooks and evidence were absent.
+- Frontend spine policy passed after the Phase 0 ownership and dependency-budget re-baseline; no configured package exceeds its limit.
+- The Business Partner production qualification report was blocked because required production rollout/qualification runbooks and evidence were absent.
 
-These are audit-time observations, not permanent certification evidence. Re-run the repository and target-environment gates after implementation and retain their outputs in the governed release evidence location.
+These are audit-time observations, not permanent qualification evidence. Re-run the repository and target-environment gates after implementation and retain their outputs in the governed release evidence location.
