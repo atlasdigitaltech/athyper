@@ -167,7 +167,7 @@ SOURCE_REVISION="$(git rev-parse HEAD)-dirty" \
 pnpm images:v2:build
 ```
 
-`docker-bake.hcl` is the local authority for the five targets and mirrors the
+`deploy/docker-bake.hcl` is the local authority for the five targets and mirrors the
 workflow matrix. The web and runtime final stages remove package-manager tooling
 that is not needed at runtime. The IAM target uses digest-pinned Keycloak 26.7.2,
 builds and tests the ATHYPER provider extension, and retains only the PostgreSQL

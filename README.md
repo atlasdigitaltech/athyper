@@ -9,33 +9,33 @@ Canonical docs live under [docs/](docs/). The most-used entry points:
 
 ### Infrastructure & deployment — [docs/infrastructure/](docs/infrastructure/README.md)
 
-| Resource | Path |
-|----------|------|
-| Stack v2 controller and runtime | [deploy/README.md](deploy/README.md) |
-| Stack v2 machine build plan | [docs/infrastructure/stack-v2-new-machine-build-plan.md](docs/infrastructure/stack-v2-new-machine-build-plan.md) |
-| Workload placement | [docs/infrastructure/stack-v2-workload-placement.md](docs/infrastructure/stack-v2-workload-placement.md) |
-| Architecture overview + v13 permission model | [docs/infrastructure/infrastructure-plan.md](docs/infrastructure/infrastructure-plan.md) |
+| Resource                                     | Path                                                                                                             |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Stack v2 controller and runtime              | [deploy/README.md](deploy/README.md)                                                                             |
+| Stack v2 machine build plan                  | [docs/infrastructure/stack-v2-new-machine-build-plan.md](docs/infrastructure/stack-v2-new-machine-build-plan.md) |
+| Workload placement                           | [docs/infrastructure/stack-v2-workload-placement.md](docs/infrastructure/stack-v2-workload-placement.md)         |
+| Architecture overview + v13 permission model | [docs/infrastructure/infrastructure-plan.md](docs/infrastructure/infrastructure-plan.md)                         |
 
 ### IAM and platform configuration
 
-| Resource | Path |
-|----------|------|
-| Keycloak realm config | [docs/infrastructure/iam-realm-config.md](docs/infrastructure/iam-realm-config.md) |
+| Resource                  | Path                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| Keycloak realm config     | [docs/infrastructure/iam-realm-config.md](docs/infrastructure/iam-realm-config.md)         |
 | Keycloak protocol mappers | [docs/infrastructure/iam-protocol-mappers.md](docs/infrastructure/iam-protocol-mappers.md) |
 
 ### Architecture, meta-entity, specs
 
-| Resource | Path |
-|----------|------|
-| Local docs index (ADRs, architecture, audits) | [docs/local/README.md](docs/local/README.md) |
-| Folder boundary map | [docs/local/architecture/folder-boundary-map.md](docs/local/architecture/folder-boundary-map.md) |
-| Meta-entity model docs | [docs/meta-entity/](docs/meta-entity/) |
-| Integration specs | [docs/integrations/](docs/integrations/) |
-| Specs | [docs/specs/](docs/specs/) |
+| Resource                                      | Path                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Local docs index (ADRs, architecture, audits) | [docs/local/README.md](docs/local/README.md)                                                     |
+| Folder boundary map                           | [docs/local/architecture/folder-boundary-map.md](docs/local/architecture/folder-boundary-map.md) |
+| Meta-entity model docs                        | [docs/meta-entity/](docs/meta-entity/)                                                           |
+| Integration specs                             | [docs/integrations/](docs/integrations/)                                                         |
+| Specs                                         | [docs/specs/](docs/specs/)                                                                       |
 
 ## Prerequisites
 
-Node.js >= 22, pnpm 10.33.0 via Corepack, Docker with Compose, git >= 2.40.
+Node.js 24.19.0, pnpm 10.33.0 via Corepack, Docker with Compose, git >= 2.40.
 
 ```bash
 node -v && pnpm -v && docker info

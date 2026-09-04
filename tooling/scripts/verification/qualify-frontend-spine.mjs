@@ -12,7 +12,7 @@ const checks = [
   ["contracts", "exec", "tsx", "--test", "tests/contracts/frontend-spine-browser-contracts.test.ts", "tests/contracts/frontend-spine-server-contracts.test.ts", "tests/contracts/api-client-transport.test.ts", "tests/contracts/auth-session-foundation.test.ts", "tests/contracts/bff-relay-security.test.ts", "tests/contracts/query-provider-lifecycle.test.ts", "tests/contracts/server-plane-composition.test.ts", "tests/contracts/shared-shell-navigation.test.ts", "tests/contracts/access-consumption-phase9.test.ts", "tests/contracts/app-composition-phase10.test.ts", "tests/contracts/first-business-module-readiness.test.ts"],
   ["experience", "--filter", "@athyper/server-platform-experience", "test"],
   ["components", "exec", "tsx", "--tsconfig", "tooling/config/tsconfig-react.json", "--test", "tests/foundation/error-boundaries.test.tsx", "tests/foundation/access-gates-phase9.test.tsx"],
-  ["accessibility", "exec", "playwright", "test", "--config=playwright.foundation.config.ts", "tests/foundation-browser/error-boundaries.spec.ts", "tests/foundation-browser/shared-shell.spec.ts"],
+  ["accessibility", "exec", "playwright", "test", "--config=tooling/config/playwright.foundation.config.ts", "tests/foundation-browser/error-boundaries.spec.ts", "tests/foundation-browser/shared-shell.spec.ts"],
   ["build", "run", "build:frontend-spine"]
 ];
 for (const plane of ["neon", "mesh", "studio"]) rmSync(resolve(root, "apps", plane, ".next"), { recursive: true, force: true });

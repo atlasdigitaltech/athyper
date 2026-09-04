@@ -47,7 +47,7 @@ export function inspectReleaseImages(revision, tag, cwd = process.cwd()) {
 export function buildReleaseImages(cwd = process.cwd()) {
   const revision = assertCleanSource(cwd);
   const tag = `candidate-${revision.slice(0, 12)}`;
-  run("docker", ["buildx", "bake", "--file", "docker-bake.hcl"], {
+  run("docker", ["buildx", "bake", "--file", "deploy/docker-bake.hcl"], {
     cwd,
     env: { ...process.env, SOURCE_REVISION: revision, LOCAL_TAG: tag },
     stdio: "inherit",
