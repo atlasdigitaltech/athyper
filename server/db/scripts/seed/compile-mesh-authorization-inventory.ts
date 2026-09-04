@@ -39,7 +39,7 @@ const ddlSources = [
   "ddl/planes/mesh/document/03_tables.sql",
   "ddl/planes/mesh/mesh/03_tables.sql",
 ] as const;
-const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"] as const;
+const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tooling/tools/scripts"] as const;
 
 export async function compileMeshAuthorizationInventory(): Promise<{
   readonly artifact: Record<string, unknown>;

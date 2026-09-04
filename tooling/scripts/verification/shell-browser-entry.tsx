@@ -1,0 +1,8 @@
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { ShellChrome } from "../../../packages/platform/shell/shell/src/client";
+import type { DerivedShellNavigation } from "../../../packages/platform/shell/shell/src/core";
+const params = new URLSearchParams(location.search), empty = params.has("empty"), multi = params.has("multi"), desktopBrand = params.has("desktopBrand");
+const route = Object.freeze({ id: "fixture.home", moduleCode: "acc", href: "/" as const, label: "General Ledger", iconKey: "home", requiredPermissions: [], requiredFeatures: [], navigation: "primary" as const, workspaceCode: "fin", workspaceName: "Finance", moduleName: "General Ledger", sortOrder: 1 });
+const navigation: DerivedShellNavigation = Object.freeze({ workspaces: empty ? [] : [Object.freeze({ code: "fin", name: "Finance", href: "/", iconKey: "home", sortOrder: 1, routes: [route] })], routes: empty ? [] : [route], ...(empty ? {} : { landingHref: "/" }), unknownActiveModules: [] });
+createRoot(document.getElementById("root")!).render(<ShellChrome applicationName="Athyper Test" persistentDesktopBrand={desktopBrand} tenantId="tenant-alpha" tenantLabel="Tenant Alpha" tenantSecondaryLabel="ALPHA" accountLabel="User One" accountInitials="UO" accountLoginId="user.one" accountEmail="user.one@example.test" transactionContext={{ label: "Working company", value: "Company 1000", secondaryLabel: "Example company", changeable: false }} navigation={navigation} contexts={multi ? [{ tenantId: "tenant-alpha", label: "Tenant Alpha" }, { tenantId: "tenant-beta", label: "Tenant Beta" }] : undefined}><section><h1>Dashboard</h1><button type="button">Page action</button></section></ShellChrome>);

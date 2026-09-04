@@ -25,7 +25,7 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
 FROM base AS builder
 COPY --from=installer /repo/ ./
 COPY --from=pruner /repo/out/full/ ./
-COPY tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
+COPY tooling/tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-server-runtime-packages.mjs
 
 # Build workspace dependencies first, then the host
 RUN pnpm --filter "@athyper/platform-i18n" run build

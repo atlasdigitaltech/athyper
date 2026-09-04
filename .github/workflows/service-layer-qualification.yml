@@ -8,7 +8,7 @@ on:
       - "server/packages/**/*.postgres.test.ts"
       - "server/packages/test-utils/**"
       - "tooling/config/ddl-service-*"
-      - "tools/scripts/*ddl-service-coverage*"
+      - "tooling/tools/scripts/*ddl-service-coverage*"
       - ".github/workflows/service-layer-qualification.yml"
   push:
     branches: [main]
@@ -17,7 +17,7 @@ on:
       - "server/packages/**/*.postgres.test.ts"
       - "server/packages/test-utils/**"
       - "tooling/config/ddl-service-*"
-      - "tools/scripts/*ddl-service-coverage*"
+      - "tooling/tools/scripts/*ddl-service-coverage*"
       - ".github/workflows/service-layer-qualification.yml"
   schedule:
     - cron: "15 3 * * 1-5"

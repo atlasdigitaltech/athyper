@@ -36,7 +36,7 @@ test("S4 certification executes live negative and concurrent database probes", a
 test("S4 compatibility surfaces use evidence checkpoints and fail-closed removal gates", async () => {
   const policy = JSON.parse(
     await read(
-      "../../config/governance/business-partner-s4-compatibility-retirement.v1.json",
+      "../../governance/config/governance/business-partner-s4-compatibility-retirement.v1.json",
     ),
   );
   assert.equal(

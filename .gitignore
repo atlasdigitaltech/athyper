@@ -153,8 +153,8 @@ stack/config/**/certs/*.p12
 stack/config/**/certs/ca.*
 
 # Tool outputs
-tools/**/tmp/
-tools/**/output/
+tooling/tools/**/tmp/
+tooling/tools/**/output/
 .codex-logs/
 .weekly-db-checks/
 

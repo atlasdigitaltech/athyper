@@ -113,7 +113,7 @@
         "runtime_meta.applied_release_payload",
         "authz.entity_operation_binding",
         "server/db/ddl/planes/neon/business-partner-ddl-inventory.generated.json",
-        "policy/reports"
+        "governance/policy/reports"
       ],
       "identityProof": "Authority declarations are release artifacts, not independently authored runtime rows; their identity is the applied release and payload hash already enforced by runtime_meta.applied_release_payload.",
       "lifecycleProof": "Stage, activate, supersede and rollback already belong to runtime_meta.applied_release; a second status lifecycle would permit drift.",

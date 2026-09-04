@@ -16,7 +16,7 @@
       "packages",
       "server/apps",
       "server/packages",
-      "tools/scripts"
+      "tooling/tools/scripts"
     ],
     "reviewedSlicesContract": "seed/contracts/authorization/inventory/neon/reviewed-slices.v1.json",
     "studioNeonOrganizationBoundary": "seed/contracts/authorization/inventory/neon/studio-neon-organization-boundary.v1.json"

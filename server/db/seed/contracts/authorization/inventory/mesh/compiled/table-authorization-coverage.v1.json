@@ -16,7 +16,7 @@
       "packages",
       "server/apps",
       "server/packages",
-      "tools/scripts"
+      "tooling/tools/scripts"
     ],
     "reviewedSlicesContract": "seed/contracts/authorization/inventory/mesh/reviewed-slices.v1.json",
     "studioMeshNetworkBoundary": "seed/contracts/authorization/inventory/mesh/studio-mesh-network-boundary.v1.json",

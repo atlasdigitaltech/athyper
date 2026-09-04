@@ -10,4 +10,4 @@ This directory contains durable architecture decisions, current architecture gui
 
 - `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
 
-Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `policy/reports/` when they must remain live; otherwise Git history is the archive.
+Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `governance/policy/reports/` when they must remain live; otherwise Git history is the archive.

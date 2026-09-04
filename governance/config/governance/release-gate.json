@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "mode": "blocking",
+  "requiredEvidence": {
+    "performanceReport": "tooling/performance/qualification/current-report.json",
+    "queryCountBudget": "tooling/performance/qualification/current-report.json",
+    "latencyBudget": "tooling/performance/qualification/current-report.json",
+    "transactionDurationBudget": "tooling/performance/qualification/current-report.json",
+    "companyCodeRead": "tooling/performance/qualification/company-code-read.json",
+    "companyCodeMutation": "tooling/performance/qualification/company-code-mutation.json",
+    "rlsVerification": "tooling/performance/qualification/evidence/rls.json",
+    "outboxDurability": "tooling/performance/qualification/evidence/outbox-durability.json",
+    "redisDegradation": "tooling/performance/qualification/evidence/redis-degradation.json",
+    "attachmentQuarantine": "tooling/performance/qualification/evidence/attachment-quarantine.json",
+    "sseReconnectCatchup": "tooling/performance/qualification/evidence/sse-reconnect-catchup.json",
+    "tenantSizeLoad": "tooling/performance/qualification/evidence/tenant-size-load.json",
+    "compatibilityTraffic": "tooling/performance/qualification/compatibility-report.json"
+  },
+  "rollbackFlags": ["MUTATION_KERNEL_STAGE", "ENTITY_MUTATION_SERVICE_PILOTS"],
+  "runbooks": [
+    "docs/runbooks/meta-entity-generation-bump.md",
+    "docs/runbooks/meta-entity-mutation-kernel-rollback.md",
+    "docs/runbooks/meta-entity-redis-impairment.md",
+    "docs/runbooks/outbox-lag.md",
+    "docs/runbooks/postgres-pool-exhaustion.md",
+    "docs/runbooks/sse-overload.md",
+    "docs/runbooks/attachment-quarantine.md"
+  ],
+  "retirement": {
+    "requiredZeroCompatibilityReleases": 1,
+    "requireNoShadowDifferences": true,
+    "requireRollbackFlag": true
+  }
+}

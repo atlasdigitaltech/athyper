@@ -31,6 +31,6 @@ for (const pilot of planes) test(`${pilot.plane} runs the common environment, au
 });
 
 test("deployment profiles enumerate the complete active frontend package closure and BFF variables", () => {
-  const deployment = JSON.parse(readFileSync("config/deployment/profiles.json", "utf8")) as { profiles: Record<string, { requiredProductPackages: string[]; requiredSharedPackages: string[]; environmentVariables: string[]; healthChecks: { path: string }[] }> };
+  const deployment = JSON.parse(readFileSync("governance/config/deployment/profiles.json", "utf8")) as { profiles: Record<string, { requiredProductPackages: string[]; requiredSharedPackages: string[]; environmentVariables: string[]; healthChecks: { path: string }[] }> };
   for (const pilot of planes) { const profile = deployment.profiles[`athyper-${pilot.plane}`]!; for (const variable of ["APP_ORIGIN", "RUNTIME_API_URL", "REDIS_URL", "KEYCLOAK_BASE_URL", "SESSION_TOKEN_ENCRYPTION_KEY"]) assert.ok(profile.environmentVariables.includes(variable), `${pilot.plane}:${variable}`); assert.deepEqual(profile.healthChecks.map((item) => item.path), ["/livez", "/readyz"]); assert.ok(profile.requiredSharedPackages.includes("@athyper/platform-shell-runtime")); assert.ok(profile.requiredProductPackages.some((name) => name.includes(`product-${pilot.plane}`))); }
 });

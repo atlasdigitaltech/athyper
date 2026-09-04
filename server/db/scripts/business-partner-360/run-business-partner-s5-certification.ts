@@ -9,7 +9,7 @@ import {assertLoopbackDatabaseTarget} from "../lib/database-target.js";
 
 const CONFIRMATION="RUN-BP-S5-CERTIFICATION";
 const repositoryRoot=resolve(import.meta.dirname,"../../../..");
-const matrixPath="config/governance/business-partner-s5-role-permission-matrix.v1.json";
+const matrixPath="governance/config/governance/business-partner-s5-role-permission-matrix.v1.json";
 const tenant="00000000-0000-0000-0000-000000000000";
 const lifecycleFunction="control.command_business_partner_lifecycle(uuid,text,uuid,text,bigint,text,text,uuid)";
 const decisionFunction="control.command_business_partner_decision(uuid,text,uuid,text,bigint,text,text,text,jsonb,uuid)";

@@ -440,7 +440,7 @@ async function productionPermissionDemand(catalogs: Record<Plane, Catalog>): Pro
   dynamic: Array<{ path: string; line: number; expression: string }>;
 }> {
   const known = new Set(planes.flatMap((plane) => catalogs[plane].permissions.map((permission) => permission.canonicalCode)));
-  const roots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"].map((path) => resolve(repositoryRoot, path));
+  const roots = ["apps", "packages", "server/apps", "server/packages", "tooling/tools/scripts"].map((path) => resolve(repositoryRoot, path));
   const files = (await Promise.all(roots.map(walk))).flat().filter((path) =>
     /\.(?:ts|tsx|js|mjs)$/.test(path)
     && !/[\\/](?:__tests__|__fixtures__|node_modules|dist|coverage)[\\/]/.test(path)

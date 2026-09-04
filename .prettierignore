@@ -27,8 +27,8 @@ mesh/tmp
 **/*.gen.ts
 **/generated-*.ts
 **/*.generated.*
-catalog/generated/**
-policy/reports/**
+governance/catalog/generated/**
+governance/policy/reports/**
 
 # IAM config — Keycloak realm exports, login theme resources, FTL templates:
 # externally-managed artifacts, not app source. Substring-validated, not byte.

@@ -6922,7 +6922,7 @@
     }
   ],
   "identityGenerationPolicy": {
-    "source": "tools/scripts/generate-athyper-demo-iam.cjs",
+    "source": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
     "principalIdFormula": "aa<TT><LL><PP>-0000-0000-0000-000000000000",
     "tenantHex": "01",
     "legalEntityPersonas": [

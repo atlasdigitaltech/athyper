@@ -208,7 +208,7 @@ jobs:
       # @types/react-dom, @tanstack/react-query), bounded peer ranges for
       # @tanstack/react-query, and tsconfig normalization (moduleResolution
       # casing, required extends, no per-package strictness downgrades).
-      # See scripts/policy/ and .syncpackrc.json.
+      # See tooling/scripts/policy/ and .syncpackrc.json.
       - name: Workspace policy
         run: pnpm run policy
 
@@ -307,7 +307,7 @@ jobs:
       ORG_TENANT_A: ${{ secrets.PERF_ORG }}
       ENTITY: ${{ vars.PERF_ENTITY }}
       RECORD_ID: ${{ vars.PERF_RECORD_ID }}
-      PERF_OUTPUT_DIR: perf/artifacts/p0
+      PERF_OUTPUT_DIR: tooling/performance/artifacts/p0
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -333,7 +333,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: athyper-p0-performance-${{ github.sha }}
-          path: perf/artifacts/p0/
+          path: tooling/performance/artifacts/p0/
           if-no-files-found: error
           retention-days: 30
 
@@ -530,15 +530,15 @@ jobs:
         env:
           DATABASE_URL: postgresql://athyperapp_test:athyperapp_test@127.0.0.1:5432/athyper_test
         run: |
-          mkdir -p perf/qualification/evidence
-          pnpm --dir server exec tsx scripts/verify-rls.ts --json > perf/qualification/evidence/rls.json
+          mkdir -p tooling/performance/qualification/evidence
+          pnpm --dir server exec tsx scripts/verify-rls.ts --json > tooling/performance/qualification/evidence/rls.json
 
       - name: Upload blocking RLS evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: rls-qualification-${{ github.run_id }}
-          path: perf/qualification/evidence/rls.json
+          path: tooling/performance/qualification/evidence/rls.json
           if-no-files-found: error
 
       # Audit P3-S1 — entity_policy coverage gate. Asserts that every active

@@ -74,9 +74,10 @@ apps/admin/      Internal platform administration plane
 packages/        Shared, domain, and product TypeScript packages
 server/          Shared Express API + BullMQ workers + DB DDL/seeds
 deploy/          Stack v2 Compose, controller, catalogs, and instance definitions
+tests/           Repository-wide contract, foundation, and end-to-end tests
+governance/      Platform catalogs, governed configuration, policies, and reports
 stack/config/    Shared IAM, branding, and validation assets used by Stack v2 builds
-perf/k6/         Load test scripts
-tooling/         Shared tsconfig bases
+tooling/         Repository configuration, automation, developer tools, and performance assets
 ```
 
 ## Common commands

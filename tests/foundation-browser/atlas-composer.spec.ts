@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 
 const css = `${readFileSync("packages/platform/foundation/theme/src/styles.css", "utf8")}\n${readFileSync("packages/platform/shell/shell/src/styles.css", "utf8")}`;
 const bundle = buildSync({
-  entryPoints: ["scripts/verification/atlas-composer-browser-entry.tsx"],
+  entryPoints: ["tooling/scripts/verification/atlas-composer-browser-entry.tsx"],
   bundle: true,
   write: false,
   format: "iife",

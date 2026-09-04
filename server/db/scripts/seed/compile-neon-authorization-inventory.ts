@@ -37,7 +37,7 @@ const ddlSources = [
   "ddl/common/document/03_foundation_tables.sql",
   "ddl/planes/neon/document/03_tables.sql",
 ] as const;
-const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tools/scripts"] as const;
+const repositoryRoots = ["apps", "packages", "server/apps", "server/packages", "tooling/tools/scripts"] as const;
 
 export async function compileNeonAuthorizationInventory(): Promise<{
   readonly artifact: Record<string, unknown>;

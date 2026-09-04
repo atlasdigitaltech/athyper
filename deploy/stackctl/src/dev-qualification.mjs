@@ -228,7 +228,7 @@ function lokiValues(run, endpoint) {
 
 function runVerification(run, repoRoot) {
   if (!process.env.VERIFICATION_ACCESS_TOKEN) return undefined;
-  const result = run(process.execPath, [join(repoRoot, "scripts", "verification", "run-platform-verification.mjs"), "--api-url", process.env.VERIFICATION_API_URL ?? "https://api.dev.athyper.test", "--plane", process.env.VERIFICATION_PLANE ?? "studio", "--mode", "functional"], { cwd: repoRoot, timeout: 130_000 });
+  const result = run(process.execPath, [join(repoRoot, "tooling", "scripts", "verification", "run-platform-verification.mjs"), "--api-url", process.env.VERIFICATION_API_URL ?? "https://api.dev.athyper.test", "--plane", process.env.VERIFICATION_PLANE ?? "studio", "--mode", "functional"], { cwd: repoRoot, timeout: 130_000 });
   if (!result.ok) return { error: result.stderr || result.error || `runner exited ${result.status}` };
   try { return { document: JSON.parse(result.stdout) }; }
   catch { return { error: "runner returned invalid JSON" }; }

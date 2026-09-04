@@ -103,7 +103,7 @@ if (legacyPath.test(activeSources)) fail("active provisioning still references l
 else pass("active provisioning references only common and plane DDL");
 
 await access(resolve(databaseRoot, "ddl/common/_manifest.txt"));
-await access(resolve(repositoryRoot, "scripts/policy/authorization-legacy-freeze.ts"));
+await access(resolve(repositoryRoot, "tooling/scripts/policy/authorization-legacy-freeze.ts"));
 pass("common manifest and authorization freeze policy are present");
 
 const commonMasterTables = await readFile(

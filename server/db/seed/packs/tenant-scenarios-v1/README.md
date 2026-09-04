@@ -62,7 +62,7 @@ before applying authorization-v2 organization/group membership:
 
 ```powershell
 pnpm.cmd run iam:demo:functional-subjects:reconcile
-node tools/scripts/apply-realm-demo-setup.cjs --container athyper-iam-1 `
+node tooling/tools/scripts/apply-realm-demo-setup.cjs --container athyper-iam-1 `
   --admin-user $env:IAM_ADMIN --admin-password $env:IAM_ADMIN_PASSWORD `
   --realm-file stack/config/iam/realm-athyper.json `
   --demo-file stack/config/iam/realm-athyper-demosetup.json --fast 1
