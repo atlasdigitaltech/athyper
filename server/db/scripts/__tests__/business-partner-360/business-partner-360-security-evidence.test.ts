@@ -101,7 +101,7 @@ test("P0 public and browser-adjacent surfaces remain restricted-value negative",
 test("P0 materialization tests cover exact replay, conflict, stale version and safe effects", async () => {
   const [serviceTest, service, repository] = await Promise.all([
     read(
-      "packages/services/master-data/src/__tests__/business-partner-request-service.test.ts",
+      "packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
     ),
     read(
       "packages/services/master-data/src/business-partner-request-service.ts",
@@ -116,6 +116,6 @@ test("P0 materialization tests cover exact replay, conflict, stale version and s
   );
   assert.match(serviceTest, /replayed:true/);
   assert.match(service, /BUSINESS_PARTNER_REQUEST_APPLICATION_CONFLICT/);
-  assert.match(repository, /BUSINESS_PARTNER_REQUEST_STALE_BASE_VERSION/);
+  assert.match(repository, /BUSINESS_PARTNER_CASE_VERSION_CONFLICT/);
   assert.doesNotMatch(service, /payload:\s*\{[^}]*proposedPayload/s);
 });

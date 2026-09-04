@@ -63,7 +63,8 @@ test("builds a schema-valid inventory from the current plane manifests", async (
   assert.equal(new Set(artifact.rows.map((row) => row.sourceKey)).size, artifact.rows.length);
   assert.equal(artifact.summary.tableDeclarations, artifact.rows.length);
   assert.equal(artifact.summary.classifiedAndOwned + artifact.summary.reviewRequired, artifact.rows.length);
-  assert.equal(artifact.summary.coveragePercent, 0);
+  assert.equal(artifact.summary.coveragePercent, 100);
+  assert.equal(artifact.summary.reviewRequired, 0);
   assert.equal(validateCoverageArtifact(artifact), artifact);
   assert.ok(artifact.rows.some((row) => row.physicalAuthority === "common_plane_local" && row.installedPlanes.length === 3));
   assert.ok(artifact.rows.some((row) => row.tableKey === "ledger.gl_balance" && row.installedPlanes.join() === "neon"));

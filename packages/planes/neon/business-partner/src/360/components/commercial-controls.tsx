@@ -235,9 +235,7 @@ function SupplierControls({
           "typeCode",
           "partnerRole",
           "decision",
-          "commodityCategoryCode",
-          "commodityCategoryName",
-          "commodityCodes",
+          "commodityCapabilities",
           "effectiveFrom",
           "effectiveUntil",
           "nextReviewAt",
@@ -249,7 +247,7 @@ function SupplierControls({
         fields={[
           "status",
           "rationale",
-          "commodityCategoryId",
+          "commodityCategoryIds",
           "effectiveFrom",
           "effectiveUntil",
         ]}
@@ -383,6 +381,8 @@ function showListItem(value: unknown) {
   if (!item) return String(value);
   if (item["domainCode"] && item["code"])
     return `${String(item["domainCode"]).toUpperCase()} ${String(item["code"])}${item["name"] ? ` — ${String(item["name"])}` : ""}`;
+  if (item["categoryCode"])
+    return `${String(item["categoryCode"])}${item["categoryName"] ? ` — ${String(item["categoryName"])}` : ""}`;
   return String(value);
 }
 function label(value: string) {

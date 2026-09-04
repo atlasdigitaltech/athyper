@@ -2,37 +2,37 @@
 
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
-Registry SHA-256: `a4f67fcffa464efc8b8da776f2499020468067ec6efd3c5644483e416fddb6d2`
-Files scanned / authorization-bearing: 2777 / 641
-Registered authorization objects: 463
-Aggregated object references: 1120
-Writer references: 127
-Contract/UI field references: 858
-Permission definitions / uses: 0 / 0
-Authorization-bearing routes: 0
+Registry SHA-256: `ce0f89057da260dde40fe4cc6360f93067bcd70b36ec5ea24b12dc23ea76c00c`
+Files scanned / authorization-bearing: 2739 / 526
+Registered authorization objects: 466
+Aggregated object references: 822
+Writer references: 68
+Contract/UI field references: 873
+Permission definitions / uses: 83 / 394
+Authorization-bearing routes: 11
 Keycloak mappers: 145
-Canonical capture sources: 0 (neon=0, mesh=0)
-Keycloak REST writer paths: 0
-Open gate findings: 570
+Canonical capture sources: 0 ()
+Keycloak REST writer paths: 10
+Open gate findings: 0
 
 ## Gate status
 
 | Gate | Findings |
 |---|---:|
-| Unknown authorization sources | 162 |
-| Unknown authorization writers | 2 |
+| Unknown authorization sources | 0 |
+| Unknown authorization writers | 0 |
 | Unowned objects | 0 |
 | Unclassified writers | 0 |
-| Missing source definitions | 136 |
-| Generated artifact failures | 34 |
-| Unknown capture sources | 2 |
-| Stale capture-source registrations | 74 |
+| Missing source definitions | 0 |
+| Generated artifact failures | 0 |
+| Unknown capture sources | 0 |
+| Stale capture-source registrations | 0 |
 | Duplicate capture sources | 0 |
-| Cross-plane capture-source drift | 74 |
+| Cross-plane capture-source drift | 0 |
 | Unknown Keycloak REST writers | 0 |
-| Stale Keycloak REST writer rules | 41 |
-| Known source anomalies blocking strict certification | 29 |
-| Zero-Mesh-specific-data Neon boundary findings | 16 |
+| Stale Keycloak REST writer rules | 0 |
+| Known source anomalies blocking strict certification | 0 |
+| Zero-Mesh-specific-data Neon boundary findings | 0 |
 
 Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. Owned known anomalies remain visible and block strict certification, but are reported separately by structural-only verification. Tests and documentation do not satisfy runtime ownership.
 
@@ -44,27 +44,29 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | audit.attachment_access.default_partition | `log.attachment_access_log_default` | neon | decision_evidence_partition | platform-iam | studio, neon | retain_with_parent | 0 | 0 | 0 |
 | audit.field_access | `log.field_access_log` | neon | decision_evidence | policy-platform | neon | retain | 0 | 0 | 0 |
 | audit.field_access.default_partition | `log.field_access_log_default` | neon | decision_evidence_partition | platform-iam | studio, neon | retain_with_parent | 0 | 0 | 0 |
-| audit.permission_decision | `log.permission_decision_log` | neon | decision_evidence | platform-iam | studio, neon | replace_persona_evidence_fields | 0 | 0 | 0 |
+| audit.permission_decision | `log.permission_decision_log` | neon | decision_evidence | platform-iam | studio, neon | replace_persona_evidence_fields | 0 | 1 | 0 |
 | audit.permission_decision.default_partition | `log.permission_decision_log_default` | neon | decision_evidence_partition | platform-iam | studio, neon | retain_with_parent | 0 | 0 | 0 |
 | audit.security_event | `log.security_event_log` | neon | audit | security-platform | studio, neon | retain | 0 | 0 | 0 |
-| authentication.mfa_config | `control.mfa_config` | neon | authentication_assurance | platform-iam | studio, neon | keep_keycloak_authority_projection | 0 | 2 | 0 |
-| authorization.group | `master.auth_group` | neon | authorization | platform-iam | studio, neon | replace_additively | 0 | 4 | 1 |
-| authorization.group_member | `master.auth_group_member` | neon | authorization | platform-iam | studio, neon | replace_additively | 0 | 5 | 1 |
-| authorization.group_role | `master.auth_group_role` | neon | authorization | platform-iam | studio, neon | replace_additively | 0 | 5 | 1 |
-| catalog.enterprise_feature | `shared.enterprise_feature` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | replace_with_feature_catalog | 0 | 0 | 0 |
-| catalog.module | `shared.module` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 5 | 0 |
-| catalog.subscription_plan | `shared.subscription_plan` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 4 | 0 |
-| catalog.subscription_plan_version | `shared.subscription_plan_version` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 0 | 0 |
-| catalog.workspace | `shared.workspace` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 4 | 1 |
-| compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 0 | 0 |
-| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 1 | 123 | 14 |
-| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 42 | 10 |
-| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 29 | 5 |
-| context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 0 | 1 |
-| context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 0 | 0 |
-| context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 30 | 0 |
-| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 24 | 0 |
-| context.tenant_relationship | `master.tenant_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 1 | 24 | 0 |
+| authentication.mfa_config | `control.mfa_config` | neon | authentication_assurance | platform-iam | studio, neon | keep_keycloak_authority_projection | 0 | 3 | 0 |
+| authorization.group | `master.auth_group` | neon | authorization | platform-iam | studio, neon | replace_additively | 1 | 4 | 2 |
+| authorization.group_member | `master.auth_group_member` | neon | authorization | platform-iam | studio, neon | replace_additively | 0 | 5 | 0 |
+| authorization.group_role | `master.auth_group_role` | neon | authorization | platform-iam | studio, neon | replace_additively | 0 | 3 | 0 |
+| authorization.invalidation_health | `event.authorization_invalidation_health` | neon | authorization_runtime_health | platform-iam | studio, neon, mesh | keep_as_runtime_health_projection | 1 | 2 | 0 |
+| authorization.seed_staging | `control.auth_permission_seed_staging` | neon | seed_staging | platform-iam | studio, neon | ephemeral_seed_compilation_only | 0 | 1 | 0 |
+| catalog.enterprise_feature | `shared.enterprise_feature` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | replace_with_feature_catalog | 0 | 1 | 0 |
+| catalog.module | `shared.module` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 4 | 0 |
+| catalog.subscription_plan | `shared.subscription_plan` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 3 | 0 |
+| catalog.subscription_plan_version | `shared.subscription_plan_version` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 2 | 0 |
+| catalog.workspace | `shared.workspace` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 3 | 1 |
+| compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 1 | 0 |
+| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 1 | 39 | 3 |
+| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 25 | 3 |
+| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 30 | 4 |
+| context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 1 | 0 |
+| context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 2 | 0 |
+| context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 33 | 0 |
+| context.team_member | `master.team_member` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 27 | 0 |
+| context.tenant_relationship | `master.tenant_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 1 | 27 | 0 |
 | function.access_grant_status_changed | `master.trg_access_grant_status_changed` | neon | authorization_change_capture | platform-iam | neon | remove_with_legacy_access_grant | 0 | 0 | 0 |
 | function.bump_auth_epoch | `master.fn_bump_auth_epoch` | neon | authorization_change_capture | platform-iam | studio, neon | replace_with_durable_change_watermark | 0 | 0 | 0 |
 | function.check_permission | `master.check_permission` | neon | legacy_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
@@ -77,45 +79,46 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.resolve_allowed_companies | `master.resolve_allowed_companies` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
-| identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 0 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 158 | 24 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 41 | 12 |
-| identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 26 | 5 |
-| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 217 | 23 |
-| identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 0 | 0 |
-| identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 0 | 0 |
-| legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 1 | 0 |
-| legacy.attachment_acl | `master.attachment_acl` | neon | record_acl | document-platform | neon | merge_into_auth_record_acl | 0 | 0 | 0 |
-| legacy.business_network | `master.business_network` | neon | legacy_mesh_context | mesh-platform | mesh, neon | remove_from_neon | 0 | 0 | 0 |
-| legacy.business_network_membership | `master.business_network_membership` | neon | legacy_mesh_authorization | mesh-platform | mesh, neon | remove_from_neon | 0 | 0 | 0 |
-| legacy.business_network_membership_role | `master.business_network_membership_role` | neon | legacy_mesh_authorization | mesh-platform | mesh, neon | remove_from_neon | 0 | 0 | 0 |
-| legacy.company_code_access | `master.company_code_access` | neon | legacy_scope | platform-iam | neon | remove | 0 | 2 | 0 |
-| legacy.content_item_access_grant | `master.content_item_access_grant` | neon | record_acl | content-platform | neon | merge_into_auth_record_acl | 0 | 2 | 0 |
-| legacy.delegation_grant | `master.delegation_grant` | neon | delegation | platform-iam | neon | normalize | 0 | 2 | 0 |
+| identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 113 | 15 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 40 | 7 |
+| identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 27 | 0 |
+| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 107 | 14 |
+| identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
+| identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
+| legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 2 | 0 |
+| legacy.attachment_acl | `master.attachment_acl` | neon | record_acl | document-platform | neon | merge_into_auth_record_acl | 0 | 2 | 0 |
+| legacy.business_network | `master.business_network` | neon | legacy_mesh_context | mesh-platform | mesh, neon | remove_from_neon | 0 | 3 | 0 |
+| legacy.business_network_membership | `master.business_network_membership` | neon | legacy_mesh_authorization | mesh-platform | mesh, neon | remove_from_neon | 0 | 2 | 0 |
+| legacy.business_network_membership_role | `master.business_network_membership_role` | neon | legacy_mesh_authorization | mesh-platform | mesh, neon | remove_from_neon | 0 | 2 | 0 |
+| legacy.company_code_access | `master.company_code_access` | neon | legacy_scope | platform-iam | neon | remove | 0 | 4 | 0 |
+| legacy.content_item_access_grant | `master.content_item_access_grant` | neon | record_acl | content-platform | neon | merge_into_auth_record_acl | 0 | 3 | 0 |
+| legacy.delegation_grant | `master.delegation_grant` | neon | delegation | platform-iam | neon | normalize | 0 | 4 | 0 |
 | legacy.group_feature_grant | `master.group_feature_grant` | neon | legacy_entitlement | platform-iam | neon | remove | 0 | 1 | 0 |
-| legacy.permission | `shared.permission` | neon_and_mesh_legacy | permission_catalog | platform-iam | studio, neon, mesh | move_to_control_auth_permission | 0 | 1 | 0 |
-| legacy.permission_category | `shared.permission_category` | neon_and_mesh_legacy | permission_catalog | platform-iam | studio, neon, mesh | move_to_control_auth_permission | 0 | 0 | 0 |
-| legacy.permission_scope_policy | `shared.permission_scope_policy` | neon_and_mesh_legacy | scope | platform-iam | neon | move_to_control_scope_policy | 0 | 0 | 0 |
+| legacy.permission | `shared.permission` | neon_and_mesh_legacy | permission_catalog | platform-iam | studio, neon, mesh | move_to_control_auth_permission | 0 | 4 | 0 |
+| legacy.permission_category | `shared.permission_category` | neon_and_mesh_legacy | permission_catalog | platform-iam | studio, neon, mesh | move_to_control_auth_permission | 0 | 2 | 0 |
+| legacy.permission_scope_policy | `shared.permission_scope_policy` | neon_and_mesh_legacy | scope | platform-iam | neon | move_to_control_scope_policy | 0 | 2 | 0 |
 | legacy.persona | `shared.persona` | neon_and_mesh_legacy | legacy_authorization | platform-iam | studio, neon, mesh | remove | 0 | 2 | 0 |
 | legacy.persona_permission | `shared.persona_permission` | neon_and_mesh_legacy | legacy_authorization | platform-iam | studio, neon, mesh | remove | 0 | 2 | 0 |
-| legacy.plan_feature_access | `shared.plan_feature_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | replace_with_plan_version_feature_access | 0 | 0 | 0 |
-| legacy.plan_module_access | `shared.plan_module_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | replace_with_plan_version_module_access | 0 | 0 | 0 |
-| legacy.plan_permission_access | `shared.plan_permission_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | remove_permission_level_entitlement | 0 | 0 | 0 |
+| legacy.plan_feature_access | `shared.plan_feature_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | replace_with_plan_version_feature_access | 0 | 2 | 0 |
+| legacy.plan_module_access | `shared.plan_module_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | replace_with_plan_version_module_access | 0 | 3 | 0 |
+| legacy.plan_permission_access | `shared.plan_permission_access` | neon_and_mesh_legacy | entitlement | commercial-platform | neon | remove_permission_level_entitlement | 0 | 2 | 0 |
 | legacy.principal_feature_grant | `master.principal_feature_grant` | neon | legacy_entitlement | platform-iam | neon | remove | 0 | 1 | 0 |
-| legacy.principal_persona | `master.principal_persona` | neon | legacy_authorization | platform-iam | studio, neon | remove | 0 | 1 | 0 |
-| legacy.role | `shared.role` | neon_and_mesh_legacy | legacy_authorization | platform-iam | studio, neon, mesh | replace_with_tenant_plane_role | 0 | 0 | 0 |
-| legacy.tenant_admin_grant | `master.tenant_admin_grant` | neon | legacy_plane_admission | platform-iam | studio | replace_with_auth_plane_membership | 0 | 0 | 0 |
-| legacy.tenant_feature_entitlement | `master.tenant_feature_entitlement` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 2 | 0 |
-| legacy.tenant_module_subscription | `master.tenant_module_subscription` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 2 | 0 |
-| legacy.tenant_permission_override | `master.tenant_permission_override` | neon | entitlement_override | commercial-platform | neon | replace_with_feature_entitlement_override | 0 | 0 | 0 |
-| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 1 | 34 | 9 |
-| mesh.account_grant | `mesh.account_grant` | mesh | legacy_authorization | mesh-platform | mesh | replace_with_mesh_local_role_group_model | 0 | 4 | 0 |
+| legacy.principal_persona | `master.principal_persona` | neon | legacy_authorization | platform-iam | studio, neon | remove | 0 | 2 | 0 |
+| legacy.role | `shared.role` | neon_and_mesh_legacy | legacy_authorization | platform-iam | studio, neon, mesh | replace_with_tenant_plane_role | 0 | 2 | 0 |
+| legacy.tenant_admin_grant | `master.tenant_admin_grant` | neon | legacy_plane_admission | platform-iam | studio | replace_with_auth_plane_membership | 0 | 2 | 0 |
+| legacy.tenant_feature_entitlement | `master.tenant_feature_entitlement` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 3 | 0 |
+| legacy.tenant_module_subscription | `master.tenant_module_subscription` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 4 | 0 |
+| legacy.tenant_permission_override | `master.tenant_permission_override` | neon | entitlement_override | commercial-platform | neon | replace_with_feature_entitlement_override | 0 | 2 | 0 |
+| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 1 | 29 | 8 |
+| mesh.account_grant | `mesh.account_grant` | mesh | legacy_authorization | mesh-platform | mesh | replace_with_mesh_local_role_group_model | 0 | 2 | 0 |
 | mesh.attachment_acl | `mesh.attachment_acl` | mesh | record_acl | mesh-platform | mesh | normalize_mesh_locally | 0 | 1 | 0 |
 | mesh.audit.access_decision | `mesh_log.access_decision_log` | mesh | decision_evidence | mesh-platform | mesh | retain | 0 | 0 | 0 |
 | mesh.audit.access_decision.default_partition | `mesh_log.access_decision_log_default` | mesh | decision_evidence_partition | mesh-platform | mesh | retain_with_parent | 0 | 0 | 0 |
 | mesh.audit.attachment_access | `mesh_log.attachment_access_log` | mesh | decision_evidence | mesh-platform | mesh | retain | 0 | 0 | 0 |
 | mesh.audit.attachment_access.default_partition | `mesh_log.attachment_access_log_default` | mesh | decision_evidence_partition | mesh-platform | mesh | retain_with_parent | 0 | 0 | 0 |
 | mesh.audit.security_event | `mesh_log.security_event_log` | mesh | audit | mesh-platform | mesh | retain | 0 | 0 | 0 |
+| mesh.authorization.account_entitlement | `mesh.auth_account_entitlement` | mesh | seed_projection_authority | mesh-platform | mesh | retain_as_compiled_seed_authority_identity | 0 | 2 | 0 |
 | mesh.capture.anomaly_disposition | `mesh_control.authorization_anomaly_disposition` | mesh | authorization_migration_evidence | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 1 | 0 |
 | mesh.capture.checkpoint | `mesh_log.authorization_projection_checkpoint` | mesh | authorization_migration_evidence | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 0 | 0 |
 | mesh.capture.clock | `mesh_log.authorization_capture_clock` | mesh | authorization_migration_evidence | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 1 | 0 |
@@ -135,7 +138,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | mesh.capture.health_view | `mesh_log.v_authorization_capture_health` | mesh | authorization_change_capture | mesh-platform | mesh | recreate_from_mesh_capture_evidence | 0 | 0 | 0 |
 | mesh.capture.migration_run | `mesh_control.authorization_migration_run` | mesh | authorization_migration_control | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 0 | 0 |
 | mesh.capture.snapshot_marker | `mesh_log.authorization_snapshot_marker` | mesh | authorization_migration_evidence | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 0 | 0 |
-| mesh.capture.source_registry | `mesh_control.authorization_capture_source` | mesh | authorization_change_capture | mesh-platform | mesh | retain_through_mesh_migration_observation | 0 | 0 | 0 |
+| mesh.capture.source_registry | `mesh_control.authorization_capture_source` | mesh | authorization_change_capture | mesh-platform | mesh | retain_through_mesh_migration_observation | 0 | 1 | 1 |
 | mesh.capture.transaction | `mesh_log.authorization_change_transaction` | mesh | authorization_migration_evidence | mesh-platform | mesh | preserve_immutable_through_observation | 0 | 0 | 0 |
 | mesh.capture.writer_registry | `mesh_control.authorization_writer_registry` | mesh | authorization_change_capture | mesh-platform | mesh | retain_through_mesh_migration_observation | 0 | 0 | 0 |
 | mesh.capture.writer_view | `mesh_log.v_authorization_writer_telemetry` | mesh | authorization_change_capture | mesh-platform | mesh | recreate_from_mesh_capture_evidence | 0 | 0 | 0 |
@@ -143,34 +146,34 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | mesh.conversation_participant | `mesh.conversation_participant` | mesh | conversation_acl | mesh-platform | mesh | keep_mesh_local_authorization_source | 0 | 1 | 0 |
 | mesh.function.grant_fingerprint | `mesh.fn_account_grant_fingerprint` | mesh | authorization_cache | mesh-platform | mesh | replace_with_authorization_fingerprint | 0 | 0 | 0 |
 | mesh.function.grant_revoke | `mesh.fn_account_grant_revoke_hook` | mesh | authorization_change_hook | mesh-platform | mesh | replace_with_mesh_local_change_capture | 0 | 0 | 0 |
-| mesh.identity.binding | `mesh.principal_identity_binding` | mesh | identity_binding | mesh-platform | mesh | keep_mesh_only | 0 | 5 | 0 |
-| mesh.identity.principal | `mesh.principal` | mesh | identity | mesh-platform | mesh | keep_mesh_only | 0 | 5 | 0 |
-| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 35 | 9 |
+| mesh.identity.binding | `mesh.principal_identity_binding` | mesh | identity_binding | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
+| mesh.identity.principal | `mesh.principal` | mesh | identity | mesh-platform | mesh | keep_mesh_only | 0 | 2 | 0 |
+| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 35 | 8 |
 | mesh.rollout.feature_flag | `mesh_control.feature_flag` | mesh | rollout_control | mesh-platform | mesh | keep_mesh_only | 0 | 0 | 0 |
-| metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 7 | 1 |
-| metadata.entity_action_rule | `control.entity_action_rule` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 2 | 0 |
-| metadata.entity_field | `control.entity_field` | neon | field_authorization_metadata | metadata-platform | studio, neon | normalize_security_references | 0 | 0 | 0 |
-| metadata.entity_flow | `control.entity_flow` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 3 | 0 |
-| metadata.entity_flow_step | `control.entity_flow_step` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 2 | 0 |
-| metadata.entity_lifecycle | `control.entity_lifecycle` | neon | authorization_metadata | workflow-platform | neon | keep_canonical_entity_lifecycle_binding | 0 | 2 | 0 |
-| metadata.entity_lifecycle_state_mask | `control.entity_lifecycle_state_mask` | neon | authorization_guard | workflow-platform | neon | normalize_as_non_granting_state_capability_guard | 0 | 0 | 0 |
+| metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 3 | 0 |
+| metadata.entity_action_rule | `control.entity_action_rule` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 1 | 0 |
+| metadata.entity_field | `control.entity_field` | neon | field_authorization_metadata | metadata-platform | studio, neon | normalize_security_references | 0 | 1 | 0 |
+| metadata.entity_flow | `control.entity_flow` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 2 | 0 |
+| metadata.entity_flow_step | `control.entity_flow_step` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 1 | 0 |
+| metadata.entity_lifecycle | `control.entity_lifecycle` | neon | authorization_metadata | workflow-platform | neon | keep_canonical_entity_lifecycle_binding | 0 | 1 | 0 |
+| metadata.entity_lifecycle_state_mask | `control.entity_lifecycle_state_mask` | neon | authorization_guard | workflow-platform | neon | normalize_as_non_granting_state_capability_guard | 0 | 1 | 0 |
 | metadata.entity_operation | `control.entity_operation` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 4 | 0 |
-| metadata.entity_policy | `control.entity_policy` | neon | resource_policy | policy-platform | neon | keep_as_non_granting_guard | 0 | 2 | 4 |
-| metadata.entity_relation | `control.entity_relation` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 2 | 0 |
-| metadata.entity_surface | `control.entity_surface` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 2 | 0 |
+| metadata.entity_policy | `control.entity_policy` | neon | resource_policy | policy-platform | neon | keep_as_non_granting_guard | 0 | 1 | 0 |
+| metadata.entity_relation | `control.entity_relation` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 1 | 0 |
+| metadata.entity_surface | `control.entity_surface` | neon | authorization_metadata | metadata-platform | studio, neon | normalize_permission_references | 0 | 1 | 0 |
 | metadata.entity_version | `control.entity_version` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_versioned_contract | 0 | 3 | 1 |
 | metadata.entity_version_contract | `control.entity_version_contract` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_contract | 0 | 0 | 0 |
-| metadata.field_security_policy | `control.field_security_policy` | neon | field_authorization | policy-platform | neon | normalize_permission_references | 0 | 3 | 1 |
-| metadata.lifecycle | `control.lifecycle` | neon | authorization_metadata | workflow-platform | neon | keep_as_non_granting_workflow_context | 0 | 1 | 0 |
-| metadata.lifecycle_state | `control.lifecycle_state` | neon | authorization_metadata | workflow-platform | neon | keep_as_non_granting_workflow_context | 0 | 0 | 0 |
-| metadata.lifecycle_transition | `control.lifecycle_transition` | neon | authorization_metadata | workflow-platform | neon | bind_exact_permission_id | 0 | 2 | 0 |
-| metadata.lifecycle_transition_gate | `control.lifecycle_transition_gate` | neon | authorization_guard | workflow-platform | neon | normalize_as_non_granting_transition_guard | 0 | 0 | 0 |
-| metadata.permission_alias | `control.permission_alias` | neon | compatibility | platform-iam | studio, neon | remove_after_shadow | 0 | 0 | 0 |
-| migration.anomaly_disposition | `control.authorization_anomaly_disposition` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_as_migration_evidence | 0 | 1 | 0 |
-| migration.capture_clock | `event.authorization_capture_clock` | neon_and_mesh_migration | durable_source_watermark | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 1 | 0 |
-| migration.capture_source | `control.authorization_capture_source` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 0 | 0 |
-| migration.change_event | `event.authorization_change_event` | neon_and_mesh_migration | authorization_change_capture | platform-iam | studio, neon, mesh | retain_per_approved_migration_evidence_policy | 0 | 0 | 0 |
-| migration.change_transaction | `event.authorization_change_transaction` | neon_and_mesh_migration | authorization_change_capture | platform-iam | studio, neon, mesh | retain_per_approved_migration_evidence_policy | 0 | 0 | 0 |
+| metadata.field_security_policy | `control.field_security_policy` | neon | field_authorization | policy-platform | neon | normalize_permission_references | 0 | 1 | 0 |
+| metadata.lifecycle | `control.lifecycle` | neon | authorization_metadata | workflow-platform | neon | keep_as_non_granting_workflow_context | 0 | 2 | 0 |
+| metadata.lifecycle_state | `control.lifecycle_state` | neon | authorization_metadata | workflow-platform | neon | keep_as_non_granting_workflow_context | 0 | 1 | 0 |
+| metadata.lifecycle_transition | `control.lifecycle_transition` | neon | authorization_metadata | workflow-platform | neon | bind_exact_permission_id | 0 | 1 | 0 |
+| metadata.lifecycle_transition_gate | `control.lifecycle_transition_gate` | neon | authorization_guard | workflow-platform | neon | normalize_as_non_granting_transition_guard | 0 | 1 | 0 |
+| metadata.permission_alias | `control.permission_alias` | neon | compatibility | platform-iam | studio, neon | remove_after_shadow | 0 | 2 | 0 |
+| migration.anomaly_disposition | `control.authorization_anomaly_disposition` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_as_migration_evidence | 0 | 2 | 0 |
+| migration.capture_clock | `event.authorization_capture_clock` | neon_and_mesh_migration | durable_source_watermark | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 2 | 0 |
+| migration.capture_source | `control.authorization_capture_source` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 2 | 1 |
+| migration.change_event | `event.authorization_change_event` | neon_and_mesh_migration | authorization_change_capture | platform-iam | studio, neon, mesh | retain_per_approved_migration_evidence_policy | 0 | 1 | 0 |
+| migration.change_transaction | `event.authorization_change_transaction` | neon_and_mesh_migration | authorization_change_capture | platform-iam | studio, neon, mesh | retain_per_approved_migration_evidence_policy | 0 | 1 | 0 |
 | migration.function.capture_row_trigger | `event.trg_capture_authorization_change` | neon_and_mesh_migration | authorization_change_capture_trigger | platform-iam | studio, neon, mesh | remove_after_all_legacy_writers_are_retired | 0 | 0 | 0 |
 | migration.function.capture_truncate_trigger | `event.trg_capture_authorization_truncate` | neon_and_mesh_migration | authorization_change_capture_trigger | platform-iam | studio, neon, mesh | remove_after_all_legacy_writers_are_retired | 0 | 0 | 0 |
 | migration.function.immutable_event_trigger | `event.trg_authorization_change_event_immutable` | neon_and_mesh_migration | authorization_change_capture_invariant | platform-iam | studio, neon, mesh | retain_with_change_capture | 0 | 0 | 0 |
@@ -183,13 +186,13 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | migration.function.transaction_guard_trigger | `event.trg_authorization_change_transaction_guard` | neon_and_mesh_migration | authorization_change_capture_invariant | platform-iam | studio, neon, mesh | retain_with_change_capture | 0 | 0 | 0 |
 | migration.function.watermark | `event.fn_authorization_capture_watermark` | neon_and_mesh_migration | durable_source_watermark | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 0 | 0 |
 | migration.health_view | `event.v_authorization_capture_health` | neon_and_mesh_migration | migration_telemetry | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 0 | 0 |
-| migration.projection_checkpoint | `event.authorization_projection_checkpoint` | neon_and_mesh_migration | authorization_projection_control | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 0 | 0 |
-| migration.run | `control.authorization_migration_run` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_as_migration_evidence | 0 | 0 | 0 |
-| migration.snapshot_marker | `event.authorization_snapshot_marker` | neon_and_mesh_migration | authorization_snapshot_control | platform-iam | studio, neon, mesh | retain_as_snapshot_and_cutover_evidence | 0 | 0 | 0 |
+| migration.projection_checkpoint | `event.authorization_projection_checkpoint` | neon_and_mesh_migration | authorization_projection_control | platform-iam | studio, neon, mesh | retain_until_all_consumers_retired | 0 | 1 | 0 |
+| migration.run | `control.authorization_migration_run` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_as_migration_evidence | 0 | 1 | 0 |
+| migration.snapshot_marker | `event.authorization_snapshot_marker` | neon_and_mesh_migration | authorization_snapshot_control | platform-iam | studio, neon, mesh | retain_as_snapshot_and_cutover_evidence | 0 | 1 | 0 |
 | migration.telemetry_view | `event.v_authorization_legacy_write_telemetry` | neon_and_mesh_migration | migration_telemetry | platform-iam | studio, neon, mesh | retain_through_post_cutover_observation | 0 | 0 | 0 |
-| migration.writer_registry | `control.authorization_writer_registry` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 0 | 0 |
-| rollout.feature_flag | `control.feature_flag` | neon | rollout_control | platform-runtime | studio, neon | keep | 0 | 0 | 0 |
-| support.session | `ai.atlas_support_session` | neon | delegated_support_access | ai-platform | studio | keep_bounded_by_new_evaluator | 0 | 3 | 0 |
+| migration.writer_registry | `control.authorization_writer_registry` | neon_and_mesh_migration | migration_control | platform-iam | studio, neon, mesh | retain_through_authorization_cutover_and_observation | 0 | 1 | 0 |
+| rollout.feature_flag | `control.feature_flag` | neon | rollout_control | platform-runtime | studio, neon | keep | 0 | 1 | 0 |
+| support.session | `ai.atlas_support_session` | neon | delegated_support_access | ai-platform | studio | keep_bounded_by_new_evaluator | 0 | 5 | 0 |
 | support.session_audit | `ai.atlas_support_session_audit` | neon | audit | ai-platform | studio | retain | 0 | 0 | 0 |
 | wave1.mesh.function.mesh_control.authorization_v2_is_effective | `mesh_control.authorization_v2_is_effective` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.function.mesh_control.authorization_v2_owner_aligned | `mesh_control.authorization_v2_owner_aligned` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -253,18 +256,18 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.mesh.function.mesh.trg_auth_v2_lifecycle_guard | `mesh.trg_auth_v2_lifecycle_guard` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.function.mesh.trg_auth_v2_retention_guard | `mesh.trg_auth_v2_retention_guard` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.auth_catalog_owner | `mesh_control.auth_catalog_owner` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.auth_permission | `mesh_control.auth_permission` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.auth_permission | `mesh_control.auth_permission` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.auth_permission_category | `mesh_control.auth_permission_category` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.auth_permission_plane | `mesh_control.auth_permission_plane` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.auth_permission_plane | `mesh_control.auth_permission_plane` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.auth_permission_scope_policy | `mesh_control.auth_permission_scope_policy` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.auth_plane | `mesh_control.auth_plane` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.authorization_v2_conservation_ledger | `mesh_control.authorization_v2_conservation_ledger` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.authorization_v2_deferred_constraint_registry | `mesh_control.authorization_v2_deferred_constraint_registry` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.authorization_v2_expand_installation | `mesh_control.authorization_v2_expand_installation` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.authorization_v2_frozen_legacy_object | `mesh_control.authorization_v2_frozen_legacy_object` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.authorization_v2_transformer_registry | `mesh_control.authorization_v2_transformer_registry` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.table.mesh_control.authorization_v2_conservation_ledger | `mesh_control.authorization_v2_conservation_ledger` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.authorization_v2_deferred_constraint_registry | `mesh_control.authorization_v2_deferred_constraint_registry` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.authorization_v2_expand_installation | `mesh_control.authorization_v2_expand_installation` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.authorization_v2_frozen_legacy_object | `mesh_control.authorization_v2_frozen_legacy_object` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh_control.authorization_v2_transformer_registry | `mesh_control.authorization_v2_transformer_registry` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
 | wave1.mesh.table.mesh_control.entity | `mesh_control.entity` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh_control.entity_operation | `mesh_control.entity_operation` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 3 | 0 |
+| wave1.mesh.table.mesh_control.entity_operation | `mesh_control.entity_operation` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.entity_operation_plane | `mesh_control.entity_operation_plane` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.entity_scope_binding | `mesh_control.entity_scope_binding` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_control.entity_version | `mesh_control.entity_version` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -279,29 +282,29 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.mesh.table.mesh_log.authorization_v2_replay_inbox | `mesh_log.authorization_v2_replay_inbox` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh_log.authorization_v2_replay_transaction | `mesh_log.authorization_v2_replay_transaction` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.account_entitlement_override | `mesh.account_entitlement_override` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh.auth_delegation | `mesh.auth_delegation` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 2 | 0 |
+| wave1.mesh.table.mesh.auth_delegation | `mesh.auth_delegation` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_delegation_permission | `mesh.auth_delegation_permission` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_delegation_permission_scope | `mesh.auth_delegation_permission_scope` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh.auth_deny_rule | `mesh.auth_deny_rule` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh.auth_deny_rule | `mesh.auth_deny_rule` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_deny_rule_group | `mesh.auth_deny_rule_group` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_deny_rule_hard_policy | `mesh.auth_deny_rule_hard_policy` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_deny_rule_principal | `mesh.auth_deny_rule_principal` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_group_member_v2 | `mesh.auth_group_member_v2` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_group_role_v2 | `mesh.auth_group_role_v2` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_group_v2 | `mesh.auth_group_v2` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh.auth_override | `mesh.auth_override` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh.auth_override | `mesh.auth_override` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_permission_set | `mesh.auth_permission_set` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_permission_set_rule | `mesh.auth_permission_set_rule` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh.auth_plane_membership | `mesh.auth_plane_membership` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 3 | 0 |
-| wave1.mesh.table.mesh.auth_record_acl | `mesh.auth_record_acl` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 2 | 0 |
-| wave1.mesh.table.mesh.auth_record_acl_permission | `mesh.auth_record_acl_permission` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.table.mesh.auth_plane_membership | `mesh.auth_plane_membership` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.table.mesh.auth_record_acl | `mesh.auth_record_acl` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.table.mesh.auth_record_acl_permission | `mesh.auth_record_acl_permission` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_role | `mesh.auth_role` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_role_compilation | `mesh.auth_role_compilation` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_role_permission | `mesh.auth_role_permission` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_role_permission_set | `mesh.auth_role_permission_set` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.table.mesh.auth_scope_account | `mesh.auth_scope_account` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 2 | 0 |
-| wave1.mesh.table.mesh.auth_scope_network_relationship | `mesh.auth_scope_network_relationship` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 2 | 0 |
-| wave1.mesh.table.mesh.auth_scope_resource | `mesh.auth_scope_resource` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 2 | 0 |
+| wave1.mesh.table.mesh.auth_scope_account | `mesh.auth_scope_account` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.table.mesh.auth_scope_network_relationship | `mesh.auth_scope_network_relationship` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.table.mesh.auth_scope_resource | `mesh.auth_scope_resource` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.table.mesh.auth_scope_target | `mesh.auth_scope_target` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh_control.v_authorization_v2_operation_publication | `mesh_control.v_authorization_v2_operation_publication` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh_log.v_auth_decision_evidence_v2 | `mesh_log.v_auth_decision_evidence_v2` | mesh | authorization_decision_evidence | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -310,11 +313,11 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.mesh.view.mesh_log.v_authorization_replay_health_v2 | `mesh_log.v_authorization_replay_health_v2` | mesh | authorization_migration_control | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh.auth_authority_readiness_v | `mesh.auth_authority_readiness_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh.auth_current_delegation_permission_scope_v | `mesh.auth_current_delegation_permission_scope_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.view.mesh.auth_current_group_member_v | `mesh.auth_current_group_member_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.mesh.view.mesh.auth_current_group_role_v | `mesh.auth_current_group_role_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.mesh.view.mesh.auth_current_plane_membership_v | `mesh.auth_current_plane_membership_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.view.mesh.auth_current_group_member_v | `mesh.auth_current_group_member_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.view.mesh.auth_current_group_role_v | `mesh.auth_current_group_role_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.mesh.view.mesh.auth_current_plane_membership_v | `mesh.auth_current_plane_membership_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh.auth_plane_membership_legacy_compare_v | `mesh.auth_plane_membership_legacy_compare_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.mesh.view.mesh.auth_published_role_permission_v | `mesh.auth_published_role_permission_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.mesh.view.mesh.auth_published_role_permission_v | `mesh.auth_published_role_permission_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.mesh.view.mesh.auth_scope_target_resolved_v | `mesh.auth_scope_target_resolved_v` | mesh | canonical_authorization_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.function.control.authorization_v2_catalog_entity_aligned | `control.authorization_v2_catalog_entity_aligned` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.function.control.authorization_v2_is_effective | `control.authorization_v2_is_effective` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -372,15 +375,15 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.neon.function.master.trg_auth_v2_retention_guard | `master.trg_auth_v2_retention_guard` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.function.master.trg_tenant_entitlement_override_guard | `master.trg_tenant_entitlement_override_guard` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.control.auth_catalog_owner | `control.auth_catalog_owner` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.auth_permission | `control.auth_permission` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 5 | 0 |
-| wave1.neon.table.control.auth_permission_plane | `control.auth_permission_plane` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.control.auth_permission | `control.auth_permission` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 3 | 0 |
+| wave1.neon.table.control.auth_permission_plane | `control.auth_permission_plane` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.control.auth_permission_scope_policy | `control.auth_permission_scope_policy` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.control.auth_plane | `control.auth_plane` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.authorization_v2_conservation_ledger | `control.authorization_v2_conservation_ledger` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.authorization_v2_deferred_constraint_registry | `control.authorization_v2_deferred_constraint_registry` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.authorization_v2_expand_installation | `control.authorization_v2_expand_installation` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.authorization_v2_frozen_legacy_object | `control.authorization_v2_frozen_legacy_object` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.control.authorization_v2_transformer_registry | `control.authorization_v2_transformer_registry` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.table.control.authorization_v2_conservation_ledger | `control.authorization_v2_conservation_ledger` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.control.authorization_v2_deferred_constraint_registry | `control.authorization_v2_deferred_constraint_registry` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.control.authorization_v2_expand_installation | `control.authorization_v2_expand_installation` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.control.authorization_v2_frozen_legacy_object | `control.authorization_v2_frozen_legacy_object` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.control.authorization_v2_transformer_registry | `control.authorization_v2_transformer_registry` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
 | wave1.neon.table.control.entity_operation_plane | `control.entity_operation_plane` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.control.entity_scope_binding | `control.entity_scope_binding` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.event.authorization_global_epoch_v2 | `event.authorization_global_epoch_v2` | neon | authorization_v2_runtime | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -393,30 +396,30 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.neon.table.event.authorization_v2_replay_transaction | `event.authorization_v2_replay_transaction` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.log.auth_decision_evidence_v2 | `log.auth_decision_evidence_v2` | neon | authorization_decision_evidence | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.log.auth_decision_evidence_v2_default | `log.auth_decision_evidence_v2_default` | neon | authorization_decision_evidence | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_delegation | `master.auth_delegation` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.master.auth_delegation | `master.auth_delegation` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_delegation_permission | `master.auth_delegation_permission` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_delegation_permission_scope | `master.auth_delegation_permission_scope` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_deny_rule | `master.auth_deny_rule` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.master.auth_deny_rule | `master.auth_deny_rule` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_deny_rule_group | `master.auth_deny_rule_group` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_deny_rule_hard_policy | `master.auth_deny_rule_hard_policy` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_deny_rule_principal | `master.auth_deny_rule_principal` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_group_member_v2 | `master.auth_group_member_v2` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_group_role_v2 | `master.auth_group_role_v2` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_group_v2 | `master.auth_group_v2` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_override | `master.auth_override` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.master.auth_override | `master.auth_override` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_permission_set | `master.auth_permission_set` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_permission_set_rule | `master.auth_permission_set_rule` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_plane_membership | `master.auth_plane_membership` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 3 | 1 |
-| wave1.neon.table.master.auth_record_acl | `master.auth_record_acl` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.table.master.auth_record_acl_permission | `master.auth_record_acl_permission` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.table.master.auth_role | `master.auth_role` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 4 | 1 |
+| wave1.neon.table.master.auth_plane_membership | `master.auth_plane_membership` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.table.master.auth_record_acl | `master.auth_record_acl` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.table.master.auth_record_acl_permission | `master.auth_record_acl_permission` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.table.master.auth_role | `master.auth_role` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
 | wave1.neon.table.master.auth_role_compilation | `master.auth_role_compilation` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_role_permission | `master.auth_role_permission` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 3 | 1 |
+| wave1.neon.table.master.auth_role_permission | `master.auth_role_permission` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
 | wave1.neon.table.master.auth_role_permission_set | `master.auth_role_permission_set` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_scope_company | `master.auth_scope_company` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_scope_legal_entity | `master.auth_scope_legal_entity` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.auth_scope_operating_organization | `master.auth_scope_operating_organization` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave1.neon.table.master.auth_scope_target | `master.auth_scope_target` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 6 | 1 |
+| wave1.neon.table.master.auth_scope_target | `master.auth_scope_target` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
 | wave1.neon.table.master.auth_scope_tenant | `master.auth_scope_tenant` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.master.tenant_entitlement_override | `master.tenant_entitlement_override` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.table.shared.auth_permission_category | `shared.auth_permission_category` | neon | canonical_authorization_catalog | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
@@ -425,10 +428,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave1.neon.view.event.v_authorization_invalidation_health_v2 | `event.v_authorization_invalidation_health_v2` | neon | authorization_v2_runtime | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.view.event.v_authorization_replay_health_v2 | `event.v_authorization_replay_health_v2` | neon | authorization_migration_control | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.view.master.auth_current_delegation_permission_scope_v | `master.auth_current_delegation_permission_scope_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.view.master.auth_current_group_member_v | `master.auth_current_group_member_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.view.master.auth_current_group_role_v | `master.auth_current_group_role_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.view.master.auth_current_plane_membership_v | `master.auth_current_plane_membership_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave1.neon.view.master.auth_published_role_permission_v | `master.auth_published_role_permission_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 1 | 0 |
+| wave1.neon.view.master.auth_current_group_member_v | `master.auth_current_group_member_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.view.master.auth_current_group_role_v | `master.auth_current_group_role_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.view.master.auth_current_plane_membership_v | `master.auth_current_plane_membership_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave1.neon.view.master.auth_published_role_permission_v | `master.auth_published_role_permission_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave1.neon.view.master.auth_scope_target_resolved_v | `master.auth_scope_target_resolved_v` | neon | canonical_authorization_authority | platform-iam | studio, neon | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave2.mesh.table.mesh_control.auth_catalog_reference_v2 | `mesh_control.auth_catalog_reference_v2` | mesh | canonical_authorization_catalog | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave2.mesh.table.mesh_control.auth_permission_alias_v2 | `mesh_control.auth_permission_alias_v2` | mesh | authorization_migration_control | mesh-platform | mesh | remove_after_certified_catalog_cutover | 0 | 0 | 0 |
@@ -448,8 +451,8 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | wave4.mesh.table.mesh.account_entitlement | `mesh.account_entitlement` | mesh | canonical_entitlement_authority | mesh-platform | mesh | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave4.neon.function.control.resolve_admin_permission_entitlement | `control.resolve_admin_permission_entitlement` | neon | canonical_entitlement_evaluator | platform-iam | studio | promote_after_certified_cutover | 0 | 0 | 0 |
 | wave4.neon.function.master.resolve_neon_permission_entitlement | `master.resolve_neon_permission_entitlement` | neon | canonical_entitlement_evaluator | platform-iam | neon | promote_after_certified_cutover | 0 | 0 | 0 |
-| wave4.neon.table.control.auth_admin_entitlement_policy | `control.auth_admin_entitlement_policy` | neon | canonical_entitlement_policy | platform-iam | studio | promote_after_certified_cutover | 0 | 1 | 0 |
-| wave4.neon.table.control.auth_entitlement_target_policy | `control.auth_entitlement_target_policy` | neon | canonical_entitlement_policy | platform-iam | neon | promote_after_certified_cutover | 0 | 3 | 0 |
+| wave4.neon.table.control.auth_admin_entitlement_policy | `control.auth_admin_entitlement_policy` | neon | canonical_entitlement_policy | platform-iam | studio | promote_after_certified_cutover | 0 | 0 | 0 |
+| wave4.neon.table.control.auth_entitlement_target_policy | `control.auth_entitlement_target_policy` | neon | canonical_entitlement_policy | platform-iam | neon | promote_after_certified_cutover | 0 | 2 | 0 |
 | wave4.neon.table.control.authorization_v4_access_grant_disposition | `control.authorization_v4_access_grant_disposition` | neon | authorization_migration_control | platform-iam | studio, neon | retain_as_migration_evidence | 0 | 0 | 0 |
 | wave4.neon.table.control.authorization_v4_feature_grant_disposition | `control.authorization_v4_feature_grant_disposition` | neon | authorization_migration_control | platform-iam | studio, neon | retain_as_migration_evidence | 0 | 0 | 0 |
 | wave4.neon.table.control.authorization_v4_role_deny_disposition | `control.authorization_v4_role_deny_disposition` | neon | authorization_migration_control | platform-iam | studio, neon | retain_as_migration_evidence | 0 | 0 | 0 |
@@ -508,54 +511,65 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 
 | Kind | Exact identity | Classification | Owner | Disposition | Source | Dependencies |
 |---|---|---|---|---|---|---|
-| trigger | `audit.authorization_decision_evidence.trg_authorization_decision_05_prepare` | unclassified | — | requires_review | server/db/ddl/common/audit/08_triggers.sql:37 | — |
-| trigger | `audit.authorization_decision_evidence.trg_authorization_decision_immutable` | unclassified | — | requires_review | server/db/ddl/common/audit/08_triggers.sql:41 | — |
+| table | `audit.authorization_decision_d` | structural_dependency | audit-platform | review_with_registered_dependency | server/db/ddl/common/audit/02_domains.sql:74 | — |
+| table | `audit.authorization_decision_evidence` | structural_dependency | audit-platform | review_with_registered_dependency | server/db/ddl/common/audit/03_tables.sql:219 | — |
+| table | `audit.authorization_decision_evidence_default` | structural_dependency | audit-platform | review_with_registered_dependency | server/db/ddl/common/audit/03_tables.sql:309 | — |
+| trigger | `audit.authorization_decision_evidence.trg_authorization_decision_05_prepare` | structural_dependency | audit-platform | review_with_registered_dependency | server/db/ddl/common/audit/08_triggers.sql:37 | — |
+| trigger | `audit.authorization_decision_evidence.trg_authorization_decision_immutable` | structural_dependency | audit-platform | review_with_registered_dependency | server/db/ddl/common/audit/08_triggers.sql:41 | — |
 | function | `audit.trg_prepare_audit_log` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:117 | `master.principal` |
 | function | `audit.trg_prepare_authorization_decision` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:603 | `master.principal` |
 | function | `audit.trg_prepare_security_event` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:659 | `master.principal` |
-| trigger | `authz.delegation_grant.trg_delegation_grant_10_validate` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:278 | — |
-| trigger | `authz.delegation_grant.trg_delegation_grant_20_parent_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:282 | — |
-| trigger | `authz.delegation.trg_delegation_10_normalize` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:241 | — |
-| trigger | `authz.delegation.trg_delegation_20_identity_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:247 | — |
-| trigger | `authz.delegation.trg_delegation_21_natural_key_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:251 | — |
-| trigger | `authz.delegation.trg_delegation_30_active_subject` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:255 | — |
-| trigger | `authz.delegation.trg_delegation_35_audit_evidence` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:392 | — |
-| trigger | `authz.delegation.trg_delegation_40_status_transition` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:261 | — |
-| trigger | `authz.delegation.trg_delegation_50_status_changed` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:270 | — |
-| trigger | `authz.delegation.trg_delegation_60_updated_at` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:274 | — |
-| trigger | `authz.delegation.trg_delegation_90_delete_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:437 | — |
-| function | `authz.fn_internal_permission_is_assignable_at_scope` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:390 | — |
-| function | `authz.fn_permission_is_assignable_at_scope` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:424 | — |
+| table | `authz.acl_status_d` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/02_domains.sql:147 | — |
+| table | `authz.delegation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:380 | — |
+| table | `authz.delegation_grant` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:454 | — |
+| trigger | `authz.delegation_grant.trg_delegation_grant_10_validate` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:278 | — |
+| trigger | `authz.delegation_grant.trg_delegation_grant_20_parent_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:282 | — |
+| trigger | `authz.delegation.trg_delegation_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:241 | — |
+| trigger | `authz.delegation.trg_delegation_20_identity_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:247 | — |
+| trigger | `authz.delegation.trg_delegation_21_natural_key_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:251 | — |
+| trigger | `authz.delegation.trg_delegation_30_active_subject` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:255 | — |
+| trigger | `authz.delegation.trg_delegation_35_audit_evidence` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:392 | — |
+| trigger | `authz.delegation.trg_delegation_40_status_transition` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:261 | — |
+| trigger | `authz.delegation.trg_delegation_50_status_changed` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:270 | — |
+| trigger | `authz.delegation.trg_delegation_60_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:274 | — |
+| trigger | `authz.delegation.trg_delegation_90_delete_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:437 | — |
+| function | `authz.fn_internal_permission_is_assignable_at_scope` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:390 | — |
+| function | `authz.fn_permission_is_assignable_at_scope` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:424 | — |
 | function | `authz.fn_reconcile_expired_authority` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:1318 | `master.principal` |
 | function | `authz.fn_stage_application_projection` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:1414 | `master.tenant` |
-| trigger | `authz.permission_scope_kind.trg_permission_scope_kind_50_updated_at` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:23 | — |
-| trigger | `authz.permission.trg_permission_10_normalize` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:2 | — |
-| trigger | `authz.permission.trg_permission_20_definition_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:7 | — |
-| trigger | `authz.permission.trg_permission_30_status_transition` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:11 | — |
-| trigger | `authz.permission.trg_permission_35_audit_evidence` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:360 | — |
-| trigger | `authz.permission.trg_permission_40_status_changed` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:15 | — |
-| trigger | `authz.permission.trg_permission_50_updated_at` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:19 | — |
-| trigger | `authz.permission.trg_permission_90_delete_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:405 | — |
-| trigger | `authz.record_acl.trg_record_acl_10_normalize` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:322 | — |
-| trigger | `authz.record_acl.trg_record_acl_20_identity_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:327 | — |
-| trigger | `authz.record_acl.trg_record_acl_21_natural_key_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:331 | — |
-| trigger | `authz.record_acl.trg_record_acl_30_validate_permission` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:335 | — |
-| trigger | `authz.record_acl.trg_record_acl_31_active_subject` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:340 | — |
-| trigger | `authz.record_acl.trg_record_acl_35_audit_evidence` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:400 | — |
-| trigger | `authz.record_acl.trg_record_acl_40_status_transition` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:347 | — |
-| trigger | `authz.record_acl.trg_record_acl_50_status_changed` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:351 | — |
-| trigger | `authz.record_acl.trg_record_acl_60_updated_at` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:355 | — |
-| trigger | `authz.record_acl.trg_record_acl_90_delete_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:445 | — |
-| trigger | `authz.role_permission.trg_role_permission_10_identity_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:113 | — |
-| trigger | `authz.role_permission.trg_role_permission_20_parent_guard` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:117 | — |
-| trigger | `authz.role_permission.trg_role_permission_50_updated_at` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:121 | — |
-| function | `authz.trg_guard_delegation_grant` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:952 | — |
-| function | `authz.trg_guard_permission_definition` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:200 | — |
-| function | `authz.trg_guard_role_permission` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:536 | — |
+| table | `authz.permission` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:5 | — |
+| table | `authz.permission_kind_d` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/02_domains.sql:12 | — |
+| table | `authz.permission_scope_kind` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:40 | — |
+| trigger | `authz.permission_scope_kind.trg_permission_scope_kind_50_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:23 | — |
+| trigger | `authz.permission.trg_permission_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:2 | — |
+| trigger | `authz.permission.trg_permission_20_definition_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:7 | — |
+| trigger | `authz.permission.trg_permission_30_status_transition` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:11 | — |
+| trigger | `authz.permission.trg_permission_35_audit_evidence` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:360 | — |
+| trigger | `authz.permission.trg_permission_40_status_changed` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:15 | — |
+| trigger | `authz.permission.trg_permission_50_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:19 | — |
+| trigger | `authz.permission.trg_permission_90_delete_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:405 | — |
+| table | `authz.record_acl` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:537 | — |
+| trigger | `authz.record_acl.trg_record_acl_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:322 | — |
+| trigger | `authz.record_acl.trg_record_acl_20_identity_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:327 | — |
+| trigger | `authz.record_acl.trg_record_acl_21_natural_key_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:331 | — |
+| trigger | `authz.record_acl.trg_record_acl_30_validate_permission` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:335 | — |
+| trigger | `authz.record_acl.trg_record_acl_31_active_subject` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:340 | — |
+| trigger | `authz.record_acl.trg_record_acl_35_audit_evidence` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:400 | — |
+| trigger | `authz.record_acl.trg_record_acl_40_status_transition` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:347 | — |
+| trigger | `authz.record_acl.trg_record_acl_50_status_changed` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:351 | — |
+| trigger | `authz.record_acl.trg_record_acl_60_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:355 | — |
+| trigger | `authz.record_acl.trg_record_acl_90_delete_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:445 | — |
+| table | `authz.role_permission` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/03_tables.sql:192 | — |
+| trigger | `authz.role_permission.trg_role_permission_10_identity_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:113 | — |
+| trigger | `authz.role_permission.trg_role_permission_20_parent_guard` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:117 | — |
+| trigger | `authz.role_permission.trg_role_permission_50_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:121 | — |
+| function | `authz.trg_guard_delegation_grant` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:952 | — |
+| function | `authz.trg_guard_permission_definition` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:200 | — |
+| function | `authz.trg_guard_role_permission` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:536 | — |
 | function | `authz.trg_validate_active_subject` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:841 | `master.principal`<br>`master.tenant` |
 | function | `authz.trg_validate_delegation_activation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:992 | `master.principal` |
 | function | `authz.trg_validate_group_member` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:704 | `master.principal` |
-| function | `authz.trg_validate_permission_publish` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:244 | — |
+| function | `authz.trg_validate_permission_publish` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:244 | — |
 | function | `control.fn_provision_external_workforce_exchange` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:695 | `master.principal`<br>`mesh.network_account` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:1 | `master.tenant` |
@@ -565,16 +579,17 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `document.fn_business_partner_request_approvers` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3941 | `master.company_code`<br>`master.operating_organization`<br>`master.principal` |
 | function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:145 | `master.tenant` |
 | function | `document.fn_workforce_request_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3144 | `master.principal` |
-| trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:69 | — |
-| trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:96 | — |
-| function | `event.fn_authorization_bump_epoch` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:118 | — |
-| function | `event.fn_authorization_claim_invalidations` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:212 | — |
-| function | `event.fn_authorization_complete_invalidation` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:236 | — |
-| function | `event.fn_authorization_emit_invalidation` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:171 | — |
-| function | `event.fn_authorization_fail_invalidation` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:248 | — |
+| table | `event.authorization_invalidation_outbox` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/03_tables.sql:409 | — |
+| trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:69 | — |
+| trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:96 | — |
+| function | `event.fn_authorization_bump_epoch` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:118 | — |
+| function | `event.fn_authorization_claim_invalidations` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:212 | — |
+| function | `event.fn_authorization_complete_invalidation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:236 | — |
+| function | `event.fn_authorization_emit_invalidation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:171 | — |
+| function | `event.fn_authorization_fail_invalidation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:248 | — |
 | function | `event.fn_notification_worker_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:326 | `master.principal` |
-| function | `event.trg_authorization_invalidation_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:50 | — |
-| function | `event.trg_capture_authorization_invalidation` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:457 | — |
+| function | `event.trg_authorization_invalidation_immutable` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:50 | — |
+| function | `event.trg_capture_authorization_invalidation` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/08_triggers.sql:457 | — |
 | trigger | `master.company_code.trg_company_code_identity_immutable` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:359 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_status_changed` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:361 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_updated_at` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:363 | `master.company_code` |
@@ -582,6 +597,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:854 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:899 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:892 | `master.principal`<br>`master.principal_identity_binding` |
+| table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/02_domains.sql:36 | — |
+| table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/02_domains.sql:38 | — |
+| table | `master.identity_provider_d` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/02_domains.sql:47 | — |
 | trigger | `master.legal_entity.trg_legal_entity_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:353 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:347 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:349 | `master.legal_entity` |
@@ -590,7 +608,6 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1557 | `master.legal_entity` |
 | trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1563 | `master.legal_entity` |
 | view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/09_views.sql:26 | `master.company_code` |
-| view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql:26 | `master.company_code` |
 | trigger | `master.operating_organization.trg_operating_organization_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:379 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:373 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:375 | `master.operating_organization` |
@@ -684,9 +701,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:164 | `master.tenant_relationship` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:205 | `master.tenant_relationship` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:202 | `master.tenant_relationship` |
-| function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/mesh/master/07_functions.sql:729 | — |
-| function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/neon/master/07_functions.sql:774 | — |
-| function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/studio/master/07_functions.sql:767 | — |
+| function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:729 | — |
+| function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:774 | — |
+| function | `master.trg_normalize_principal_identity_binding` | structural_dependency | commercial-platform+content-platform+document-platform+finance-platform+mesh-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:767 | — |
 | function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4891 | `master.tenant` |
 | function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3790 | `master.operating_organization` |
 | function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4038 | `master.company_code` |
@@ -734,243 +751,68 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `mesh.trg_validate_catalog_price` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:159 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_document_envelope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:350 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_profile_trade_role` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:630 | `mesh.network_account` |
-| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_10_graph_guard` | unclassified | — | requires_review | server/db/ddl/planes/studio/metadata/08_triggers.sql:181 | — |
-| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_20_binding` | unclassified | — | requires_review | server/db/ddl/planes/studio/metadata/08_triggers.sql:182 | — |
-| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_90_updated_at` | unclassified | — | requires_review | server/db/ddl/planes/studio/metadata/08_triggers.sql:188 | — |
+| table | `metadata.entity_operation_permission` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/03_tables.sql:946 | — |
+| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_10_graph_guard` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/08_triggers.sql:181 | — |
+| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_20_binding` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/08_triggers.sql:182 | — |
+| trigger | `metadata.entity_operation_permission.trg_entity_operation_permission_90_updated_at` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/planes/studio/metadata/08_triggers.sql:188 | — |
 | function | `onboarding.fn_create_case_with_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/onboarding/07_functions.sql:6 | `master.principal` |
-| trigger | `ops.authorization_operation_cutover_drill.authorization_operation_cutover_drill_immutable` | unclassified | — | requires_review | server/db/ddl/common/ops/08_triggers.sql:9 | — |
-| trigger | `ops.authorization_operation_rollout.authorization_operation_rollout_guard` | unclassified | — | requires_review | server/db/ddl/common/ops/08_triggers.sql:5 | — |
-| trigger | `ops.authorization_parity_certification.authorization_parity_certification_immutable` | unclassified | — | requires_review | server/db/ddl/common/ops/08_triggers.sql:1 | — |
-| trigger | `ops.authorization_shadow_comparison.authorization_shadow_comparison_immutable` | unclassified | — | requires_review | server/db/ddl/common/ops/08_triggers.sql:12 | — |
-| function | `ops.certify_authorization_operation_parity` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:1 | — |
-| function | `ops.set_authorization_operation_rollout` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:36 | — |
-| function | `ops.trg_guard_authorization_operation_cutover_drill` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:89 | — |
-| function | `ops.trg_guard_authorization_parity_certification` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:76 | — |
-| function | `ops.trg_guard_authorization_rollout_write` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:81 | — |
-| function | `ops.trg_guard_authorization_shadow_comparison` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:94 | — |
-| trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:46 | — |
-| function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:107 | — |
+| table | `ops.authorization_operation_cutover_drill` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:95 | — |
+| trigger | `ops.authorization_operation_cutover_drill.authorization_operation_cutover_drill_immutable` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/08_triggers.sql:9 | — |
+| table | `ops.authorization_operation_rollout` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:59 | — |
+| trigger | `ops.authorization_operation_rollout.authorization_operation_rollout_guard` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/08_triggers.sql:5 | — |
+| table | `ops.authorization_parity_certification` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:1 | — |
+| trigger | `ops.authorization_parity_certification.authorization_parity_certification_immutable` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/08_triggers.sql:1 | — |
+| table | `ops.authorization_qualification_cohort_requirement` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:42 | — |
+| table | `ops.authorization_session_shadow_comparison` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:214 | — |
+| table | `ops.authorization_shadow_comparison` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/03_tables.sql:117 | — |
+| trigger | `ops.authorization_shadow_comparison.authorization_shadow_comparison_immutable` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/08_triggers.sql:12 | — |
+| function | `ops.certify_authorization_operation_parity` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:1 | — |
+| function | `ops.set_authorization_operation_rollout` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:36 | — |
+| function | `ops.trg_guard_authorization_operation_cutover_drill` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:89 | — |
+| function | `ops.trg_guard_authorization_parity_certification` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:76 | — |
+| function | `ops.trg_guard_authorization_rollout_write` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:81 | — |
+| function | `ops.trg_guard_authorization_shadow_comparison` | structural_dependency | operations-platform | review_with_registered_dependency | server/db/ddl/common/ops/07_functions.sql:94 | — |
+| table | `runtime_meta.authorization_epoch` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/runtime_meta/03_tables.sql:70 | — |
+| trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/08_triggers.sql:46 | — |
+| function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | structural_dependency | metadata-platform | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:107 | — |
 
 ## Runtime authorization reader and evaluator symbols
 
 | Symbol | Classification | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `authorizeAdmin` | unclassified | runtime | server/packages/platform/ai/src/atlas-experience-routes.ts | 10 |
-| `authorizeDescriptorOperation` | unclassified | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 67, 84, 94, 101, 140, 159, 225, 242, 270, 314 |
-| `authorizeImportMode` | unclassified | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 68, 84, 94, 141, 160, 225, 315 |
-| `authorizeRecordListRead` | unclassified | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 19 |
-| `authorizeRecordListRead` | unclassified | runtime | server/packages/services/records/src/entity-list-service.ts | 28 |
-| `authorizeRecordListRead` | unclassified | runtime | server/packages/services/records/src/query-service.ts | 37 |
-| `authorizeRecordListRead` | unclassified | runtime | server/packages/services/records/src/record-read-access.ts | 5 |
+| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4090 |
+| `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/experience-routes.test.ts | 6 |
+| `authorizeAdmin` | reviewed | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 8, 10 |
+| `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 67, 84, 94, 101, 140, 159, 225, 242, 270, 314 |
+| `authorizeImportMode` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 68, 84, 94, 141, 160, 225, 315 |
+| `authorizeRecordListRead` | reviewed | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 2, 19 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 10, 28 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 7, 37 |
+| `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 5 |
+| `checkAnyPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 936 |
+| `checkPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 936 |
+| `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
+| `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 936 |
 | `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 54, 109 |
-| `requirePermission` | unclassified | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
-| `requirePermission` | unclassified | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
-| `requirePermission` | unclassified | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
-| `requirePermission` | unclassified | runtime | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
-| `requirePermission` | unclassified | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
-| `requirePermission` | unclassified | runtime | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
-| `requirePermission` | unclassified | runtime | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
+| `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
+| `requirePermission` | reviewed | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
+| `requirePermission` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
+| `requirePermission` | reviewed | route | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
+| `resolveAccessibleCompany` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
+| `resolveAccessScope` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
+| `resolveCurrentAuthEpoch` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
 
 ## Unknown source findings
 
-| Type | Identity | Path | Lines |
-|---|---|---|---|
-| database_object | `audit.authorization_decision_evidence.trg_authorization_decision_05_prepare` | server/db/ddl/common/audit/08_triggers.sql | 37 |
-| database_object | `audit.authorization_decision_evidence.trg_authorization_decision_immutable` | server/db/ddl/common/audit/08_triggers.sql | 41 |
-| database_object | `authz.fn_internal_permission_is_assignable_at_scope` | server/db/ddl/common/authz/07_functions.sql | 390 |
-| database_object | `authz.fn_permission_is_assignable_at_scope` | server/db/ddl/common/authz/07_functions.sql | 424 |
-| database_object | `authz.trg_guard_delegation_grant` | server/db/ddl/common/authz/07_functions.sql | 952 |
-| database_object | `authz.trg_guard_permission_definition` | server/db/ddl/common/authz/07_functions.sql | 200 |
-| database_object | `authz.trg_guard_role_permission` | server/db/ddl/common/authz/07_functions.sql | 536 |
-| database_object | `authz.trg_validate_permission_publish` | server/db/ddl/common/authz/07_functions.sql | 244 |
-| database_object | `authz.delegation_grant.trg_delegation_grant_10_validate` | server/db/ddl/common/authz/08_triggers.sql | 278 |
-| database_object | `authz.delegation_grant.trg_delegation_grant_20_parent_guard` | server/db/ddl/common/authz/08_triggers.sql | 282 |
-| database_object | `authz.delegation.trg_delegation_10_normalize` | server/db/ddl/common/authz/08_triggers.sql | 241 |
-| database_object | `authz.delegation.trg_delegation_20_identity_guard` | server/db/ddl/common/authz/08_triggers.sql | 247 |
-| database_object | `authz.delegation.trg_delegation_21_natural_key_guard` | server/db/ddl/common/authz/08_triggers.sql | 251 |
-| database_object | `authz.delegation.trg_delegation_30_active_subject` | server/db/ddl/common/authz/08_triggers.sql | 255 |
-| database_object | `authz.delegation.trg_delegation_35_audit_evidence` | server/db/ddl/common/authz/08_triggers.sql | 392 |
-| database_object | `authz.delegation.trg_delegation_40_status_transition` | server/db/ddl/common/authz/08_triggers.sql | 261 |
-| database_object | `authz.delegation.trg_delegation_50_status_changed` | server/db/ddl/common/authz/08_triggers.sql | 270 |
-| database_object | `authz.delegation.trg_delegation_60_updated_at` | server/db/ddl/common/authz/08_triggers.sql | 274 |
-| database_object | `authz.delegation.trg_delegation_90_delete_guard` | server/db/ddl/common/authz/08_triggers.sql | 437 |
-| database_object | `authz.permission_scope_kind.trg_permission_scope_kind_50_updated_at` | server/db/ddl/common/authz/08_triggers.sql | 23 |
-| database_object | `authz.permission.trg_permission_10_normalize` | server/db/ddl/common/authz/08_triggers.sql | 2 |
-| database_object | `authz.permission.trg_permission_20_definition_guard` | server/db/ddl/common/authz/08_triggers.sql | 7 |
-| database_object | `authz.permission.trg_permission_30_status_transition` | server/db/ddl/common/authz/08_triggers.sql | 11 |
-| database_object | `authz.permission.trg_permission_35_audit_evidence` | server/db/ddl/common/authz/08_triggers.sql | 360 |
-| database_object | `authz.permission.trg_permission_40_status_changed` | server/db/ddl/common/authz/08_triggers.sql | 15 |
-| database_object | `authz.permission.trg_permission_50_updated_at` | server/db/ddl/common/authz/08_triggers.sql | 19 |
-| database_object | `authz.permission.trg_permission_90_delete_guard` | server/db/ddl/common/authz/08_triggers.sql | 405 |
-| database_object | `authz.record_acl.trg_record_acl_10_normalize` | server/db/ddl/common/authz/08_triggers.sql | 322 |
-| database_object | `authz.record_acl.trg_record_acl_20_identity_guard` | server/db/ddl/common/authz/08_triggers.sql | 327 |
-| database_object | `authz.record_acl.trg_record_acl_21_natural_key_guard` | server/db/ddl/common/authz/08_triggers.sql | 331 |
-| database_object | `authz.record_acl.trg_record_acl_30_validate_permission` | server/db/ddl/common/authz/08_triggers.sql | 335 |
-| database_object | `authz.record_acl.trg_record_acl_31_active_subject` | server/db/ddl/common/authz/08_triggers.sql | 340 |
-| database_object | `authz.record_acl.trg_record_acl_35_audit_evidence` | server/db/ddl/common/authz/08_triggers.sql | 400 |
-| database_object | `authz.record_acl.trg_record_acl_40_status_transition` | server/db/ddl/common/authz/08_triggers.sql | 347 |
-| database_object | `authz.record_acl.trg_record_acl_50_status_changed` | server/db/ddl/common/authz/08_triggers.sql | 351 |
-| database_object | `authz.record_acl.trg_record_acl_60_updated_at` | server/db/ddl/common/authz/08_triggers.sql | 355 |
-| database_object | `authz.record_acl.trg_record_acl_90_delete_guard` | server/db/ddl/common/authz/08_triggers.sql | 445 |
-| database_object | `authz.role_permission.trg_role_permission_10_identity_guard` | server/db/ddl/common/authz/08_triggers.sql | 113 |
-| database_object | `authz.role_permission.trg_role_permission_20_parent_guard` | server/db/ddl/common/authz/08_triggers.sql | 117 |
-| database_object | `authz.role_permission.trg_role_permission_50_updated_at` | server/db/ddl/common/authz/08_triggers.sql | 121 |
-| database_object | `event.trg_capture_authorization_invalidation` | server/db/ddl/common/authz/08_triggers.sql | 457 |
-| database_object | `event.fn_authorization_bump_epoch` | server/db/ddl/common/event/07_functions.sql | 118 |
-| database_object | `event.fn_authorization_claim_invalidations` | server/db/ddl/common/event/07_functions.sql | 212 |
-| database_object | `event.fn_authorization_complete_invalidation` | server/db/ddl/common/event/07_functions.sql | 236 |
-| database_object | `event.fn_authorization_emit_invalidation` | server/db/ddl/common/event/07_functions.sql | 171 |
-| database_object | `event.fn_authorization_fail_invalidation` | server/db/ddl/common/event/07_functions.sql | 248 |
-| database_object | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | server/db/ddl/common/event/07_functions.sql | 107 |
-| database_object | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | server/db/ddl/common/event/08_triggers.sql | 69 |
-| database_object | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | server/db/ddl/common/event/08_triggers.sql | 96 |
-| database_object | `event.trg_authorization_invalidation_immutable` | server/db/ddl/common/event/08_triggers.sql | 50 |
-| database_object | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | server/db/ddl/common/event/08_triggers.sql | 46 |
-| database_object | `ops.certify_authorization_operation_parity` | server/db/ddl/common/ops/07_functions.sql | 1 |
-| database_object | `ops.set_authorization_operation_rollout` | server/db/ddl/common/ops/07_functions.sql | 36 |
-| database_object | `ops.trg_guard_authorization_operation_cutover_drill` | server/db/ddl/common/ops/07_functions.sql | 89 |
-| database_object | `ops.trg_guard_authorization_parity_certification` | server/db/ddl/common/ops/07_functions.sql | 76 |
-| database_object | `ops.trg_guard_authorization_rollout_write` | server/db/ddl/common/ops/07_functions.sql | 81 |
-| database_object | `ops.trg_guard_authorization_shadow_comparison` | server/db/ddl/common/ops/07_functions.sql | 94 |
-| database_object | `ops.authorization_operation_cutover_drill.authorization_operation_cutover_drill_immutable` | server/db/ddl/common/ops/08_triggers.sql | 9 |
-| database_object | `ops.authorization_operation_rollout.authorization_operation_rollout_guard` | server/db/ddl/common/ops/08_triggers.sql | 5 |
-| database_object | `ops.authorization_parity_certification.authorization_parity_certification_immutable` | server/db/ddl/common/ops/08_triggers.sql | 1 |
-| database_object | `ops.authorization_shadow_comparison.authorization_shadow_comparison_immutable` | server/db/ddl/common/ops/08_triggers.sql | 12 |
-| database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/mesh/master/07_functions.sql | 729 |
-| database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 774 |
-| database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/studio/master/07_functions.sql | 767 |
-| database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_10_graph_guard` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 181 |
-| database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_20_binding` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 182 |
-| database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_90_updated_at` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 188 |
-| object | `master.identity_provider_d` | server/apps/platform-host/src/composition/register-platform.ts | 1315 |
-| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/common/authz/08_triggers.sql | 473 |
-| object | `event.trg_capture_authorization_invalidation` | server/db/ddl/common/authz/08_triggers.sql | 457 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/03_tables.sql | 409 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/03_tables.sql | 447 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/05_constraints.sql | 67 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/06_indexes.sql | 37, 40, 42, 44 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/07_functions.sql | 192 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/07_functions.sql | 200, 214, 216, 221, 243 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/07_functions.sql | 205, 228, 239, 252 |
-| object | `event.fn_authorization_bump_epoch` | server/db/ddl/common/event/07_functions.sql | 118 |
-| object | `event.fn_authorization_bump_epoch` | server/db/ddl/common/event/07_functions.sql | 204, 226 |
-| object | `event.fn_authorization_claim_invalidations` | server/db/ddl/common/event/07_functions.sql | 212 |
-| object | `event.fn_authorization_complete_invalidation` | server/db/ddl/common/event/07_functions.sql | 236 |
-| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/common/event/07_functions.sql | 171 |
-| object | `event.fn_authorization_fail_invalidation` | server/db/ddl/common/event/07_functions.sql | 248 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/08_triggers.sql | 70, 95, 96 |
-| object | `event.trg_authorization_invalidation_immutable` | server/db/ddl/common/event/08_triggers.sql | 50 |
-| object | `event.trg_authorization_invalidation_immutable` | server/db/ddl/common/event/08_triggers.sql | 71 |
-| object | `event.authorization_invalidation_health` | server/db/ddl/common/event/09_views.sql | 1, 16 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/09_views.sql | 13 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/10_rls.sql | 73, 74, 75, 77 |
-| object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/11_grants.sql | 38, 41, 44 |
-| object | `event.fn_authorization_bump_epoch` | server/db/ddl/common/event/11_grants.sql | 42 |
-| object | `event.fn_authorization_claim_invalidations` | server/db/ddl/common/event/11_grants.sql | 42 |
-| object | `event.fn_authorization_complete_invalidation` | server/db/ddl/common/event/11_grants.sql | 42 |
-| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/common/event/11_grants.sql | 42 |
-| object | `event.fn_authorization_fail_invalidation` | server/db/ddl/common/event/11_grants.sql | 42 |
-| object | `master.identity_provider_d` | server/db/ddl/common/master/03_platform_tables.sql | 735 |
-| object | `event.trg_authorization_invalidation_immutable` | server/db/ddl/common/shared/09_function_search_path_hardening.sql | 19 |
-| object | `event.authorization_invalidation_health` | server/db/ddl/common/shared/11_migrated_view_grants.sql | 8, 24, 35 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/mesh/master/02_domains.sql | 36, 156, 157, 168 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/mesh/master/07_functions.sql | 856, 885 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/mesh/master/07_functions.sql | 747 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/mesh/master/07_functions.sql | 729 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/mesh/master/08_triggers.sql | 215 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/mesh/master/08_triggers.sql | 209 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/mesh/master/11_grants.sql | 60 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/02_domains.sql | 38, 311, 312, 323 |
-| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/planes/neon/master/07_functions.sql | 4926 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/07_functions.sql | 901, 930 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 792 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 774 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/neon/master/08_triggers.sql | 215 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/08_triggers.sql | 209 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/11_grants.sql | 161 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/studio/master/02_domains.sql | 47, 167, 168, 179 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/studio/master/07_functions.sql | 894, 923 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/studio/master/07_functions.sql | 785 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/studio/master/07_functions.sql | 767 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/studio/master/08_triggers.sql | 225 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/studio/master/08_triggers.sql | 219 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/studio/master/11_grants.sql | 75 |
-| object | `event.fn_authorization_bump_epoch` | server/db/scripts/operations/authorization/reset-authorization-clean-slate.ts | 94 |
-| object | `mesh.auth_account_entitlement` | server/db/scripts/seed/compile-final-authorization-seed-packs.ts | 139 |
-| object | `control.auth_permission_seed_staging` | server/db/seed-backup/contracts/base/seed-contract.v1.json | 57 |
-| object | `control.auth_permission_seed_staging` | server/db/seed-backup/migration/legacy-lint-report.v1.json | 64038, 64224 |
-| object | `master.acl_access_level` | server/db/seed-backup/migration/lookup-ledger.v1.json | 2253 |
-| object | `master.delegation_scope` | server/db/seed-backup/migration/lookup-ledger.v1.json | 3940 |
-| object | `master.principal_relationship_type` | server/db/seed-backup/migration/lookup-ledger.v1.json | 5541 |
-| object | `master.principal_relationship_verification_status` | server/db/seed-backup/migration/lookup-ledger.v1.json | 5566 |
-| object | `master.principal_relationship_verified_method` | server/db/seed-backup/migration/lookup-ledger.v1.json | 5591 |
-| object | `control.auth_permission_seed_staging` | server/db/seed-backup/migration/migration-ledger.v1.json | 2337, 2464 |
-| object | `master.acl_access_level` | server/db/seed-backup/migration/migration-ledger.v1.json | 10078 |
-| object | `master.content_item_access_grant_access_level` | server/db/seed-backup/migration/migration-ledger.v1.json | 13695 |
-| object | `master.content_item_access_grant_subject_type` | server/db/seed-backup/migration/migration-ledger.v1.json | 13751 |
-| object | `master.delegation_scope` | server/db/seed-backup/migration/migration-ledger.v1.json | 14199 |
-| object | `master.principal_identity_binding_sync_status` | server/db/seed-backup/migration/migration-ledger.v1.json | 17795 |
-| object | `master.principal_relationship_type` | server/db/seed-backup/migration/migration-ledger.v1.json | 17907 |
-| object | `master.principal_relationship_verification_status` | server/db/seed-backup/migration/migration-ledger.v1.json | 17963 |
-| object | `master.principal_relationship_verified_method` | server/db/seed-backup/migration/migration-ledger.v1.json | 18019 |
-| object | `master.tenant_feature_entitlement_status` | server/db/seed-backup/migration/migration-ledger.v1.json | 19759 |
-| object | `mesh.auth_account_entitlement` | server/db/seed-backup/packs/authorization-v2/mesh/seed-pack.v1.json | 3573 |
-| object | `control.auth_permission_seed_staging` | server/db/seed/contracts/base/seed-contract.v1.json | 70 |
-| object | `mesh.auth_account_entitlement` | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 3265 |
-| object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts | 6121 |
-| object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts | 5563 |
-| object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts | 12507 |
-| object | `master.identity_provider_d` | server/packages/platform/iam/src/kysely-identity-context-resolver.ts | 39 |
-| object | `event.authorization_invalidation_outbox` | server/packages/platform/metadata/src/invalidation.ts | 13 |
-| object | `event.fn_authorization_claim_invalidations` | server/packages/platform/metadata/src/invalidation.ts | 10 |
-| object | `event.fn_authorization_complete_invalidation` | server/packages/platform/metadata/src/invalidation.ts | 11 |
-| security_symbol | `authorizeAdmin` | server/packages/platform/ai/src/atlas-experience-routes.ts | 10 |
-| security_symbol | `requirePermission` | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
-| security_symbol | `requirePermission` | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
-| security_symbol | `requirePermission` | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
-| security_symbol | `requirePermission` | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
-| security_symbol | `requirePermission` | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
-| security_symbol | `requirePermission` | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
-| security_symbol | `requirePermission` | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
-| security_symbol | `authorizeRecordListRead` | server/packages/services/records/src/entity-list-service.ts | 28 |
-| security_symbol | `authorizeRecordListRead` | server/packages/services/records/src/query-service.ts | 37 |
-| security_symbol | `authorizeRecordListRead` | server/packages/services/records/src/record-read-access.ts | 5 |
-| security_symbol | `authorizeDescriptorOperation` | server/packages/services/records/src/transfer/transfer-service.ts | 67, 84, 94, 101, 140, 159, 225, 242, 270, 314 |
-| security_symbol | `authorizeImportMode` | server/packages/services/records/src/transfer/transfer-service.ts | 68, 84, 94, 141, 160, 225, 315 |
+None.
 
 ## Known source anomalies
 
 | ID | Type | Identity | Owner | Current path | Lines | Disposition | Removal wave |
 |---|---|---|---|---|---|---|---|
-| drift.legacy-master-persona-reader | object | `master.persona` | platform-iam | server/packages/services/iam/routes/operator.routes.ts | not observed | replace_reader_with_principal_profile_or_idp_projection | Wave 1 authorization model replacement |
-| drift.permission-ap-invoice-approve | permission_code | `AP.INVOICE.APPROVE` | platform-iam+finance-platform | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_policy | Wave 1 seed replacement |
-| drift.permission-iam-delegation-manage | permission_code | `IAM.DELEGATION.MANAGE` | platform-iam | server/packages/services/iam/routes/operator.routes.ts | not observed | define_in_canonical_permission_seed_or_remove_legacy_route | Wave 1 authorization model replacement |
-| drift.permission-iam-grant-manage | permission_code | `IAM.GRANT.MANAGE` | platform-iam | server/packages/services/iam/routes/company-code-access.routes.ts | not observed | define_in_canonical_permission_seed_or_remove_legacy_routes | Wave 1 authorization model replacement |
-| drift.permission-iam-grant-manage | permission_code | `IAM.GRANT.MANAGE` | platform-iam | server/packages/services/iam/routes/operator.routes.ts | not observed | define_in_canonical_permission_seed_or_remove_legacy_routes | Wave 1 authorization model replacement |
-| drift.permission-iam-group-manage | permission_code | `IAM.GROUP.MANAGE` | platform-iam | server/packages/services/iam/routes/operator.routes.ts | not observed | define_in_canonical_permission_seed_before_group_cutover | Wave 1 authorization model replacement |
-| drift.permission-iam-principal-read | permission_code | `IAM.PRINCIPAL.READ` | platform-iam | server/packages/services/iam/routes/operator.routes.ts | not observed | define_in_canonical_permission_seed_or_remove_legacy_route | Wave 1 authorization model replacement |
-| drift.permission-invoice-line-add-from-catalog | permission_code | `INVOICE.LINE.ADD_FROM_CATALOG` | runtime-domain+platform-iam | packages/shared/runtime-domain/runtime-line-item/src/adapters/catalog.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-catalog | permission_code | `INVOICE.LINE.ADD_FROM_CATALOG` | runtime-domain+platform-iam | packages/shared/runtime-line-item/src/adapters/catalog.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-po | permission_code | `INVOICE.LINE.ADD_FROM_PO` | runtime-domain+platform-iam | packages/shared/runtime-domain/runtime-line-item/src/adapters/open-po-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-po | permission_code | `INVOICE.LINE.ADD_FROM_PO` | runtime-domain+platform-iam | packages/shared/runtime-line-item/src/adapters/open-po-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-receipt | permission_code | `INVOICE.LINE.ADD_FROM_RECEIPT` | runtime-domain+platform-iam | packages/shared/runtime-domain/runtime-line-item/src/adapters/open-receipt-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-receipt | permission_code | `INVOICE.LINE.ADD_FROM_RECEIPT` | runtime-domain+platform-iam | packages/shared/runtime-line-item/src/adapters/open-receipt-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-service-sheet | permission_code | `INVOICE.LINE.ADD_FROM_SERVICE_SHEET` | runtime-domain+platform-iam | packages/shared/runtime-domain/runtime-line-item/src/adapters/open-service-sheet-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-invoice-line-add-from-service-sheet | permission_code | `INVOICE.LINE.ADD_FROM_SERVICE_SHEET` | runtime-domain+platform-iam | packages/shared/runtime-line-item/src/adapters/open-service-sheet-line.ts | not observed | define_in_canonical_permission_seed_or_replace_adapter_contract | Wave 1 seed replacement |
-| drift.permission-ppl-pii-edit | permission_code | `PPL.PII.EDIT` | people-platform+platform-iam | server/db/ddl/master/08_people_rls.sql | not observed | define_in_canonical_permission_seed_before_rls_certification | Wave 1 seed replacement |
-| drift.permission-ppl-pii-view | permission_code | `PPL.PII.VIEW` | people-platform+platform-iam | server/db/ddl/master/08_people_rls.sql | not observed | define_in_canonical_permission_seed_before_rls_certification | Wave 1 seed replacement |
-| drift.permission-sales-opportunity-create | permission_code | `SALES.OPPORTUNITY.CREATE` | sales-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-sales-opportunity-create | permission_code | `SALES.OPPORTUNITY.CREATE` | sales-platform+platform-iam | server/packages/services/business/sales/sales-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-sales-order-create | permission_code | `SALES.ORDER.CREATE` | sales-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-sales-order-create | permission_code | `SALES.ORDER.CREATE` | sales-platform+platform-iam | server/packages/services/business/sales/sales-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-sales-quotation-create | permission_code | `SALES.QUOTATION.CREATE` | sales-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-sales-quotation-create | permission_code | `SALES.QUOTATION.CREATE` | sales-platform+platform-iam | server/packages/services/business/sales/sales-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-demand-aggregate | permission_code | `SOURCE.DEMAND.AGGREGATE` | procurement-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-demand-aggregate | permission_code | `SOURCE.DEMAND.AGGREGATE` | procurement-platform+platform-iam | server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-event-create | permission_code | `SOURCE.EVENT.CREATE` | procurement-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-event-create | permission_code | `SOURCE.EVENT.CREATE` | procurement-platform+platform-iam | server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-event-evaluate | permission_code | `SOURCE.EVENT.EVALUATE` | procurement-platform+platform-iam | server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
-| drift.permission-source-event-evaluate | permission_code | `SOURCE.EVENT.EVALUATE` | procurement-platform+platform-iam | server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts | not observed | define_in_canonical_permission_seed_or_remove_scope_and_runtime_use | Wave 1 seed replacement |
 
 ## Zero-Mesh-specific-data Neon boundary findings
 
@@ -978,29 +820,11 @@ These are owned current-state exceptions to the target boundary, not evidence th
 
 | ID | Boundary class | Identity | Owner | Current path | Lines | Disposition | Removal wave |
 |---|---|---|---|---|---|---|---|
-| boundary.mesh-runtime-athyperadmin-app-pool | mesh_runtime_rls_bypass_app_pool | `mesh.runtime.athyperadmin_app_pool` | database-platform+mesh-platform | server/.env.example | not observed | replace_mesh_runtime_pool_with_dedicated_nobypassrls_login | Wave 0 Mesh boundary hardening |
-| boundary.mesh-runtime-athyperadmin-app-pool | mesh_runtime_rls_bypass_app_pool | `mesh.runtime.athyperadmin_app_pool` | database-platform+mesh-platform | stack/env/.env.example | not observed | replace_mesh_runtime_pool_with_dedicated_nobypassrls_login | Wave 0 Mesh boundary hardening |
-| boundary.mesh-runtime-superuser-app-pool | mesh_runtime_rls_bypass_app_pool | `mesh.runtime.postgres_superuser_app_pool` | database-platform+mesh-platform | stack/scripts/setup/write-env-staging.sh | not observed | replace_mesh_runtime_pool_with_dedicated_nobypassrls_login | Wave 0 Mesh boundary hardening |
-| boundary.neon-legacy-mesh-business-network-membership-role-table | neon_legacy_mesh_table | `master.business_network_membership_role` | mesh-platform+database-platform | server/db/ddl/master/01m_bp_core_hardening.sql | not observed | migrate_or_classify_rows_then_drop_from_neon | Wave 1E network cleanup |
-| boundary.neon-legacy-mesh-business-network-membership-table | neon_legacy_mesh_table | `master.business_network_membership` | mesh-platform+database-platform | server/db/ddl/master/01m_bp_core_hardening.sql | not observed | migrate_or_classify_rows_then_drop_from_neon | Wave 1E network cleanup |
-| boundary.neon-legacy-mesh-business-network-table | neon_legacy_mesh_table | `master.business_network` | mesh-platform+database-platform | server/db/ddl/master/01m_bp_core_hardening.sql | not observed | migrate_or_classify_rows_then_drop_from_neon | Wave 1E network cleanup |
-| boundary.neon-legacy-mesh-network-seeds | neon_legacy_mesh_seed | `neon.seed.legacy_mesh_network_authorization` | mesh-platform+database-platform | server/db/seed/tenants/neon/010_demo/network/001_buyer_networks.sql | not observed | remove_mesh_authorization_rows_from_neon_seed_contract | Wave 2 deterministic seed replacement |
-| boundary.neon-legacy-mesh-network-seeds | neon_legacy_mesh_seed | `neon.seed.legacy_mesh_network_authorization` | mesh-platform+database-platform | server/db/seed/tenants/neon/020_technostat/network/001_buyer_networks.sql | not observed | remove_mesh_authorization_rows_from_neon_seed_contract | Wave 2 deterministic seed replacement |
-| boundary.neon-legacy-mesh-network-seeds | neon_legacy_mesh_seed | `neon.seed.legacy_mesh_network_authorization` | mesh-platform+database-platform | server/db/seed/tenants/neon/020_technostat/network/004_mesh_buyer_bindings.sql | not observed | remove_mesh_authorization_rows_from_neon_seed_contract | Wave 2 deterministic seed replacement |
-| boundary.neon-legacy-mesh-network-seeds | neon_legacy_mesh_seed | `neon.seed.legacy_mesh_network_authorization` | mesh-platform+database-platform | server/db/seed/tenants/neon/030_cirrusatlantic/network/001_buyer_networks.sql | not observed | remove_mesh_authorization_rows_from_neon_seed_contract | Wave 2 deterministic seed replacement |
-| boundary.neon-legacy-mesh-network-seeds | neon_legacy_mesh_seed | `neon.seed.legacy_mesh_network_authorization` | mesh-platform+database-platform | server/db/seed/tenants/neon/030_cirrusatlantic/network/004_mesh_buyer_bindings.sql | not observed | remove_mesh_authorization_rows_from_neon_seed_contract | Wave 2 deterministic seed replacement |
-| boundary.neon-runtime-derived-mesh-database-url | neon_mesh_connection_fallback | `neon.runtime.derived_mesh_database_url` | runtime-platform+mesh-platform | server/src/config.ts | not observed | remove_cross_plane_database_url_derivation | Wave 0 plane boundary hardening |
-| boundary.neon-runtime-direct-mesh-database-config | neon_direct_mesh_configuration | `neon.runtime.direct_mesh_database_config` | runtime-platform+mesh-platform | server/production.env.example | 40 | split_neon_and_mesh_runtime_process_credentials | Wave 0 plane boundary hardening |
-| boundary.neon-runtime-direct-mesh-database-config | neon_direct_mesh_configuration | `neon.runtime.direct_mesh_database_config` | runtime-platform+mesh-platform | server/staging.env.example | 40 | split_neon_and_mesh_runtime_process_credentials | Wave 0 plane boundary hardening |
-| boundary.neon-runtime-mesh-reader-fallback | neon_direct_mesh_reader | `neon.runtime.mesh_reader_fallback` | platform-iam+mesh-platform | server/packages/services/iam/context/context-resolver.service.ts | not observed | require_explicit_mesh_plane_repository_without_neon_fallback | Wave 0 plane boundary hardening |
-| boundary.neon-runtime-mesh-reader-fallback | neon_direct_mesh_reader | `neon.runtime.mesh_reader_fallback` | platform-iam+mesh-platform | server/packages/services/iam/discovery/discovery.service.ts | not observed | require_explicit_mesh_plane_repository_without_neon_fallback | Wave 0 plane boundary hardening |
 
 ## Canonical capture-source parity
 
 Capture DDLs:
 
-- neon: `server/db/ddl/control/01zzo_authorization_migration_controls.sql` -> `control.authorization_capture_source`
-- mesh: `server/db/ddl/mesh_control/01z_authorization_migration_controls.sql` -> `mesh_control.authorization_capture_source`
 
 | Plane | Exact source | Object ID | Owner | Disposition | DDL | Line |
 |---|---|---|---|---|---|---:|
@@ -1009,40 +833,19 @@ Capture DDLs:
 
 | Object | Access | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `master.auth_group` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 77 |
-| `master.auth_group_member` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 151 |
-| `master.auth_group_role` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 101 |
+| `master.auth_group` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 99 |
+| `master.auth_group` | update | test | tooling/scripts/policy/authorization-inventory.test.ts | 100 |
 | `shared.workspace` | insert | test | server/db/scripts/__tests__/seed/seed-contract-lint.test.ts | 77 |
 | `master.company_code` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 30 |
 | `master.company_code` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 243 |
 | `master.company_code` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 46 |
-| `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 275 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 319 |
-| `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/200_demo_legal_entities.sql | 45 |
-| `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/201_athyper_subsidiaries.sql | 187 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/201_athyper_subsidiaries.sql | 283 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/311_ledger_books.sql | 140 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/party_master/004_athq_intercompany.sql | 53 |
-| `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 188 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 209 |
-| `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/006_technostat_intercompany_master.sql | 53 |
-| `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/100_org_structure/200_legal_entities.sql | 84 |
 | `master.legal_entity` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 478 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 239 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 33 |
-| `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 142, 189 |
-| `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/200_demo_legal_entities.sql | 28 |
-| `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/201_athyper_subsidiaries.sql | 67 |
-| `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 127 |
-| `master.legal_entity` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 156, 174 |
-| `master.legal_entity` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/004_technostat_finance_controls.sql | 41, 54, 67, 80 |
-| `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/100_org_structure/200_legal_entities.sql | 32 |
 | `master.operating_organization` | update | tool | server/db/scripts/business-partner-360/provision-business-partner-360-acceptance-fixtures.ts | 45 |
 | `master.operating_organization` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 68 |
 | `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 314 |
 | `master.operating_organization` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 247 |
-| `master.operating_organization` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/202_operating_organizations.sql | 43 |
-| `master.operating_organization_company` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/202_operating_organizations.sql | 81 |
 | `master.principal` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 46 |
 | `master.principal` | delete | tool | server/db/scripts/business-partner-360/run-business-partner-s5-certification.ts | 206 |
 | `master.principal` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s5-certification.ts | 55 |
@@ -1055,15 +858,6 @@ Capture DDLs:
 | `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 270 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 21 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 98 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 24 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/001_demo_principals.sql | 41 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/004_athq_principals.sql | 38 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 60 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_principal_users.sql | 94, 112 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 96 |
-| `master.principal` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 113 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/000_tenant.sql | 102 |
-| `master.principal` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 22 |
 | `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 329 |
 | `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 335, 423 |
 | `master.principal` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 23 |
@@ -1072,18 +866,8 @@ Capture DDLs:
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 153 |
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 801 |
 | `master.principal_identity_binding` | update | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 781 |
-| `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 38 |
-| `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/001_demo_principals.sql | 86 |
-| `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 90 |
-| `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_principal_users.sql | 232 |
-| `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 51 |
 | `master.principal_identity_binding` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 341 |
 | `master.principal_identity_binding` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 416 |
-| `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/001_demo_principals.sql | 65 |
-| `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/004_athq_principals.sql | 64 |
-| `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 73 |
-| `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_principal_users.sql | 166 |
-| `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 37 |
 | `master.tenant` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 29 |
 | `master.tenant` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 120, 137 |
 | `master.tenant` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 420 |
@@ -1096,15 +880,6 @@ Capture DDLs:
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 11 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/publication-authority.sql | 5 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 90 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 9 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/neon/_template/000_tenant.sql | 15 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/000_tenant.sql | 18 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 12 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 57 |
-| `master.tenant` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 78 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/000_tenant.sql | 46 |
-| `master.tenant` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 11 |
-| `master.tenant` | update | runtime | server/db/seed-backup/tenants/studio/005_canonical_party_fixtures.sql | 14 |
 | `master.tenant` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 18 |
 | `master.tenant` | update | test | server/packages/test-utils/src/postgres-service-harness.postgres.test.ts | 24, 29 |
 | `mesh.network_account` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 276, 755, 2108 |
@@ -1115,47 +890,143 @@ Capture DDLs:
 | `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 429 |
 | `mesh.network_account` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 274 |
 | `mesh.network_account` | update | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 137 |
-| `mesh.network_account` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 57 |
+| `mesh_control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 298 |
 | `mesh.network_relationship` | insert | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 838 |
 | `mesh.network_relationship` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 256, 271, 286, 944 |
 | `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/business-partner-profile-publication.sql | 3 |
 | `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 517 |
 | `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 427 |
 | `mesh.network_relationship` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 298 |
-| `mesh.network_relationship` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 194 |
 | `mesh.network_relationship` | insert | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 37 |
 | `mesh.network_relationship` | update | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 31, 36 |
-| `control.entity` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/002_bank_account_display_fix.sql | 19 |
-| `control.entity_policy` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/entity_engine/010_entity_policies.sql | 40, 69 |
-| `control.entity_policy` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/entity_engine/010_entity_policies.sql | 82 |
-| `control.entity_policy` | insert | runtime | server/db/seed-backup/tenants/neon/020_technostat/entity_engine/001_entity_policies.sql | 44, 74 |
-| `control.entity_policy` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/entity_engine/001_entity_policies.sql | 87 |
 | `control.entity_version` | update | test | server/db/scripts/tests/integration/effective-lock-scenarios.ts | 108, 132, 190 |
-| `control.field_security_policy` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/entity_engine/020_field_security_policies.sql | 45, 59, 73, 83, 94, 105, 116 |
-| `master.auth_plane_membership` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 133 |
-| `master.auth_role` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 34 |
-| `master.auth_role_permission` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 58 |
-| `master.auth_scope_target` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 14 |
+| `control.authorization_capture_source` | insert | test | tooling/scripts/policy/authorization-inventory.test.ts | 247, 261, 265, 279 |
 
 ## Keycloak REST writer inventory
 
 | Path | Classification | Owner | Operations | Disposition | Lines |
 |---|---|---|---|---|---|
+| tooling/tools/devtools/keycloackgen/configure-browser-flow.mjs | reviewed | platform-iam | `POST:authentication_flow`<br>`PUT:authentication_flow`<br>`PUT:realm`<br>`PUT:user` | replace_with_versioned_keycloak_seed_contract | 51, 88, 113, 119, 130, 147, 164 |
+| tooling/tools/devtools/keycloackgen/configure-email.mjs | reviewed | platform-iam | `PUT:realm` | replace_with_versioned_keycloak_seed_contract | 67 |
+| tooling/tools/devtools/keycloackgen/configure-magic-link.mjs | reviewed | platform-iam | `POST:authentication_flow`<br>`PUT:authentication_flow`<br>`PUT:realm`<br>`PUT:user_required_action` | replace_with_versioned_keycloak_seed_contract | 50, 68, 84, 93, 112 |
+| tooling/tools/devtools/keycloackgen/enforce-mfa.mjs | reviewed | platform-iam | `PUT:user`<br>`PUT:user_required_action` | replace_with_versioned_keycloak_seed_contract | 66, 81 |
+| tooling/tools/devtools/keycloackgen/smoke-test-email.mjs | reviewed | platform-iam | `PUT:user_required_action` | retain_as_non_production_smoke_test | 26 |
+| tooling/tools/scripts/deploy-broker-flows.cjs | reviewed | platform-iam | `POST:authentication_flow`<br>`PUT:authentication_flow` | replace_with_versioned_keycloak_seed_contract | 115, 131, 138, 146 |
+| tooling/tools/scripts/deploy-realm-demosetup.cjs | reviewed | platform-iam | `DELETE:client_role`<br>`DELETE:organization`<br>`DELETE:organization_membership`<br>`POST:identity_provider`<br>`POST:organization`<br>`POST:organization_membership`<br>`POST:protocol_mapper_or_realm_import`<br>`PUT:admin_other`<br>`PUT:identity_provider`<br>`PUT:organization`<br>`PUT:user` | replace_with_versioned_keycloak_seed_contract | 115, 139, 159, 189, 194, 223, 234, 257, 304, 359, 366, 395 |
+| tooling/tools/scripts/deploy-users-groups-idps.cjs | reviewed | platform-iam | `DELETE:user`<br>`POST:client_role`<br>`POST:group`<br>`POST:group_role_mapping`<br>`POST:identity_provider`<br>`POST:organization_membership`<br>`POST:user`<br>`PUT:identity_provider`<br>`PUT:user_group_membership` | replace_with_versioned_keycloak_seed_contract | 134, 166, 183, 203, 236, 255, 279, 321, 324 |
+| tooling/tools/scripts/fix-org-memberships.cjs | reviewed | platform-iam | `DELETE:organization_membership`<br>`POST:organization_membership`<br>`PUT:organization_membership` | replace_with_versioned_keycloak_seed_contract | 78, 84, 90, 126 |
+| tooling/tools/scripts/rebuild-broker-flows.cjs | reviewed | platform-iam | `DELETE:authentication_flow`<br>`POST:authentication_flow`<br>`PUT:authentication_flow` | replace_with_versioned_keycloak_seed_contract | 49, 54, 60, 80, 89 |
 
 ## Permission seed inventory
 
 | Code | Risk | Definition sources |
 |---|---|---|
+| `mesh.catalog.attachment.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:10 |
+| `mesh.catalog.attachment.delete` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:23 |
+| `mesh.catalog.attachment.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:36 |
+| `mesh.catalog.attachment.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:49 |
+| `mesh.catalog.bank_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:62 |
+| `mesh.catalog.bank_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:75 |
+| `mesh.catalog.bank_account.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:88 |
+| `mesh.catalog.catalog.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:101 |
+| `mesh.catalog.catalog.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:114 |
+| `mesh.catalog.content_item.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:127 |
+| `mesh.catalog.content_item.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:140 |
+| `mesh.catalog.content_item.share` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:153 |
+| `mesh.catalog.content_item.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:166 |
+| `mesh.catalog.conversation.add_participant` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:179 |
+| `mesh.catalog.conversation.create` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:192 |
+| `mesh.catalog.conversation.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:205 |
+| `mesh.catalog.conversation.remove_participant` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:218 |
+| `mesh.catalog.document_envelope.acknowledge` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:231 |
+| `mesh.catalog.document_envelope.publish` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:244 |
+| `mesh.catalog.document_envelope.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:257 |
+| `mesh.catalog.document_envelope.replay` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:270 |
+| `mesh.catalog.network_account.connect` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:283 |
+| `mesh.catalog.network_account.invite` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:296 |
+| `mesh.catalog.network_account.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:309 |
+| `mesh.catalog.network_account.update` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:322 |
+| `mesh.catalog.network_relationship.accept` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:335 |
+| `mesh.catalog.network_relationship.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:348 |
+| `mesh.catalog.network_relationship.request` | medium | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:361 |
+| `mesh.catalog.network_relationship.suspend` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:374 |
+| `mesh.catalog.network_relationship.terminate` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:387 |
+| `mesh.catalog.supplier_profile_verification.read` | low | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:400 |
+| `mesh.catalog.supplier_profile_verification.reject` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:413 |
+| `mesh.catalog.supplier_profile_verification.verify` | high | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json:426 |
+| `neon.address_contact.company_code.manage` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:10 |
+| `neon.address_contact.legal_entity.manage` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:23 |
+| `neon.address_contact.tenant.manage` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:36 |
+| `neon.ai.agent_admin.support_session` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:49 |
+| `neon.ai.agent_feedback.submit` | low | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:62 |
+| `neon.ai.agent_history.delete` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:75 |
+| `neon.ai.agent_history.export` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:88 |
+| `neon.ai.agent_history.manage` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:101 |
+| `neon.ai.agent_history.read` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:114 |
+| `neon.ai.agent_tools.read` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:127 |
+| `neon.ai.agent.provider_diagnostics` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:140 |
+| `neon.ai.agent.use` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:153 |
+| `neon.context.catalog.read` | low | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:166 |
+| `neon.records.lock.force_release` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:179 |
+| `neon.relationship.business_partner.create` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:192 |
+| `neon.relationship.business_partner.update` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:205 |
+| `neon.supplier.banking.admin` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:218 |
+| `neon.supplier.banking.submit` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:231 |
+| `neon.supplier.banking.verify` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:244 |
+| `neon.supplier.governance.write` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:257 |
+| `neon.supplier.qualification.admin` | critical | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:270 |
+| `neon.supplier.tax.restricted` | high | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:283 |
+| `neon.supplier.tax.submit` | low | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:296 |
+| `neon.supplier.tax.verify` | medium | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json:309 |
+| `studio.iam.application_projection.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:10 |
+| `studio.iam.application_projection.replay` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:23 |
+| `studio.iam.idp.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:36 |
+| `studio.iam.idp.read` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:49 |
+| `studio.iam.parameter.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:62 |
+| `studio.jobs.board.view` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:75 |
+| `studio.jobs.queue.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:88 |
+| `studio.metadata.contract_draft.create` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:101 |
+| `studio.metadata.contract.break_glass` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:114 |
+| `studio.metadata.contract.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:127 |
+| `studio.metadata.contract.export` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:140 |
+| `studio.metadata.contract.import` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:153 |
+| `studio.metadata.contract.publish` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:166 |
+| `studio.metadata.contract.review` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:179 |
+| `studio.metadata.contract.rollback` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:192 |
+| `studio.metadata.contract.submit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:205 |
+| `studio.metadata.contract.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:218 |
+| `studio.metadata.overlay.edit` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:231 |
+| `studio.platform.catalog.manage` | high | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:244 |
+| `studio.platform.catalog.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:257 |
+| `studio.platform.reference.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:270 |
+| `studio.platform.reference.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:283 |
+| `studio.platform.subscriptions.manage` | critical | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:296 |
+| `studio.platform.subscriptions.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:309 |
+| `studio.platform.taxonomy.import` | medium | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:322 |
+| `studio.platform.taxonomy.view` | low | server/db/seed/contracts/authorization/catalog/studio/catalog.v2.json:335 |
 
 ## Authorization-bearing routes
 
 | Source | Route | Methods | Permissions | Security symbols |
 |---|---|---|---|---|
+| server/packages/platform/ai/src/atlas-experience-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | authorizeAdmin |
+| server/packages/platform/ai/src/atlas-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `neon.ai.agent.use` | — |
+| server/packages/platform/ai/src/atlas-surface-draft-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | — |
+| server/packages/platform/experience/src/routes.ts | `<dynamic-or-mounted>` | UNKNOWN | `studio.platform.catalog.manage` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId` | DELETE | `mesh.catalog.attachment.create` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/download` | POST | `mesh.catalog.attachment.create` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/finalize` | POST | `mesh.catalog.attachment.create` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/:attachmentId/status` | GET | `mesh.catalog.attachment.create` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/attachments/stage` | POST | `mesh.catalog.attachment.create` | — |
+| server/packages/services/attachments/src/attachment-routes.ts | `/api/content/items/:id/attachments/:attachmentId/versions` | POST | `mesh.catalog.attachment.create` | — |
+| server/packages/services/publication/src/publication-routes.ts | `<dynamic-or-mounted>` | UNKNOWN | — | requirePermission |
 
 ## Contract and UI field inventory
 
 | Field | Artifact class | Path | Lines |
 |---|---|---|---|
+| `allowed` | runtime | governance/config/governance/authorization-data-disposition-inventory.v1.json | 1930 |
+| `allowed` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 150 |
 | `allowed` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 7, 18, 21 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 4 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 23 |
@@ -1163,7 +1034,7 @@ Capture DDLs:
 | `allowed` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 50 |
 | `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 339 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
+| `allowed` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 515, 819, 874 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857, 1443, 1451, 2215, 2228, 2239, 2252, 2265, 2272, 2302, 2355, 2366, 2370, 4091, 4094, 4095, 4244, 4245, 4455, 4783 |
 | `allowed` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 50 |
@@ -1189,11 +1060,11 @@ Capture DDLs:
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23 |
 | `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-projection.ts | 132 |
 | `allowed` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `allowed` | runtime | server/packages/planes/neon/src/finance-http.ts | 54 |
+| `allowed` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
 | `allowed` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
 | `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 222 |
 | `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 87 |
-| `allowed` | runtime | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 7, 8, 13, 14, 16, 17 |
+| `allowed` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 7, 8, 13, 14, 16, 17 |
 | `allowed` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
 | `allowed` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 24 |
 | `allowed` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
@@ -1235,7 +1106,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 22 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6, 16 |
 | `allowed` | runtime | server/packages/platform/iam/src/external-worker-identity-intent.ts | 206, 229 |
-| `allowed` | runtime | server/packages/platform/iam/src/iam-routes.ts | 34 |
+| `allowed` | route | server/packages/platform/iam/src/iam-routes.ts | 34 |
 | `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 172, 173, 179, 182, 224 |
 | `allowed` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
 | `allowed` | runtime | server/packages/platform/iam/src/identity-saga.ts | 394 |
@@ -1245,24 +1116,24 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 52 |
 | `allowed` | runtime | server/packages/platform/iam/src/required-actions.ts | 2, 3, 14, 17, 19 |
 | `allowed` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `allowed` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 460, 465 |
+| `allowed` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 460, 465 |
 | `allowed` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `allowed` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
 | `allowed` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `allowed` | runtime | server/packages/platform/policy/src/policy-routes.ts | 31, 70 |
+| `allowed` | route | server/packages/platform/policy/src/policy-routes.ts | 31, 70 |
 | `allowed` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
 | `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
 | `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 69, 76, 127 |
 | `allowed` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3, 5 |
-| `allowed` | runtime | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
+| `allowed` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
 | `allowed` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `allowed` | runtime | server/packages/services/content/src/content-service.ts | 4, 5 |
 | `allowed` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
 | `allowed` | runtime | server/packages/services/documents/src/document-service.ts | 120 |
 | `allowed` | runtime | server/packages/services/finance/src/ledger/cross-book-posting-service.ts | 10, 25 |
 | `allowed` | runtime | server/packages/services/finance/src/planning/planning-service.ts | 9 |
-| `allowed` | runtime | server/packages/services/integration/src/integration-routes.ts | 2 |
+| `allowed` | route | server/packages/services/integration/src/integration-routes.ts | 2 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2, 6, 14 |
@@ -1280,9 +1151,9 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 101 |
 | `allowed` | runtime | server/packages/services/master-data/src/services.ts | 124 |
 | `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
-| `allowed` | runtime | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
-| `allowed` | runtime | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
-| `allowed` | runtime | server/packages/services/publication/src/publication-routes.ts | 138 |
+| `allowed` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
+| `allowed` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
+| `allowed` | route | server/packages/services/publication/src/publication-routes.ts | 138 |
 | `allowed` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `allowed` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20, 39, 47, 113, 141, 150 |
 | `allowed` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 6, 19 |
@@ -1295,7 +1166,7 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/services/records/src/mutation-service.ts | 34, 56, 75, 95, 109 |
 | `allowed` | runtime | server/packages/services/records/src/query-service.ts | 20, 139, 142 |
 | `allowed` | runtime | server/packages/services/records/src/record-read-access.ts | 10, 28, 31, 59 |
-| `allowed` | runtime | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
+| `allowed` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
 | `allowed` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
 | `allowed` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
 | `allowed` | keycloak | stack/config/iam/realm-athyper-clean-slate.json | 2248, 2258, 2260, 2694, 2722, 2726, 2741, 2753, 2757 |
@@ -1306,6 +1177,8 @@ Capture DDLs:
 | `allowed` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `allowed` | test | tests/contracts/auth-session-foundation.test.ts | 35 |
 | `allowed` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 28, 30 |
+| `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 733, 919, 936 |
+| `allowed` | tool | tooling/scripts/policy/verify-api-client-phase2.mjs | 10, 13 |
 | `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4788 |
 | `authorizationScopes` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `authorizationScopes` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 25 |
@@ -1384,13 +1257,13 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/ai/src/__tests__/runtime.test.ts | 6 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/surface-draft-generation.test.ts | 7 |
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
-| `denied` | runtime | server/packages/platform/ai/src/atlas-experience-routes.ts | 15 |
+| `denied` | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 15 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
 | `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 88, 124, 196 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
-| `denied` | runtime | server/packages/platform/control-admin/src/authorization-management-routes.ts | 14, 16 |
-| `denied` | runtime | server/packages/platform/experience/src/routes.ts | 32 |
+| `denied` | route | server/packages/platform/control-admin/src/authorization-management-routes.ts | 14, 16 |
+| `denied` | route | server/packages/platform/experience/src/routes.ts | 32 |
 | `denied` | test | server/packages/platform/experience/src/service.test.ts | 15 |
 | `denied` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
@@ -1424,9 +1297,16 @@ Capture DDLs:
 | `denied` | test | tests/e2e/production/surface-matrix.spec.ts | 197 |
 | `denied` | test | tests/foundation-browser/error-boundaries.spec.ts | 5 |
 | `denied` | test | tests/foundation/error-boundaries.test.tsx | 13 |
+| `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 734 |
+| `denied` | tool | tooling/scripts/policy/verify-auth-session-phase3.mjs | 10 |
+| `denied` | ui | tooling/scripts/verification/render-boundary-fixture.tsx | 9 |
 | `groupIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 220, 229, 232 |
 | `groupIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 119, 145, 158 |
 | `groupIds` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 273, 282, 285 |
+| `groupIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 735, 755 |
+| `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
+| `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
+| `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
 | `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 62, 72, 293, 296 |
 | `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 222 |
 | `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 21, 137 |
@@ -1434,7 +1314,7 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 20 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 9 |
+| `permissionCode` | route | server/apps/platform-host/src/composition/finance-routes.ts | 9 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 512, 817, 872 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1442, 1448, 2211, 2220, 2234, 2244, 2257, 2270, 2278, 2297, 2299, 2310, 2352, 2363, 4453 |
 | `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1764 |
@@ -1501,14 +1381,14 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 11 |
 | `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/deterministic.ts | 187 |
 | `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/kysely-authoring-repository.ts | 98 |
-| `permissionCode` | runtime | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 17 |
+| `permissionCode` | route | server/packages/planes/studio/meta-entity-authoring/src/routes.ts | 17 |
 | `permissionCode` | runtime | server/packages/planes/studio/onboarding/src/maintenance.ts | 23 |
 | `permissionCode` | runtime | server/packages/planes/studio/src/catalog-metadata-reader.ts | 26 |
 | `permissionCode` | test | server/packages/planes/studio/src/metadata-draft-import.test.ts | 3 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 24 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 6 |
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 19 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/atlas-admin-routes.ts | 11 |
+| `permissionCode` | route | server/packages/platform/ai/src/atlas-admin-routes.ts | 11 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 28, 83 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 83, 172, 191, 197, 354 |
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
@@ -1536,18 +1416,18 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 4, 10, 19, 27, 30, 33, 36, 39, 41, 54, 59, 65, 73, 76 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 22, 51, 52 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `permissionCode` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 463, 465 |
+| `permissionCode` | route | server/packages/platform/jobs/src/job-admin-routes.ts | 463, 465 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 5 |
 | `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 27, 53 |
 | `permissionCode` | test | server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts | 16 |
 | `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
-| `permissionCode` | runtime | server/packages/platform/policy/src/policy-routes.ts | 29, 68 |
+| `permissionCode` | route | server/packages/platform/policy/src/policy-routes.ts | 29, 68 |
 | `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 82 |
 | `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 8, 11, 13 |
 | `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 127, 128 |
 | `permissionCode` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 5 |
-| `permissionCode` | runtime | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
+| `permissionCode` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
 | `permissionCode` | runtime | server/packages/services/content/src/content-service.ts | 4 |
 | `permissionCode` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 36 |
 | `permissionCode` | runtime | server/packages/services/documents/src/document-service.ts | 34, 120 |
@@ -1555,7 +1435,7 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/finance/src/shared/finance-foundation.test.ts | 83 |
 | `permissionCode` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 5, 6 |
 | `permissionCode` | runtime | server/packages/services/finance/src/shared/posting-guard.ts | 9 |
-| `permissionCode` | runtime | server/packages/services/integration/src/integration-routes.ts | 2 |
+| `permissionCode` | route | server/packages/services/integration/src/integration-routes.ts | 2 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts | 5, 7 |
@@ -1576,9 +1456,9 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/services/master-data/src/kysely-workforce-request-repository.ts | 61 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/services.ts | 124 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
-| `permissionCode` | runtime | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
-| `permissionCode` | runtime | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
-| `permissionCode` | runtime | server/packages/services/publication/src/publication-routes.ts | 136, 138 |
+| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
+| `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
+| `permissionCode` | route | server/packages/services/publication/src/publication-routes.ts | 136, 138 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 10 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 18, 38, 39, 46, 47, 113, 119, 141, 146, 150 |
 | `permissionCode` | test | server/packages/services/records/src/__tests__/record-read-access.test.ts | 13, 22 |
@@ -1591,13 +1471,14 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/services/records/src/mutation-service.ts | 33, 34, 56, 74, 75, 94, 95, 112, 115, 117 |
 | `permissionCode` | runtime | server/packages/services/records/src/query-service.ts | 79, 137, 140, 141 |
 | `permissionCode` | runtime | server/packages/services/records/src/record-read-access.ts | 11, 12, 16, 30, 50 |
-| `permissionCode` | runtime | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
+| `permissionCode` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
 | `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
 | `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
 | `permissionCode` | test | tests/contracts/three-plane-list-scope.test.ts | 30 |
 | `permissionCode` | runtime | tests/e2e/acceptance/governed-import-smoke.mjs | 296 |
 | `permissionCode` | runtime | tests/e2e/acceptance/public-record-transfer-smoke.mjs | 301 |
-| `permissionCodes` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
+| `permissionCode` | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 937 |
+| `permissionCodes` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
 | `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 89, 190 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 12, 28, 41, 62, 71, 97 |
@@ -1607,10 +1488,11 @@ Capture DDLs:
 | `permissionCodes` | tool | server/db/scripts/seed/mesh-authorization-inventory-model.ts | 227, 232, 233 |
 | `permissionCodes` | tool | server/db/scripts/seed/neon-authorization-inventory-model.ts | 213, 218, 219 |
 | `permissionCodes` | runtime | server/packages/contracts/finance/src/commands.ts | 7 |
-| `permissionCodes` | runtime | server/packages/planes/neon/src/finance-http.ts | 54 |
+| `permissionCodes` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
 | `permissionCodes` | test | server/packages/planes/neon/src/finance-jobs.test.ts | 6 |
 | `permissionCodes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 13, 79 |
 | `permissionCodes` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 6 |
+| `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 180, 996, 998, 1028, 2107 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/customer-controls.tsx | 11, 71, 72 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 44, 54, 58, 85 |
 | `permissions` | test | packages/planes/neon/business-partner/src/workflow.test.ts | 5, 8, 9, 10, 11 |
@@ -1630,7 +1512,7 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/policy-vertical.test.ts | 19 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 20, 21 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
+| `permissions` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 754, 783, 791, 803, 857, 4091, 4094, 4095, 4244, 4245, 4775 |
 | `permissions` | ddl | server/db/ddl/common/authz/00_schema.sql | 4 |
 | `permissions` | ddl | server/db/ddl/common/authz/07_functions.sql | 578 |
@@ -1663,11 +1545,6 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/seed/validate-canonical-catalogs.ts | 28, 47, 74, 79 |
 | `permissions` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175 |
 | `permissions` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
-| `permissions` | runtime | server/db/seed-backup/contracts/authorization/authority/mesh/authority.v1.json | 22 |
-| `permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json | 11 |
-| `permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/catalog.v1.json | 13 |
-| `permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json | 11, 102, 103, 104, 105, 106 |
-| `permissions` | runtime | server/db/seed-backup/meta-entity/990_assertions/010_contract_assertions.sql | 153 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/mesh/catalog.v2.json | 7 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/mesh/scope-compatibility.v1.json | 6 |
 | `permissions` | runtime | server/db/seed/contracts/authorization/catalog/neon/catalog.v2.json | 7 |
@@ -1692,7 +1569,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 20 |
 | `permissions` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23, 30 |
 | `permissions` | test | server/packages/planes/neon/src/finance-http.test.ts | 7 |
-| `permissions` | runtime | server/packages/planes/neon/src/finance-http.ts | 54 |
+| `permissions` | route | server/packages/planes/neon/src/finance-http.ts | 54 |
 | `permissions` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
 | `permissions` | test | server/packages/planes/neon/src/register-finance.test.ts | 7 |
 | `permissions` | runtime | server/packages/planes/neon/src/register-finance.ts | 289, 336, 348, 355, 380, 386, 391, 411, 469 |
@@ -1725,7 +1602,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 8, 30, 31, 67, 68, 85, 91 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
-| `permissions` | runtime | server/packages/platform/iam/src/iam-routes.ts | 34 |
+| `permissions` | route | server/packages/platform/iam/src/iam-routes.ts | 34 |
 | `permissions` | runtime | server/packages/platform/iam/src/iam-service.ts | 46, 101, 102, 104, 106, 109, 110, 172, 174, 200, 201 |
 | `permissions` | runtime | server/packages/platform/iam/src/kysely-identity-context-resolver.ts | 58, 63 |
 | `permissions` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 11, 12, 13, 19, 27, 30, 33, 36, 39, 41, 58, 65, 70, 71 |
@@ -1782,14 +1659,23 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/query-provider-lifecycle.test.ts | 13 |
 | `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
+| `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 736, 796, 798, 919, 938, 939, 978, 982 |
+| `permissions` | tool | tooling/scripts/policy/host-capability-registry.mjs | 98 |
+| `permissions` | tool | tooling/scripts/policy/host-capability-registry.test.mjs | 32 |
+| `permissions` | tool | tooling/scripts/policy/verify-access-consumption-phase9.mjs | 12 |
+| `permissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 14, 20 |
+| `persona` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 308 |
+| `persona` | runtime | governance/config/governance/authorization-legacy-freeze-baseline.v1.json | 6497, 6649, 6663, 6664, 6671, 6672, 6679, 6680, 6687, 6688, 6695, 6696, 6703, 6704, 6711, 6712, 6719, 6720, 6727, 6728, 6735, 6736, 6743, 6744, 6751, 6752, 6753, 6759, 6760, 6767, 6768, 6775, 6776, 6783, 6784, 6791, 6792, 6799, 6800, 7041, 7049, 7057 |
 | `persona` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 14, 17, 19, 21, 28 |
 | `persona` | tool | server/db/scripts/checks/seeds/authorization.ts | 72 |
 | `persona` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 64, 65, 66, 67, 68, 70, 72 |
 | `persona` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 35, 56, 57, 58, 59, 60, 61, 64, 149, 158, 159, 163, 164, 169, 172, 173, 179, 184, 185, 190, 193, 194, 198, 199, 209, 210, 222, 233, 234 |
 | `persona` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 68 |
-| `persona` | runtime | server/db/seed-backup/contracts/authorization/evaluator/mesh/repository-contract.v1.json | 25 |
-| `persona` | runtime | server/db/seed-backup/contracts/authorization/evaluator/neon-admin/repository-contract.v1.json | 24 |
 | `persona` | keycloak | stack/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
+| `persona` | tool | tooling/scripts/policy/authorization-inventory.ts | 558, 737, 742 |
+| `persona` | tool | tooling/tools/scripts/generate-athyper-demo-iam.cjs | 71, 85, 99, 100, 101, 117, 128, 132, 140, 141, 147, 148, 163, 254 |
+| `persona` | tool | tooling/tools/scripts/verify-athyper-demo-iam.cjs | 107, 108, 110 |
+| `personaId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
 | `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4786 |
 | `planeExcluded` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planeExcluded` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 23 |
@@ -1874,6 +1760,7 @@ Capture DDLs:
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
+| `planLocked` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
 | `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4779 |
 | `principalFingerprint` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `principalFingerprint` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 16 |
@@ -1972,14 +1859,12 @@ Capture DDLs:
 | `profileHash` | runtime | server/packages/test-utils/src/index.ts | 15, 22 |
 | `profileHash` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `profileHash` | test | tests/contracts/frontend-spine-browser-contracts.test.ts | 21 |
-| `required_permission` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/catalog.v1.json | 76 |
-| `required_permission` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | 45 |
-| `required_permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/catalog.v1.json | 66 |
-| `required_permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | 31 |
+| `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 937 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 140 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 110 |
 | `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 178, 179 |
 | `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 41, 46 |
+| `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 937 |
 | `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 50, 61, 72, 93, 104, 117 |
 | `requiredPermissions` | runtime | packages/planes/mesh/shell/src/navigation.ts | 11 |
 | `requiredPermissions` | runtime | packages/planes/neon/navigation/src/index.ts | 12 |
@@ -2000,20 +1885,19 @@ Capture DDLs:
 | `requiredPermissions` | test | tests/foundation/access-gates-phase9.test.tsx | 9 |
 | `requiredPermissions` | test | tests/foundation/activity-center-interactions.test.tsx | 10 |
 | `requiredPermissions` | test | tests/foundation/quick-access-interactions.test.tsx | 10 |
+| `requiredPermissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 12, 26 |
+| `requiredPermissions` | ui | tooling/scripts/verification/shell-browser-entry.tsx | 6 |
 | `roleIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 217, 227, 231 |
 | `roleIds` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 121, 126 |
 | `roleIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 111, 117, 196, 198 |
 | `roleIds` | tool | server/db/scripts/provisioning/three-plane-model.ts | 126 |
 | `roleIds` | tool | server/db/scripts/seed/compile-final-authorization-seed-packs.ts | 80, 81, 82 |
 | `roleIds` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 24, 229, 272, 276, 285 |
-| `roleIds` | runtime | server/db/seed-backup/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json | 282, 292, 302, 312, 322 |
-| `roleIds` | runtime | server/db/seed-backup/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json | 2661, 2671, 2681, 2691, 2701, 2711, 2721, 2731, 2739, 2749 |
-| `roleIds` | runtime | server/db/seed-backup/contracts/authorization/authority/neon-admin/compiled/development-existing-user-group-manifest.v1.json | 26, 54, 82, 110, 138, 160, 190, 220, 250, 280, 308, 327, 346, 376, 395, 414, 444, 472, 571, 590, 700, 799, 818, 928, 958, 988, 1018, 1048, 1078, 1177, 1196, 1306, 1405, 1424, 1534, 1564, 1594, 1624, 1654, 1684, 1703, 1722, 1752, 1771, 1790, 1820, 1850, 1880, 1910, 1940, 1970, 1989, 2008, 2038, 2057, 2076, 2106, 2136, 2166, 2196, 2226, 2256, 2275, 2294, 2324, 2343, 2362, 2392, 2422, 2452, 2482, 2512, 2542, 2561, 2580, 2610, 2629, 2648, 2678, 2708, 2738, 2768, 2798, 2828, 2847, 2866, 2896, 2915, 2934, 2964, 2994, 3024, 3054, 3084, 3114, 3133, 3152, 3182, 3201, 3220, 3250, 3280, 3310, 3340, 3370, 3400, 3419, 3438, 3468, 3487, 3506, 3536, 3566, 3596, 3626, 3656, 3686, 3705, 3724, 3754, 3773, 3792, 3822, 3852, 3882, 3912, 3942, 3972, 3991, 4010, 4040, 4059, 4078, 4108, 4138, 4168, 4198, 4228, 4258, 4277, 4296, 4326, 4345, 4364, 4394, 4424, 4454, 4484, 4514, 4544, 4563, 4582, 4612, 4631, 4650, 4680, 4710, 4740, 4770, 4800, 4830, 4849, 4868, 4898, 4917, 4936, 4966, 4996, 5026, 5056, 5086, 5116, 5135, 5154, 5184, 5203, 5222, 5252, 5282, 5312, 5342, 5372, 5402, 5421, 5440, 5470, 5489, 5508, 5538, 5568, 5598, 5628, 5658, 5688, 5707, 5726, 5756, 5775, 5794, 5824, 5854, 5884, 5914, 5944, 5974, 5993, 6012, 6042, 6061, 6080, 6110, 6144, 6163, 6208, 6242, 6261, 6306, 6325, 6355, 6374, 6404, 6423, 6453, 6483, 6513, 6543, 6573, 6603, 6633, 6663, 6693, 6723 |
-| `roleIds` | runtime | server/db/seed-backup/packs/authorization-v2/mesh/seed-pack.v1.json | 1159, 1169, 1179, 1189, 1199, 1825, 1855, 1885, 1995, 2105, 2215, 2325, 2355, 2385, 2415, 2445, 2475, 2505, 2535, 2565, 2595, 2625, 2655, 2685, 2715, 2745, 2775, 2805, 2835, 2865, 2895, 2925, 2955, 2985, 3015, 3045, 3075, 3105, 3135, 3165, 3195, 3225, 3255, 3285, 3330, 3375, 3405, 3435, 3465, 3495, 3525, 3555 |
-| `roleIds` | runtime | server/db/seed-backup/packs/authorization-v2/neon-admin/seed-pack.v1.json | 2704, 2714, 2724, 2734, 2744, 2754, 2764, 2774, 2782, 2792, 20442, 20470, 20498, 20526, 20554, 20576, 20606, 20636, 20666, 20696, 20724, 20743, 20773, 20792, 20822, 20850, 20949, 20979, 21078, 21108, 21138, 21168, 21198, 21228, 21258, 21357, 21387, 21486, 21516, 21546, 21576, 21606, 21636, 21666, 21685, 21715, 21734, 21764, 21794, 21824, 21854, 21884, 21914, 21933, 21963, 21982, 22012, 22042, 22072, 22102, 22132, 22162, 22181, 22211, 22230, 22260, 22290, 22320, 22350, 22380, 22410, 22429, 22459, 22478, 22508, 22538, 22568, 22598, 22628, 22658, 22677, 22707, 22726, 22756, 22786, 22816, 22846, 22876, 22906, 22925, 22955, 22974, 23004, 23034, 23064, 23094, 23124, 23154, 23173, 23203, 23222, 23252, 23282, 23312, 23342, 23372, 23402, 23421, 23451, 23470, 23500, 23530, 23560, 23590, 23620, 23650, 23669, 23699, 23718, 23748, 23778, 23808, 23838, 23868, 23898, 23917, 23947, 23966, 23996, 24026, 24056, 24086, 24116, 24146, 24165, 24195, 24214, 24244, 24274, 24304, 24334, 24364, 24394, 24413, 24443, 24462, 24492, 24522, 24552, 24582, 24612, 24642, 24661, 24691, 24710, 24740, 24770, 24800, 24830, 24860, 24890, 24909, 24939, 24958, 24988, 25018, 25048, 25078, 25108, 25138, 25157, 25187, 25206, 25236, 25266, 25296, 25326, 25356, 25386, 25405, 25435, 25454, 25484, 25518, 25548, 25582, 25612, 25631, 25661, 25680, 25710, 25729, 25759, 25789, 25819 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 1134, 1982, 2006, 2030, 2054, 2078, 2102, 2126, 2150, 2174, 2198, 2222, 2246, 2270, 2294, 2318, 2342, 2366, 2390, 2414, 2438, 2462, 2486, 2510, 2534, 2558, 2582, 2606, 2630, 2654, 2678, 2702, 2726, 2750, 2774, 2798, 2822, 2846, 2870, 2894, 2918, 2942, 2966, 2990, 3014, 3038, 3062, 3086, 3110, 3134, 3158, 3182, 3206, 3230, 3254 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 773, 2979, 3003, 3027, 3051, 3075, 3099, 3123, 3147, 3171, 3195, 3219, 3243, 3267, 3291, 3315, 3339, 3363, 3387, 3411, 3435, 3459, 3483, 3507, 3531, 3555, 3579, 3603, 3627, 3651, 3675, 3699, 3723, 3747, 3771, 3795, 3819, 3843, 3867, 3891, 3915, 3939, 3963, 3987, 4011, 4035, 4059, 4083, 4107, 4131, 4155, 4179, 4203, 4227, 4251, 4275, 4299, 4323, 4347, 4371, 4395, 4419, 4443, 4467, 4491, 4515, 4539, 4563, 4587, 4611, 4635, 4659, 4683, 4707, 4731, 4755, 4779, 4803, 4827, 4851, 4875, 4899, 4923, 4947, 4971, 4995, 5019, 5043, 5067, 5091, 5115, 5139, 5163, 5187, 5211, 5235, 5259, 5283, 5307, 5331, 5355, 5379, 5403, 5427, 5451, 5475, 5499, 5523, 5547, 5571, 5595, 5619, 5643, 5667, 5691, 5715, 5739, 5763, 5787, 5811, 5835, 5859, 5883, 5907, 5931, 5955, 5979, 6003, 6027, 6051, 6075, 6099, 6123, 6147, 6171, 6195, 6219, 6243, 6267, 6291, 6315, 6339, 6363, 6387, 6411, 6435, 6459, 6483, 6507, 6531, 6555, 6579 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 771, 1255, 1279, 1303, 1327, 1351, 1375, 1399, 1423, 1447, 1471, 1495, 1519, 1543, 1567, 1591, 1615, 1639, 1663, 1687, 1711, 1735, 1759, 1783, 1807, 1831, 1855, 1879, 1903 |
+| `roleIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 738, 755 |
+| `roleIds` | tool | tooling/tools/scripts/update-realm-neon.cjs | 94, 96 |
 
 ## Keycloak mapper inventory
 
@@ -2172,23 +2056,6 @@ Capture DDLs:
 | server/db/prisma/schema.mesh.prisma | server/db/prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma | database-platform | yes | yes |
 | server/db/prisma/schema.neon.prisma | server/db/prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma | database-platform | yes | yes |
 | server/db/prisma/schema.studio.prisma | server/db/prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma | database-platform | yes | yes |
-| server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh | mesh-platform | no | no |
-| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
-| server/db/seed/contracts/generated/resolver-contracts.json | server/scripts/export-resolver-contracts.ts | metadata-platform | no | no |
 | stack/config/iam/realm-athyper-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
 | stack/config/iam/realm-athyper.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
 | stack/config/iam/realm-platform-control-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |

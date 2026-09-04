@@ -19,7 +19,7 @@ test("G3 creates capability episodes instead of relationship metadata flags", as
   assert.match(sql, /status = 'requested' AND approved_by_tenant_id IS NULL/);
   assert.doesNotMatch(
     sql,
-    /ALTER TABLE mesh\.network_relationship\s+ADD COLUMN .*capability/is,
+    /ALTER TABLE mesh\.network_relationship\s+ADD COLUMN[^;]*(?:capability|capabilities)/i,
   );
   assert.doesNotMatch(
     sql,

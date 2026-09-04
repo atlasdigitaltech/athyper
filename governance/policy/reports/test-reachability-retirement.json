@@ -8,102 +8,6 @@
       "runner": "test:operations"
     },
     {
-      "path": "tooling/scripts/acceptance/controlled-transfer-disruption.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/performance/qualify-meta-entity.test.mjs",
-      "runner": "test:performance-guards"
-    },
-    {
-      "path": "tooling/scripts/performance/verify-experience-production-gates.test.mjs",
-      "runner": "test:performance-guards"
-    },
-    {
-      "path": "tooling/scripts/performance/verify-meta-entity-retirement.test.mjs",
-      "runner": "test:performance-guards"
-    },
-    {
-      "path": "tooling/scripts/performance/verify-runtime-list-cache-rollout.test.mjs",
-      "runner": "test:performance-guards"
-    },
-    {
-      "path": "tooling/scripts/performance/verify-shared-shell-bundle.test.mjs",
-      "runner": "test:performance-guards"
-    },
-    {
-      "path": "tooling/scripts/policy/audit-style-tokens.test.ts",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/authorization-inventory.test.ts",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/frontend-spine-governance.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/generate-server-route-manifest.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/host-capability-registry.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/meta-entity-certification.test.ts",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/meta-entity-rollout-gate.test.ts",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-design-system.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-docker-toolchain.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-experience-cleanup.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-governance-plane-composition.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-server-docker-workspaces.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-server-rebuild-boundaries.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/policy/verify-theme-token-integrity.test.mjs",
-      "runner": "test:policy"
-    },
-    {
-      "path": "tooling/scripts/rehearsal/record-sanitized-data-evidence.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/release/promote-image-set.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/staging-email-canary-evidence.test.mjs",
-      "runner": "test:operations"
-    },
-    {
-      "path": "tooling/scripts/verification/verify-notification-provider-readiness.test.mjs",
-      "runner": "test:operations"
-    },
-    {
       "path": "tests/contracts/access-consumption-phase9.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -274,6 +178,102 @@
     {
       "path": "tests/foundation/theme-contract.test.tsx",
       "runner": "test:foundation"
+    },
+    {
+      "path": "tooling/scripts/acceptance/controlled-transfer-disruption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/performance/qualify-meta-entity.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-experience-production-gates.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-meta-entity-retirement.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-runtime-list-cache-rollout.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/performance/verify-shared-shell-bundle.test.mjs",
+      "runner": "test:performance-guards"
+    },
+    {
+      "path": "tooling/scripts/policy/audit-style-tokens.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/authorization-inventory.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/frontend-spine-governance.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/generate-server-route-manifest.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/host-capability-registry.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/meta-entity-certification.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/meta-entity-rollout-gate.test.ts",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-design-system.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-docker-toolchain.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-experience-cleanup.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-governance-plane-composition.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-server-docker-workspaces.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-server-rebuild-boundaries.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-theme-token-integrity.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/rehearsal/record-sanitized-data-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/release/promote-image-set.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/staging-email-canary-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/verify-notification-provider-readiness.test.mjs",
+      "runner": "test:operations"
     },
     {
       "path": "tooling/tools/scripts/ddl-service-coverage-policy.test.mjs",

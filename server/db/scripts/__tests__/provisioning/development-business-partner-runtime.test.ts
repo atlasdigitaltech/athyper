@@ -91,8 +91,8 @@ test("development business-partner access separates reader and primary-admin req
     ),
     "utf8",
   );
-  assert.match(source, /neon\.relationship\.business_partner_request\.read/);
-  assert.match(source, /neon\.relationship\.business_partner_request\.create/);
+  assert.match(source, /neon\.relationship\.entity_case\.read/);
+  assert.match(source, /neon\.relationship\.entity_case\.create/);
   assert.match(source, /demo\.neon\.business-partner-request-creator/);
   assert.match(source, /PRIMARY_TENANT_ADMINS/);
   assert.match(source, /neon\.business_partner\.view_360/);

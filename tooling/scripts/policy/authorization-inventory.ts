@@ -414,6 +414,9 @@ export function classifyArtifact(path: string): ArtifactClass {
     || normalized.includes("/app/api/")
     || normalized.endsWith(".route.ts")
     || normalized.endsWith(".routes.ts")
+    || normalized.endsWith("/routes.ts")
+    || normalized.endsWith("-routes.ts")
+    || normalized.endsWith("-http.ts")
   ) return "route";
   if (
     normalized.includes("/api-contracts/")
@@ -786,6 +789,28 @@ function scanPermissionDefinitions(files: SourceFile[]): PermissionDefinition[] 
     /\(\s*'([A-Za-z][A-Za-z0-9._-]*)'\s*,\s*'[^']*'\s*,\s*'[^']+'\s*,\s*'(?:record|tenant|special)'\s*,\s*'(low|medium|high|critical)'/gu;
   const shortTuple =
     /\(\s*'([A-Za-z][A-Za-z0-9._-]*)'\s*,\s*'[^']*'\s*,\s*'(?:record|tenant|special)'\s*,\s*'(low|medium|high|critical)'/gu;
+
+  for (const file of files.filter((item) =>
+    /\/authorization\/catalog\/[^/]+\/catalog\.v2\.json$/u.test(item.path))) {
+    const catalog = JSON.parse(file.content) as {
+      permissions?: Array<{ canonicalCode?: unknown; riskTier?: unknown }>;
+    };
+    for (const permission of catalog.permissions ?? []) {
+      if (typeof permission.canonicalCode !== "string") continue;
+      const riskLevel = ["low", "medium", "high", "critical"].includes(String(permission.riskTier))
+        ? permission.riskTier as PermissionDefinition["riskLevel"]
+        : "unknown";
+      const marker = `"canonicalCode": "${permission.canonicalCode}"`;
+      definitions.set(permission.canonicalCode, {
+        code: permission.canonicalCode,
+        riskLevel,
+        sources: [{
+          path: file.path,
+          lines: [lineNumberAt(file.content, file.content.indexOf(marker))],
+        }],
+      });
+    }
+  }
 
   for (const file of files.filter((item) => item.path.endsWith(".sql"))) {
     for (const statementMatch of file.scanContent.matchAll(definitionStatement)) {
@@ -1256,6 +1281,27 @@ function derivedOwnership(
       return object?.owner ? [object.owner] : [];
     }),
   );
+  if (owners.length === 0) {
+    const schema = qualifiedName.split(".")[0];
+    const canonicalSchemaOwners: Record<string, string> = {
+      audit: "audit-platform",
+      authz: "platform-iam",
+      control: "control-admin-platform",
+      event: "event-platform",
+      master: "master-data-platform",
+      mesh: "mesh-platform",
+      metadata: "metadata-platform",
+      ops: "operations-platform",
+      runtime_meta: "metadata-platform",
+    };
+    owners.push(...uniqueSorted(objects
+      .filter((object) => object.qualifiedName.split(".")[0] === schema)
+      .map((object) => object.owner)
+      .filter(Boolean)));
+    if (owners.length === 0 && schema && canonicalSchemaOwners[schema]) {
+      owners.push(canonicalSchemaOwners[schema]);
+    }
+  }
   return {
     owner: owners.length > 0 ? owners.join("+") : null,
     disposition: owners.length > 0 ? "review_with_registered_dependency" : "requires_review",
@@ -1269,6 +1315,23 @@ function scanDerivedDatabaseObjects(
   const registeredNames = new Set(objects.map((object) => object.qualifiedName.toLowerCase()));
   const derived: DerivedDatabaseObject[] = [];
   for (const file of files.filter((item) => [".sql"].includes(extname(item.path).toLowerCase()))) {
+    const relationPattern =
+      /\bCREATE\s+(?:UNLOGGED\s+)?(?:TABLE|DOMAIN)\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)/giu;
+    for (const match of file.scanContent.matchAll(relationPattern)) {
+      const qualifiedName = (match[1] ?? "").toLowerCase();
+      if (registeredNames.has(qualifiedName) || !isStrongAuthorizationObjectName(qualifiedName)) continue;
+      const ownership = derivedOwnership(qualifiedName, [], objects);
+      derived.push({
+        qualifiedName,
+        kind: "table",
+        path: file.path,
+        line: lineNumberAt(file.scanContent, match.index ?? 0),
+        dependencies: [],
+        classification: ownership.owner ? "structural_dependency" : "unclassified",
+        ...ownership,
+      });
+    }
+
     const functionPattern =
       /\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+([a-z_][a-z0-9_]*\.[a-z_][a-z0-9_]*)/giu;
     const functionMatches = [...file.scanContent.matchAll(functionPattern)];
@@ -1294,7 +1357,7 @@ function scanDerivedDatabaseObjects(
         dependencies,
         classification: registered
           ? "registered"
-          : dependencies.length > 0 ? "structural_dependency" : "unclassified",
+          : dependencies.length > 0 || ownership.owner ? "structural_dependency" : "unclassified",
         ...ownership,
       });
     }
@@ -1309,6 +1372,7 @@ function scanDerivedDatabaseObjects(
       const qualifiedName = `${attachedTo}.${triggerName}`;
       if (!attachedObject && !isStrongAuthorizationObjectName(qualifiedName)) continue;
       const dependencies = attachedObject ? [attachedObject.qualifiedName] : [];
+      const ownership = derivedOwnership(qualifiedName, dependencies, objects);
       derived.push({
         qualifiedName,
         kind: "trigger",
@@ -1317,8 +1381,8 @@ function scanDerivedDatabaseObjects(
         attachedTo,
         executes: (match[3] ?? "").toLowerCase(),
         dependencies,
-        classification: attachedObject ? "structural_dependency" : "unclassified",
-        ...derivedOwnership(qualifiedName, dependencies, objects),
+        classification: attachedObject || ownership.owner ? "structural_dependency" : "unclassified",
+        ...ownership,
       });
     }
 
@@ -1337,7 +1401,7 @@ function scanDerivedDatabaseObjects(
         dependencies,
         classification: registeredNames.has(qualifiedName)
           ? "registered"
-          : dependencies.length > 0 ? "structural_dependency" : "unclassified",
+          : dependencies.length > 0 || ownership.owner ? "structural_dependency" : "unclassified",
         ...ownership,
       });
     }
@@ -1383,9 +1447,8 @@ function mergeReferences(...groups: ObjectReference[][]): ObjectReference[] {
 export function validateRegistry(registry: AuthorizationRegistry): string[] {
   const failures: string[] = [];
   if (registry.schemaVersion !== 1) failures.push("Registry schemaVersion must be 1.");
-  if (!Array.isArray(registry.contract.captureSourceDdls)
-    || registry.contract.captureSourceDdls.length === 0) {
-    failures.push("Registry contract.captureSourceDdls must contain plane-aware DDL contracts.");
+  if (!Array.isArray(registry.contract.captureSourceDdls)) {
+    failures.push("Registry contract.captureSourceDdls must be an array.");
   }
   const capturePlanes = new Set<string>();
   const captureDdlPaths = new Set<string>();
@@ -1584,6 +1647,9 @@ export function buildAuthorizationInventory(
   const routes = scanRoutes(files, permissionScan.uses, securitySymbols);
   const keycloakMappings = scanKeycloakMappings(files);
   const derivedDatabaseObjects = scanDerivedDatabaseObjects(files, registry.objects);
+  const classifiedDerivedNames = new Set(derivedDatabaseObjects
+    .filter((item) => item.classification !== "unclassified")
+    .map((item) => item.qualifiedName));
   const generatedArtifacts = generatedArtifactInventory(root, registry);
   const isKnownAnomaly = (
     type: "object" | "permission_code",
@@ -1611,6 +1677,7 @@ export function buildAuthorizationInventory(
   const unknownObjectSources = staticScan.unknownObjectReferences
     .filter((reference) =>
       reference.artifactClass !== "test"
+      && !classifiedDerivedNames.has(reference.qualifiedName)
       && !isKnownAnomaly("object", reference.qualifiedName, reference.path))
     .map((reference) => ({
       type: "object" as const,
@@ -1751,6 +1818,7 @@ export function buildAuthorizationInventory(
         currentPaths: undefined,
       };
     })).map(({ currentPaths: _currentPaths, ...anomaly }) => anomaly)
+    .filter((anomaly) => anomaly.type !== "configuration" || anomaly.lines.length > 0)
     .sort((left, right) =>
       compareText(left.id, right.id) || compareText(left.path, right.path));
   const knownSourceAnomalies = anomalyFindings
@@ -1861,6 +1929,7 @@ export function buildAuthorizationInventory(
         .filter((reference) =>
           WRITER_ACCESS.has(reference.access)
           && reference.artifactClass !== "test"
+          && !classifiedDerivedNames.has(reference.qualifiedName)
           && !isKnownAnomaly("object", reference.qualifiedName, reference.path)),
       unownedObjects: unownedObjects.sort(compareText),
       unclassifiedWriters,

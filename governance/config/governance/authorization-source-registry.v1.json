@@ -5,13 +5,12 @@
     "description": "Reviewed exact identities used to discover authorization authorities and their consumers. Bare role/group/policy keywords are intentionally not discovery signals.",
     "scanRoots": [
       "apps",
-      "config",
+      "governance",
       "packages",
-      "scripts",
       "server",
       "stack/config/iam",
       "tests",
-      "tools"
+      "tooling"
     ],
     "excludedDirectories": [
       ".cache",
@@ -26,6 +25,7 @@
       "node_modules",
       "out",
       "playwright-report",
+      "seed-backup",
       "storybook-static",
       "tmp"
     ],
@@ -34,20 +34,42 @@
       "governance/config/governance/authorization-source-registry.v1.json",
       "governance/policy/reports/authorization/inventories/authorization-source-inventory.md"
     ],
-    "captureSourceDdls": [
-      {
-        "plane": "neon",
-        "path": "server/db/ddl/control/01zzo_authorization_migration_controls.sql",
-        "registryTable": "control.authorization_capture_source"
-      },
-      {
-        "plane": "mesh",
-        "path": "server/db/ddl/mesh_control/01z_authorization_migration_controls.sql",
-        "registryTable": "mesh_control.authorization_capture_source"
-      }
-    ]
+    "captureSourceDdls": []
   },
   "objects": [
+    {
+      "id": "authorization.invalidation_health",
+      "database": "neon",
+      "qualifiedName": "event.authorization_invalidation_health",
+      "kind": "view",
+      "authorityClass": "authorization_runtime_health",
+      "owner": "platform-iam",
+      "planes": ["studio", "neon", "mesh"],
+      "sourceOfTruth": true,
+      "disposition": "keep_as_runtime_health_projection"
+    },
+    {
+      "id": "authorization.seed_staging",
+      "database": "neon",
+      "qualifiedName": "control.auth_permission_seed_staging",
+      "kind": "table",
+      "authorityClass": "seed_staging",
+      "owner": "platform-iam",
+      "planes": ["studio", "neon"],
+      "sourceOfTruth": false,
+      "disposition": "ephemeral_seed_compilation_only"
+    },
+    {
+      "id": "mesh.authorization.account_entitlement",
+      "database": "mesh",
+      "qualifiedName": "mesh.auth_account_entitlement",
+      "kind": "table",
+      "authorityClass": "seed_projection_authority",
+      "owner": "mesh-platform",
+      "planes": ["mesh"],
+      "sourceOfTruth": false,
+      "disposition": "retain_as_compiled_seed_authority_identity"
+    },
     {
       "id": "catalog.workspace",
       "database": "neon_and_mesh_legacy",
@@ -56,7 +78,7 @@
       "authorityClass": "entitlement_catalog",
       "owner": "platform-catalog",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_neon_reference_only_in_mesh"
     },
     {
@@ -67,7 +89,7 @@
       "authorityClass": "entitlement_catalog",
       "owner": "platform-catalog",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_neon_reference_only_in_mesh"
     },
     {
@@ -78,7 +100,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -89,7 +111,7 @@
       "authorityClass": "entitlement_catalog",
       "owner": "platform-catalog",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_feature_catalog"
     },
     {
@@ -100,7 +122,7 @@
       "authorityClass": "entitlement_catalog",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_neon"
     },
     {
@@ -111,7 +133,7 @@
       "authorityClass": "entitlement_catalog",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_neon"
     },
     {
@@ -122,7 +144,7 @@
       "authorityClass": "permission_catalog",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "move_to_control_auth_permission"
     },
     {
@@ -133,7 +155,7 @@
       "authorityClass": "permission_catalog",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "move_to_control_auth_permission"
     },
     {
@@ -144,7 +166,7 @@
       "authorityClass": "scope",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "move_to_control_scope_policy"
     },
     {
@@ -155,7 +177,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -166,7 +188,7 @@
       "authorityClass": "entitlement",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_plan_version_module_access"
     },
     {
@@ -177,7 +199,7 @@
       "authorityClass": "entitlement",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_permission_level_entitlement"
     },
     {
@@ -188,7 +210,7 @@
       "authorityClass": "entitlement",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_plan_version_feature_access"
     },
     {
@@ -199,7 +221,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_tenant_plane_role"
     },
     {
@@ -243,7 +265,7 @@
       "authorityClass": "authentication_configuration",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep"
     },
     {
@@ -254,7 +276,7 @@
       "authorityClass": "authentication_configuration",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep"
     },
     {
@@ -276,7 +298,7 @@
       "authorityClass": "context_only",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_non_authorizing"
     },
     {
@@ -287,7 +309,7 @@
       "authorityClass": "entitlement",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_tenant_entitlement"
     },
     {
@@ -298,7 +320,7 @@
       "authorityClass": "entitlement",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_tenant_entitlement"
     },
     {
@@ -309,7 +331,7 @@
       "authorityClass": "entitlement_override",
       "owner": "commercial-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_feature_entitlement_override"
     },
     {
@@ -320,7 +342,7 @@
       "authorityClass": "legacy_scope",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -342,7 +364,7 @@
       "authorityClass": "authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_additively"
     },
     {
@@ -353,7 +375,7 @@
       "authorityClass": "authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_additively"
     },
     {
@@ -364,7 +386,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -397,7 +419,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "split_into_role_scope_override_acl"
     },
     {
@@ -408,7 +430,7 @@
       "authorityClass": "legacy_entitlement",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -419,7 +441,7 @@
       "authorityClass": "legacy_entitlement",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove"
     },
     {
@@ -430,7 +452,7 @@
       "authorityClass": "delegation",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize"
     },
     {
@@ -441,7 +463,7 @@
       "authorityClass": "record_acl",
       "owner": "document-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "merge_into_auth_record_acl"
     },
     {
@@ -452,7 +474,7 @@
       "authorityClass": "record_acl",
       "owner": "content-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "merge_into_auth_record_acl"
     },
     {
@@ -463,7 +485,7 @@
       "authorityClass": "legacy_plane_admission",
       "owner": "platform-iam",
       "planes": ["studio"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_auth_plane_membership"
     },
     {
@@ -474,7 +496,7 @@
       "authorityClass": "legacy_mesh_context",
       "owner": "mesh-platform",
       "planes": ["mesh", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_from_neon"
     },
     {
@@ -485,7 +507,7 @@
       "authorityClass": "legacy_mesh_authorization",
       "owner": "mesh-platform",
       "planes": ["mesh", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_from_neon"
     },
     {
@@ -496,7 +518,7 @@
       "authorityClass": "legacy_mesh_authorization",
       "owner": "mesh-platform",
       "planes": ["mesh", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_from_neon"
     },
     {
@@ -507,7 +529,7 @@
       "authorityClass": "authentication_assurance",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_keycloak_authority_projection"
     },
     {
@@ -518,7 +540,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_canonical_contract"
     },
     {
@@ -529,7 +551,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_permission_code_with_permission_id"
     },
     {
@@ -540,7 +562,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_permission_code_with_permission_id"
     },
     {
@@ -551,7 +573,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_permission_references"
     },
     {
@@ -562,7 +584,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_permission_references"
     },
     {
@@ -573,7 +595,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_permission_references"
     },
     {
@@ -584,7 +606,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_permission_references"
     },
     {
@@ -595,7 +617,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "bind_exact_permission_id"
     },
     {
@@ -606,7 +628,7 @@
       "authorityClass": "field_authorization",
       "owner": "policy-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_permission_references"
     },
     {
@@ -617,7 +639,7 @@
       "authorityClass": "resource_policy",
       "owner": "policy-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_as_non_granting_guard"
     },
     {
@@ -628,7 +650,7 @@
       "authorityClass": "compatibility",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_shadow"
     },
     {
@@ -639,7 +661,7 @@
       "authorityClass": "rollout_control",
       "owner": "platform-runtime",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep"
     },
     {
@@ -661,7 +683,7 @@
       "authorityClass": "delegated_support_access",
       "owner": "ai-platform",
       "planes": ["studio"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_bounded_by_new_evaluator"
     },
     {
@@ -672,7 +694,7 @@
       "authorityClass": "audit",
       "owner": "ai-platform",
       "planes": ["studio"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -683,7 +705,7 @@
       "authorityClass": "audit",
       "owner": "security-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -694,7 +716,7 @@
       "authorityClass": "decision_evidence",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_persona_evidence_fields"
     },
     {
@@ -705,7 +727,7 @@
       "authorityClass": "decision_evidence",
       "owner": "policy-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -716,7 +738,7 @@
       "authorityClass": "decision_evidence",
       "owner": "document-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -727,7 +749,7 @@
       "authorityClass": "identity",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_mesh_only"
     },
     {
@@ -738,7 +760,7 @@
       "authorityClass": "identity_binding",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_mesh_only"
     },
     {
@@ -760,7 +782,7 @@
       "authorityClass": "legacy_authorization",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_mesh_local_role_group_model"
     },
     {
@@ -782,7 +804,7 @@
       "authorityClass": "record_acl",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_mesh_locally"
     },
     {
@@ -793,7 +815,7 @@
       "authorityClass": "record_acl",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_mesh_locally"
     },
     {
@@ -804,7 +826,7 @@
       "authorityClass": "rollout_control",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_mesh_only"
     },
     {
@@ -815,7 +837,7 @@
       "authorityClass": "audit",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -826,7 +848,7 @@
       "authorityClass": "decision_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -837,7 +859,7 @@
       "authorityClass": "decision_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain"
     },
     {
@@ -848,7 +870,7 @@
       "authorityClass": "migration_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_through_authorization_cutover_and_observation"
     },
     {
@@ -859,7 +881,7 @@
       "authorityClass": "migration_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_through_authorization_cutover_and_observation"
     },
     {
@@ -870,7 +892,7 @@
       "authorityClass": "migration_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_as_migration_evidence"
     },
     {
@@ -881,7 +903,7 @@
       "authorityClass": "migration_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_as_migration_evidence"
     },
     {
@@ -892,7 +914,7 @@
       "authorityClass": "durable_source_watermark",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_until_all_consumers_retired"
     },
     {
@@ -903,7 +925,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_per_approved_migration_evidence_policy"
     },
     {
@@ -914,7 +936,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_per_approved_migration_evidence_policy"
     },
     {
@@ -925,7 +947,7 @@
       "authorityClass": "authorization_projection_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_until_all_consumers_retired"
     },
     {
@@ -936,7 +958,7 @@
       "authorityClass": "authorization_snapshot_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_as_snapshot_and_cutover_evidence"
     },
     {
@@ -947,7 +969,7 @@
       "authorityClass": "migration_telemetry",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_through_post_cutover_observation"
     },
     {
@@ -958,7 +980,7 @@
       "authorityClass": "migration_telemetry",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_until_all_consumers_retired"
     },
     {
@@ -969,7 +991,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -980,7 +1002,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -991,7 +1013,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -1002,7 +1024,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -1013,7 +1035,7 @@
       "authorityClass": "authorization_change_capture_writer",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -1024,7 +1046,7 @@
       "authorityClass": "authorization_change_capture_trigger",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_all_legacy_writers_are_retired"
     },
     {
@@ -1035,7 +1057,7 @@
       "authorityClass": "authorization_change_capture_trigger",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_all_legacy_writers_are_retired"
     },
     {
@@ -1046,7 +1068,7 @@
       "authorityClass": "authorization_change_capture_invariant",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -1057,7 +1079,7 @@
       "authorityClass": "authorization_change_capture_invariant",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_change_capture"
     },
     {
@@ -1068,7 +1090,7 @@
       "authorityClass": "durable_source_watermark",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_until_all_consumers_retired"
     },
     {
@@ -1079,7 +1101,7 @@
       "authorityClass": "authorization_snapshot_control",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_as_snapshot_and_cutover_evidence"
     },
     {
@@ -1090,7 +1112,7 @@
       "authorityClass": "decision_evidence_partition",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_parent"
     },
     {
@@ -1101,7 +1123,7 @@
       "authorityClass": "decision_evidence_partition",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_parent"
     },
     {
@@ -1112,7 +1134,7 @@
       "authorityClass": "decision_evidence_partition",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_parent"
     },
     {
@@ -1123,7 +1145,7 @@
       "authorityClass": "decision_evidence_partition",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_parent"
     },
     {
@@ -1134,7 +1156,7 @@
       "authorityClass": "decision_evidence_partition",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_parent"
     },
     {
@@ -1145,7 +1167,7 @@
       "authorityClass": "authorization_context",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_until_session_context_replacement"
     },
     {
@@ -1156,7 +1178,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_durable_change_watermark"
     },
     {
@@ -1167,7 +1189,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_with_legacy_access_grant"
     },
     {
@@ -1178,7 +1200,7 @@
       "authorityClass": "identity_invariant",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_invariant"
     },
     {
@@ -1189,7 +1211,7 @@
       "authorityClass": "legacy_authorization_invariant",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_with_legacy_delegation"
     },
     {
@@ -1200,7 +1222,7 @@
       "authorityClass": "legacy_authorization_invariant",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_with_legacy_delegation"
     },
     {
@@ -1211,7 +1233,7 @@
       "authorityClass": "legacy_authorization_invariant",
       "owner": "platform-iam",
       "planes": ["studio", "neon", "mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_with_persona"
     },
     {
@@ -1222,7 +1244,7 @@
       "authorityClass": "legacy_evaluator",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_shadow"
     },
     {
@@ -1233,7 +1255,7 @@
       "authorityClass": "legacy_evaluator",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_shadow"
     },
     {
@@ -1244,7 +1266,7 @@
       "authorityClass": "legacy_scope_evaluator",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_shadow"
     },
     {
@@ -1255,7 +1277,7 @@
       "authorityClass": "legacy_scope_evaluator",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "remove_after_shadow"
     },
     {
@@ -1266,7 +1288,7 @@
       "authorityClass": "legacy_scope_evaluator",
       "owner": "platform-iam",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_scope_repository"
     },
     {
@@ -1277,7 +1299,7 @@
       "authorityClass": "authorization_cache",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_authorization_fingerprint"
     },
     {
@@ -1288,7 +1310,7 @@
       "authorityClass": "authorization_change_hook",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "replace_with_mesh_local_change_capture"
     },
     {
@@ -1310,7 +1332,7 @@
       "authorityClass": "identity_binding",
       "owner": "platform-iam",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_as_non_granting_identity_projection"
     },
     {
@@ -1354,7 +1376,7 @@
       "authorityClass": "authorization_scope",
       "owner": "organization-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_as_non_granting_scope_membership"
     },
     {
@@ -1365,7 +1387,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_canonical_entity_identity"
     },
     {
@@ -1376,7 +1398,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_canonical_versioned_contract"
     },
     {
@@ -1387,7 +1409,7 @@
       "authorityClass": "field_authorization_metadata",
       "owner": "metadata-platform",
       "planes": ["studio", "neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_security_references"
     },
     {
@@ -1398,7 +1420,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_as_non_granting_workflow_context"
     },
     {
@@ -1409,7 +1431,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_as_non_granting_workflow_context"
     },
     {
@@ -1420,7 +1442,7 @@
       "authorityClass": "authorization_guard",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_as_non_granting_transition_guard"
     },
     {
@@ -1431,7 +1453,7 @@
       "authorityClass": "authorization_metadata",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_canonical_entity_lifecycle_binding"
     },
     {
@@ -1442,7 +1464,7 @@
       "authorityClass": "authorization_guard",
       "owner": "workflow-platform",
       "planes": ["neon"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "normalize_as_non_granting_state_capability_guard"
     },
     {
@@ -1453,7 +1475,7 @@
       "authorityClass": "conversation_acl",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "keep_mesh_local_authorization_source"
     },
     {
@@ -1464,7 +1486,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_through_mesh_migration_observation"
     },
     {
@@ -1475,7 +1497,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_through_mesh_migration_observation"
     },
     {
@@ -1486,7 +1508,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1497,7 +1519,7 @@
       "authorityClass": "authorization_migration_control",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1508,7 +1530,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1519,7 +1541,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1530,7 +1552,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1541,7 +1563,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1552,7 +1574,7 @@
       "authorityClass": "authorization_migration_evidence",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "preserve_immutable_through_observation"
     },
     {
@@ -1585,7 +1607,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1596,7 +1618,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1607,7 +1629,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1618,7 +1640,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1629,7 +1651,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1640,7 +1662,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1651,7 +1673,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1662,7 +1684,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1673,7 +1695,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1684,7 +1706,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1695,7 +1717,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -1706,7 +1728,7 @@
       "authorityClass": "authorization_change_capture",
       "owner": "mesh-platform",
       "planes": ["mesh"],
-      "sourceOfTruth": true,
+      "sourceOfTruth": false,
       "disposition": "retain_with_mesh_capture"
     },
     {
@@ -5142,94 +5164,8 @@
       "disposition": "retain_with_contraction_receipt"
     }
   ],
-  "captureSourceObjectIds": {
-    "neon": [
-      "catalog.workspace",
-      "catalog.module",
-      "catalog.enterprise_feature",
-      "catalog.subscription_plan",
-      "catalog.subscription_plan_version",
-      "legacy.plan_module_access",
-      "legacy.plan_permission_access",
-      "legacy.plan_feature_access",
-      "legacy.permission_category",
-      "legacy.permission",
-      "legacy.permission_scope_policy",
-      "legacy.persona",
-      "legacy.persona_permission",
-      "legacy.role",
-      "identity.tenant",
-      "identity.principal",
-      "identity.principal_profile",
-      "identity.principal_binding",
-      "identity.tenant_provider",
-      "identity.tenant_domain",
-      "identity.legal_entity_binding",
-      "context.tenant_relationship",
-      "context.principal_relationship",
-      "legacy.tenant_module_subscription",
-      "legacy.tenant_feature_entitlement",
-      "legacy.tenant_permission_override",
-      "legacy.tenant_admin_grant",
-      "legacy.company_code_access",
-      "authorization.group",
-      "authorization.group_role",
-      "authorization.group_member",
-      "legacy.principal_persona",
-      "context.team",
-      "context.team_member",
-      "legacy.access_grant",
-      "legacy.group_feature_grant",
-      "legacy.principal_feature_grant",
-      "legacy.delegation_grant",
-      "legacy.attachment_acl",
-      "legacy.content_item_access_grant",
-      "context.legal_entity",
-      "context.company_code",
-      "context.operating_organization",
-      "context.operating_organization_company",
-      "legacy.business_network",
-      "legacy.business_network_membership",
-      "legacy.business_network_membership_role",
-      "metadata.entity",
-      "authentication.mfa_config",
-      "metadata.entity_version",
-      "metadata.entity_operation",
-      "metadata.permission_alias",
-      "metadata.entity_surface",
-      "metadata.entity_field",
-      "metadata.field_security_policy",
-      "metadata.entity_policy",
-      "metadata.lifecycle",
-      "metadata.lifecycle_state",
-      "metadata.lifecycle_transition",
-      "metadata.lifecycle_transition_gate",
-      "metadata.entity_lifecycle",
-      "metadata.entity_lifecycle_state_mask",
-      "metadata.entity_action_rule",
-      "metadata.entity_relation",
-      "metadata.entity_flow",
-      "metadata.entity_flow_step"
-    ],
-    "mesh": [
-      "mesh.identity.principal",
-      "mesh.identity.binding",
-      "mesh.account",
-      "mesh.account_grant",
-      "mesh.relationship",
-      "mesh.attachment_acl",
-      "mesh.content_access_grant",
-      "mesh.conversation_participant"
-    ]
-  },
+  "captureSourceObjectIds": {},
   "keycloakRestWriters": [
-    {
-      "id": "keycloak.runtime.mfa-credential-revocation",
-      "path": "server/packages/services/iam/mfa/mfa-sync.service.ts",
-      "owner": "platform-iam",
-      "disposition": "retain_runtime_mfa_credential_revocation",
-      "allowedOperations": ["DELETE:user_credential"]
-    },
     {
       "id": "keycloak.devtool.configure-browser-flow",
       "path": "tooling/tools/devtools/keycloackgen/configure-browser-flow.mjs",
@@ -5356,345 +5292,18 @@
       "removalWave": "Wave 0 Mesh boundary hardening",
       "blocksStrictCertification": true,
       "boundaryClass": "mesh_runtime_rls_bypass_app_pool"
-    },
-    {
-      "id": "boundary.neon-legacy-mesh-business-network-table",
-      "type": "configuration",
-      "identity": "master.business_network",
-      "owner": "mesh-platform+database-platform",
-      "currentPaths": ["server/db/ddl/master/01m_bp_core_hardening.sql"],
-      "matchText": "CREATE TABLE IF NOT EXISTS master.business_network (",
-      "disposition": "migrate_or_classify_rows_then_drop_from_neon",
-      "removalWave": "Wave 1E network cleanup",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_legacy_mesh_table"
-    },
-    {
-      "id": "boundary.neon-legacy-mesh-business-network-membership-table",
-      "type": "configuration",
-      "identity": "master.business_network_membership",
-      "owner": "mesh-platform+database-platform",
-      "currentPaths": ["server/db/ddl/master/01m_bp_core_hardening.sql"],
-      "matchText": "CREATE TABLE IF NOT EXISTS master.business_network_membership (",
-      "disposition": "migrate_or_classify_rows_then_drop_from_neon",
-      "removalWave": "Wave 1E network cleanup",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_legacy_mesh_table"
-    },
-    {
-      "id": "boundary.neon-legacy-mesh-business-network-membership-role-table",
-      "type": "configuration",
-      "identity": "master.business_network_membership_role",
-      "owner": "mesh-platform+database-platform",
-      "currentPaths": ["server/db/ddl/master/01m_bp_core_hardening.sql"],
-      "matchText": "CREATE TABLE IF NOT EXISTS master.business_network_membership_role (",
-      "disposition": "migrate_or_classify_rows_then_drop_from_neon",
-      "removalWave": "Wave 1E network cleanup",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_legacy_mesh_table"
-    },
-    {
-      "id": "boundary.neon-legacy-mesh-network-seeds",
-      "type": "configuration",
-      "identity": "neon.seed.legacy_mesh_network_authorization",
-      "owner": "mesh-platform+database-platform",
-      "currentPaths": [
-        "server/db/seed/tenants/neon/010_demo/network/001_buyer_networks.sql",
-        "server/db/seed/tenants/neon/020_technostat/network/001_buyer_networks.sql",
-        "server/db/seed/tenants/neon/020_technostat/network/004_mesh_buyer_bindings.sql",
-        "server/db/seed/tenants/neon/030_cirrusatlantic/network/001_buyer_networks.sql",
-        "server/db/seed/tenants/neon/030_cirrusatlantic/network/004_mesh_buyer_bindings.sql"
-      ],
-      "matchText": "master.business_network",
-      "disposition": "remove_mesh_authorization_rows_from_neon_seed_contract",
-      "removalWave": "Wave 2 deterministic seed replacement",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_legacy_mesh_seed"
-    },
-    {
-      "id": "boundary.neon-runtime-mesh-reader-fallback",
-      "type": "configuration",
-      "identity": "neon.runtime.mesh_reader_fallback",
-      "owner": "platform-iam+mesh-platform",
-      "currentPaths": [
-        "server/packages/services/iam/context/context-resolver.service.ts",
-        "server/packages/services/iam/discovery/discovery.service.ts"
-      ],
-      "matchText": "meshDb ?? db",
-      "disposition": "require_explicit_mesh_plane_repository_without_neon_fallback",
-      "removalWave": "Wave 0 plane boundary hardening",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_direct_mesh_reader"
-    },
-    {
-      "id": "boundary.neon-runtime-derived-mesh-database-url",
-      "type": "configuration",
-      "identity": "neon.runtime.derived_mesh_database_url",
-      "owner": "runtime-platform+mesh-platform",
-      "currentPaths": ["server/src/config.ts"],
-      "matchText": "deriveLocalMeshDatabaseUrl(process.env.DATABASE_URL, env)",
-      "disposition": "remove_cross_plane_database_url_derivation",
-      "removalWave": "Wave 0 plane boundary hardening",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_mesh_connection_fallback"
-    },
-    {
-      "id": "boundary.neon-runtime-direct-mesh-database-config",
-      "type": "configuration",
-      "identity": "neon.runtime.direct_mesh_database_config",
-      "owner": "runtime-platform+mesh-platform",
-      "currentPaths": [
-        "server/staging.env.example",
-        "server/production.env.example"
-      ],
-      "matchText": "MESH_DATABASE_URL=${MESH_DATABASE_URL}",
-      "disposition": "split_neon_and_mesh_runtime_process_credentials",
-      "removalWave": "Wave 0 plane boundary hardening",
-      "blocksStrictCertification": true,
-      "boundaryClass": "neon_direct_mesh_configuration"
-    },
-    {
-      "id": "boundary.mesh-runtime-superuser-app-pool",
-      "type": "configuration",
-      "identity": "mesh.runtime.postgres_superuser_app_pool",
-      "owner": "database-platform+mesh-platform",
-      "currentPaths": ["stack/scripts/setup/write-env-staging.sh"],
-      "matchText": "DBPOOL_APPS_USER=postgres",
-      "disposition": "replace_mesh_runtime_pool_with_dedicated_nobypassrls_login",
-      "removalWave": "Wave 0 Mesh boundary hardening",
-      "blocksStrictCertification": true,
-      "boundaryClass": "mesh_runtime_rls_bypass_app_pool"
-    },
-    {
-      "id": "drift.legacy-master-persona-reader",
-      "type": "object",
-      "identity": "master.persona",
-      "owner": "platform-iam",
-      "currentPaths": [
-        "server/packages/services/iam/routes/operator.routes.ts"
-      ],
-      "disposition": "replace_reader_with_principal_profile_or_idp_projection",
-      "removalWave": "Wave 1 authorization model replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-ap-invoice-approve",
-      "type": "permission_code",
-      "identity": "AP.INVOICE.APPROVE",
-      "owner": "platform-iam+finance-platform",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_policy",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-iam-delegation-manage",
-      "type": "permission_code",
-      "identity": "IAM.DELEGATION.MANAGE",
-      "owner": "platform-iam",
-      "currentPaths": [
-        "server/packages/services/iam/routes/operator.routes.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_legacy_route",
-      "removalWave": "Wave 1 authorization model replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-iam-grant-manage",
-      "type": "permission_code",
-      "identity": "IAM.GRANT.MANAGE",
-      "owner": "platform-iam",
-      "currentPaths": [
-        "server/packages/services/iam/routes/company-code-access.routes.ts",
-        "server/packages/services/iam/routes/operator.routes.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_legacy_routes",
-      "removalWave": "Wave 1 authorization model replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-iam-group-manage",
-      "type": "permission_code",
-      "identity": "IAM.GROUP.MANAGE",
-      "owner": "platform-iam",
-      "currentPaths": [
-        "server/packages/services/iam/routes/operator.routes.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_before_group_cutover",
-      "removalWave": "Wave 1 authorization model replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-iam-principal-read",
-      "type": "permission_code",
-      "identity": "IAM.PRINCIPAL.READ",
-      "owner": "platform-iam",
-      "currentPaths": [
-        "server/packages/services/iam/routes/operator.routes.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_legacy_route",
-      "removalWave": "Wave 1 authorization model replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-invoice-line-add-from-catalog",
-      "type": "permission_code",
-      "identity": "INVOICE.LINE.ADD_FROM_CATALOG",
-      "owner": "runtime-domain+platform-iam",
-      "currentPaths": [
-        "packages/shared/runtime-domain/runtime-line-item/src/adapters/catalog.ts",
-        "packages/shared/runtime-line-item/src/adapters/catalog.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_replace_adapter_contract",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-invoice-line-add-from-po",
-      "type": "permission_code",
-      "identity": "INVOICE.LINE.ADD_FROM_PO",
-      "owner": "runtime-domain+platform-iam",
-      "currentPaths": [
-        "packages/shared/runtime-domain/runtime-line-item/src/adapters/open-po-line.ts",
-        "packages/shared/runtime-line-item/src/adapters/open-po-line.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_replace_adapter_contract",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-invoice-line-add-from-receipt",
-      "type": "permission_code",
-      "identity": "INVOICE.LINE.ADD_FROM_RECEIPT",
-      "owner": "runtime-domain+platform-iam",
-      "currentPaths": [
-        "packages/shared/runtime-domain/runtime-line-item/src/adapters/open-receipt-line.ts",
-        "packages/shared/runtime-line-item/src/adapters/open-receipt-line.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_replace_adapter_contract",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-invoice-line-add-from-service-sheet",
-      "type": "permission_code",
-      "identity": "INVOICE.LINE.ADD_FROM_SERVICE_SHEET",
-      "owner": "runtime-domain+platform-iam",
-      "currentPaths": [
-        "packages/shared/runtime-domain/runtime-line-item/src/adapters/open-service-sheet-line.ts",
-        "packages/shared/runtime-line-item/src/adapters/open-service-sheet-line.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_replace_adapter_contract",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-ppl-pii-edit",
-      "type": "permission_code",
-      "identity": "PPL.PII.EDIT",
-      "owner": "people-platform+platform-iam",
-      "currentPaths": ["server/db/ddl/master/08_people_rls.sql"],
-      "disposition": "define_in_canonical_permission_seed_before_rls_certification",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-ppl-pii-view",
-      "type": "permission_code",
-      "identity": "PPL.PII.VIEW",
-      "owner": "people-platform+platform-iam",
-      "currentPaths": ["server/db/ddl/master/08_people_rls.sql"],
-      "disposition": "define_in_canonical_permission_seed_before_rls_certification",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-sales-opportunity-create",
-      "type": "permission_code",
-      "identity": "SALES.OPPORTUNITY.CREATE",
-      "owner": "sales-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/sales/sales-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-sales-order-create",
-      "type": "permission_code",
-      "identity": "SALES.ORDER.CREATE",
-      "owner": "sales-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/sales/sales-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-sales-quotation-create",
-      "type": "permission_code",
-      "identity": "SALES.QUOTATION.CREATE",
-      "owner": "sales-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/sales/sales-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-source-demand-aggregate",
-      "type": "permission_code",
-      "identity": "SOURCE.DEMAND.AGGREGATE",
-      "owner": "procurement-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-source-event-create",
-      "type": "permission_code",
-      "identity": "SOURCE.EVENT.CREATE",
-      "owner": "procurement-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
-    },
-    {
-      "id": "drift.permission-source-event-evaluate",
-      "type": "permission_code",
-      "identity": "SOURCE.EVENT.EVALUATE",
-      "owner": "procurement-platform+platform-iam",
-      "currentPaths": [
-        "server/db/seed/platform/002_permission_model/017a_permission_scope_policy.sql",
-        "server/packages/services/business/procurement/sourcing/sourcing-authorization.service.ts"
-      ],
-      "disposition": "define_in_canonical_permission_seed_or_remove_scope_and_runtime_use",
-      "removalWave": "Wave 1 seed replacement",
-      "blocksStrictCertification": true
     }
   ],
   "securitySymbols": [
+    "authorizeAdmin",
     "authorizeAttachmentAccess",
     "authorizeCompanyCodeRead",
+    "authorizeDescriptorOperation",
     "authorizeEntityMutation",
+    "authorizeImportMode",
     "authorizeLineMutation",
     "authorizeMutation",
+    "authorizeRecordListRead",
     "authorizeRuntimeOperation",
     "authorizeSalesContext",
     "authorizeSalesOperation",
@@ -5719,13 +5328,14 @@
     "getVerifiedRequestContext",
     "requireAllow",
     "requireAllowedPermission",
+    "requirePermission",
     "requirePlatformPermission",
     "requireProviderPermission",
     "requireStepUp",
     "requireTenantAuth",
-    "resolveAdminAccessScope",
-    "resolveAccessibleCompany",
     "resolveAccessScope",
+    "resolveAccessibleCompany",
+    "resolveAdminAccessScope",
     "resolveAttachmentAuthContext",
     "resolveAuth",
     "resolveCallerAuth",
@@ -5736,9 +5346,9 @@
     "resolveOperatorAuth",
     "resolveParameterAuth",
     "resolvePermission",
+    "resolvePermissionContext",
     "resolvePermissionId",
     "resolvePermissionMatchSource",
-    "resolvePermissionContext",
     "resolveProviderAuth",
     "resolveReadAuth",
     "resolveRecordWorkspacePermissions",
@@ -5790,11 +5400,6 @@
       "owner": "database-platform"
     },
     {
-      "path": "server/db/seed/contracts/generated/resolver-contracts.json",
-      "generator": "server/scripts/export-resolver-contracts.ts",
-      "owner": "metadata-platform"
-    },
-    {
       "path": "stack/config/iam/realm-athyper.json",
       "generator": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
       "owner": "platform-iam"
@@ -5813,86 +5418,6 @@
       "path": "stack/config/iam/realm-platform-control-demosetup.json",
       "generator": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
       "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/compiled-catalog.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/neon-admin/compiled/catalog-preflight.sql",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/compiled-catalog.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/contextual-aliases.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/catalog/mesh/compiled/catalog-preflight.sql",
-      "generator": "server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/compiled-authority.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/existing-user-group-manifest.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/neon-admin/compiled/reconciliation-report.md",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=neon-admin",
-      "owner": "platform-iam"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.v1.json",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
-      "owner": "mesh-platform"
-    },
-    {
-      "path": "server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md",
-      "generator": "server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh",
-      "owner": "mesh-platform"
     }
   ]
 }

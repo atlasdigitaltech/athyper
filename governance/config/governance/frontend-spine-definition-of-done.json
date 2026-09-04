@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "criteria": [
     { "id": "canonical-graph", "evidence": ["governance/config/governance/frontend-spine-packages.json", "tooling/scripts/policy/verify-canonical-package-rules.mjs"] },
-    { "id": "backup-isolation", "evidence": ["tooling/scripts/policy/verify-frontend-spine-governance.mjs", "docs/architecture/frontend-spine-reference-disposition.md"] },
+    { "id": "backup-isolation", "evidence": ["tooling/scripts/policy/verify-frontend-spine-governance.mjs"] },
     { "id": "authoritative-contracts", "evidence": ["packages/contracts/platform/fixtures/platform-bootstrap.v1.json", "tests/contracts/frontend-spine-browser-contracts.test.ts", "tests/contracts/frontend-spine-server-contracts.test.ts"] },
     { "id": "server-only-session", "evidence": ["tooling/scripts/policy/verify-auth-session-phase3.mjs", "tests/contracts/auth-session-foundation.test.ts"] },
     { "id": "same-origin-relay", "evidence": ["tooling/scripts/policy/verify-bff-relay-phase4.mjs", "tests/contracts/bff-relay-security.test.ts"] },
@@ -13,7 +13,7 @@
     { "id": "derived-navigation", "evidence": ["tooling/scripts/policy/verify-shared-shell-phase8.mjs", "tests/contracts/shared-shell-navigation.test.ts", "tooling/scripts/policy/verify-access-consumption-phase9.mjs"] },
     { "id": "server-authority", "evidence": ["server/packages/runtime/http/src/route-contract.ts", "server/packages/platform/experience/src/routes.ts", "tests/contracts/access-consumption-phase9.test.ts"] },
     { "id": "three-plane-qualification", "evidence": ["tooling/scripts/policy/verify-app-composition-phase10.mjs", "tests/contracts/app-composition-phase10.test.ts", "governance/config/deployment/profiles.json"] },
-    { "id": "rollback-observability", "evidence": ["docs/architecture/frontend-pilot-cutover.md", "docs/runbooks/frontend-spine-production-observability.md", "stack/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"] },
+    { "id": "rollback-observability", "evidence": ["stack/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"] },
     { "id": "business-module-readiness", "evidence": ["docs/architecture/frontend-first-business-module.md", "tests/contracts/first-business-module-readiness.test.ts"] }
   ]
 }

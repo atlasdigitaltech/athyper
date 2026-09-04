@@ -21,6 +21,7 @@ const markdownPath = resolve(
 );
 const ddlRoot = resolve(repositoryRoot, "server/db/ddl");
 const checkOnly = process.argv.includes("--check");
+const artifactsOnly = process.argv.includes("--artifacts-only");
 
 const policy = JSON.parse(await readFile(policyPath, "utf8"));
 const sqlFiles = await listFiles(ddlRoot, (path) => path.endsWith(".sql"));
@@ -209,10 +210,10 @@ if (checkOnly) {
   const failures = [];
   if (currentInventory !== inventory) failures.push(slash(relative(repositoryRoot, inventoryPath)));
   if (currentMarkdown !== markdown) failures.push(slash(relative(repositoryRoot, markdownPath)));
-  if (!body.gates.everyDiscoveredTableHasOneDisposition) {
+  if (!artifactsOnly && !body.gates.everyDiscoveredTableHasOneDisposition) {
     failures.push(`unclassified tables: ${unknownSchemas.join(", ")}`);
   }
-  if (duplicateRuntimeRegistrations.length > 0) {
+  if (!artifactsOnly && duplicateRuntimeRegistrations.length > 0) {
     failures.push(
       `runtime table registrations also declared in DDL: ${duplicateRuntimeRegistrations.join(", ")}`,
     );

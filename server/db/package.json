@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "test": "tsx --test scripts/__tests__/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:codegen:pull:neon": "node prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma --force",
     "db:codegen:pull:mesh": "node prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma --force",

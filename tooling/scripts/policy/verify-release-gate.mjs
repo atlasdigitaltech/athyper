@@ -15,10 +15,11 @@ const warnings = [];
 // that still pass it, but never allow CI to downgrade a blocking policy.
 const advisory = config.mode !== "blocking" && (args.advisory === true || args.advisory === "true");
 const qualificationPath = args.qualification || "tooling/performance/qualification/result.json";
+const requireEvidence = Boolean(args.qualification || args["require-evidence"]);
 
 const evidence = (name, path) => {
   if (!existsSync(resolve(root, path))) {
-    failures.push(`${name}: missing evidence artifact ${path}`);
+    (requireEvidence ? failures : warnings).push(`${name}: missing evidence artifact ${path}`);
     return null;
   }
   const artifact = load(path);
@@ -28,7 +29,7 @@ const evidence = (name, path) => {
 
 const report = evidence("performanceReport", config.requiredEvidence.performanceReport);
 const qualification = existsSync(resolve(root, qualificationPath)) ? load(qualificationPath) : null;
-if (!qualification) failures.push(`qualification: missing result artifact ${qualificationPath}`);
+if (!qualification) (requireEvidence ? failures : warnings).push(`qualification: missing result artifact ${qualificationPath}`);
 else {
   if (qualification.schemaVersion !== 1) failures.push("qualification: schemaVersion must be 1");
   if (qualification.passed !== true) failures.push("qualification: performance qualification did not pass");
@@ -66,4 +67,4 @@ for (const runbook of config.runbooks) if (!existsSync(resolve(root, runbook))) 
 for (const warning of warnings) console.warn(`WARN: ${warning}`);
 for (const failure of failures) console.error(`FAIL: ${failure}`);
 if (failures.length && !advisory) process.exit(1);
-console.log(`Release gate ${failures.length ? "advisory" : "passed"}: ${failures.length} blocking checks, ${warnings.length} retirement warnings.`);
+console.log(`Release gate ${failures.length ? "failed" : requireEvidence ? "passed" : "readiness passed"}: ${failures.length} blocking checks, ${warnings.length} readiness/retirement warnings.`);

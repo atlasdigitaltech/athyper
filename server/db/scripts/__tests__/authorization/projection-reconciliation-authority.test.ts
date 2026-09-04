@@ -146,7 +146,7 @@ test("retry exhaustion records observation and alerts without changing desired b
   );
   assert.match(
     worker,
-    /classification!=="transient"\|\|work\.attemptNo>=this\.maxAttempts/,
+    /classification\s*!==\s*"transient"\s*\|\|\s*work\.attemptNo\s*>=\s*this\.maxAttempts/,
   );
   assert.match(
     host,
@@ -173,10 +173,10 @@ test("health and manual replay use dedicated canonical Studio permissions", asyn
   );
   assert.match(catalog, /studio\.iam\.application_projection\.read/);
   assert.match(catalog, /studio\.iam\.application_projection\.replay/);
-  assert.match(host, /permission:"studio\.iam\.application_projection\.read"/);
+  assert.match(host, /permission:\s*"studio\.iam\.application_projection\.read"/);
   assert.match(
     host,
-    /permission:"studio\.iam\.application_projection\.replay"/,
+    /permission:\s*"studio\.iam\.application_projection\.replay"/,
   );
   assert.match(host, /status='dead_letter' AND replay_requested_at IS NULL/);
 });

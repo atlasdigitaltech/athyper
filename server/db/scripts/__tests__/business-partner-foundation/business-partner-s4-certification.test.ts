@@ -6,31 +6,25 @@ import test from "node:test";
 const root = resolve(import.meta.dirname, "../../..");
 const read = (path: string) => readFile(resolve(root, path), "utf8");
 
-test("S4 certification executes live negative and concurrent database probes", async () => {
-  const source = await read(
-    "scripts/business-partner-360/run-business-partner-s4-certification.ts",
+test("canonical S4 constraints preserve normalized alias and decision-scope authority", async () => {
+  const [masterTables, masterConstraints, controlTables, controlConstraints] =
+    await Promise.all([
+      read("ddl/planes/neon/master/03_tables.sql"),
+      read("ddl/planes/neon/master/05_constraints.sql"),
+      read("ddl/planes/neon/control/03_tables.sql"),
+      read("ddl/planes/neon/control/05_constraints.sql"),
+    ]);
+  assert.match(masterTables, /CREATE TABLE master\.business_partner_alias/);
+  assert.match(masterConstraints, /business_partner_alias_no_overlap_excl/);
+  assert.match(
+    controlTables,
+    /CREATE TABLE control\.business_partner_decision_scope/,
   );
-  for (const value of [
-    "inactive_catalog_reference",
-    "overlapping_alias",
-    "overlapping_effective_assignment",
-    "overlapping_relationship_period",
-    "relationship_hierarchy_cycle",
-    "multiple_scope_coordinates",
-    "inactive_scope_reference",
-    "scope_cardinality_over_100",
-    "invalid_json_shape",
-    "oversized_json",
-    "alias_overlap",
-    "assignment_overlap",
-    "relationship_overlap",
-    "decision_scope_overlap",
-  ])
-    assert.match(source, new RegExp(value));
-  assert.match(source, /SAVEPOINT/);
-  assert.match(source, /ROLLBACK TO SAVEPOINT/);
-  assert.match(source, /statement_timeout/);
-  assert.match(source, /accepted:1\+\(result\.ok\?1:0\)/);
+  assert.match(controlTables, /scope_group BETWEEN 1 AND 100/);
+  assert.match(
+    controlConstraints,
+    /business_partner_decision_scope_no_overlap_excl/,
+  );
 });
 
 test("S4 compatibility surfaces use evidence checkpoints and fail-closed removal gates", async () => {
@@ -59,32 +53,25 @@ test("S4 compatibility surfaces use evidence checkpoints and fail-closed removal
   }
 });
 
-test("S4 evidence is durable, sanitized, cleanup-verified, and not removal-eligible on first capture", async () => {
-  const source = await read(
-    "scripts/business-partner-360/run-business-partner-s4-certification.ts",
+test("retired S4 evidence runners are not exposed by the canonical database package", async () => {
+  const packageSource = await read("package.json");
+  assert.doesNotMatch(packageSource, /run-business-partner-s4-certification/);
+  assert.doesNotMatch(
+    packageSource,
+    /run-business-partner-s4-migration-evidence/,
   );
-  assert.match(source, /athyper\.business-partner-s4-certification/);
-  assert.match(source, /sanitized:true/);
-  assert.match(source, /negativeFixtures:"transaction_rollback"/);
-  assert.match(source, /cleanupVerified:concurrencyResult\.cleanupVerified/);
-  assert.match(source, /removalEligible:false/);
-  assert.match(source, /writeFile\(destination/);
-  assert.match(source, /assertLoopbackDatabaseTarget/);
-  assert.match(source, /RUN-BP-S4-CERTIFICATION/);
 });
 
-test("S4 migration evidence rejects dirty authority metadata and proves alias and scope backfills", async () => {
-  const source = await read(
-    "scripts/business-partner-360/run-business-partner-s4-migration-evidence.ts",
-  );
-  assert.match(source, /disposable pre-S4 database/);
-  assert.match(source, /S4 preflight failed/);
-  assert.match(source, /rowCountsPreserved/);
-  assert.match(source, /legacyAliasElements/);
-  assert.match(source, /business_partner_decision_scope/);
+test("clean-build S4 authority is declared directly without an active backfill path", async () => {
+  const [masterTables, controlTables, packageSource] = await Promise.all([
+    read("ddl/planes/neon/master/03_tables.sql"),
+    read("ddl/planes/neon/control/03_tables.sql"),
+    read("package.json"),
+  ]);
+  assert.match(masterTables, /CREATE TABLE master\.business_partner_alias/);
   assert.match(
-    source,
-    /credit_review:2,customer_designation:2,qualification:2,supplier_preference:2/,
+    controlTables,
+    /CREATE TABLE control\.business_partner_decision_scope/,
   );
-  assert.match(source, /APPLY-BP-S4-DISPOSABLE-MIGRATION/);
+  assert.doesNotMatch(packageSource, /S4-DISPOSABLE|s4-migration/);
 });

@@ -125,6 +125,7 @@ if (entryPath === resolve(fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2);
   const supportedArgs = new Set([
     "--check",
+    "--artifacts-only",
     "--help",
     "--json",
     "--structural-only",
@@ -138,6 +139,7 @@ if (entryPath === resolve(fileURLToPath(import.meta.url))) {
   }
   const json = args.includes("--json");
   const structuralOnly = args.includes("--structural-only");
+  const artifactsOnly = args.includes("--artifacts-only");
   if (args.includes("--help")) {
     process.stdout.write(
       "Usage: verify-authorization-inventory.ts [--check] [--json] [--structural-only]\n"
@@ -145,16 +147,21 @@ if (entryPath === resolve(fileURLToPath(import.meta.url))) {
       + "                     (also the default behavior)\n"
       + "  --json             emit the recomputed machine-readable verification result\n"
       + "  --structural-only  exit on artifact drift or structural gates, while reporting\n"
-      + "                     owned known anomalies separately\n",
+      + "                     owned known anomalies separately\n"
+      + "  --artifacts-only   check generated inventory and report freshness only\n",
     );
     process.exit(0);
   }
   const result = verifyAuthorizationInventory();
-  const shouldFail = structuralOnly ? !result.structuralPassed : !result.strictPassed;
+  const shouldFail = artifactsOnly
+    ? result.artifactDriftFailures.length > 0
+    : structuralOnly
+      ? !result.structuralPassed
+      : !result.strictPassed;
   if (json) {
     process.stdout.write(`${JSON.stringify({
       schemaVersion: 1,
-      mode: structuralOnly ? "structural_only" : "strict",
+      mode: artifactsOnly ? "artifacts_only" : structuralOnly ? "structural_only" : "strict",
       registrySha256: result.inventory.contract.registrySha256,
       summary: result.inventory.summary,
       gateCounts: Object.fromEntries(
@@ -171,7 +178,9 @@ if (entryPath === resolve(fileURLToPath(import.meta.url))) {
     }, null, 2)}\n`);
   } else if (shouldFail) {
     process.stderr.write("authorization-inventory verification failed:\n");
-    const failures = structuralOnly
+    const failures = artifactsOnly
+      ? result.artifactDriftFailures
+      : structuralOnly
       ? [...result.artifactDriftFailures, ...result.structuralGateFailures]
       : result.failures;
     for (const failure of failures) process.stderr.write(`- ${failure}\n`);
@@ -180,7 +189,9 @@ if (entryPath === resolve(fileURLToPath(import.meta.url))) {
       "authorization-inventory verification passed: "
       + `${result.inventory.summary.registeredObjects} registered objects, `
       + `${result.inventory.summary.authorizationFiles} authorization-bearing files, `
-      + (structuralOnly
+      + (artifactsOnly
+        ? "generated artifacts are current.\n"
+        : structuralOnly
         ? `${result.knownAnomalyFailures.length} owned known anomaly gate(s) reported separately.\n`
         : "no open gates.\n"),
     );

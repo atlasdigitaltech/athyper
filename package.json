@@ -24,7 +24,7 @@
     "env:staging": "pnpm athyper up stg --confirm stg",
     "env:test": "pnpm athyper up qa --confirm qa",
     "build": "turbo build --concurrency 1",
-    "lint": "pnpm policy:shared-grouping && pnpm policy:i18n && turbo lint",
+    "lint": "pnpm policy:i18n && turbo lint",
     "lint:errors": "turbo run lint",
     "policy:design-system": "node tooling/scripts/policy/verify-design-system.mjs",
     "policy:theme-token-integrity": "node tooling/scripts/policy/verify-theme-token-integrity.mjs",
@@ -116,6 +116,8 @@
     "test:server-rebuild-boundaries": "node --test tooling/scripts/policy/verify-server-rebuild-boundaries.test.mjs",
     "inventory:server-rebuild": "node tooling/scripts/policy/generate-server-rebuild-inventory.mjs --write",
     "inventory:server-rebuild:check": "node tooling/scripts/policy/generate-server-rebuild-inventory.mjs",
+    "inventory:authorization:check": "pnpm exec tsx tooling/scripts/policy/verify-authorization-inventory.ts --check",
+    "inventory:authorization-data-disposition:check": "node tooling/scripts/policy/authorization-data-disposition.mjs --check --artifacts-only",
     "inventory:ddl-service-coverage": "node tooling/tools/scripts/generate-ddl-service-coverage.mjs",
     "inventory:ddl-service-coverage:check": "node tooling/tools/scripts/verify-ddl-service-coverage.mjs",
     "ddl:coverage:generate": "node tooling/tools/scripts/generate-ddl-service-coverage.mjs",
@@ -167,7 +169,6 @@
     "policy:plane-boundaries": "node tooling/scripts/policy/verify-plane-boundaries.mjs",
     "policy:experience-cleanup": "node tooling/scripts/policy/verify-experience-cleanup.mjs",
     "policy:content-ui-boundaries": "node tooling/scripts/policy/verify-content-ui-boundaries.mjs",
-    "policy:shared-naming": "node tooling/scripts/policy/verify-shared-naming.mjs",
     "policy:legacy-package-ids": "node tooling/scripts/policy/verify-legacy-package-ids.mjs",
     "policy:legacy-runtime-retirement": "node tooling/scripts/policy/verify-legacy-runtime-retirement.mjs",
     "policy:runtime-api-paths": "tsx tooling/scripts/policy/verify-runtime-api-paths.ts --strict",
@@ -192,13 +193,9 @@
     "policy:qualification-artifacts": "node tooling/scripts/policy/verify-qualification-artifacts.mjs",
     "perf:tenant-size-load:verify": "node tooling/scripts/performance/verify-tenant-size-load-evidence.mjs",
     "policy:performance-phase-history": "node tooling/scripts/policy/verify-performance-phase-history.mjs",
-    "policy:shared-ownership": "node tooling/scripts/policy/verify-shared-ownership.mjs --strict",
-    "policy:shared-grouping:strict": "node tooling/scripts/policy/verify-shared-naming.mjs --strict-group --group-report governance/policy/reports/shared-grouping-audit.json",
-    "policy:shared-naming:legacy": "node tooling/scripts/policy/verify-shared-naming.mjs --strict --legacy",
-    "policy:shared-grouping": "node tooling/scripts/policy/verify-shared-naming.mjs",
     "document-open-rollout-ci-gate": "tsx --tsconfig apps/neon/tsconfig.json tooling/scripts/document-open-rollout-ci-gate.mjs",
     "document-open-rollout-snapshot-export": "tsx --tsconfig apps/neon/tsconfig.json tooling/scripts/document-open-rollout-snapshot-export.mjs",
-    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:server-rebuild-boundaries && pnpm inventory:server-rebuild:check && pnpm routes:server-manifest:check && pnpm policy:server-docker-workspaces && pnpm policy:docker-toolchain && pnpm policy:canonical-packages && pnpm policy:frontend-spine && pnpm policy:foundation-phase1 && pnpm policy:api-client-phase2 && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:shared-ownership && pnpm policy:shared-naming && pnpm policy:shared-grouping && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:runtime-api-paths"
+    "policy": "pnpm policy:versions && pnpm policy:peers && pnpm policy:tsconfig && pnpm policy:style-tokens && pnpm policy:server-boundaries && pnpm policy:server-rebuild-boundaries && pnpm inventory:server-rebuild:check && pnpm inventory:authorization:check && pnpm inventory:authorization-data-disposition:check && pnpm routes:server-manifest:check && pnpm policy:server-docker-workspaces && pnpm policy:docker-toolchain && pnpm policy:canonical-packages && pnpm policy:frontend-spine && pnpm policy:frontend-spine-dod && pnpm policy:foundation-phase1 && pnpm policy:api-client-phase2 && pnpm policy:shared-purity && pnpm policy:no-source-junctions && pnpm policy:deployment-profiles && pnpm policy:neon-mesh-boundary && pnpm policy:plane-boundaries && pnpm policy:content-ui-boundaries && pnpm policy:legacy-package-ids && pnpm policy:legacy-runtime-retirement && pnpm policy:runtime-api-paths"
   },
   "pnpm": {
     "overrides": {

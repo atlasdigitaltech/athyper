@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
- * Blocks new dependencies on retired runtime packages and growth of legacy
- * /api/records consumers. Existing exceptions are explicit, owned, dated,
- * and bounded by occurrence count so this is a ratchet rather than a waiver.
+ * Blocks dependencies on retired runtime packages. `/api/records` remains the
+ * canonical mutation and transfer route family after the three-plane rebuild,
+ * so route definitions and clients are deliberately outside this retirement
+ * policy.
  */
 import { readFile, readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
@@ -13,7 +14,6 @@ const sourceRoots = ["apps", "packages", "server"];
 const sourceExtensions = new Set([".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs"]);
 const skipDirectories = new Set(["node_modules", ".next", ".turbo", "dist", "build", "coverage", ".git"]);
 const legacyImport = /(?:from\s*["']|import\s*\(\s*["'])@athyper\/(?:entity-runtime|document-runtime|runtime-document|runtime-record)(?:[/'"])/g;
-const legacyRecords = /\/api\/(?:relay\/api\/)?records\b/g;
 
 async function walk(directory, files) {
   let entries = [];
@@ -41,7 +41,7 @@ function dateIsValid(value) {
 function validatePolicy(policy) {
   const failures = [];
   const today = new Date().toISOString().slice(0, 10);
-  for (const allowance of [...(policy.legacyPackageRoots ?? []), ...(policy.legacyRecordsConsumers ?? [])]) {
+  for (const allowance of policy.legacyPackageRoots ?? []) {
     if (!allowance.path || !allowance.owner || !dateIsValid(allowance.removeBy)) {
       failures.push(`invalid allowlist entry: ${JSON.stringify(allowance)}`);
     }
@@ -55,7 +55,6 @@ function validatePolicy(policy) {
 async function main() {
   const policy = JSON.parse(await readFile(policyPath, "utf8"));
   const failures = validatePolicy(policy);
-  const exactAllowances = new Map((policy.legacyRecordsConsumers ?? []).map((entry) => [entry.path, entry]));
   const rootAllowances = policy.legacyPackageRoots ?? [];
   const files = [];
   await Promise.all(sourceRoots.map((directory) => walk(join(root, directory), files)));
@@ -70,42 +69,20 @@ async function main() {
     }
     if (packageRoot) packageRoot.actualImports = (packageRoot.actualImports ?? 0) + imports;
 
-    const recordCalls = count(text, legacyRecords);
-    if (recordCalls === 0) continue;
-    if (packageRoot) {
-      packageRoot.actualOccurrences = (packageRoot.actualOccurrences ?? 0) + recordCalls;
-      continue;
-    }
-    const allowance = exactAllowances.get(path);
-    if (!allowance) {
-      failures.push(`${path}: legacy /api/records consumer is not allowlisted`);
-    } else if (recordCalls > allowance.maxOccurrences) {
-      failures.push(`${path}: has ${recordCalls} legacy /api/records occurrence(s), above allowlisted maximum ${allowance.maxOccurrences}`);
-    }
-    if (allowance) allowance.actualOccurrences = recordCalls;
   }
 
   for (const allowance of rootAllowances) {
-    if ((allowance.actualOccurrences ?? 0) > allowance.maxLegacyRecordsOccurrences) {
-      failures.push(`${allowance.path}: has ${allowance.actualOccurrences} legacy /api/records occurrence(s), above allowlisted maximum ${allowance.maxLegacyRecordsOccurrences}`);
-    }
     if ((allowance.actualImports ?? 0) > allowance.maxDeprecatedRuntimeImports) {
       failures.push(`${allowance.path}: imports deprecated runtime packages ${allowance.actualImports} time(s), above allowlisted maximum ${allowance.maxDeprecatedRuntimeImports}`);
     }
   }
-  for (const allowance of exactAllowances.values()) {
-    if (!allowance.actualOccurrences) {
-      failures.push(`${allowance.path}: stale legacy /api/records allowance; remove it from the retirement inventory`);
-    }
-  }
-
   if (failures.length > 0) {
     console.error("[legacy-runtime-retirement] policy violations:");
     failures.forEach((failure) => console.error(`- ${failure}`));
     process.exitCode = 1;
     return;
   }
-  console.log("[legacy-runtime-retirement] OK — deprecated dependencies and /api/records usage are within the owned retirement baseline.");
+  console.log("[legacy-runtime-retirement] OK — no deprecated runtime package imports were found.");
 }
 
 main().catch((error) => {

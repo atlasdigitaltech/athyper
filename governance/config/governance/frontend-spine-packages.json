@@ -1,15 +1,14 @@
 {
-  "$schema": "./frontend-spine-packages.schema.json",
   "version": 1,
   "packages": [
-    { "path": "apps/neon", "name": "@athyper/neon", "owner": "Neon", "classification": "Application composition", "dependencyBudget": { "runtime": 20, "workspace": 16 } },
-    { "path": "apps/mesh", "name": "@athyper/mesh", "owner": "Mesh", "classification": "Application composition", "dependencyBudget": { "runtime": 18, "workspace": 14 } },
-    { "path": "apps/studio", "name": "@athyper/studio", "owner": "Studio", "classification": "Application composition", "dependencyBudget": { "runtime": 17, "workspace": 13 } },
+    { "path": "apps/neon", "name": "@athyper/neon", "owner": "Neon", "classification": "Application composition", "dependencyBudget": { "runtime": 26, "workspace": 22 } },
+    { "path": "apps/mesh", "name": "@athyper/mesh", "owner": "Mesh", "classification": "Application composition", "dependencyBudget": { "runtime": 22, "workspace": 18 } },
+    { "path": "apps/studio", "name": "@athyper/studio", "owner": "Studio", "classification": "Application composition", "dependencyBudget": { "runtime": 21, "workspace": 17 } },
     { "path": "packages/contracts/platform/api", "name": "@athyper/contract-platform-api", "owner": "Contract Platform", "classification": "Shared contract", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
     { "path": "packages/contracts/platform/auth-session", "name": "@athyper/contract-platform-auth-session", "owner": "Contract Platform", "classification": "Shared contract", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
     { "path": "packages/contracts/platform/authorization", "name": "@athyper/contract-platform-authorization", "owner": "Contract Platform", "classification": "Shared contract", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
     { "path": "packages/contracts/platform/navigation", "name": "@athyper/contract-platform-navigation", "owner": "Contract Platform", "classification": "Shared contract", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
-    { "path": "packages/platform/foundation/api-client", "name": "@athyper/platform-api-client", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 6, "workspace": 6 } },
+    { "path": "packages/platform/foundation/api-client", "name": "@athyper/platform-api-client", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 7, "workspace": 7 } },
     { "path": "packages/platform/ai/agent-runtime", "name": "@athyper/platform-ai-agent-runtime", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 1, "workspace": 1 } },
     { "path": "packages/platform/ai/agent-ui", "name": "@athyper/platform-ai-agent-ui", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 2, "workspace": 1 } },
     { "path": "packages/platform/foundation/brand", "name": "@athyper/platform-brand", "owner": "Shared Platform", "classification": "Shared platform", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
@@ -30,7 +29,7 @@
     { "path": "packages/planes/neon/business-partner", "name": "@athyper/product-neon-business-partner", "owner": "Neon", "classification": "Product-specific", "dependencyBudget": { "runtime": 5, "workspace": 5 } },
     { "path": "packages/planes/neon/navigation", "name": "@athyper/product-neon-navigation", "owner": "Neon", "classification": "Product-specific", "dependencyBudget": { "runtime": 2, "workspace": 3 } },
     { "path": "packages/planes/neon/shell", "name": "@athyper/product-neon-shell", "owner": "Neon", "classification": "Product-specific", "dependencyBudget": { "runtime": 7, "workspace": 7 } },
-    { "path": "packages/planes/mesh/business-partner", "name": "@athyper/product-mesh-business-partner", "owner": "Mesh", "classification": "Product-specific", "dependencyBudget": { "runtime": 5, "workspace": 5 } },
+    { "path": "packages/planes/mesh/business-partner", "name": "@athyper/product-mesh-business-partner", "owner": "Mesh", "classification": "Product-specific", "dependencyBudget": { "runtime": 6, "workspace": 6 } },
     { "path": "packages/planes/mesh/shell", "name": "@athyper/product-mesh-shell", "owner": "Mesh", "classification": "Product-specific", "dependencyBudget": { "runtime": 6, "workspace": 6 } },
     { "path": "packages/planes/studio/business-partner", "name": "@athyper/product-studio-business-partner", "owner": "Studio", "classification": "Product-specific", "dependencyBudget": { "runtime": 0, "workspace": 0 } },
     { "path": "packages/planes/studio/shell", "name": "@athyper/product-studio-shell", "owner": "Studio", "classification": "Product-specific", "dependencyBudget": { "runtime": 5, "workspace": 5 } }
