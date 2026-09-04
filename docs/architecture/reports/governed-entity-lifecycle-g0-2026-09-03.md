@@ -17,7 +17,7 @@ The following local checks are green:
 
 ```text
 pnpm --dir server/db db:verify:governed-lifecycle-g0
-pnpm --dir server/db db:verify:business-partner-ddl-parity
+pnpm --dir server/db db:foundation:plan
 pnpm --dir server/db db:verify:ddl-model
 pnpm --dir server/db typecheck
 pnpm --dir server/db test

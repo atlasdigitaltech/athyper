@@ -15,11 +15,11 @@ const mesh = readFileSync(
   "utf8",
 );
 const runtime = readFileSync(
-  new URL("../../../ddl/planes/neon/document/07_entity_case_business_partner_runtime.sql", import.meta.url),
+  new URL("../../../ddl/planes/neon/document/07_functions.sql", import.meta.url),
   "utf8",
 );
 const retirement = readFileSync(
-  new URL("../../../ddl/planes/neon/document/99_g6_request_family_retirement.sql", import.meta.url),
+  new URL("../../../ddl/planes/neon/document/11_grants.sql", import.meta.url),
   "utf8",
 );
 const generated = readFileSync(

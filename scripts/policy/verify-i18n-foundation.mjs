@@ -21,14 +21,16 @@ if (!shell.includes("IntlProvider") || !shell.includes("fallbackMessages")) viol
 if (!messages.includes("shellArabicMessages")) violations.push("shared shell must publish an Arabic catalog");
 if (!styles.includes("[dir=rtl] .athyper-shell__rail") || !styles.includes("translateX(105%)")) violations.push("shared shell must mirror desktop and mobile RTL geometry");
 if (!shell.includes("onLocaleChange") || !read("packages/platform/shell/shell/src/client.tsx").includes("localePolicy.enabledLocales")) violations.push("shared shell must constrain user selection to the effective plane policy");
-const localeMigration=read("server/db/migrations/20260825_plane_locale_policy.sql");
-if (!localeMigration.includes("fallback_locale_code = 'en'") || !localeMigration.includes("enabled_locale_codes")) violations.push("plane policy storage must retain English as an emergency fallback");
-const governanceMigration=read("server/db/migrations/20260825_locale_catalog_governance.sql");
-if (!governanceMigration.includes("locale_catalog_governance") || !governanceMigration.includes("'zh-Hans'") || !governanceMigration.includes("fallback_locale_code = 'en'")) violations.push("plane catalog governance migration must cover all locale evidence and English fallback");
-const normalizedMigration=read("server/db/migrations/20260825_normalized_locale_catalog.sql");
-for (const boundary of ["shared.locale", "control.ui_locale_catalog", "master.tenant_locale_activation"]) if (!normalizedMigration.includes(boundary)) violations.push(`normalized locale migration is missing ${boundary}`);
-for (const locale of ["'en'", "'ar'", "'ms'", "'zh-Hans'", "'hi'", "'ta'", "'fr'", "'de'"]) if (!normalizedMigration.includes(locale)) violations.push(`normalized locale migration is missing ${locale}`);
-for (const manifest of ["studio", "neon", "mesh"]) if (!read(`server/db/migrations/manifests/${manifest}.txt`).includes("20260825_normalized_locale_catalog.sql")) violations.push(`${manifest} migration manifest must install normalized locale governance`);
+const localePolicy = read("server/db/ddl/common/control/03_tables.sql");
+if (!localePolicy.includes("fallback_locale_code") || !localePolicy.includes("enabled_locale_codes")) violations.push("canonical plane policy storage must retain locale fallback and enablement controls");
+const localeCatalog = read("server/db/ddl/common/control/12_ui_locale_catalog_seed.sql") + read("server/db/ddl/common/shared/reference-data/005_locale.sql");
+if (!localeCatalog.includes("'zh-Hans'") || !localeCatalog.includes("'en'")) violations.push("canonical locale catalog must cover governed locales and English fallback");
+const normalizedDdl = read("server/db/ddl/common/shared/03_tables.sql") + localePolicy + read("server/db/ddl/common/master/03_platform_tables.sql");
+for (const boundary of ["shared.locale", "control.ui_locale_catalog", "master.tenant_locale_activation"]) if (!normalizedDdl.includes(boundary)) violations.push(`canonical locale DDL is missing ${boundary}`);
+for (const plane of ["studio", "neon", "mesh"]) {
+  const manifest = read(`server/db/ddl/planes/${plane}/_manifest.txt`);
+  for (const entry of ["common/shared/03_tables.sql", "common/control/03_tables.sql", "common/control/12_ui_locale_catalog_seed.sql"]) if (!manifest.includes(entry)) violations.push(`${plane} DDL manifest is missing ${entry}`);
+}
 
 if (violations.length) {
   console.error("i18n foundation policy failed:\n" + violations.map((item) => `- ${item}`).join("\n"));

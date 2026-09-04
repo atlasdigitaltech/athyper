@@ -189,16 +189,16 @@ test("tenant publication wins over shared defaults while personal changes stay s
   assert.deepEqual(effective.surface.blocks.map((block)=>block.id),["second.card"]);
 });
 
-test("forward migration assigns BP permissions to the bp module", async () => {
-  const migration = await readFile(new URL("../../server/db/migrations/20260831_neon_business_partner_catalog_ownership.sql", import.meta.url), "utf8");
-  assert.match(migration, /'bp', 'Business Partner'/);
-  assert.match(migration, /canonical_code LIKE 'neon\.relationship\.business_partner%'/);
-  assert.match(migration, /module\.code <> 'bp'/);
+test("canonical Neon DDL assigns BP permissions to the bp module", async () => {
+  const seed = await readFile(new URL("../../server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql", import.meta.url), "utf8");
+  assert.match(seed, /'bp', 'Business Partner'/);
+  assert.match(seed, /canonical_code LIKE 'neon\.relationship\.business_partner%'/);
+  assert.match(seed, /module\.code <> 'bp'/);
 });
 
-test("forward migration aligns the Studio exp and pcat catalog modules", async () => {
-  const migration = await readFile(new URL("../../server/db/migrations/20260901_studio_platform_catalog_alignment.sql", import.meta.url), "utf8");
-  assert.match(migration, /'exp','Experience & Navigation Design'/);
-  assert.match(migration, /'pcat','Platform Catalog Management'/);
-  assert.match(migration, /<> 33/);
+test("canonical Studio DDL aligns the exp and pcat catalog modules", async () => {
+  const seed = await readFile(new URL("../../server/db/ddl/planes/studio/control/12_platform_catalog_reference_seed.sql", import.meta.url), "utf8");
+  assert.match(seed, /'exp','Experience & Navigation Design'/);
+  assert.match(seed, /'pcat','Platform Catalog Management'/);
+  assert.match(seed, /<> 33/);
 });

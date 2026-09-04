@@ -207,7 +207,4 @@ planes/mesh/control/12_subscription_plan_reference_seed.sql
 planes/mesh/control/12_subscription_plan_module_reference_seed.sql
 planes/mesh/mesh/12_reference_seed.sql
 planes/mesh/mesh/12_partner_profile_reference_seed.sql
-planes/mesh/mesh/13_exchange_integrity_hardening.sql
-planes/mesh/mesh/14_relationship_capability_foundation.sql
-planes/mesh/mesh/15_data_protection_and_stewardship.sql
 common/shared/99_security_definer_hardening.sql

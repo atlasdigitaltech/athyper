@@ -10002,7 +10002,7 @@
       "objectKind": "table",
       "definitions": [
         {
-          "path": "server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql",
+          "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
           "line": 227
         }
       ],
@@ -10308,7 +10308,7 @@
       "objectKind": "table",
       "definitions": [
         {
-          "path": "server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql",
+          "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
           "line": 165
         }
       ],
@@ -10362,7 +10362,7 @@
       "objectKind": "table",
       "definitions": [
         {
-          "path": "server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql",
+          "path": "server/db/ddl/planes/mesh/mesh/11_grants.sql",
           "line": 66
         }
       ],

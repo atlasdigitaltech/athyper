@@ -2,18 +2,18 @@
 
 > Generated deterministically by `scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
-Registry SHA-256: `7ff88dfec14af9d43ad0c7036634b5fd11aa44f40a900f196cd1fb2c9be35700`
-Files scanned / authorization-bearing: 3115 / 712
+Registry SHA-256: `db4d1441331cba776b05bda22e1e00abc0eca28e76b39d1b84b2287cdaa0a88b`
+Files scanned / authorization-bearing: 3037 / 677
 Registered authorization objects: 463
-Aggregated object references: 1394
-Writer references: 118
-Contract/UI field references: 892
+Aggregated object references: 1342
+Writer references: 131
+Contract/UI field references: 894
 Permission definitions / uses: 0 / 0
 Authorization-bearing routes: 0
 Keycloak mappers: 145
 Canonical capture sources: 0 (neon=0, mesh=0)
 Keycloak REST writer paths: 10
-Open gate findings: 534
+Open gate findings: 530
 
 ## Gate status
 
@@ -24,7 +24,7 @@ Open gate findings: 534
 | Unowned objects | 0 |
 | Unclassified writers | 0 |
 | Missing source definitions | 135 |
-| Generated artifact failures | 38 |
+| Generated artifact failures | 34 |
 | Unknown capture sources | 2 |
 | Stale capture-source registrations | 74 |
 | Duplicate capture sources | 0 |
@@ -57,9 +57,9 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | catalog.subscription_plan_version | `shared.subscription_plan_version` | neon_and_mesh_legacy | entitlement_catalog | commercial-platform | neon | keep_neon | 0 | 2 | 0 |
 | catalog.workspace | `shared.workspace` | neon_and_mesh_legacy | entitlement_catalog | platform-catalog | studio, neon, mesh | keep_neon_reference_only_in_mesh | 0 | 6 | 1 |
 | compiled.entity | `snapshot.entity_compiled` | neon | authorization_projection | metadata-platform | studio, neon | regenerate | 0 | 0 | 0 |
-| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 1 | 138 | 14 |
-| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 46 | 10 |
-| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 41 | 7 |
+| context.company_code | `master.company_code` | neon | authorization_scope | finance-platform | neon | keep_as_non_granting_scope_source | 1 | 125 | 14 |
+| context.legal_entity | `master.legal_entity` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 44 | 10 |
+| context.operating_organization | `master.operating_organization` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_source | 1 | 32 | 5 |
 | context.operating_organization_company | `master.operating_organization_company` | neon | authorization_scope | organization-platform | neon | keep_as_non_granting_scope_membership | 0 | 1 | 1 |
 | context.principal_relationship | `master.principal_relationship` | neon | context_only | platform-iam | studio, neon | keep_non_authorizing | 0 | 2 | 0 |
 | context.team | `master.team` | neon | context_only | organization-platform | neon | keep_non_authorizing | 1 | 33 | 0 |
@@ -78,10 +78,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.validate_delegation_permissions | `master.trg_validate_delegation_permissions` | neon | legacy_authorization_invariant | platform-iam | neon | remove_with_legacy_delegation | 0 | 0 | 0 |
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
-| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 184 | 20 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 43 | 12 |
+| identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 164 | 24 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 44 | 12 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 29 | 5 |
-| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 234 | 17 |
+| identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 222 | 23 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | identity.tenant_provider | `master.tenant_identity_provider` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
 | legacy.access_grant | `master.access_grant` | neon | legacy_authorization | platform-iam | studio, neon, mesh | split_into_role_scope_override_acl | 0 | 4 | 0 |
@@ -108,7 +108,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | legacy.tenant_feature_entitlement | `master.tenant_feature_entitlement` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 5 | 0 |
 | legacy.tenant_module_subscription | `master.tenant_module_subscription` | neon | entitlement | commercial-platform | neon | replace_with_tenant_entitlement | 0 | 6 | 0 |
 | legacy.tenant_permission_override | `master.tenant_permission_override` | neon | entitlement_override | commercial-platform | neon | replace_with_feature_entitlement_override | 0 | 3 | 0 |
-| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 1 | 43 | 5 |
+| mesh.account | `mesh.network_account` | mesh | plane_membership_context | mesh-platform | mesh | keep_mesh_only | 1 | 36 | 9 |
 | mesh.account_grant | `mesh.account_grant` | mesh | legacy_authorization | mesh-platform | mesh | replace_with_mesh_local_role_group_model | 0 | 6 | 0 |
 | mesh.attachment_acl | `mesh.attachment_acl` | mesh | record_acl | mesh-platform | mesh | normalize_mesh_locally | 0 | 2 | 0 |
 | mesh.audit.access_decision | `mesh_log.access_decision_log` | mesh | decision_evidence | mesh-platform | mesh | retain | 0 | 0 | 0 |
@@ -145,7 +145,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | mesh.function.grant_revoke | `mesh.fn_account_grant_revoke_hook` | mesh | authorization_change_hook | mesh-platform | mesh | replace_with_mesh_local_change_capture | 0 | 0 | 0 |
 | mesh.identity.binding | `mesh.principal_identity_binding` | mesh | identity_binding | mesh-platform | mesh | keep_mesh_only | 0 | 6 | 0 |
 | mesh.identity.principal | `mesh.principal` | mesh | identity | mesh-platform | mesh | keep_mesh_only | 0 | 6 | 0 |
-| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 40 | 8 |
+| mesh.relationship | `mesh.network_relationship` | mesh | context_only | mesh-platform | mesh | keep_non_authorizing | 1 | 37 | 9 |
 | mesh.rollout.feature_flag | `mesh_control.feature_flag` | mesh | rollout_control | mesh-platform | mesh | keep_mesh_only | 0 | 0 | 0 |
 | metadata.entity | `control.entity` | neon | authorization_metadata | metadata-platform | studio, neon | keep_canonical_entity_identity | 0 | 8 | 1 |
 | metadata.entity_action_rule | `control.entity_action_rule` | neon | authorization_metadata | metadata-platform | studio, neon | replace_permission_code_with_permission_id | 0 | 3 | 0 |
@@ -557,21 +557,14 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `authz.trg_validate_group_member` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/authz/07_functions.sql:704 | `master.principal` |
 | function | `authz.trg_validate_permission_publish` | unclassified | — | requires_review | server/db/ddl/common/authz/07_functions.sql:244 | — |
 | function | `control.fn_provision_external_workforce_exchange` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:695 | `master.principal`<br>`mesh.network_account` |
-| function | `control.fn_provision_external_workforce_exchange` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260830_mesh_external_workforce_exchange.sql:70 | `master.principal`<br>`mesh.network_account` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:1 | `master.tenant` |
 | function | `control.fn_validate_owner_type_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/control/07_functions.sql:1 | `master.tenant` |
-| function | `control.generate_fiscal_periods` | structural_dependency | finance-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:3541 | `master.company_code`<br>`master.principal` |
-| function | `control.trg_guard_mesh_business_partner_profile_projection` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260828_neon_mesh_business_partner_profile_projection.sql:19 | `master.principal`<br>`master.tenant` |
-| function | `control.trg_validate_decision_scope` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:826 | `master.company_code`<br>`master.operating_organization` |
-| function | `control.trg_validate_decision_scope` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/migrations/20260903_neon_business_partner_integrity_hardening.sql:199 | `master.company_code`<br>`master.operating_organization` |
+| function | `control.generate_fiscal_periods` | structural_dependency | finance-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:3700 | `master.company_code`<br>`master.principal` |
+| function | `control.trg_validate_decision_scope` | structural_dependency | finance-platform+organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/control/07_functions.sql:856 | `master.company_code`<br>`master.operating_organization` |
 | function | `document.fn_business_partner_request_approvers` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3941 | `master.company_code`<br>`master.operating_organization`<br>`master.principal` |
-| function | `document.fn_business_partner_request_approvers` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260828_neon_business_partner_workflow_resolver.sql:9 | `master.company_code`<br>`master.operating_organization`<br>`master.principal` |
-| function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:22 | `master.tenant` |
+| function | `document.fn_workflow_sla_due_tenants` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/document/07_functions.sql:145 | `master.tenant` |
 | function | `document.fn_workforce_request_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/document/07_functions.sql:3144 | `master.principal` |
-| function | `document.fn_workforce_request_approvers` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260902_neon_workforce_request_lifecycle.sql:41 | `master.principal` |
-| function | `document.trg_guard_business_partner_request_payload_boundary` | structural_dependency | finance-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260830_neon_business_partner_typed_request_extensions.sql:47 | `master.company_code`<br>`master.principal` |
-| function | `document.trg_guard_supplier_activation_evidence` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260829_neon_supplier_readiness_lifecycle.sql:23 | `master.principal` |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:69 | — |
 | trigger | `event.authorization_invalidation_outbox.trg_authorization_invalidation_notify` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:96 | — |
 | function | `event.fn_authorization_bump_epoch` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:118 | — |
@@ -580,34 +573,31 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `event.fn_authorization_emit_invalidation` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:171 | — |
 | function | `event.fn_authorization_fail_invalidation` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:248 | — |
 | function | `event.fn_notification_worker_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/event/07_functions.sql:326 | `master.principal` |
-| function | `event.fn_notification_worker_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260828_notification_worker_principal_tenant_guard.sql:4 | `master.principal` |
-| function | `event.fn_notification_worker_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/migrations/20260828_notification_worker_principal.sql:4 | `master.principal` |
 | function | `event.trg_authorization_invalidation_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:50 | — |
 | function | `event.trg_capture_authorization_invalidation` | unclassified | — | requires_review | server/db/ddl/common/authz/08_triggers.sql:457 | — |
 | trigger | `master.company_code.trg_company_code_identity_immutable` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:359 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_status_changed` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:361 | `master.company_code` |
 | trigger | `master.company_code.trg_company_code_updated_at` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:363 | `master.company_code` |
-| function | `master.fn_resolve_dimension_set` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1291 | `master.company_code` |
+| function | `master.fn_resolve_dimension_set` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1329 | `master.company_code` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:854 | `master.principal`<br>`master.principal_identity_binding` |
-| function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:861 | `master.principal`<br>`master.principal_identity_binding` |
+| function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:899 | `master.principal`<br>`master.principal_identity_binding` |
 | function | `master.fn_resolve_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:892 | `master.principal`<br>`master.principal_identity_binding` |
 | trigger | `master.legal_entity.trg_legal_entity_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:353 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:347 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:349 | `master.legal_entity` |
 | trigger | `master.legal_entity.trg_legal_entity_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:351 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1553 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1551 | `master.legal_entity` |
-| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1557 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1559 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1557 | `master.legal_entity` |
+| trigger | `master.legal_entity.wave6_legal_entity_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1563 | `master.legal_entity` |
 | view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/09_views.sql:26 | `master.company_code` |
 | view | `master.mv_company_postable_account` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql:26 | `master.company_code` |
 | trigger | `master.operating_organization.trg_operating_organization_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:379 | `master.operating_organization` |
-| trigger | `master.operating_organization.trg_operating_organization_hierarchy_cycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/migrations/20260818_neon_operating_organization_hardening.sql:281 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_identity_immutable` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:373 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_status_changed` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:375 | `master.operating_organization` |
 | trigger | `master.operating_organization.trg_operating_organization_updated_at` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:377 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1554 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1552 | `master.operating_organization` |
-| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1558 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_amendment` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1560 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_lifecycle` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1558 | `master.operating_organization` |
+| trigger | `master.operating_organization.wave6_operating_organization_scope` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:1564 | `master.operating_organization` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:204 | `master.principal_identity_binding` |
 | trigger | `master.principal_identity_binding.trg_principal_identity_binding_10_normalize` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:214 | `master.principal_identity_binding` |
@@ -639,7 +629,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:192 | `master.principal` |
 | trigger | `master.principal.trg_principal_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:202 | `master.principal` |
 | function | `master.seed_audit_reason_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/common/audit/07_functions.sql:418 | `master.principal` |
-| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2793 | `master.principal` |
+| function | `master.seed_condition_type_catalog` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:2831 | `master.principal` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:155 | `master.team_member` |
 | trigger | `master.team_member.trg_team_member_10_normalize` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:165 | `master.team_member` |
@@ -676,78 +666,69 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | trigger | `master.tenant.trg_tenant_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/08_triggers.sql:9 | `master.tenant` |
 | trigger | `master.tenant.trg_tenant_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/08_triggers.sql:9 | `master.tenant` |
 | trigger | `master.tenant.trg_tenant_updated_at` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/08_triggers.sql:15 | `master.tenant` |
-| function | `master.trg_assert_active_person_business_partner` | structural_dependency | organization-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260829_neon_person_workforce_onboarding.sql:19 | `master.legal_entity`<br>`master.principal` |
 | function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:649 | `master.principal` |
-| function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:656 | `master.principal` |
+| function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:694 | `master.principal` |
 | function | `master.trg_guard_principal_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:687 | `master.principal` |
 | function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:747 | `master.principal_identity_binding` |
-| function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:754 | `master.principal_identity_binding` |
+| function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:792 | `master.principal_identity_binding` |
 | function | `master.trg_guard_principal_identity_binding` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:785 | `master.principal_identity_binding` |
 | function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:489 | `master.team` |
-| function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:496 | `master.team` |
+| function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:534 | `master.team` |
 | function | `master.trg_guard_team_identity` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:527 | `master.team` |
 | function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:524 | `master.team_member` |
-| function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:531 | `master.team_member` |
+| function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:569 | `master.team_member` |
 | function | `master.trg_guard_team_member` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:562 | `master.team_member` |
 | function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:1 | `master.tenant` |
 | function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1 | `master.tenant` |
 | function | `master.trg_guard_tenant_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:39 | `master.tenant` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:164 | `master.tenant_relationship` |
-| function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:169 | `master.tenant_relationship` |
+| function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:205 | `master.tenant_relationship` |
 | function | `master.trg_guard_tenant_relationship_identity` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:202 | `master.tenant_relationship` |
 | function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/mesh/master/07_functions.sql:729 | — |
-| function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/neon/master/07_functions.sql:736 | — |
+| function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/neon/master/07_functions.sql:774 | — |
 | function | `master.trg_normalize_principal_identity_binding` | unclassified | — | requires_review | server/db/ddl/planes/studio/master/07_functions.sql:767 | — |
-| function | `master.trg_reject_person_business_partner_legacy_link_mutation` | structural_dependency | finance-platform+organization-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260902_neon_business_partner_organization_boundary.sql:107 | `master.company_code`<br>`master.legal_entity`<br>`master.principal`<br>`master.tenant` |
-| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4853 | `master.tenant` |
-| function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3752 | `master.operating_organization` |
-| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4000 | `master.company_code` |
-| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/migrations/20260829_neon_workforce_effective_range_hardening.sql:87 | `master.company_code` |
+| function | `master.trg_sync_organization_scope_target` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4891 | `master.tenant` |
+| function | `master.trg_validate_business_partner_role` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3790 | `master.operating_organization` |
+| function | `master.trg_validate_employment_contract` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:4038 | `master.company_code` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/master/07_functions.sql:768 | `master.principal` |
-| function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:775 | `master.principal` |
+| function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:813 | `master.principal` |
 | function | `master.trg_validate_identity_binding_principal` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/studio/master/07_functions.sql:806 | `master.principal` |
-| function | `master.trg_validate_operating_organization_profile` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1043 | `master.operating_organization` |
-| function | `master.trg_validate_operating_organization_profile` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/migrations/20260818_neon_operating_organization_hardening.sql:218 | `master.operating_organization` |
-| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3204 | `master.company_code` |
-| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/migrations/20260903_neon_business_partner_integrity_hardening.sql:190 | `master.company_code` |
+| function | `master.trg_validate_operating_organization_profile` | structural_dependency | organization-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:1081 | `master.operating_organization` |
+| function | `master.trg_validate_partner_profile_references` | structural_dependency | finance-platform | review_with_registered_dependency | server/db/ddl/planes/neon/master/07_functions.sql:3242 | `master.company_code` |
 | function | `mesh.catalog_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:217 | `mesh.network_relationship` |
 | function | `mesh.catalog_price_is_visible` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:315 | `mesh.network_relationship` |
-| function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1060 | `mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1061 | `mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:544 | `mesh.network_account` |
-| function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:545 | `mesh.network_account` |
-| function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:708 | `mesh.network_relationship` |
-| function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:709 | `mesh.network_relationship` |
-| function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:613 | `mesh.network_relationship` |
-| function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:614 | `mesh.network_relationship` |
-| function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:267 | `mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:268 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_document_envelope_lifecycle` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1211 | `master.tenant`<br>`mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.command_issue_registration_exchange` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1705 | `mesh.network_account` |
+| function | `mesh.command_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:695 | `mesh.network_account` |
+| function | `mesh.command_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:859 | `mesh.network_relationship` |
+| function | `mesh.command_open_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2083 | `mesh.network_account` |
+| function | `mesh.command_registration_exchange_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1720 | `mesh.network_account` |
+| function | `mesh.command_relationship_capability_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1673 | `mesh.network_relationship` |
+| function | `mesh.command_request_network_relationship` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:764 | `mesh.network_relationship` |
+| function | `mesh.command_request_relationship_capability` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1648 | `mesh.network_relationship` |
+| function | `mesh.command_resolve_canonical_party_correlation_case` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2097 | `mesh.network_account` |
+| function | `mesh.fn_catalog_publication_snapshot` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:418 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.fn_upsert_network_scope` | structural_dependency | platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:884 | `master.tenant` |
-| trigger | `mesh.network_account.trg_network_account_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1163 | `mesh.network_account` |
-| trigger | `mesh.network_account.trg_network_account_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1164 | `mesh.network_account` |
-| trigger | `mesh.network_account.trg_network_account_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1166 | `mesh.network_account` |
-| trigger | `mesh.network_account.trg_network_account_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1167 | `mesh.network_account` |
+| function | `mesh.is_hardened_https_url` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1845 | `master.principal`<br>`mesh.network_account` |
+| trigger | `mesh.network_account.trg_network_account_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1314 | `mesh.network_account` |
+| trigger | `mesh.network_account.trg_network_account_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1317 | `mesh.network_account` |
 | trigger | `mesh.network_account.trg_network_account_status_changed` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:42 | `mesh.network_account` |
 | trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:259 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1156 | `mesh.network_account` |
-| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1157 | `mesh.network_account` |
+| trigger | `mesh.network_account.wave6_network_account_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1307 | `mesh.network_account` |
 | trigger | `mesh.network_account.wave6_network_account_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:257 | `mesh.network_account` |
 | trigger | `mesh.network_account.wave6_network_account_scope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:261 | `mesh.network_account` |
-| trigger | `mesh.network_relationship.trg_network_relationship_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1169 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.trg_network_relationship_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1170 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.trg_network_relationship_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1172 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.trg_network_relationship_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1173 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.trg_network_relationship_command_authority` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1320 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.trg_network_relationship_identity_coordinates_immutable` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1323 | `mesh.network_relationship` |
 | trigger | `mesh.network_relationship.trg_network_relationship_status_changed` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:46 | `mesh.network_relationship` |
 | trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:260 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:1159 | `mesh.network_relationship` |
-| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:1160 | `mesh.network_relationship` |
+| trigger | `mesh.network_relationship.wave6_network_relationship_event` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:1310 | `mesh.network_relationship` |
 | trigger | `mesh.network_relationship.wave6_network_relationship_lifecycle` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:258 | `mesh.network_relationship` |
 | trigger | `mesh.network_relationship.wave6_network_relationship_scopes` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/08_triggers.sql:262 | `mesh.network_relationship` |
-| function | `mesh.trg_guard_network_identity_coordinates` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql:424 | `mesh.network_account`<br>`mesh.network_relationship` |
-| function | `mesh.trg_guard_network_identity_coordinates` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql:425 | `mesh.network_account`<br>`mesh.network_relationship` |
+| function | `mesh.trg_guard_network_identity_coordinates` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:575 | `mesh.network_account`<br>`mesh.network_relationship` |
 | function | `mesh.trg_sync_network_account_scope` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:903 | `mesh.network_account` |
 | function | `mesh.trg_sync_network_relationship_scopes` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:913 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_bank_disclosure` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:731 | `mesh.network_relationship` |
+| function | `mesh.trg_validate_bank_disclosure` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/11_grants.sql:2021 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_catalog_audience` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:127 | `mesh.network_relationship` |
 | function | `mesh.trg_validate_catalog_owner` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:78 | `mesh.network_account` |
 | function | `mesh.trg_validate_catalog_price` | structural_dependency | mesh-platform | review_with_registered_dependency | server/db/ddl/planes/mesh/mesh/07_functions.sql:159 | `mesh.network_relationship` |
@@ -769,7 +750,6 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function | `ops.trg_guard_authorization_shadow_comparison` | unclassified | — | requires_review | server/db/ddl/common/ops/07_functions.sql:94 | — |
 | trigger | `runtime_meta.authorization_epoch.trg_authorization_epoch_coordinates_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/08_triggers.sql:46 | — |
 | function | `runtime_meta.trg_authorization_epoch_coordinates_immutable` | unclassified | — | requires_review | server/db/ddl/common/event/07_functions.sql:107 | — |
-| function | `snapshot.trg_reject_network_profile_publication_mutation` | structural_dependency | mesh-platform+platform-iam | review_with_registered_dependency | server/db/migrations/20260828_mesh_business_partner_profile_publication.sql:18 | `master.principal`<br>`mesh.network_account`<br>`mesh.network_relationship` |
 
 ## Runtime authorization reader and evaluator symbols
 
@@ -789,7 +769,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 54, 109 |
 | `requirePermission` | unclassified | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
 | `requirePermission` | unclassified | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
-| `requirePermission` | unclassified | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 17, 34, 45, 123 |
+| `requirePermission` | unclassified | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
 | `requirePermission` | unclassified | runtime | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
 | `requirePermission` | unclassified | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
 | `requirePermission` | unclassified | runtime | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
@@ -864,13 +844,13 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | database_object | `ops.authorization_parity_certification.authorization_parity_certification_immutable` | server/db/ddl/common/ops/08_triggers.sql | 1 |
 | database_object | `ops.authorization_shadow_comparison.authorization_shadow_comparison_immutable` | server/db/ddl/common/ops/08_triggers.sql | 12 |
 | database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/mesh/master/07_functions.sql | 729 |
-| database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 736 |
+| database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 774 |
 | database_object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/studio/master/07_functions.sql | 767 |
 | database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_10_graph_guard` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 181 |
 | database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_20_binding` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 182 |
 | database_object | `metadata.entity_operation_permission.trg_entity_operation_permission_90_updated_at` | server/db/ddl/planes/studio/metadata/08_triggers.sql | 188 |
 | object | `event.authorization_invalidation_outbox` | config/governance/authorization-data-disposition-inventory.v1.json | 6093 |
-| object | `master.identity_provider_d` | server/apps/platform-host/src/composition/register-platform.ts | 256 |
+| object | `master.identity_provider_d` | server/apps/platform-host/src/composition/register-platform.ts | 1303 |
 | object | `event.fn_authorization_emit_invalidation` | server/db/ddl/common/authz/08_triggers.sql | 473 |
 | object | `event.trg_capture_authorization_invalidation` | server/db/ddl/common/authz/08_triggers.sql | 457 |
 | object | `event.authorization_invalidation_outbox` | server/db/ddl/common/event/03_tables.sql | 409 |
@@ -909,10 +889,10 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/mesh/master/08_triggers.sql | 209 |
 | object | `master.identity_provider_d` | server/db/ddl/planes/mesh/master/11_grants.sql | 60 |
 | object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/02_domains.sql | 38, 311, 312, 323 |
-| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/planes/neon/master/07_functions.sql | 4888 |
-| object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/07_functions.sql | 863, 892 |
-| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 754 |
-| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 736 |
+| object | `event.fn_authorization_emit_invalidation` | server/db/ddl/planes/neon/master/07_functions.sql | 4926 |
+| object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/07_functions.sql | 901, 930 |
+| object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 792 |
+| object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/07_functions.sql | 774 |
 | object | `master.trg_guard_principal_identity_binding` | server/db/ddl/planes/neon/master/08_triggers.sql | 215 |
 | object | `master.trg_normalize_principal_identity_binding` | server/db/ddl/planes/neon/master/08_triggers.sql | 209 |
 | object | `master.identity_provider_d` | server/db/ddl/planes/neon/master/11_grants.sql | 161 |
@@ -947,7 +927,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | object | `mesh.auth_account_entitlement` | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 3265 |
 | object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/athyper-postgres/src/generated/kysely-studio/types.ts | 6121 |
 | object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts | 5563 |
-| object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts | 12782 |
+| object | `event.authorization_invalidation_outbox` | server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts | 12507 |
 | object | `master.identity_provider_d` | server/packages/platform/iam/src/kysely-identity-context-resolver.ts | 39 |
 | object | `event.authorization_invalidation_outbox` | server/packages/platform/metadata/src/invalidation.ts | 13 |
 | object | `event.fn_authorization_claim_invalidations` | server/packages/platform/metadata/src/invalidation.ts | 10 |
@@ -955,7 +935,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | security_symbol | `authorizeAdmin` | server/packages/platform/ai/src/atlas-experience-routes.ts | 10 |
 | security_symbol | `requirePermission` | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
 | security_symbol | `requirePermission` | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
-| security_symbol | `requirePermission` | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 17, 34, 45, 123 |
+| security_symbol | `requirePermission` | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
 | security_symbol | `requirePermission` | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
 | security_symbol | `requirePermission` | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
 | security_symbol | `requirePermission` | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
@@ -1043,8 +1023,8 @@ Capture DDLs:
 | `master.auth_group_member` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 151 |
 | `master.auth_group_role` | insert | runtime | server/db/seed-backup/blueprints/universal/990_validation/998_canonical_neon_authority.sql | 101 |
 | `shared.workspace` | insert | test | server/db/scripts/__tests__/seed/seed-contract-lint.test.ts | 77 |
-| `master.company_code` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s4-migration-evidence.ts | 33 |
 | `master.company_code` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 30 |
+| `master.company_code` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 243 |
 | `master.company_code` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 46 |
 | `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 275 |
 | `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 319 |
@@ -1057,8 +1037,8 @@ Capture DDLs:
 | `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 209 |
 | `master.company_code` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/006_technostat_intercompany_master.sql | 53 |
 | `master.company_code` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/100_org_structure/200_legal_entities.sql | 84 |
-| `master.legal_entity` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s4-migration-evidence.ts | 32 |
 | `master.legal_entity` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 478 |
+| `master.legal_entity` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 239 |
 | `master.legal_entity` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 33 |
 | `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/199_gl_preseed.sql | 142, 189 |
 | `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/200_demo_legal_entities.sql | 28 |
@@ -1068,11 +1048,9 @@ Capture DDLs:
 | `master.legal_entity` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/004_technostat_finance_controls.sql | 41, 54, 67, 80 |
 | `master.legal_entity` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/100_org_structure/200_legal_entities.sql | 32 |
 | `master.operating_organization` | update | tool | server/db/scripts/business-partner-360/provision-business-partner-360-acceptance-fixtures.ts | 45 |
-| `master.operating_organization` | delete | tool | server/db/scripts/business-partner-360/run-business-partner-s4-certification.ts | 95 |
-| `master.operating_organization` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s4-certification.ts | 49, 75 |
-| `master.operating_organization` | insert | tool | server/db/scripts/business-partner-360/run-business-partner-s4-migration-evidence.ts | 31 |
 | `master.operating_organization` | insert | tool | server/db/scripts/provisioning/neon-scenario-foundation.ts | 68 |
-| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 97 |
+| `master.operating_organization` | update | tool | server/db/scripts/provisioning/provision-development-business-partner-fixtures.ts | 314 |
+| `master.operating_organization` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 247 |
 | `master.operating_organization` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/202_operating_organizations.sql | 43 |
 | `master.operating_organization_company` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/100_org_structure/202_operating_organizations.sql | 81 |
 | `master.principal` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 46 |
@@ -1081,6 +1059,10 @@ Capture DDLs:
 | `master.principal` | update | tool | server/db/scripts/operations/authorization/reset-authorization-clean-slate.ts | 86 |
 | `master.principal` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 126, 145 |
 | `master.principal` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 403, 770 |
+| `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 529 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 327 |
+| `master.principal` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 430 |
+| `master.principal` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 270 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 21 |
 | `master.principal` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 98 |
 | `master.principal` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 24 |
@@ -1092,8 +1074,8 @@ Capture DDLs:
 | `master.principal` | update | runtime | server/db/seed-backup/tenants/neon/020_technostat/000_tenant.sql | 113 |
 | `master.principal` | insert | runtime | server/db/seed-backup/tenants/neon/030_cirrusatlantic/000_tenant.sql | 102 |
 | `master.principal` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 22 |
-| `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 125 |
-| `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 127, 159 |
+| `master.principal` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 320 |
+| `master.principal` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 326, 414 |
 | `master.principal` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 23 |
 | `master.principal_identity_binding` | delete | tool | server/db/scripts/operations/iam/reconcile-runtime-subjects.ts | 68 |
 | `master.principal_identity_binding` | insert | tool | server/db/scripts/operations/iam/reconcile-runtime-subjects.ts | 72 |
@@ -1105,8 +1087,8 @@ Capture DDLs:
 | `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 90 |
 | `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_principal_users.sql | 232 |
 | `master.principal_identity_binding` | insert | runtime | server/db/seed-backup/tenants/studio/000_platform_staff.sql | 51 |
-| `master.principal_identity_binding` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 130 |
-| `master.principal_identity_binding` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 158 |
+| `master.principal_identity_binding` | insert | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 332 |
+| `master.principal_identity_binding` | update | runtime | server/packages/platform/iam/src/kysely-identity-saga.ts | 407 |
 | `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/001_demo_principals.sql | 65 |
 | `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/004_athq_principals.sql | 64 |
 | `master.principal_profile` | insert | runtime | server/db/seed-backup/tenants/neon/010_demo/900_principals/006_demo_in_priya.sql | 73 |
@@ -1115,6 +1097,12 @@ Capture DDLs:
 | `master.tenant` | insert | ddl | server/db/ddl/common/master/12_system_authority_reference_seed.sql | 29 |
 | `master.tenant` | insert | tool | server/db/scripts/operations/studio/project-meta-entity-admin-identities.ts | 120, 137 |
 | `master.tenant` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 420 |
+| `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 557 |
+| `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g2-hardening.mjs | 199 |
+| `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 532 |
+| `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 315 |
+| `master.tenant` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 431 |
+| `master.tenant` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 256 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/asset_org_fixture.sql | 11 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/fixtures/publication-authority.sql | 5 |
 | `master.tenant` | insert | test | server/db/scripts/tests/integration/meta-entity/schema.sql | 90 |
@@ -1129,17 +1117,22 @@ Capture DDLs:
 | `master.tenant` | update | runtime | server/db/seed-backup/tenants/studio/005_canonical_party_fixtures.sql | 14 |
 | `master.tenant` | insert | runtime | server/packages/test-utils/fixtures/rls-actors.sql | 18 |
 | `master.tenant` | update | test | server/packages/test-utils/src/postgres-service-harness.postgres.test.ts | 24, 29 |
-| `mesh.network_account` | update | ddl | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql | 125, 604 |
-| `mesh.network_account` | update | runtime | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql | 126, 605 |
+| `mesh.network_account` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 276, 755, 2108 |
 | `mesh.network_account` | insert | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 523 |
 | `mesh.network_account` | insert | tool | server/db/scripts/provisioning/provision-development-phase1-list-fixtures.ts | 31 |
+| `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 525 |
+| `mesh.network_account` | insert | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 331 |
+| `mesh.network_account` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 429 |
+| `mesh.network_account` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 274 |
+| `mesh.network_account` | update | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 137 |
 | `mesh.network_account` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 57 |
 | `mesh_control.authorization_capture_source` | insert | test | scripts/policy/authorization-inventory.test.ts | 298 |
-| `mesh.network_relationship` | insert | ddl | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql | 687 |
-| `mesh.network_relationship` | update | ddl | server/db/ddl/planes/mesh/mesh/13_exchange_integrity_hardening.sql | 105, 120, 135, 793 |
-| `mesh.network_relationship` | insert | runtime | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql | 688 |
-| `mesh.network_relationship` | update | runtime | server/db/migrations/20260903_mesh_exchange_integrity_hardening.sql | 106, 121, 136, 794 |
+| `mesh.network_relationship` | insert | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 838 |
+| `mesh.network_relationship` | update | ddl | server/db/ddl/planes/mesh/mesh/11_grants.sql | 256, 271, 286, 944 |
 | `mesh.network_relationship` | update | test | server/db/scripts/tests/integration/business-partner-profile-publication.sql | 3 |
+| `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g3-mesh-lifecycle.mjs | 517 |
+| `mesh.network_relationship` | delete | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 427 |
+| `mesh.network_relationship` | insert | test | server/db/scripts/tests/integration/certify-g4-data-protection.mjs | 298 |
 | `mesh.network_relationship` | insert | runtime | server/db/seed-backup/tenants/mesh/000_exchange/001_demo_network_accounts.sql | 194 |
 | `mesh.network_relationship` | insert | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 37 |
 | `mesh.network_relationship` | update | runtime | server/packages/planes/mesh/src/network-relationship-import.ts | 31, 36 |
@@ -1197,13 +1190,15 @@ Capture DDLs:
 | `allowed` | tool | scripts/policy/verify-api-client-phase2.mjs | 10, 13 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 144, 145 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 309, 404, 492, 493, 494, 495, 496, 497, 499, 501, 502, 503, 783, 812, 848, 918 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 503, 807, 862 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857, 1443, 1451, 2215, 2228, 2239, 2252, 2265, 2272, 2302, 2355, 2366, 2370, 4091, 4094, 4095, 4244, 4245, 4455, 4783 |
 | `allowed` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 50 |
 | `allowed` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 52, 187 |
 | `allowed` | tool | server/db/scripts/seed/compile-mesh-authorization-inventory.ts | 228, 229 |
 | `allowed` | tool | server/db/scripts/seed/compile-neon-authorization-inventory.ts | 207, 211 |
 | `allowed` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175, 176, 279, 368, 422, 459 |
+| `allowed` | test | server/db/scripts/tests/integration/external-worker-iam-cross-plane.mjs | 465 |
+| `allowed` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
 | `allowed` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `allowed` | runtime | server/packages/contracts/ai/src/tools.ts | 103 |
 | `allowed` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 20, 39 |
@@ -1214,7 +1209,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3, 6 |
 | `allowed` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6, 7 |
-| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 45 |
+| `allowed` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 962 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6, 20 |
 | `allowed` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
 | `allowed` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7, 23 |
@@ -1236,7 +1231,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `allowed` | runtime | server/packages/platform/ai/src/context.ts | 22 |
 | `allowed` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 27, 28, 29 |
-| `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 20 |
+| `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
 | `allowed` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
 | `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 57, 59, 79, 86, 122, 196 |
 | `allowed` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
@@ -1246,40 +1241,41 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 55, 56, 57, 58, 84, 85, 101 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/control-services.ts | 144 |
 | `allowed` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 123 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 436 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 344 |
 | `allowed` | test | server/packages/platform/experience/src/service.test.ts | 15, 53, 96, 156, 168 |
-| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 64, 76, 77, 235 |
+| `allowed` | runtime | server/packages/platform/experience/src/service.ts | 207, 247, 274, 951 |
 | `allowed` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 71 |
 | `allowed` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
 | `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
 | `allowed` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
-| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 7 |
+| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 47 |
 | `allowed` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 15, 24, 34, 44, 51, 58, 64, 71, 78, 84, 91, 97, 103 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 12 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-foundation.test.ts | 11, 12, 13, 14 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 35, 39, 59, 61 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2, 4 |
-| `allowed` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123, 126, 127 |
+| `allowed` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 438, 450, 451, 453 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/legacy-compatibility.test.ts | 2 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11, 17, 19, 24, 32, 50, 55, 60, 75, 77, 78, 79, 80, 81, 90, 93 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10, 22 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6, 16 |
+| `allowed` | runtime | server/packages/platform/iam/src/external-worker-identity-intent.ts | 206, 229 |
 | `allowed` | runtime | server/packages/platform/iam/src/iam-routes.ts | 34 |
 | `allowed` | runtime | server/packages/platform/iam/src/iam-service.ts | 172, 173, 179, 182, 224 |
 | `allowed` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
-| `allowed` | runtime | server/packages/platform/iam/src/identity-saga.ts | 197 |
+| `allowed` | runtime | server/packages/platform/iam/src/identity-saga.ts | 394 |
 | `allowed` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 265, 281 |
 | `allowed` | runtime | server/packages/platform/iam/src/legacy-compatibility.ts | 1, 8 |
 | `allowed` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 4, 14, 17, 21, 25, 28, 31, 34, 37, 38, 40, 41, 42, 46, 49, 51, 52, 55, 56, 60 |
 | `allowed` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 52 |
 | `allowed` | runtime | server/packages/platform/iam/src/required-actions.ts | 2, 3, 14, 17, 19 |
 | `allowed` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `allowed` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 94, 95 |
+| `allowed` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 460, 465 |
 | `allowed` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
 | `allowed` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
 | `allowed` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
-| `allowed` | runtime | server/packages/platform/policy/src/policy-routes.ts | 19, 28 |
+| `allowed` | runtime | server/packages/platform/policy/src/policy-routes.ts | 31, 70 |
 | `allowed` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
 | `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
@@ -1296,16 +1292,18 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2, 6, 14 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 39, 43 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-request-service.test.ts | 8, 39, 43 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 10 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 156 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 26, 62 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 10 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 16, 18, 21 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 77, 93 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 25 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1103 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 148 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 297 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `allowed` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 101 |
 | `allowed` | runtime | server/packages/services/master-data/src/services.ts | 124 |
 | `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
 | `allowed` | runtime | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
@@ -1334,7 +1332,7 @@ Capture DDLs:
 | `allowed` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `allowed` | test | tests/contracts/auth-session-foundation.test.ts | 35 |
 | `allowed` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 28, 30 |
-| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 918 |
+| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4788 |
 | `authorizationScopes` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `authorizationScopes` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 25 |
 | `authorizationScopes` | runtime | server/packages/contracts/auth/src/authorization.ts | 80 |
@@ -1355,10 +1353,10 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `authorizationScopes` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `authorizationScopes` | test | server/packages/platform/experience/src/service.test.ts | 15, 100, 113, 125, 132 |
-| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 159, 177, 194 |
+| `authorizationScopes` | runtime | server/packages/platform/experience/src/service.ts | 664, 726, 825 |
 | `authorizationScopes` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 443 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 12, 34 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `authorizationScopes` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1386,7 +1384,7 @@ Capture DDLs:
 | `denied` | tool | scripts/policy/authorization-inventory.ts | 731 |
 | `denied` | tool | scripts/policy/verify-auth-session-phase3.mjs | 10 |
 | `denied` | ui | scripts/verification/render-boundary-fixture.tsx | 9 |
-| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 382, 918 |
+| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1249, 4784 |
 | `denied` | ddl | server/db/ddl/common/ai/05_constraints.sql | 218 |
 | `denied` | ddl | server/db/ddl/common/ai/07_functions.sql | 64 |
 | `denied` | ddl | server/db/ddl/common/audit/02_domains.sql | 65 |
@@ -1400,7 +1398,7 @@ Capture DDLs:
 | `denied` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 3 |
 | `denied` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-account-bank-linkage.test.ts | 6 |
-| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 45 |
+| `denied` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 964 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 6 |
 | `denied` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
 | `denied` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 7 |
@@ -1425,7 +1423,7 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/experience/src/service.test.ts | 15 |
 | `denied` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `denied` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `denied` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 439 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11, 23, 33 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `denied` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1440,8 +1438,9 @@ Capture DDLs:
 | `denied` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
 | `denied` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `denied` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 25 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 297 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1107 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `denied` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 105 |
 | `denied` | runtime | server/packages/services/master-data/src/services.ts | 124 |
 | `denied` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
 | `denied` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
@@ -1461,7 +1460,7 @@ Capture DDLs:
 | `matchedGrantId` | tool | scripts/policy/authorization-inventory.ts | 752 |
 | `matchedGroupId` | tool | scripts/policy/authorization-inventory.ts | 752 |
 | `matchedRoleId` | tool | scripts/policy/authorization-inventory.ts | 752 |
-| `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 13, 14, 32 |
+| `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 62, 72, 293, 296 |
 | `permissionCode` | runtime | config/governance/authorization-golden-corpus.schema.json | 172, 194, 998, 1008, 1031, 1062 |
 | `permissionCode` | runtime | config/governance/authorization-supplemental-decision-evidence.schema.json | 164, 174, 197, 228 |
 | `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 222 |
@@ -1472,8 +1471,8 @@ Capture DDLs:
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 9 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 144, 145 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 404, 492, 493, 494, 495, 496, 497, 498, 499, 500, 501, 502, 848 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 500, 805, 860 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1442, 1448, 2211, 2220, 2234, 2244, 2257, 2270, 2278, 2297, 2299, 2310, 2352, 2363, 4453 |
 | `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1764 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 14, 31 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 15 |
@@ -1484,7 +1483,7 @@ Capture DDLs:
 | `permissionCode` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 22, 34, 48, 52, 96, 104, 106, 109, 111, 112, 113, 115, 127, 128, 129, 130, 143, 151, 152, 161, 417, 418, 426, 437, 438, 439, 454, 461, 462, 464, 475, 476, 477, 481, 482 |
 | `permissionCode` | tool | server/db/scripts/operations/studio/provision-meta-entity-authority.ts | 143, 151, 156, 158 |
 | `permissionCode` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 648, 705, 706, 712, 713 |
-| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 54, 93, 102 |
+| `permissionCode` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 56, 95, 104 |
 | `permissionCode` | tool | server/db/scripts/provisioning/provision-development-phase1-list-runtimes.ts | 18, 43, 66, 68, 77, 80 |
 | `permissionCode` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 126, 128, 129, 136, 139, 140 |
 | `permissionCode` | tool | server/db/scripts/provisioning/three-plane-model.ts | 179 |
@@ -1521,7 +1520,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/contracts/ai/src/runtime-schemas.ts | 6 |
 | `permissionCode` | runtime | server/packages/contracts/auth/src/authorization.ts | 22, 33, 40, 53, 96 |
 | `permissionCode` | runtime | server/packages/contracts/finance/src/foundation.ts | 102 |
-| `permissionCode` | runtime | server/packages/contracts/finance/src/ports.ts | 31 |
+| `permissionCode` | runtime | server/packages/contracts/finance/src/ports.ts | 79 |
 | `permissionCode` | runtime | server/packages/contracts/master-data/src/business-partner-360-network.ts | 25 |
 | `permissionCode` | runtime | server/packages/contracts/meta-entity-authoring/src/model.ts | 21, 32 |
 | `permissionCode` | runtime | server/packages/contracts/metadata/src/descriptors.ts | 131, 137, 147 |
@@ -1530,7 +1529,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-bank-disclosure.ts | 58 |
 | `permissionCode` | test | server/packages/planes/mesh/src/business-partner-profile-publication.test.ts | 6 |
 | `permissionCode` | runtime | server/packages/planes/mesh/src/business-partner-profile-publication.ts | 41 |
-| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 45 |
+| `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-account-bank-linkage.ts | 945, 948, 955, 964 |
 | `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-match.test.ts | 20 |
 | `permissionCode` | runtime | server/packages/planes/neon/src/business-partner-profile-match.ts | 79 |
 | `permissionCode` | test | server/packages/planes/neon/src/business-partner-profile-projection.test.ts | 23 |
@@ -1547,38 +1546,38 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 19 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/atlas-admin-routes.ts | 11 |
 | `permissionCode` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 28, 83 |
-| `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 17, 20, 26, 34 |
+| `permissionCode` | runtime | server/packages/platform/ai/src/knowledge.ts | 83, 172, 191, 197, 354 |
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 73 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 70, 96 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 84, 85 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/control-services.ts | 144 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 123 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 434, 436 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 343, 344 |
 | `permissionCode` | test | server/packages/platform/experience/src/service.test.ts | 100, 113, 125, 132 |
-| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 168 |
+| `permissionCode` | runtime | server/packages/platform/experience/src/service.ts | 696 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 71 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
-| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 7 |
+| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 45 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 13, 14, 19, 21, 22, 28, 31, 32, 38, 41, 42, 48, 50, 55, 57, 62, 63, 68, 70, 75, 77, 82, 88, 90, 95, 96, 101, 102 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 9, 32 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 51 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 12, 18, 23, 36, 49, 53, 58, 69, 70, 74, 76, 78, 80, 86, 87, 89, 92 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 73 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/identity-provisioning-service.ts | 24 |
-| `permissionCode` | runtime | server/packages/platform/iam/src/identity-saga.ts | 196 |
+| `permissionCode` | runtime | server/packages/platform/iam/src/identity-saga.ts | 388 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/kysely-permission-resolver.ts | 256, 258, 259, 260, 270, 294, 297, 302, 316, 317, 321, 333, 334 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 4, 10, 19, 27, 30, 33, 36, 39, 41, 54, 59, 65, 73, 76 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/provisioning-vertical.ts | 22, 51, 52 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/trustiam-authority.ts | 117 |
-| `permissionCode` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 94, 95 |
+| `permissionCode` | runtime | server/packages/platform/jobs/src/job-admin-routes.ts | 463, 465 |
 | `permissionCode` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 5 |
 | `permissionCode` | runtime | server/packages/platform/metadata/src/descriptor-parser.ts | 27, 53 |
 | `permissionCode` | test | server/packages/platform/metadata/src/distributed-descriptor-cache.test.ts | 16 |
 | `permissionCode` | runtime | server/packages/platform/notifications/src/notification-operations.ts | 47 |
-| `permissionCode` | runtime | server/packages/platform/policy/src/policy-routes.ts | 18, 28 |
+| `permissionCode` | runtime | server/packages/platform/policy/src/policy-routes.ts | 29, 68 |
 | `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 82 |
 | `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 8, 11, 13 |
@@ -1598,17 +1597,18 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts | 5, 7 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts | 8 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 6, 14 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 43 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 8 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-request-service.test.ts | 43 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 10 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 28, 155 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 61 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 16 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 7, 10, 34 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 15, 18, 20 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 29, 68, 69, 72, 76, 93 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 25 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1095, 1100, 1107 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 148 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 297 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-request-repository.ts | 210 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 88, 93, 105 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/kysely-workforce-request-repository.ts | 61 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/services.ts | 124 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
@@ -1635,7 +1635,7 @@ Capture DDLs:
 | `permissionCode` | runtime | tests/e2e/acceptance/public-record-transfer-smoke.mjs | 301 |
 | `permissionCodes` | tool | scripts/policy/authorization-inventory.ts | 180, 971, 973, 1003, 2038 |
 | `permissionCodes` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 309 |
+| `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 89, 190 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 12, 28, 41, 62, 71, 97 |
 | `permissionCodes` | tool | server/db/scripts/seed/build-exact-scope-compatibility.ts | 20 |
@@ -1658,7 +1658,7 @@ Capture DDLs:
 | `permissions` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 27, 50, 52 |
 | `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 52, 53, 60, 119 |
 | `permissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 8, 19, 32, 37, 38, 52, 53 |
-| `permissions` | runtime | packages/platform/shell/shell/src/core.ts | 24, 51 |
+| `permissions` | runtime | packages/platform/shell/shell/src/core.ts | 41, 133 |
 | `permissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 64 |
 | `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 134, 296, 339 |
 | `permissions` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
@@ -1674,34 +1674,25 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 20, 21 |
 | `permissions` | runtime | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 303, 306, 307, 308, 309, 783, 812, 918 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 754, 783, 791, 803, 857, 4091, 4094, 4095, 4244, 4245, 4775 |
 | `permissions` | ddl | server/db/ddl/common/authz/00_schema.sql | 4 |
 | `permissions` | ddl | server/db/ddl/common/authz/07_functions.sql | 578 |
 | `permissions` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 53, 191 |
-| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 324, 346, 379, 396, 403 |
+| `permissions` | runtime | server/db/ddl/governed-entity-lifecycle-minimal-schema-review.v1.json | 133 |
+| `permissions` | ddl | server/db/ddl/planes/neon/authz/14_permission_reference_seed.sql | 97, 277, 299, 326, 348, 381, 398, 405 |
 | `permissions` | ddl | server/db/ddl/planes/neon/master/03_tables.sql | 1990 |
 | `permissions` | ddl | server/db/ddl/planes/studio/authz/14_permission_reference_seed.sql | 142 |
-| `permissions` | runtime | server/db/migrations/20260828_mesh_business_partner_profile_publication.sql | 77 |
-| `permissions` | runtime | server/db/migrations/20260828_neon_business_partner_request_permissions.sql | 5, 15, 18, 30 |
-| `permissions` | runtime | server/db/migrations/20260828_neon_mesh_business_partner_profile_projection.sql | 52 |
-| `permissions` | runtime | server/db/migrations/20260829_neon_supplier_registration_permissions.sql | 2, 15, 16, 19 |
-| `permissions` | runtime | server/db/migrations/20260831_neon_business_partner_catalog_ownership.sql | 144, 190 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/authorization-clean-slate.test.ts | 21, 23, 41, 46, 152, 166 |
-| `permissions` | test | server/db/scripts/__tests__/authorization/canonical-catalog-v2.test.ts | 24, 28, 30, 48, 61, 77, 87, 100, 106 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 76, 103, 131, 174 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 14, 30, 43, 50, 82, 100 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/inventory-promotion.test.ts | 72, 122, 127 |
 | `permissions` | test | server/db/scripts/__tests__/authorization/projection-reconciliation-authority.test.ts | 159 |
 | `permissions` | test | server/db/scripts/__tests__/business-partner-360/business-partner-360-workforce-privacy.test.ts | 42, 53 |
-| `permissions` | test | server/db/scripts/__tests__/business-partner-foundation/business-partner-customer-onboarding-parity.test.ts | 17, 75 |
-| `permissions` | test | server/db/scripts/__tests__/business-partner-foundation/business-partner-definition-publication.test.ts | 57 |
-| `permissions` | test | server/db/scripts/__tests__/business-partner-foundation/business-partner-supplier-registration-channel.test.ts | 17, 91 |
-| `permissions` | test | server/db/scripts/__tests__/business-partner-foundation/business-partner-typed-materialization.test.ts | 114, 132 |
 | `permissions` | tool | server/db/scripts/checks/ddl/platform-catalog.ts | 60 |
 | `permissions` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 22, 24, 94, 100, 106, 107, 148, 149, 151, 158, 215, 442 |
 | `permissions` | tool | server/db/scripts/operations/authorization/reset-authorization-clean-slate.ts | 111, 120 |
 | `permissions` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 60, 644, 647, 693, 701, 713 |
-| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 190, 213, 225 |
+| `permissions` | tool | server/db/scripts/provisioning/provision-development-business-partner-runtime.ts | 316, 401, 413 |
 | `permissions` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 135, 140, 161, 216, 226, 227 |
 | `permissions` | tool | server/db/scripts/provisioning/three-plane-model.ts | 178 |
 | `permissions` | tool | server/db/scripts/reports/neon-authorization-quality.ts | 613, 634, 637 |
@@ -1714,6 +1705,7 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 88, 89, 90, 91, 93, 94, 101 |
 | `permissions` | tool | server/db/scripts/seed/validate-canonical-catalogs.ts | 28, 47, 74, 79 |
 | `permissions` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175 |
+| `permissions` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
 | `permissions` | runtime | server/db/seed-backup/contracts/authorization/authority/mesh/authority.v1.json | 22 |
 | `permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/mesh/compiled/verification-report.v1.json | 11 |
 | `permissions` | runtime | server/db/seed-backup/contracts/authorization/catalog/neon-admin/catalog.v1.json | 13 |
@@ -1746,7 +1738,7 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/planes/neon/src/finance-http.ts | 54 |
 | `permissions` | test | server/packages/planes/neon/src/record-collection-scope.test.ts | 13 |
 | `permissions` | test | server/packages/planes/neon/src/register-finance.test.ts | 7 |
-| `permissions` | runtime | server/packages/planes/neon/src/register-finance.ts | 73, 91, 95, 98, 99, 102, 106 |
+| `permissions` | runtime | server/packages/planes/neon/src/register-finance.ts | 289, 336, 348, 355, 380, 386, 391, 411, 469 |
 | `permissions` | test | server/packages/planes/studio/onboarding/src/case-lifecycle.test.ts | 5 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/a2-operations.test.ts | 8 |
 | `permissions` | test | server/packages/platform/ai/src/__tests__/experience-configuration.test.ts | 8 |
@@ -1757,7 +1749,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `permissions` | runtime | server/packages/platform/ai/src/context.ts | 13, 14, 15, 16, 22, 23, 24, 25 |
 | `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 28, 86 |
-| `permissions` | runtime | server/packages/platform/ai/src/knowledge.ts | 20 |
+| `permissions` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
 | `permissions` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
 | `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 80, 196 |
 | `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
@@ -1766,13 +1758,13 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/platform/experience/src/contracts.ts | 74, 140, 172 |
 | `permissions` | runtime | server/packages/platform/experience/src/ports.ts | 105 |
 | `permissions` | test | server/packages/platform/experience/src/service.test.ts | 15, 22, 34, 37, 52, 53, 55, 58, 60, 75, 96, 100, 113, 125, 132, 156, 168 |
-| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 63, 64, 70, 71, 76, 77, 159, 177, 194, 228, 235, 237, 240, 265 |
+| `permissions` | runtime | server/packages/platform/experience/src/service.ts | 200, 205, 207, 224, 233, 247, 274, 664, 726, 825, 931, 951, 970, 987, 989, 990, 1116 |
 | `permissions` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `permissions` | test | server/packages/platform/governance/src/routes/governance-routes.test.ts | 9 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 23, 27, 28 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 13, 35, 38, 39, 40, 44, 59, 61 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `permissions` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `permissions` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 430 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 8, 30, 31, 67, 68, 85, 91 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `permissions` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1781,7 +1773,7 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/platform/iam/src/kysely-identity-context-resolver.ts | 58, 63 |
 | `permissions` | runtime | server/packages/platform/iam/src/permission-authorizer.ts | 11, 12, 13, 19, 27, 30, 33, 36, 39, 41, 58, 65, 70, 71 |
 | `permissions` | test | server/packages/platform/metadata/src/__tests__/metadata-service.test.ts | 6 |
-| `permissions` | test | server/packages/platform/notifications/src/__tests__/notification-operations.test.ts | 12 |
+| `permissions` | test | server/packages/platform/notifications/src/__tests__/notification-operations.test.ts | 44 |
 | `permissions` | test | server/packages/platform/policy/src/__tests__/policy-service.test.ts | 9 |
 | `permissions` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
 | `permissions` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
@@ -1808,12 +1800,13 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/services/finance/src/tax/tax-credit-service.ts | 8, 13, 47 |
 | `permissions` | test | server/packages/services/finance/src/tax/tax-services.test.ts | 11, 26, 42 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 40, 43, 52, 72, 78, 98, 121, 126, 128, 140, 162, 164, 168 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8, 11, 14 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-request-service.test.ts | 8, 40, 43, 52, 72, 78, 98, 121, 126, 128, 140, 162, 164, 168 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 10, 12 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 37, 155, 179, 229 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 28, 61, 76, 122 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16, 21, 22 |
 | `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 22, 40, 42 |
-| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 27, 54, 55 |
+| `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 124, 275, 292 |
 | `permissions` | test | server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts | 9 |
 | `permissions` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `permissions` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
@@ -1830,7 +1823,7 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/home-personalization-phase3.test.ts | 19 |
 | `permissions` | test | tests/contracts/platform-catalog-experience.test.ts | 192 |
 | `permissions` | test | tests/contracts/query-provider-lifecycle.test.ts | 13 |
-| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 11, 28, 37, 47, 48, 74 |
+| `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
 | `persona` | runtime | config/governance/authorization-data-disposition-policy.v1.json | 308 |
 | `persona` | runtime | config/governance/authorization-legacy-freeze-baseline.v1.json | 6496, 6648, 6662, 6663, 6670, 6671, 6678, 6679, 6686, 6687, 6694, 6695, 6702, 6703, 6710, 6711, 6718, 6719, 6726, 6727, 6734, 6735, 6742, 6743, 6750, 6751, 6752, 6758, 6759, 6766, 6767, 6774, 6775, 6782, 6783, 6790, 6791, 6798, 6799, 7040, 7048, 7056 |
@@ -1848,7 +1841,7 @@ Capture DDLs:
 | `persona` | tool | tools/scripts/verify-athyper-demo-iam.cjs | 107, 108, 110 |
 | `personaId` | runtime | config/governance/authorization-golden-corpus.schema.json | 212 |
 | `personaId` | tool | scripts/policy/authorization-inventory.ts | 752 |
-| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 918 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4786 |
 | `planeExcluded` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planeExcluded` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 23 |
 | `planeExcluded` | runtime | server/packages/contracts/auth/src/authorization.ts | 78 |
@@ -1872,7 +1865,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/platform/experience/src/service.test.ts | 15 |
 | `planeExcluded` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `planeExcluded` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 441 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planeExcluded` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1891,7 +1884,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
 | `planLocked` | tool | scripts/policy/authorization-inventory.ts | 752 |
-| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 918 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4785 |
 | `planLocked` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planLocked` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 22 |
 | `planLocked` | runtime | server/packages/contracts/auth/src/authorization.ts | 77 |
@@ -1915,7 +1908,7 @@ Capture DDLs:
 | `planLocked` | test | server/packages/platform/experience/src/service.test.ts | 15 |
 | `planLocked` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `planLocked` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 440 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 11 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `planLocked` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1933,7 +1926,7 @@ Capture DDLs:
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 918 |
+| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4779 |
 | `principalFingerprint` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `principalFingerprint` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 16 |
 | `principalFingerprint` | runtime | server/packages/contracts/auth/src/authorization.ts | 69 |
@@ -1952,10 +1945,10 @@ Capture DDLs:
 | `principalFingerprint` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15 |
 | `principalFingerprint` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `principalFingerprint` | test | server/packages/platform/experience/src/service.test.ts | 15 |
-| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 240 |
+| `principalFingerprint` | runtime | server/packages/platform/experience/src/service.ts | 987 |
 | `principalFingerprint` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 434 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 9 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 10 |
 | `principalFingerprint` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -1978,7 +1971,8 @@ Capture DDLs:
 | `profileHash` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 3 |
 | `profileHash` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 22 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
-| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 917, 918 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4763, 4772, 4779, 4780, 4781 |
+| `profileHash` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 134 |
 | `profileHash` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `profileHash` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 17, 35 |
 | `profileHash` | runtime | server/packages/contracts/auth/src/authorization.ts | 70, 88 |
@@ -2001,11 +1995,11 @@ Capture DDLs:
 | `profileHash` | runtime | server/packages/platform/ai/src/tool-service.ts | 76, 77, 80, 120, 129 |
 | `profileHash` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `profileHash` | test | server/packages/platform/experience/src/service.test.ts | 14, 15 |
-| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 31, 229, 240 |
+| `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 97, 936, 988 |
 | `profileHash` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 27 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-provisioning-lifecycle.test.ts | 2 |
-| `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 123 |
+| `profileHash` | test | server/packages/platform/iam/src/__tests__/identity-saga.test.ts | 428, 435 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/permission-authorizer.test.ts | 7, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/provisioning-vertical.test.ts | 9, 10 |
 | `profileHash` | test | server/packages/platform/iam/src/__tests__/trustiam-authority.test.ts | 6 |
@@ -2019,7 +2013,8 @@ Capture DDLs:
 | `profileHash` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `profileHash` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
 | `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2 |
-| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-request-service.test.ts | 8 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8 |
+| `profileHash` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 14 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `profileHash` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 42, 43 |
@@ -2039,12 +2034,12 @@ Capture DDLs:
 | `requiredPermission` | tool | scripts/policy/authorization-inventory.ts | 912 |
 | `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 178, 179 |
 | `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 41, 46 |
-| `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 20, 21, 22, 25, 26, 27 |
+| `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 50, 61, 72, 93, 104, 117 |
 | `requiredPermissions` | runtime | packages/planes/mesh/shell/src/navigation.ts | 11 |
 | `requiredPermissions` | runtime | packages/planes/neon/navigation/src/index.ts | 12 |
 | `requiredPermissions` | runtime | packages/planes/studio/shell/src/navigation.ts | 11 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 29, 51 |
-| `requiredPermissions` | runtime | packages/platform/shell/shell/src/core.ts | 10, 39, 51 |
+| `requiredPermissions` | runtime | packages/platform/shell/shell/src/core.ts | 13, 97, 137 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 8, 47, 59, 64 |
 | `requiredPermissions` | tool | scripts/policy/verify-shared-shell-phase8.mjs | 12, 26 |
 | `requiredPermissions` | ui | scripts/verification/shell-browser-entry.tsx | 6 |
@@ -2057,7 +2052,7 @@ Capture DDLs:
 | `requiredPermissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |
 | `requiredPermissions` | test | tests/contracts/first-business-module-readiness.test.ts | 12 |
 | `requiredPermissions` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 27, 34 |
-| `requiredPermissions` | test | tests/contracts/shared-shell-navigation.test.ts | 7, 8, 9, 25, 26, 36, 74, 83 |
+| `requiredPermissions` | test | tests/contracts/shared-shell-navigation.test.ts | 19, 29, 39, 101, 111, 152, 249, 306, 320, 330 |
 | `requiredPermissions` | test | tests/foundation/access-gates-phase9.test.tsx | 9 |
 | `requiredPermissions` | test | tests/foundation/activity-center-interactions.test.tsx | 10 |
 | `requiredPermissions` | test | tests/foundation/quick-access-interactions.test.tsx | 10 |
@@ -2232,6 +2227,9 @@ Capture DDLs:
 
 | Artifact | Generator | Owner | Present | Generator present |
 |---|---|---|---:|---:|
+| server/db/prisma/schema.mesh.prisma | server/db/prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma | database-platform | yes | yes |
+| server/db/prisma/schema.neon.prisma | server/db/prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma | database-platform | yes | yes |
+| server/db/prisma/schema.studio.prisma | server/db/prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma | database-platform | yes | yes |
 | server/db/seed/contracts/authorization/authority/mesh/compiled/compiled-authority.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
 | server/db/seed/contracts/authorization/authority/mesh/compiled/existing-user-group-manifest.v1.json | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
 | server/db/seed/contracts/authorization/authority/mesh/compiled/reconciliation-report.md | server/db/scripts/authority/compile-authorization-authority.ts --authority=mesh | mesh-platform | no | no |
@@ -2249,8 +2247,6 @@ Capture DDLs:
 | server/db/seed/contracts/authorization/catalog/neon-admin/compiled/contextual-aliases.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
 | server/db/seed/contracts/authorization/catalog/neon-admin/compiled/verification-report.v1.json | server/db/scripts/catalog/compile-authorization-catalog.ts --catalog=neon-admin | platform-iam | no | no |
 | server/db/seed/contracts/generated/resolver-contracts.json | server/scripts/export-resolver-contracts.ts | metadata-platform | no | no |
-| server/packages/adapters/db/src/prisma/schema.mesh.prisma | server/packages/adapters/db/scripts/prisma-generate.mjs --schema server/packages/adapters/db/src/prisma/schema.mesh.prisma | database-platform | no | no |
-| server/packages/adapters/db/src/prisma/schema.prisma | server/packages/adapters/db/scripts/prisma-generate.mjs | database-platform | no | no |
 | stack/config/iam/realm-athyper-demosetup.json | tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
 | stack/config/iam/realm-athyper.json | tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
 | stack/config/iam/realm-platform-control-demosetup.json | tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |

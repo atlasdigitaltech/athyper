@@ -188,7 +188,7 @@ test("release instances use an image-contained fail-closed forward migration run
   assert.match(runner, /operator resolution is required/u);
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
-    assert.match(manifest, /20260825_notification_activity_center\.sql/u);
+    assert.doesNotMatch(manifest, /^[^#\s]/mu);
   }
 });
 

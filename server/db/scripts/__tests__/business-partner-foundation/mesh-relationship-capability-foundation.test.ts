@@ -7,7 +7,7 @@ test("G3 creates capability episodes instead of relationship metadata flags", as
   const sql = await readFile(
     path.join(
       root,
-      "ddl/planes/mesh/mesh/14_relationship_capability_foundation.sql",
+      "ddl/planes/mesh/mesh/11_grants.sql",
     ),
     "utf8",
   );
