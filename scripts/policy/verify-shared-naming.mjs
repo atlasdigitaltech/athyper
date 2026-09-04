@@ -14,11 +14,11 @@ const legacyMode = args.includes("--legacy");
 const strictGroupingMode = args.includes("--strict-group");
 
 const reportIdx = args.indexOf("--report");
-const defaultReportPath = join(sharedRoot, "..", "policy", "reports", "shared-legacy-audit.json");
+const defaultReportPath = join(repoRoot, "policy", "reports", "shared-legacy-audit.json");
 const reportPath = args.includes("--report") ? (args[reportIdx + 1] ?? defaultReportPath) : legacyMode ? defaultReportPath : null;
 
 const groupReportIdx = args.indexOf("--group-report");
-const defaultGroupReportPath = join(sharedRoot, "..", "policy", "reports", "shared-grouping-audit.json");
+const defaultGroupReportPath = join(repoRoot, "policy", "reports", "shared-grouping-audit.json");
 const groupReportPath = groupReportIdx >= 0
   ? (args[groupReportIdx + 1] ?? defaultGroupReportPath)
   : strictGroupingMode

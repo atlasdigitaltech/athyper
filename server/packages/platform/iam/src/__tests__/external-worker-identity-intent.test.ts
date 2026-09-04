@@ -94,6 +94,35 @@ describe("external-worker identity intent contract", () => {
       ),
     ).toThrow("SCOPE_INVALID");
   });
+  it("returns coded errors for null application and role elements", () => {
+    let applicationError: unknown;
+    try {
+      validateExternalWorkerIdentityIntent(event({ applications: [null] }));
+    } catch (error) {
+      applicationError = error;
+    }
+    expect(applicationError).toMatchObject({
+      code: "EXTERNAL_WORKER_INTENT_APPLICATION_INVALID",
+      message: "EXTERNAL_WORKER_INTENT_APPLICATION_INVALID",
+    });
+
+    let roleError: unknown;
+    try {
+      validateExternalWorkerIdentityIntent(
+        event({
+          applications: [
+            { plane: "neon", targetTenantId: tenant, roles: [null] },
+          ],
+        }),
+      );
+    } catch (error) {
+      roleError = error;
+    }
+    expect(roleError).toMatchObject({
+      code: "EXTERNAL_WORKER_INTENT_SCOPE_INVALID",
+      message: "EXTERNAL_WORKER_INTENT_SCOPE_INVALID",
+    });
+  });
   it("accepts only the pinned internal-employment variant", () => {
     const internal = {
       ...event(),

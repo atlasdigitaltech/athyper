@@ -7,7 +7,7 @@ encode_file() {
 
 load_optional_secret() {
   variable="$1"
-  eval "secret_file=\${${variable}_FILE:-}"
+  secret_file="$(printenv "${variable}_FILE" 2>/dev/null || true)"
   [ -n "$secret_file" ] || return 0
   [ -f "$secret_file" ] || {
     echo "Secret file configured by ${variable}_FILE is unavailable" >&2
@@ -18,8 +18,7 @@ load_optional_secret() {
     echo "Secret file configured by ${variable}_FILE is empty" >&2
     exit 1
   }
-  eval "$variable=\$secret_value"
-  export "$variable"
+  export "$variable=$secret_value"
   unset secret_file secret_value
 }
 

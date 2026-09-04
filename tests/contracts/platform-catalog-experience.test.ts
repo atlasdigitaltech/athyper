@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { applyPersonalArrangement, parseExperienceSurface, parsePersonalSurfaceArrangement, resolveEffectiveExperience, resolvePublishedExperience } from "../../packages/contracts/platform/dashboard/src/index";
+import { DEFAULT_EXPERIENCE_SURFACES } from "../../packages/contracts/platform/dashboard/src/generated-defaults";
 import { resolveCatalogRoute, validateCatalogRoutes, type CatalogWorkspaceRoute } from "../../packages/contracts/platform/navigation/src/index";
+import { PLATFORM_CATALOG_ROUTES } from "../../packages/contracts/platform/navigation/src/generated-catalog";
 import { SEMANTIC_ICON_KEYS } from "../../packages/platform/foundation/icons/src/index";
 import { orderModuleCodes } from "../../packages/platform/shell/dashboard/src/module-relevance";
 
@@ -20,37 +22,35 @@ const routes = [{
 }] as const satisfies readonly CatalogWorkspaceRoute[];
 
 test("canonical catalog locks the agreed plane sizes and BP ownership", async () => {
-  const lock = JSON.parse(await readFile(new URL("../../catalog/generated/platform-catalog.lock.json", import.meta.url), "utf8"));
-  assert.deepEqual(lock.planes.studio.counts, { workspaces: 10, modules: 33 });
-  assert.deepEqual(lock.planes.neon.counts, { workspaces: 9, modules: 51 });
-  assert.deepEqual(lock.planes.mesh.counts, { workspaces: 5, modules: 25 });
-  const mdg = lock.planes.neon.workspaces.find((workspace: { code: string }) => workspace.code === "mdg");
+  const counts = (plane: keyof typeof PLATFORM_CATALOG_ROUTES) => ({ workspaces: PLATFORM_CATALOG_ROUTES[plane].length, modules: PLATFORM_CATALOG_ROUTES[plane].reduce((sum, workspace) => sum + workspace.modules.length, 0) });
+  assert.deepEqual(counts("studio"), { workspaces: 10, modules: 33 });
+  assert.deepEqual(counts("neon"), { workspaces: 9, modules: 51 });
+  assert.deepEqual(counts("mesh"), { workspaces: 5, modules: 25 });
+  const mdg = PLATFORM_CATALOG_ROUTES.neon.find((workspace) => workspace.code === "mdg");
   assert.equal(mdg.routeSlug, "mdg");
   assert.deepEqual(mdg.modules.find((module: { code: string }) => module.code === "bp"), {
-    idSeed: "neon:module:bp", code: "bp", routeSlug: "business-partner", name: "Business Partner Management", iconKey: "contact", description: "Create and govern supplier, customer, and partner master data.", actions: [{ label: "New", suffix: "new" }, { label: "Manage", suffix: "partners" }], order: 10,
+    code: "bp", routeSlug: "business-partner", name: "Business Partner Management", iconKey: "contact", entities: [],
   });
   const knownIcons = new Set<string>(SEMANTIC_ICON_KEYS);
-  for (const workspace of lock.planes.neon.workspaces) {
+  for (const workspace of PLATFORM_CATALOG_ROUTES.neon) {
     assert.ok(knownIcons.has(workspace.iconKey), `${workspace.code} has a registered workspace icon`);
     for (const module of workspace.modules) assert.ok(knownIcons.has(module.iconKey), `${workspace.code}.${module.code} has a registered module icon`);
   }
 });
 
 test("catalog generation supplies Home, Workspace, and Module defaults", async () => {
-  const bundle = JSON.parse(await readFile(new URL("../../catalog/generated/default-experience-surfaces.json", import.meta.url), "utf8"));
-  assert.equal(bundle.schema, "athyper-experience-surface-bundle/1");
-  assert.equal(bundle.surfaces.length, 136);
-  assert.ok(bundle.surfaces.some((surface: { id: string }) => surface.id === "neon.mdg.bp.home"));
-  assert.ok(bundle.surfaces.some((surface: { id: string }) => surface.id === "mesh.financial_collab.fpg.home"));
-  assert.ok(bundle.surfaces.some((surface: { id: string }) => surface.id === "studio.entity.exp.home"));
-  assert.equal(bundle.surfaces.find((surface: { id: string }) => surface.id === "mesh.home").blocks[0].extension, "mesh.atlas-welcome");
-  assert.equal(bundle.surfaces.find((surface: { id: string }) => surface.id === "studio.home").blocks[0].extension, "studio.atlas-welcome");
-  const mdg = bundle.surfaces.find((surface: { id: string }) => surface.id === "neon.mdg.home");
+  assert.equal(DEFAULT_EXPERIENCE_SURFACES.length, 136);
+  assert.ok(DEFAULT_EXPERIENCE_SURFACES.some((surface) => surface.id === "neon.mdg.bp.home"));
+  assert.ok(DEFAULT_EXPERIENCE_SURFACES.some((surface) => surface.id === "mesh.financial_collab.fpg.home"));
+  assert.ok(DEFAULT_EXPERIENCE_SURFACES.some((surface) => surface.id === "studio.entity.exp.home"));
+  assert.equal(DEFAULT_EXPERIENCE_SURFACES.find((surface) => surface.id === "mesh.home").blocks[0].extension, "mesh.atlas-welcome");
+  assert.equal(DEFAULT_EXPERIENCE_SURFACES.find((surface) => surface.id === "studio.home").blocks[0].extension, "studio.atlas-welcome");
+  const mdg = DEFAULT_EXPERIENCE_SURFACES.find((surface) => surface.id === "neon.mdg.home");
   const bp = mdg.blocks.find((block: { id: string }) => block.id === "module.bp");
   assert.equal(mdg.blocks[0].text, "Your modules");
   assert.equal(bp.body, "Create and govern supplier, customer, and partner master data.");
   assert.deepEqual(bp.actions.map((action: { label: string }) => action.label), ["Overview", "New", "Manage", "ToDo"]);
-  const meshWorkspace = bundle.surfaces.find((surface: { id: string }) => surface.id === "mesh.network_rel.home");
+  const meshWorkspace = DEFAULT_EXPERIENCE_SURFACES.find((surface) => surface.id === "mesh.network_rel.home");
   assert.equal(meshWorkspace.blocks[0].id, "workspace.modules-title");
   assert.deepEqual(meshWorkspace.blocks[1].actions.map((action: { label: string }) => action.label), ["Overview", "ToDo"]);
   const generatedRoutes = await readFile(new URL("../../packages/contracts/platform/navigation/src/generated-catalog.ts", import.meta.url), "utf8");

@@ -170,22 +170,41 @@ export class KyselyWorkforceRepository implements WorkforceRepository<Tx> {
     transaction: Tx,
   ) {
     const employment = (
-      await sql<Row>`SELECT employment.id FROM master.employment employment WHERE employment.tenant_id=${input.tenantId}::uuid AND employment.employee_id=${input.employeeId}::uuid AND employment.legal_entity_id=${input.employerOrganizationId}::uuid ORDER BY employment.is_primary DESC,employment.hire_date DESC,employment.id DESC LIMIT 1`.execute(
+      await sql<Row>`SELECT employment.id FROM master.employment employment JOIN master.employee employee ON employee.tenant_id=employment.tenant_id AND employee.id=employment.employee_id JOIN master.person person ON person.tenant_id=employee.tenant_id AND person.id=employee.person_id WHERE employment.tenant_id=${input.tenantId}::uuid AND employment.employee_id=${input.employeeId}::uuid AND employment.legal_entity_id=${input.employerOrganizationId}::uuid AND employment.status='active' AND employment.employment_status='active' AND employee.status='active' AND person.status='active' ORDER BY employment.is_primary DESC,employment.hire_date DESC,employment.id DESC LIMIT 1`.execute(
         transaction,
       )
     ).rows[0];
-    if (!employment) return null;
-    const row = (
-      await sql<Row>`SELECT employment_id,replayed FROM document.command_internal_workforce_identity_intent(${input.tenantId}::uuid,${text(employment, "id")}::uuid,'active',${input.createPrincipal},${input.idempotencyKey},${input.actorId}::uuid,NULL::uuid)`.execute(
-        transaction,
-      )
-    ).rows[0];
-    return row
-      ? {
-          projectionId: text(row, "employment_id"),
-          replayed: Boolean(row["replayed"]),
-        }
-      : null;
+    if (!employment)
+      throw new MasterDataError(
+        409,
+        "WORKFORCE_IAM_RETRY_NOT_ELIGIBLE",
+        "IAM projection retry requires an active employee, person, and employment in the requested legal entity",
+      );
+    try {
+      const row = (
+        await sql<Row>`SELECT employment_id,replayed FROM document.command_internal_workforce_identity_intent(${input.tenantId}::uuid,${text(employment, "id")}::uuid,'active',${input.createPrincipal},${input.idempotencyKey},${input.actorId}::uuid,NULL::uuid)`.execute(
+          transaction,
+        )
+      ).rows[0];
+      if (!row)
+        throw new MasterDataError(
+          409,
+          "WORKFORCE_IAM_RETRY_NOT_ACCEPTED",
+          "IAM projection retry did not create an identity intent",
+        );
+      return {
+        projectionId: text(row, "employment_id"),
+        replayed: Boolean(row["replayed"]),
+      };
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === "23514")
+        throw new MasterDataError(
+          409,
+          "WORKFORCE_IAM_RETRY_NOT_ELIGIBLE",
+          "The current workforce lifecycle state is not eligible for IAM projection",
+        );
+      throw error;
+    }
   }
 
   async readPersonEvidence(

@@ -37,6 +37,10 @@ const metadata = {
 for (const scenario of scenarios) {
   const scenarioKey = scenario.envKey || scenario.name.toUpperCase();
   if (scenario.optional && process.env[`PERF_SKIP_${scenarioKey}`] === "true") continue;
+  if (scenario.name === "mutation" && process.env.P6_WRITE_MODE?.toLowerCase() !== "enabled") {
+    metadata.scenarios.push({ name: scenario.name, status: "not_configured" });
+    continue;
+  }
   if (!scenario.script) {
     metadata.scenarios.push({ name: scenario.name, status: "not_configured" });
     continue;
@@ -82,9 +86,65 @@ function captureTopSql(destination) {
     writeFileSync(destination, "Top SQL capture not configured. Set PERF_PG_TOP_SQL_COMMAND in the performance environment.\n");
     return;
   }
-  const result = spawnSync(command, { cwd: root, encoding: "utf8", shell: true, env: process.env });
+  const [commandName, ...commandArgs] = splitCommand(command);
+  const result = spawnSync(commandName, commandArgs, { cwd: root, encoding: "utf8", env: process.env });
   if (result.status !== 0) throw new Error(`Top SQL capture failed: ${result.stderr || command}`);
   writeFileSync(destination, result.stdout);
+}
+
+function splitCommand(value) {
+  const parts = [];
+  let current = "";
+  let quote = null;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if (quote) {
+      if (char === "\\") {
+        const next = value[index + 1];
+        if (next === quote || next === "\\") {
+          current += next;
+          index += 1;
+          continue;
+        }
+      }
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current.length > 0) {
+        parts.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    if (char === "\\") {
+      const next = value[index + 1];
+      if (next !== undefined) {
+        current += next;
+        index += 1;
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (quote) throw new Error(`Unable to parse PERF_PG_TOP_SQL_COMMAND: unmatched quote.`);
+  if (current.length > 0) parts.push(current);
+  if (parts.length === 0) throw new Error("PERF_PG_TOP_SQL_COMMAND is empty.");
+  return parts;
 }
 
 function required(name) {

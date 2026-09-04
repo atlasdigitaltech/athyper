@@ -56,6 +56,7 @@ import type { Container } from "./create-container.js";
 import { sql, type Transaction } from "kysely";
 import {
   defineRouteContract,
+  HttpError,
   registerContractRoute,
 } from "@athyper/server-runtime-http";
 import { randomUUID } from "node:crypto";
@@ -66,6 +67,12 @@ const RECONCILE_PROJECTIONS_JOB = "trustiam.projection.reconcile";
 const SYSTEM_ACTOR_ID = "00000000-0000-0000-0000-000000000000";
 const IDENTITY_SAGA_QUEUE = "iam.identity-saga";
 const RUN_IDENTITY_SAGA_JOB = "trustiam.identity.saga.run";
+const UUID_SCHEMA = {
+  type: "string",
+  format: "uuid",
+  pattern:
+    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+} as const;
 
 export interface PlatformRegistrationDependencies {
   readonly tokenVerifier?: TokenVerifier;
@@ -427,9 +434,14 @@ function registerIdentitySagaRoutes(
       authenticated: true,
       permission: "studio.iam.application_projection.replay",
       request: {
+        params: {
+          type: "object",
+          properties: { attemptId: UUID_SCHEMA },
+          required: ["attemptId"],
+        },
         body: {
           type: "object",
-          properties: { approvedBy: { type: "string", format: "uuid" } },
+          properties: { approvedBy: UUID_SCHEMA },
           required: ["approvedBy"],
         },
       },
@@ -464,7 +476,7 @@ function registerIdentitySagaRoutes(
         }
         response.status(202).json({ accepted: true, attemptId });
       } catch (error) {
-        next(error);
+        next(identityReplayHttpError(error));
       }
     },
   );
@@ -1523,6 +1535,20 @@ function issuerRealm(issuer: string): string | undefined {
 }
 function problem(status: number, code: string, title: string) {
   return { type: `https://athyper.dev/problems/${code}`, title, status, code };
+}
+
+function identityReplayHttpError(error: unknown): unknown {
+  if (!(error instanceof Error)) return error;
+  const code = error.message.split(":", 1)[0] ?? "";
+  const detail =
+    code === "IAM_REPLAY_FORBIDDEN"
+      ? "Identity saga replay requires Studio projection-replay authority"
+      : code === "IAM_REPLAY_MFA_REQUIRED"
+        ? "Identity saga replay requires an elevated session"
+        : code === "IAM_REPLAY_SOD_REQUIRED"
+          ? "Identity saga replay requires an approver distinct from the requester"
+          : undefined;
+  return detail ? new HttpError(403, code, detail) : error;
 }
 
 function createIamOutboxWriter(): OutboxWriter<

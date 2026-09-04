@@ -5,7 +5,7 @@ const root = process.cwd();
 const inventory = JSON.parse(readFileSync(
   resolve(root, "config/legacy-experience-cleanup.json"),
   "utf8",
-).replace(/^\uFEFF/, ""));
+));
 const failures = [];
 const requiredTargetCodes = new Set([
   "plane_shell_wrappers",

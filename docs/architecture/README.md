@@ -10,8 +10,4 @@ This directory contains durable architecture decisions, current architecture gui
 
 - `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
 
-## Active plans
-
-- `plans/governed-lifecycle-g6.md` — complete observation, recovery, approval, retirement, and certification plan for G6 compatibility surfaces.
-
 Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `policy/reports/` when they must remain live; otherwise Git history is the archive.

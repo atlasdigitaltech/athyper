@@ -12,6 +12,7 @@ import { ENV } from "./shared/env.js";
 import { headersA } from "./shared/headers.js";
 
 const ENTITY = __ENV.P6_ENTITY || "company_code";
+const WRITE_ENABLED = (__ENV.P6_WRITE_MODE || "").toLowerCase() === "enabled";
 const CREATE_BODY = json("P6_CREATE_BODY_JSON");
 const PATCH_BODY = json("P6_PATCH_BODY_JSON");
 const PATCH_IDS = csv(__ENV.P6_PATCH_RECORD_IDS || "");
@@ -22,10 +23,17 @@ const createMs = new Trend("p6_create_ms", true);
 const patchMs = new Trend("p6_patch_ms", true);
 const deleteMs = new Trend("p6_delete_ms", true);
 
+if (!WRITE_ENABLED) {
+  throw new Error("[athyper-perf] P6_WRITE_MODE=enabled is required for the mutation kernel");
+}
+
 const scenarios = {};
-if (CREATE_BODY) scenarios.create = iterations("createRecord", Number(__ENV.P6_CREATE_ITERATIONS || 10));
+if (CREATE_BODY) scenarios.create = iterations("createRecord", positiveInteger("P6_CREATE_ITERATIONS", 10));
 if (PATCH_BODY && PATCH_IDS.length) scenarios.patch = iterations("patchRecord", PATCH_IDS.length);
 if (DELETE_IDS.length) scenarios.remove = iterations("deleteRecord", DELETE_IDS.length);
+if (Object.keys(scenarios).length === 0) {
+  throw new Error("[athyper-perf] configure at least one P6 create, patch, or delete workload");
+}
 
 export const options = {
   scenarios,
@@ -66,6 +74,9 @@ function request(method, id, body, metric, statuses) {
 }
 
 function iterations(exec, count) {
+  if (!Number.isSafeInteger(count) || count < 1 || count > 10000) {
+    throw new Error(`[athyper-perf] ${exec} iterations must be between 1 and 10000`);
+  }
   return { executor: "shared-iterations", exec, vus: Math.min(5, count), iterations: count, maxDuration: "2m" };
 }
 
@@ -75,3 +86,11 @@ function json(name) {
 }
 
 function csv(value) { return value.split(",").map((item) => item.trim()).filter(Boolean); }
+
+function positiveInteger(name, fallback) {
+  const value = Number(__ENV[name] || fallback);
+  if (!Number.isSafeInteger(value) || value < 1 || value > 10000) {
+    throw new Error(`[athyper-perf] ${name} must be an integer between 1 and 10000`);
+  }
+  return value;
+}

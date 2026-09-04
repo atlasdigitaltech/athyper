@@ -31,7 +31,17 @@ const surfaceTimeoutMs = positiveInt(
 const headless = process.env.PERF_HEADLESS !== "false";
 const enforceBudgets = process.env.PERF_ENFORCE_BUDGETS === "true";
 
-if (!existsSync(storageState)) throw new Error(`Authenticated storage state not found: ${storageState}`);
+const availableStorageState = existsSync(storageState)
+  ? storageState
+  : existsSync(resolve(root, "tests/e2e/.auth/storage-state.json"))
+    ? resolve(root, "tests/e2e/.auth/storage-state.json")
+    : null;
+
+if (!availableStorageState) {
+  throw new Error(
+    `Authenticated storage state not found: ${storageState}. Set PERF_NEON_STORAGE_STATE to a valid Playwright storage-state path.`,
+  );
+}
 if (!existsSync(matrixPath)) throw new Error(`Record workspace matrix not found: ${matrixPath}`);
 if (!existsSync(budgetsPath)) throw new Error(`Record workspace budgets not found: ${budgetsPath}`);
 
@@ -83,7 +93,7 @@ if (enforceBudgets && report.summary.budgetViolations.length > 0) {
 }
 
 async function captureProfile(profile, run) {
-  const context = await browser.newContext({ storageState, ignoreHTTPSErrors: true });
+  const context = await browser.newContext({ storageState: availableStorageState, ignoreHTTPSErrors: true });
   const page = await context.newPage();
   const responses = [];
   page.on("response", (response) => {

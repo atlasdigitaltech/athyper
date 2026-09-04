@@ -216,7 +216,7 @@ export class KyselyBusinessPartnerInvitationRepository implements BusinessPartne
   ) {
     const owned = await this.getOwnedRequest(input.tenantId,input.requestId,input.applicantPrincipalId,input.journeyKind,transaction);
     if (!owned || owned.status !== "returned") return null;
-    return this.cases.patch({tenantId:input.tenantId,requestId:input.requestId,expectedVersion:input.expectedVersion,proposedPayload:input.proposedPayload,updatedBy:input.applicantPrincipalId},transaction);
+    return this.cases.replacePayload({tenantId:input.tenantId,requestId:input.requestId,expectedVersion:input.expectedVersion,proposedPayload:input.proposedPayload,updatedBy:input.applicantPrincipalId},transaction);
   }
   async attachOwnedEvidence(
     input: Parameters<

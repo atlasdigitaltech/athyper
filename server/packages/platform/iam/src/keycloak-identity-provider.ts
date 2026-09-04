@@ -213,7 +213,7 @@ export class KeycloakIdentityProviderAdapter implements IdentityProviderAdapter 
     const secret = await this.config.secrets.resolve(
         this.config.credentialReference,
       ),
-      secretCopy = secret.bytes.slice();
+      secretCopy = Uint8Array.from(secret.bytes);
     const clientSecret = new TextDecoder().decode(secretCopy);
     try {
       const response = await this.fetcher(

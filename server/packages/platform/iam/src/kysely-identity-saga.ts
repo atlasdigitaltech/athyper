@@ -18,6 +18,8 @@ type TransactionRunner = <T>(
   work: (tx: Transaction<Db>) => Promise<T>,
 ) => Promise<T>;
 
+class IdentitySagaSuccessFenceRejected extends Error {}
+
 export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
   constructor(private readonly run: TransactionRunner) {}
 
@@ -96,7 +98,7 @@ export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
     );
   }
 
-  succeed(
+  async succeed(
     coordinate: IdentitySagaCoordinate,
     input: {
       observedAt: string;
@@ -104,21 +106,28 @@ export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
       receipt: Readonly<Record<string, unknown>>;
     },
   ): Promise<boolean> {
-    return this.run(async (tx) => {
-      const changed = await this.transition(
-        coordinate,
-        "running",
-        sql`status='succeeded',terminal_at=${input.observedAt}::timestamptz,receipt=${JSON.stringify(input.receipt)}::jsonb`,
-        tx,
-      );
-      if (!changed) return false;
-      const updated =
-        await sql`UPDATE trustiam.identity_projection SET reconciliation_status='in_sync',provider_subject=coalesce(${input.providerSubject ?? null},provider_subject),observed_status=desired_status,observed_version=desired_version,observed_hash=desired_hash,observed_at=${input.observedAt}::timestamptz,last_error_code=NULL,updated_by=created_by WHERE id=${coordinate.identityId}::uuid AND desired_version=${coordinate.desiredVersion} AND desired_hash=${coordinate.desiredHash}`.execute(
+    try {
+      return await this.run(async (tx) => {
+        const changed = await this.transition(
+          coordinate,
+          "running",
+          sql`status='succeeded',terminal_at=${input.observedAt}::timestamptz,receipt=${JSON.stringify(input.receipt)}::jsonb`,
           tx,
         );
-      await appendSagaEvidence(tx, coordinate, "succeeded", input.receipt);
-      return Number(updated.numAffectedRows ?? 0) === 1;
-    });
+        if (!changed) return false;
+        const updated =
+          await sql`UPDATE trustiam.identity_projection SET reconciliation_status='in_sync',provider_subject=coalesce(${input.providerSubject ?? null},provider_subject),observed_status=desired_status,observed_version=desired_version,observed_hash=desired_hash,observed_at=${input.observedAt}::timestamptz,last_error_code=NULL,updated_by=created_by WHERE id=${coordinate.identityId}::uuid AND desired_version=${coordinate.desiredVersion} AND desired_hash=${coordinate.desiredHash}`.execute(
+            tx,
+          );
+        if (Number(updated.numAffectedRows ?? 0) !== 1)
+          throw new IdentitySagaSuccessFenceRejected();
+        await appendSagaEvidence(tx, coordinate, "succeeded", input.receipt);
+        return true;
+      });
+    } catch (error) {
+      if (error instanceof IdentitySagaSuccessFenceRejected) return false;
+      throw error;
+    }
   }
 
   fail(

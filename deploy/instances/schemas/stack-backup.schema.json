@@ -27,6 +27,12 @@
               "type": "array",
               "minItems": 4,
               "maxItems": 4,
+              "allOf": [
+                { "contains": { "type": "object", "required": ["database"], "properties": { "database": { "const": "athyper_iam" } } } },
+                { "contains": { "type": "object", "required": ["database"], "properties": { "database": { "const": "athyper_neon" } } } },
+                { "contains": { "type": "object", "required": ["database"], "properties": { "database": { "const": "athyper_mesh" } } } },
+                { "contains": { "type": "object", "required": ["database"], "properties": { "database": { "const": "athyper_studio" } } } }
+              ],
               "items": {
                 "allOf": [
                   { "$ref": "#/definitions/artifact" },

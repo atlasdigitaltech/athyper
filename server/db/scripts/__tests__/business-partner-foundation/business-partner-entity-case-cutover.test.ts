@@ -41,7 +41,8 @@ describe("Business Partner entity-case cutover", () => {
     assert.doesNotMatch(invitation, /business_partner_request_id/);
     assert.match(mesh, /case_created/);
     assert.match(mesh, /entity_case_id/);
-    assert.doesNotMatch(mesh, /business_partner_request_id/);
+    assert.match(mesh, /to_jsonb\(event\)->>'business_partner_request_id'/);
+    assert.doesNotMatch(mesh, /event\.business_partner_request_id/);
   });
 
   it("supports validation, correction, maker-checker decisions, and replay", () => {

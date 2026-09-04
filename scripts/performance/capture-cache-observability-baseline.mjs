@@ -6,7 +6,7 @@ import { chromium } from "@playwright/test";
 
 const root = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const baseUrl = new URL(required("PERF_NEON_BASE_URL"));
-const storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/e2e/.auth/storage-state.json");
+let storageState = resolve(root, process.env.PERF_NEON_STORAGE_STATE || "tests/e2e/.auth/storage-state.json");
 const outputDir = resolve(root, process.env.PERF_OUTPUT_DIR || "perf/artifacts/cache-observability");
 const repetitions = positiveInt(process.env.PERF_REPETITIONS || "3", "PERF_REPETITIONS");
 const settleMs = positiveInt(process.env.PERF_SETTLE_MS || "1000", "PERF_SETTLE_MS");
@@ -15,7 +15,14 @@ const entityCode = entityCodeFromPath(entityPath);
 const differentQuery = process.env.PERF_DIFFERENT_QUERY || "q=baseline-observability";
 
 if (!existsSync(storageState)) {
-  throw new Error(`Authenticated storage state not found: ${storageState}`);
+  const fallback = resolve(root, "tests/e2e/.auth/storage-state.json");
+  if (fallback !== storageState && existsSync(fallback)) {
+    storageState = fallback;
+  } else {
+    throw new Error(
+      `Authenticated storage state not found: ${storageState}. Set PERF_NEON_STORAGE_STATE to a valid Playwright storage-state path.`,
+    );
+  }
 }
 
 const contextSwitch = requestConfig("CONTEXT_SWITCH");

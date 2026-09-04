@@ -1,4 +1,4 @@
-﻿{
+{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://athyper.local/schemas/authorization-external-identity-evidence-v1.json",
   "title": "Authorization Wave 0 external identity authority evidence",

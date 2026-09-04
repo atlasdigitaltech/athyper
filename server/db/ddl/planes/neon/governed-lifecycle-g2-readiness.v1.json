@@ -48,7 +48,7 @@
       "control": "organization_only_history",
       "status": "landed",
       "owner": "Master Data",
-      "evidence": "Governed materialization is organization-only and both disposable histories contain zero non-organization rows. business-partner-organization-only-compatibility.v1.json explicitly retains person/group import and legacy request branches because known consumers remain.",
+      "evidence": "Governed materialization is organization-only and both disposable histories contain zero non-organization rows. The local development compatibility contract records person/group compatibility as retired with no remaining consumers.",
       "exitGate": "G2 disposition is complete. Physical domain removal remains gated by G0 consumer cutover and measured zero-use window and is not claimed removal-eligible."
     },
     {

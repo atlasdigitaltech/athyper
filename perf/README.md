@@ -36,6 +36,11 @@ AGGREGATE_RECORD_IDS=<id-1>,<id-2>
 DOCUMENT_EDIT_WORKSPACE=<signed workspace capability when required>
 ```
 
+The separate P6 mutation-kernel gate also requires an explicit destructive-run
+acknowledgement. Set `P6_WRITE_MODE=enabled` together with at least one of
+`P6_CREATE_BODY_JSON`, `P6_PATCH_BODY_JSON`, or `P6_DELETE_RECORD_IDS`. The P0
+capture orchestrator records P6 as `not_configured` when this opt-in is absent.
+
 The API `/metrics` endpoint exposes `athyper_framework_*` histograms and
 counters. Capture it immediately before and after every k6 run. Calculate
 p50/p95/p99 from the histograms in Prometheus and correlate them with:

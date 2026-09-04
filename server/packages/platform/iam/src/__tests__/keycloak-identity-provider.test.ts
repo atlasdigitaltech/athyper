@@ -6,7 +6,7 @@ const subject = "11111111-1111-4111-8111-111111111111",
   tenant = "33333333-3333-4333-8333-333333333333",
   key = `athyper:identity:${"a".repeat(40)}`;
 function adapter(responses: Response[]) {
-  const bytes = new TextEncoder().encode("client-secret"),
+  const bytes = Buffer.from("client-secret"),
     fetcher = vi.fn(
       async (_input: string | URL | Request, _init?: RequestInit) =>
         responses.shift() ?? new Response(null, { status: 500 }),

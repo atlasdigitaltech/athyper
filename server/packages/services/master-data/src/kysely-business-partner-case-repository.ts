@@ -100,22 +100,24 @@ export class KyselyBusinessPartnerCaseRepository
     transaction: Tx,
   ) {
     const rows = (
-      await sql<Row>`SELECT ${sql.raw(CASE_SELECT)}
-        FROM document.entity_case c
-        JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id
-        LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id
-       WHERE c.tenant_id=${query.tenantId}::uuid
-         AND c.entity_code='master.business_partner'
-         AND NULLIF(s.payload_json->>'operatingOrganizationId','')::uuid=${query.operatingOrganizationId}::uuid
-         ${query.beforeCreatedAt ? sql`AND c.created_at<${query.beforeCreatedAt}::timestamptz` : sql``}
-       ORDER BY c.created_at DESC,c.id DESC LIMIT ${Math.min((query.limit ?? 50) * 3, 600)}`.execute(
+      await sql<Row>`WITH cases AS (
+        SELECT ${sql.raw(CASE_SELECT)}
+          FROM document.entity_case c
+          JOIN snapshot.entity_snapshot s ON s.tenant_id=c.tenant_id AND s.snapshot_id=c.current_snapshot_id
+          LEFT JOIN document.business_partner_invitation i ON i.tenant_id=c.tenant_id AND i.entity_case_id=c.id
+         WHERE c.tenant_id=${query.tenantId}::uuid
+           AND c.entity_code='master.business_partner'
+           AND NULLIF(s.payload_json->>'operatingOrganizationId','')::uuid=${query.operatingOrganizationId}::uuid
+           ${query.beforeCreatedAt ? sql`AND c.created_at<${query.beforeCreatedAt}::timestamptz` : sql``}
+      )
+      SELECT * FROM cases
+       WHERE ${query.status ?? null}::text IS NULL
+          OR ${sql.raw(COMPATIBILITY_STATUS_SQL)}=${query.status ?? null}
+       ORDER BY created_at DESC,id DESC LIMIT ${query.limit ?? 50}`.execute(
         transaction,
       )
     ).rows.map(mapCase);
-    const filtered = query.status
-      ? rows.filter((item) => item.status === query.status)
-      : rows;
-    return filtered.slice(0, query.limit ?? 50);
+    return rows;
   }
 
   async getAggregate(
@@ -203,6 +205,41 @@ export class KyselyBusinessPartnerCaseRepository
         : {}),
     };
     const key = `case-patch:${input.requestId}:${input.expectedVersion}:${hash(payload).slice(0, 24)}`;
+    await executeCaseCommand(async () =>
+      sql`SELECT * FROM document.command_entity_case_draft(
+        ${input.tenantId}::uuid,${input.requestId}::uuid,${input.expectedVersion}::bigint,
+        ${text(current, "current_snapshot_id")}::uuid,${text(current, "case_code")},
+        ${text(current, "entity_code")},${text(current, "operation_code")},
+        ${nullable(current["target_entity_id"])}::uuid,${nullable(current["pre_materialization_ref"])},
+        ${text(current, "entity_contract_id")}::uuid,${text(current, "entity_contract_hash")},
+        ${nullable(current["form_template_release_id"])}::uuid,${Number(current["form_template_release_no"])}::bigint,
+        ${nullable(current["form_template_hash"])},${JSON.stringify(payload)}::jsonb,${key},
+        ${input.updatedBy}::uuid,NULL::uuid
+      )`.execute(transaction),
+    );
+    const row = await readOne(transaction, input.tenantId, "c.id", input.requestId);
+    return row ? mapCase(row) : null;
+  }
+
+  async replacePayload(
+    input: Parameters<BusinessPartnerRequestRepository<Tx>["patch"]>[0],
+    transaction: Tx,
+  ) {
+    const current = await readOne(transaction, input.tenantId, "c.id", input.requestId);
+    if (!current || mapCase(current).rowVersion !== input.expectedVersion) return null;
+    const previous = object(current["payload_json"]);
+    const payload = {
+      ...input.proposedPayload,
+      ...preserved(previous, [
+        "requestedRole",
+        "registrationChannel",
+        "operatingOrganizationId",
+        "companyCodeId",
+        "meshRegistrationExchangeId",
+        "meshRegistrationEvidenceHash",
+      ]),
+    };
+    const key = `case-replace:${input.requestId}:${input.expectedVersion}:${hash(payload).slice(0, 24)}`;
     await executeCaseCommand(async () =>
       sql`SELECT * FROM document.command_entity_case_draft(
         ${input.tenantId}::uuid,${input.requestId}::uuid,${input.expectedVersion}::bigint,
@@ -335,6 +372,18 @@ const CASE_SELECT = `c.*,s.payload_json,i.id invitation_id,i.registration_mode i
  (SELECT m.completed_by FROM document.entity_case_materialization m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.status='succeeded' ORDER BY m.attempt_no DESC LIMIT 1) applied_by,
  (SELECT m.result_evidence FROM document.entity_case_command_evidence m WHERE m.tenant_id=c.tenant_id AND m.entity_case_id=c.id AND m.command_code='entity.case.materialize' ORDER BY m.recorded_at DESC LIMIT 1) materialization_evidence`;
 
+const COMPATIBILITY_STATUS_SQL = `CASE
+ WHEN status IN('submitted','in_review') THEN 'pending_approval'
+ WHEN status='materializing' THEN 'applying'
+ WHEN status='materialized' THEN 'applied'
+ WHEN status='conflicted' THEN 'validation_failed'
+ WHEN status='draft' AND latest_decision='ENTITY_CASE_RETURNED'
+  AND latest_decision_at IS NOT NULL
+  AND(latest_draft_at IS NULL OR latest_decision_at>=latest_draft_at) THEN 'returned'
+ WHEN status='draft' AND validation_snapshot_id=current_snapshot_id
+  AND validation_summary->>'outcome'='failed' THEN 'validation_failed'
+ ELSE status END`;
+
 async function readOne(tx: Tx, tenantId: string, column: "c.id" | "c.idempotency_key", value: string) {
   return (
     await sql<Row>`SELECT ${sql.raw(CASE_SELECT)} FROM document.entity_case c
@@ -419,12 +468,25 @@ function mapCase(row: Row): BusinessPartnerRequest {
 }
 
 function mapStatus(row: Row): BusinessPartnerRequest["status"] {
-  const value = text(row, "status");
+  const value = text(row, "status"),
+    latestDecisionAt = row["latest_decision_at"] == null
+      ? undefined
+      : new Date(String(row["latest_decision_at"])).valueOf(),
+    latestDraftAt = row["latest_draft_at"] == null
+      ? undefined
+      : new Date(String(row["latest_draft_at"])).valueOf();
   if (value === "submitted" || value === "in_review") return "pending_approval";
   if (value === "materializing") return "applying";
   if (value === "materialized") return "applied";
   if (value === "conflicted") return "validation_failed";
-  if (value === "draft" && row["latest_decision"] === "ENTITY_CASE_RETURNED" && new Date(String(row["latest_decision_at"])).valueOf() >= new Date(String(row["latest_draft_at"])).valueOf()) return "returned";
+  if (
+    value === "draft" &&
+    row["latest_decision"] === "ENTITY_CASE_RETURNED" &&
+    latestDecisionAt !== undefined &&
+    Number.isFinite(latestDecisionAt) &&
+    (latestDraftAt === undefined || latestDecisionAt >= latestDraftAt)
+  )
+    return "returned";
   if (value === "draft" && row["validation_snapshot_id"] === row["current_snapshot_id"] && object(row["validation_summary"])["outcome"] === "failed") return "validation_failed";
   return value as BusinessPartnerRequest["status"];
 }
@@ -495,6 +557,7 @@ async function executeCaseCommand<T>(work: () => Promise<T>): Promise<T> {
 
 function hash(value: unknown) { return createHash("sha256").update(JSON.stringify(value)).digest("hex"); }
 function object(value: unknown): Readonly<Record<string, unknown>> { return value && typeof value === "object" && !Array.isArray(value) ? value as Readonly<Record<string, unknown>> : {}; }
+function preserved(value: Readonly<Record<string, unknown>>, keys: readonly string[]) { return Object.fromEntries(keys.flatMap((key) => value[key] === undefined ? [] : [[key, value[key]]])); }
 function text(row: Row, key: string) { if (row[key] == null) throw new Error(`BUSINESS_PARTNER_CASE_ROW_INVALID:${key}`); return String(row[key]); }
 function nullable(value: unknown) { return value == null || value === "" ? undefined : String(value); }
 function date(value: unknown) { const parsed = value instanceof Date ? value : new Date(String(value)); if (Number.isNaN(parsed.valueOf())) throw new Error("BUSINESS_PARTNER_CASE_ROW_INVALID:date"); return parsed.toISOString(); }

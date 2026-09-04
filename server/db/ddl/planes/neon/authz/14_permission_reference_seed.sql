@@ -9,7 +9,7 @@
 -- seed-natural-key: authz.permission(canonical_code);authz.permission_scope_kind(permission_id,scope_kind,propagation_mode)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: deterministic-uuid:athyper.authorization.catalog.v2
--- seed-expected-row-count: exact:58
+-- seed-expected-row-count: exact:60
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -116,24 +116,24 @@ WHERE (authz.permission.risk_tier,authz.permission.requires_mfa,authz.permission
 INSERT INTO authz.permission_scope_kind(permission_id,scope_kind,propagation_mode,status,created_by)
 SELECT permission.id,'operating_organization','subtree','active','00000000-0000-0000-0000-000000000000'::uuid
 FROM authz.permission permission
-WHERE permission.canonical_code LIKE 'neon.relationship.business_partner_request.%'
+WHERE permission.canonical_code LIKE 'neon.relationship.entity_case.%'
 ON CONFLICT (permission_id,scope_kind,propagation_mode) DO UPDATE SET status='active'
 WHERE authz.permission_scope_kind.status IS DISTINCT FROM EXCLUDED.status;
 
 DO $assertions$
 BEGIN
-  IF (SELECT count(*) FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.business_partner_request.%' AND status='published') <> 7 THEN
+  IF (SELECT count(*) FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.entity_case.%' AND status='published') <> 7 THEN
     RAISE EXCEPTION 'Business Partner request permission count mismatch';
   END IF;
   IF (SELECT count(*) FROM authz.permission permission JOIN authz.permission_scope_kind scope ON scope.permission_id=permission.id
-      WHERE permission.canonical_code LIKE 'neon.relationship.business_partner_request.%'
+      WHERE permission.canonical_code LIKE 'neon.relationship.entity_case.%'
         AND scope.scope_kind='operating_organization' AND scope.propagation_mode='subtree' AND scope.status='active') <> 7 THEN
     RAISE EXCEPTION 'Business Partner request permission scope mismatch';
   END IF;
   IF EXISTS (SELECT 1 FROM authz.permission_scope_kind scope LEFT JOIN authz.permission permission ON permission.id=scope.permission_id WHERE permission.id IS NULL) THEN
     RAISE EXCEPTION 'Business Partner request permission scope orphan detected';
   END IF;
-  IF EXISTS (SELECT canonical_code FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.business_partner_request.%' GROUP BY canonical_code HAVING count(*)<>1) THEN
+  IF EXISTS (SELECT canonical_code FROM authz.permission WHERE canonical_code LIKE 'neon.relationship.entity_case.%' GROUP BY canonical_code HAVING count(*)<>1) THEN
     RAISE EXCEPTION 'Business Partner request permission uniqueness mismatch';
   END IF;
 END

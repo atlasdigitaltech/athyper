@@ -283,7 +283,7 @@ export function validateExternalWorkerIdentityIntent(
   const apps = p["applications"];
   if (!Array.isArray(apps) || apps.length !== 1)
     throw coded("EXTERNAL_WORKER_INTENT_APPLICATION_INVALID");
-  const app = apps[0] as Record<string, unknown>,
+  const app = object(apps[0]),
     roles = app?.["roles"];
   if (
     Object.keys(app).some(
@@ -295,7 +295,7 @@ export function validateExternalWorkerIdentityIntent(
     roles.length !== 1
   )
     throw coded("EXTERNAL_WORKER_INTENT_APPLICATION_INVALID");
-  const role = roles[0] as Record<string, unknown>;
+  const role = object(roles[0]);
   if (
     Object.keys(role).some(
       (key) => !new Set(["roleCode", "scopeKind", "scopeTargetId"]).has(key),

@@ -246,17 +246,6 @@ try {
     ],
     { ...keycloakEnvironment, DATABASE_URL: databaseUrl("neon") },
   );
-  run("pnpm", [
-    "--dir",
-    "server/db",
-    "run",
-    "db:capture:governed-lifecycle-g6-parity",
-    `--database-url=${databaseUrl("neon")}`,
-    "--environment=clean",
-    "--phase=pre_retirement",
-    "--output=docs/architecture/reports/g6/clean-pre-retirement.json",
-    "--confirm=CAPTURE-G6-COMPATIBILITY-PARITY",
-  ]);
   process.stdout.write("G5_COMBINED_CLEAN_KEYCLOAK_THREE_PLANE_OK\n");
 } finally {
   for (const container of [keycloakContainer, postgresContainer])
