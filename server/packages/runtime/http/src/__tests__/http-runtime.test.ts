@@ -4,7 +4,7 @@ import {
   runWithRequestContext,
 } from "@athyper/server-foundation/context";
 import { HealthRegistry } from "@athyper/server-foundation/observability";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HttpError } from "../http-error.js";
 import {
@@ -49,6 +49,100 @@ describe("HTTP runtime", () => {
     await expect(readiness.json()).resolves.toMatchObject({
       status: "unhealthy",
     });
+  });
+
+  it.each(["healthy", "degraded", "unhealthy"] as const)("keeps all readiness aliases equivalent for %s dependencies", async (status) => {
+    const registry = new HealthRegistry();
+    registry.register("database", async () => ({ status }));
+    const url = await listen(createHttpApplication({ healthRegistry: registry, openApi: { title: "Probes", version: "1", enforceResponses: true } }));
+    for (const path of ["/readyz", "/healthz", "/health"]) {
+      const response = await fetch(`${url}${path}`);
+      expect(response.status).toBe(status === "unhealthy" ? 503 : 200);
+      expect(response.headers.get("cache-control")).toBe("no-store");
+      expect(await response.json()).toEqual({ status, checks: { database: { status } } });
+    }
+    const live = await fetch(`${url}/livez`);
+    expect(live.status).toBe(200);
+    expect(live.headers.get("cache-control")).toBe("no-store");
+    expect(await live.json()).toMatchObject({ status: "alive" });
+  });
+
+  it("bounds hung checks, shares pending work across probes, and recovers after settlement", async () => {
+    const registry = new HealthRegistry();
+    let resolve!: (result: { status: "healthy" }) => void;
+    const check = vi.fn(() => new Promise<{ status: "healthy" }>((done) => { resolve = done; }));
+    registry.register("database", check);
+    const url = await listen(createHttpApplication({ healthRegistry: registry, healthCheckTimeoutMs: 20 }));
+    const responses = await Promise.all(["/readyz", "/health", "/healthz"].map((path) => fetch(`${url}${path}`)));
+    for (const response of responses) {
+      expect(response.status).toBe(503);
+      expect(await response.json()).toMatchObject({ checks: { database: { status: "unhealthy", message: "Health check timed out" } } });
+    }
+    expect(check).toHaveBeenCalledTimes(1);
+    expect((await fetch(`${url}/readyz`)).status).toBe(503);
+    expect(check).toHaveBeenCalledTimes(1);
+    check.mockImplementation(async () => ({ status: "healthy" }));
+    resolve({ status: "healthy" });
+    expect((await fetch(`${url}/readyz`)).status).toBe(200);
+    expect(check).toHaveBeenCalledTimes(2);
+  });
+
+  it("reports thrown and invalid checks as unhealthy without leaking thrown errors", async () => {
+    const registry = new HealthRegistry();
+    registry.register("throws", () => { throw new Error("secret connection string"); });
+    registry.register("rejects", async () => { throw new Error("secret password"); });
+    registry.register("invalid", async () => ({ status: "unknown" as "healthy" }));
+    const url = await listen(createHttpApplication({ healthRegistry: registry }));
+    const response = await fetch(`${url}/health`);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ status: "unhealthy", checks: {
+      throws: { status: "unhealthy", message: "Health check failed" },
+      rejects: { status: "unhealthy", message: "Health check failed" },
+      invalid: { status: "unhealthy", message: "Invalid health check result" },
+    } });
+  });
+
+  it("keeps liveness up but readiness down during startup and draining", async () => {
+    let ready = false;
+    const drain = new HttpDrainController();
+    const registry = new HealthRegistry();
+    const check = vi.fn(async () => ({ status: "healthy" as const }));
+    registry.register("database", check);
+    const url = await listen(createHttpApplication({ healthRegistry: registry, isReady: () => ready, drainController: drain }));
+    for (const stage of ["starting", "ready", "draining"]) {
+      if (stage === "ready") ready = true;
+      if (stage === "draining") drain.beginDrain();
+      expect((await fetch(`${url}/livez`)).status).toBe(200);
+      for (const path of ["/readyz", "/healthz", "/health"]) {
+        const response = await fetch(`${url}${path}`);
+        expect(response.status).toBe(stage === "ready" ? 200 : 503);
+        expect(response.headers.get("cache-control")).toBe("no-store");
+        expect(await response.json()).toMatchObject({ status: stage === "ready" ? "healthy" : "unhealthy" });
+      }
+    }
+    expect(check).toHaveBeenCalledTimes(3);
+  });
+
+  it("rechecks draining after an in-flight dependency check completes", async () => {
+    const drain = new HttpDrainController();
+    const registry = new HealthRegistry();
+    registry.register("database", async () => { drain.beginDrain(); return { status: "healthy" }; });
+    const url = await listen(createHttpApplication({ healthRegistry: registry, drainController: drain }));
+    expect((await fetch(`${url}/readyz`)).status).toBe(503);
+  });
+
+  it("documents probe schemas and readiness aliases", async () => {
+    const url = await listen(createHttpApplication());
+    const { paths } = await (await fetch(`${url}/openapi.json`)).json();
+    expect(paths["/livez"].get.responses["200"].content["application/json"].schema.properties.status).toEqual({ const: "alive" });
+    for (const path of ["/healthz", "/health"]) {
+      expect(paths[path].get.summary).toContain("alias of GET /readyz");
+      expect(paths[path].get.responses).toEqual(paths["/readyz"].get.responses);
+    }
+  });
+
+  it.each([0, -1, 1.5, NaN, Infinity])("rejects invalid health timeout %s", (healthCheckTimeoutMs) => {
+    expect(() => createHttpApplication({ healthCheckTimeoutMs })).toThrow("Health check timeout must be a positive integer");
   });
 
   it("publishes registered route contracts as OpenAPI 3.1", async () => {
@@ -486,7 +580,8 @@ describe("HTTP runtime", () => {
     const stream = await fetch(`${url}/stream`);
     expect(drain.activeRequests).toBe(1);
     drain.beginDrain();
-    const rejected = await fetch(`${url}/livez`);
+    expect((await fetch(`${url}/livez`)).status).toBe(200);
+    const rejected = await fetch(`${url}/ordinary-request`);
     expect(rejected.status).toBe(503);
     await expect(rejected.json()).resolves.toMatchObject({
       code: "SERVER_DRAINING",

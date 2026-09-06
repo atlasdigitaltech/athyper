@@ -9,7 +9,7 @@ export type ExperienceDatabaseRunner = <Result>(
   work: (database: Database) => Promise<Result>,
 ) => Promise<Result>;
 
-/** DDL-native, read-only projection. The supplied database must be the exact physical plane selected by the host. */
+/** DDL-native experience persistence. The supplied database must be the exact physical plane selected by the host. */
 export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepository {
   constructor(private readonly database: Database, private readonly runner?: ExperienceDatabaseRunner) {}
 
@@ -231,91 +231,41 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
   }
 
   async readLocalePolicy(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
-    return this.withContext(context, async (database) => {
-      const [catalogResult,activationResult]=await Promise.all([
-        sql<{localeCode:string;status:string;coveragePct:number;linguisticReviewPassed:boolean;layoutReviewPassed:boolean;automatedTestsPassed:boolean;revision:string}>`
-          SELECT locale_code AS "localeCode",status,coverage_pct AS "coveragePct",
-                 linguistic_review_passed AS "linguisticReviewPassed",
-                 layout_review_passed AS "layoutReviewPassed",
-                 automated_tests_passed AS "automatedTestsPassed",
-                 COALESCE(updated_at,created_at)::text AS revision
-            FROM control.ui_locale_catalog
-           ORDER BY rollout_wave,locale_code`.execute(database),
-        sql<{localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean;revision:string}>`
-          SELECT locale_code AS "localeCode",enabled,is_default AS "isDefault",is_fallback AS "isFallback",
-                 COALESCE(updated_at,created_at)::text AS revision
-            FROM master.tenant_locale_activation
-           WHERE tenant_id=${context.tenantId}::uuid
-           ORDER BY locale_code`.execute(database),
-      ]);
-      const activations=activationResult.rows;
-      const revision=[...catalogResult.rows.map((row)=>row.revision),...activations.map((row)=>row.revision)].sort().at(-1)??"locale-policy:default";
-      return{
-        catalogs:catalogResult.rows.map(({revision:_revision,...row})=>row),
-        enabledLocales:activations.filter((row)=>row.enabled).map((row)=>row.localeCode),
-        defaultLocale:activations.find((row)=>row.isDefault)?.localeCode??"en",
-        fallbackLocale:activations.find((row)=>row.isFallback)?.localeCode??"en",
-        revision,
-      };
-    });
+    return this.withContext(context, (database) => readTenantLocalePolicy(database, context));
   }
 
   async updateLocalePolicy(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord> {
     return this.withContext(context, async (database) => {
-      const governance=Object.fromEntries((policy.catalogs??[]).map((catalog)=>[catalog.localeCode,{status:catalog.status,coveragePct:catalog.coveragePct,linguisticReviewPassed:catalog.linguisticReviewPassed,layoutReviewPassed:catalog.layoutReviewPassed,automatedTestsPassed:catalog.automatedTestsPassed}]));
-      await sql`
-        WITH requested AS MATERIALIZED (
-          SELECT key AS locale_code,value
-          FROM jsonb_each(${JSON.stringify(governance)}::jsonb)
-        ), catalog_update AS (
-          UPDATE control.ui_locale_catalog catalog
-             SET status=requested.value->>'status',
-                 coverage_pct=(requested.value->>'coveragePct')::smallint,
-                 linguistic_review_passed=(requested.value->>'linguisticReviewPassed')::boolean,
-                 layout_review_passed=(requested.value->>'layoutReviewPassed')::boolean,
-                 automated_tests_passed=(requested.value->>'automatedTestsPassed')::boolean,
-                 updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
-            FROM requested WHERE catalog.locale_code=requested.locale_code
-          RETURNING catalog.locale_code
-        ), reset_choice AS (
+      const write = async (transaction: Database) => {
+        const governance = Object.fromEntries((policy.catalogs ?? []).map(({localeCode, ...catalog}) => [localeCode, catalog]));
+        // This upsert also locks the tenant profile, serializing concurrent policy replacements.
+        // Catalog review choices belong to this tenant; never mutate the shared plane catalog.
+        await sql`
+          INSERT INTO master.tenant_profile(tenant_id,enabled_locale_codes,default_locale_code,fallback_locale_code,locale_catalog_governance,created_by)
+          VALUES(${context.tenantId}::uuid,${policy.enabledLocales}::text[],${policy.defaultLocale},${policy.fallbackLocale},${JSON.stringify(governance)}::jsonb,${context.principalId}::uuid)
+          ON CONFLICT ON CONSTRAINT tenant_profile_tenant_uq DO UPDATE
+          SET enabled_locale_codes=EXCLUDED.enabled_locale_codes,default_locale_code=EXCLUDED.default_locale_code,
+              fallback_locale_code=EXCLUDED.fallback_locale_code,locale_catalog_governance=EXCLUDED.locale_catalog_governance,
+              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+        // Separate statements are required: PostgreSQL cannot update the same row twice in a CTE.
+        // Clear the partial unique-index choices before assigning the replacement default.
+        await sql`
           UPDATE master.tenant_locale_activation
              SET is_default=false,is_fallback=false,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
-           WHERE tenant_id=${context.tenantId}::uuid AND (is_default OR is_fallback)
-          RETURNING locale_code
-        ), activation_upsert AS (
+           WHERE tenant_id=${context.tenantId}::uuid AND (is_default OR is_fallback)`.execute(transaction);
+        await sql`
           INSERT INTO master.tenant_locale_activation(tenant_id,locale_code,enabled,is_default,is_fallback,created_by)
           SELECT ${context.tenantId}::uuid,catalog.locale_code,
                  catalog.locale_code=ANY(${policy.enabledLocales}::text[]),
                  catalog.locale_code=${policy.defaultLocale},catalog.locale_code=${policy.fallbackLocale},
                  ${context.principalId}::uuid
             FROM control.ui_locale_catalog catalog
-           WHERE (SELECT count(*) FROM reset_choice)>=0
           ON CONFLICT (tenant_id,locale_code) DO UPDATE
           SET enabled=EXCLUDED.enabled,is_default=EXCLUDED.is_default,is_fallback=EXCLUDED.is_fallback,
-              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid
-          RETURNING locale_code
-        )
-        INSERT INTO master.tenant_profile(tenant_id,enabled_locale_codes,default_locale_code,fallback_locale_code,locale_catalog_governance,created_by)
-        SELECT ${context.tenantId}::uuid,${policy.enabledLocales}::text[],${policy.defaultLocale},${policy.fallbackLocale},${JSON.stringify(governance)}::jsonb,${context.principalId}::uuid
-         WHERE (SELECT count(*) FROM catalog_update)>=0 AND (SELECT count(*) FROM activation_upsert)>=0
-        ON CONFLICT ON CONSTRAINT tenant_profile_tenant_uq DO UPDATE
-        SET enabled_locale_codes=EXCLUDED.enabled_locale_codes,default_locale_code=EXCLUDED.default_locale_code,
-            fallback_locale_code=EXCLUDED.fallback_locale_code,locale_catalog_governance=EXCLUDED.locale_catalog_governance,
-            updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database);
-      const [catalogResult,activationResult]=await Promise.all([
-        sql<{localeCode:string;status:string;coveragePct:number;linguisticReviewPassed:boolean;layoutReviewPassed:boolean;automatedTestsPassed:boolean;revision:string}>`
-          SELECT locale_code AS "localeCode",status,coverage_pct AS "coveragePct",
-                 linguistic_review_passed AS "linguisticReviewPassed",layout_review_passed AS "layoutReviewPassed",
-                 automated_tests_passed AS "automatedTestsPassed",COALESCE(updated_at,created_at)::text AS revision
-            FROM control.ui_locale_catalog ORDER BY rollout_wave,locale_code`.execute(database),
-        sql<{localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean;revision:string}>`
-          SELECT locale_code AS "localeCode",enabled,is_default AS "isDefault",is_fallback AS "isFallback",
-                 COALESCE(updated_at,created_at)::text AS revision
-            FROM master.tenant_locale_activation WHERE tenant_id=${context.tenantId}::uuid ORDER BY locale_code`.execute(database),
-      ]);
-      const activations=activationResult.rows;
-      const revision=[...catalogResult.rows.map((row)=>row.revision),...activations.map((row)=>row.revision)].sort().at(-1)??"locale-policy:default";
-      return{catalogs:catalogResult.rows.map(({revision:_revision,...row})=>row),enabledLocales:activations.filter((row)=>row.enabled).map((row)=>row.localeCode),defaultLocale:activations.find((row)=>row.isDefault)?.localeCode??"en",fallbackLocale:activations.find((row)=>row.isFallback)?.localeCode??"en",revision};
+              updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+        return readTenantLocalePolicy(transaction, context);
+      };
+      return database.isTransaction ? write(database) : database.transaction().execute(write);
     });
   }
 
@@ -402,3 +352,41 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
 
 interface SurfaceReleaseRow { readonly id: string; readonly targetPlane: "studio" | "neon" | "mesh"; readonly surfaceKey: string; readonly layer: "shared" | "tenant"; readonly revision: number; readonly status: "draft" | "published" | "retired"; readonly definition: Record<string, unknown>; readonly contentHash: string; readonly source: "human" | "atlas"; readonly publishedAt: string | null; }
 function surfaceRelease(row: SurfaceReleaseRow): ExperienceSurfaceReleaseRecord { return Object.freeze({ id: row.id,targetPlane:row.targetPlane,surfaceKey:row.surfaceKey,layer:row.layer,revision:row.revision,status:row.status,definition:Object.freeze(row.definition),contentHash:row.contentHash,source:row.source,...(row.publishedAt?{publishedAt:row.publishedAt}:{}) }); }
+
+/** Read governance and activation from one MVCC snapshot, including tenant-specific review gates. */
+async function readTenantLocalePolicy(database: Database, context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord> {
+  const result = await sql<{
+    catalogs: NonNullable<ExperienceLocalePolicyRecord["catalogs"]>;
+    activations: {localeCode:string;enabled:boolean;isDefault:boolean;isFallback:boolean}[];
+    revision: string;
+  }>`
+    SELECT
+      (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+        'localeCode',catalog.locale_code,
+        'status',catalog.status,'coveragePct',catalog.coverage_pct,
+        'linguisticReviewPassed',catalog.linguistic_review_passed,
+        'layoutReviewPassed',catalog.layout_review_passed,
+        'automatedTestsPassed',catalog.automated_tests_passed
+      ) || COALESCE(profile.locale_catalog_governance->catalog.locale_code,'{}'::jsonb)
+      ORDER BY catalog.rollout_wave,catalog.locale_code),'[]'::jsonb)
+       FROM control.ui_locale_catalog catalog) AS catalogs,
+      (SELECT COALESCE(jsonb_agg(jsonb_build_object(
+        'localeCode',activation.locale_code,'enabled',activation.enabled,
+        'isDefault',activation.is_default,'isFallback',activation.is_fallback
+      ) ORDER BY activation.locale_code),'[]'::jsonb)
+       FROM master.tenant_locale_activation activation WHERE activation.tenant_id=${context.tenantId}::uuid) AS activations,
+      concat_ws(':',COALESCE(profile.updated_at,profile.created_at)::text,
+        (SELECT MAX(COALESCE(updated_at,created_at))::text FROM control.ui_locale_catalog),
+        (SELECT MAX(COALESCE(updated_at,created_at))::text FROM master.tenant_locale_activation WHERE tenant_id=${context.tenantId}::uuid)) AS revision
+    FROM (SELECT 1) singleton
+    LEFT JOIN master.tenant_profile profile ON profile.tenant_id=${context.tenantId}::uuid
+  `.execute(database);
+  const row = result.rows[0]!;
+  return {
+    catalogs: row.catalogs,
+    enabledLocales: row.activations.filter((activation) => activation.enabled).map((activation) => activation.localeCode),
+    defaultLocale: row.activations.find((activation) => activation.isDefault)?.localeCode ?? "en",
+    fallbackLocale: row.activations.find((activation) => activation.isFallback)?.localeCode ?? "en",
+    revision: row.revision || "locale-policy:default",
+  };
+}

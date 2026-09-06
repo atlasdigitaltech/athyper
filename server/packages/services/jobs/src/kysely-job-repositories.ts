@@ -35,7 +35,7 @@ export function createKyselyJobScheduleRepository(
           code: stringValue(row["code"], "code"),
           handlerType: stringValue(row["handler_type"], "handler_type"),
           definition: {
-            scheduleId: stringValue(row["code"], "code"),
+            scheduleId: stringValue(row["id"], "id"),
             queue: stringValue(row["target_queue"], "target_queue"),
             name: stringValue(row["handler_type"], "handler_type"),
             data: {

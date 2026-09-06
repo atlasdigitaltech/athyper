@@ -26,13 +26,13 @@ describe("jobs service", () => {
 
   it("reconciles plane-qualified schedules and removes stale definitions", async () => {
     const upsert = vi.fn(async () => undefined);
-    const remove = vi.fn(async () => true);
+    const remove = vi.fn(async (id: string) => id === "neon:schedule-1");
     const markReconciled = vi.fn(async () => undefined);
     let enabled = true;
     const reconciler = createJobScheduleReconciler({
       planes: ["studio", "neon", "mesh"],
       catalog: createJobDefinitionCatalog([definition]),
-      scheduler: { upsert, remove },
+      scheduler: { upsert, remove, listScheduleIds: async () => ["neon:schedule-1"] },
       repository: {
         listActive: async (planeKey) => enabled && planeKey === "neon" ? [{
           id: "schedule-1",
@@ -53,12 +53,12 @@ describe("jobs service", () => {
     });
 
     await expect(reconciler.reconcile()).resolves.toEqual({ upserted: 1, removed: 0 });
-    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ scheduleId: "neon:notification-discovery" }));
+    expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ scheduleId: "neon:schedule-1" }));
     expect(markReconciled).toHaveBeenCalledWith(expect.objectContaining({ planeKey: "neon" }));
 
     enabled = false;
     await expect(reconciler.reconcile()).resolves.toEqual({ upserted: 0, removed: 1 });
-    expect(remove).toHaveBeenCalledWith("neon:notification-discovery");
+    expect(remove).toHaveBeenCalledWith("neon:schedule-1");
   });
 
   it("records only explicitly governed jobs during migration", async () => {

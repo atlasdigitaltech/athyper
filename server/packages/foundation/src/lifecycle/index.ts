@@ -20,16 +20,19 @@ export class LifecycleManager {
     this.readyHandlers.push(handler);
   }
 
-  async signalReady(): Promise<void> {
+  /** Critical hosts can fail startup when an initialization hook fails. */
+  async signalReady(options: { readonly failOnError?: boolean } = {}): Promise<void> {
     if (this.ready) return;
     this.ready = true;
+    const failures: unknown[] = [];
     for (const handler of this.readyHandlers) {
       try {
         await handler();
-      } catch {
-        // Readiness observers must not make an otherwise healthy process fail.
+      } catch (error) {
+        failures.push(error);
       }
     }
+    if (options.failOnError && failures.length) throw new AggregateError(failures, "Startup initialization failed");
   }
 
   async shutdown(_reason: string): Promise<void> {

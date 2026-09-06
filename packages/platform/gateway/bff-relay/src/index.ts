@@ -5,7 +5,7 @@ export type RelayMethod = "GET" | "HEAD" | "POST" | "PUT" | "PATCH" | "DELETE";
 export type RelayRequestClass = "json" | "upload" | "download" | "stream";
 export interface RelayOperation { readonly id: string; readonly method: RelayMethod; readonly path: `/api/${string}`; readonly requestClass?: RelayRequestClass; readonly requiresTenant?: boolean; readonly tenantParam?: string; readonly idempotency?: "none" | "optional" | "required"; readonly maxBodyBytes?: number; }
 export interface RelaySessionContext { readonly accessToken: string; readonly plane: string; readonly realmKey: string; readonly tenantId?: string; readonly principalId: string; readonly authEpoch: number; readonly assurance?: "baseline" | "elevated"; readonly csrfToken: string; readonly acceptedCsrfTokens?: readonly string[]; }
-export interface RelaySessionAuthority { resolve(request: Request): Promise<RelaySessionContext | undefined>; refresh(request: Request): Promise<RelaySessionContext | undefined>; invalidate(request: Request, reason: "context_mismatch"): Promise<void>; }
+export interface RelaySessionAuthority { resolve(request: Request): Promise<RelaySessionContext | undefined>; refresh(request: Request): Promise<RelaySessionContext | undefined>; invalidate(request: Request, reason: "context_mismatch"): Promise<readonly string[] | void>; }
 export interface RelayDiagnostic { readonly event: "request" | "failure" | "refresh" | "context_mismatch"; readonly operationId?: string; readonly method: string; readonly status?: number; readonly requestId?: string; }
 export interface RelayOptions { readonly plane: string; readonly runtimeApiUrl: string; readonly appOrigin: string; readonly operations: readonly RelayOperation[]; readonly session: RelaySessionAuthority; readonly fetch?: typeof fetch; readonly maxHeaderBytes?: number; readonly defaultBodyBytes?: number; readonly timeouts?: Partial<Record<RelayRequestClass, number>>; readonly onDiagnostic?: (diagnostic: RelayDiagnostic) => void; }
 export interface RelayRouteContext { readonly params: Promise<{ readonly path: readonly string[] }>; }
@@ -15,7 +15,9 @@ const UNSAFE = new Set<RelayMethod>(["POST", "PUT", "PATCH", "DELETE"]);
 const IDEMPOTENT = new Set<RelayMethod>(["GET", "HEAD", "PUT", "DELETE"]);
 const BLOCKED_REQUEST_HEADERS = new Set(["authorization", "proxy-authorization", "cookie", "x-plane", "x-tenant-id", "x-principal-id", "x-realm", "x-org", "x-organization-id", "forwarded", "x-forwarded-for", "x-forwarded-host", "x-forwarded-proto", "x-real-ip", "x-client-ip", "true-client-ip", "cf-connecting-ip", "via", "host", "connection", "transfer-encoding", "te", "trailer", "upgrade", "keep-alive"]);
 const SAFE_REQUEST_HEADERS = new Set(["accept", "accept-language", "content-type", "if-match", "if-none-match", "if-modified-since", "if-unmodified-since", "idempotency-key", "range", "traceparent", "tracestate", "x-request-id", "x-correlation-id"]);
-const SAFE_RESPONSE_HEADERS = new Set(["content-type", "content-length", "content-disposition", "etag", "last-modified", "retry-after", "accept-ranges", "content-range", "x-request-id", "x-correlation-id", "traceparent"]);
+// Fetch decodes compressed bodies but retains their original length header.
+// Let the application server frame the returned body instead of copying it.
+const SAFE_RESPONSE_HEADERS = new Set(["content-type", "content-disposition", "etag", "last-modified", "retry-after", "accept-ranges", "content-range", "x-request-id", "x-correlation-id", "traceparent"]);
 const RAW_PATH_ATTACK = /%(?:2f|5c|2e|252f|255c|252e)/i;
 const DEFAULT_TIMEOUTS: Readonly<Record<RelayRequestClass, number>> = { json: 15_000, upload: 120_000, download: 120_000, stream: 15_000 };
 
@@ -234,7 +236,9 @@ export function createRelayHandler(options: RelayOptions): RelayHandler {
   return async (request, context) => {
     try {
       enforceHeaderLimit(request.headers, maxHeaderBytes); const { path } = await context.params; const requestPath = new URL(request.url).pathname;
-      if (!requestPath.startsWith("/api/relay/") || RAW_PATH_ATTACK.test(request.url)) return problem(400, "RELAY_INVALID_PATH", "Relay path is invalid");
+      // Path encodings are a routing concern; encoded query values are data
+      // validated by the selected Runtime operation.
+      if (!requestPath.startsWith("/api/relay/") || RAW_PATH_ATTACK.test(requestPath)) return problem(400, "RELAY_INVALID_PATH", "Relay path is invalid");
       const normalizedPath = normalizePath(path); const method = request.method.toUpperCase() as RelayMethod; const match = findOperation(operations, method, normalizedPath);
       if (!match) return problem(404, "RELAY_OPERATION_NOT_ALLOWED", "The requested platform operation is not allowlisted");
       const { operation, params } = match; const session = await options.session.resolve(request);
@@ -246,11 +250,27 @@ export function createRelayHandler(options: RelayOptions): RelayHandler {
       const idempotencyKey = request.headers.get("idempotency-key"); if (idempotencyKey && !validIdempotencyKey(idempotencyKey)) return problem(400, "RELAY_INVALID_IDEMPOTENCY_KEY", "Idempotency-Key is invalid");
       if (operation.idempotency === "required" && !idempotencyKey) return problem(428, "RELAY_IDEMPOTENCY_REQUIRED", "This operation requires an Idempotency-Key");
       if (operation.idempotency === "none" && idempotencyKey) return problem(400, "RELAY_IDEMPOTENCY_NOT_ALLOWED", "This operation does not accept an Idempotency-Key");
+      // Refresh needs authentication metadata only. The business body will be
+      // consumed below and cannot subsequently be cloned by the auth adapter.
+      const refreshHeaders = new Headers();
+      for (const name of ["cookie", "origin", "sec-fetch-site", "x-csrf-token"]) {
+        const value = request.headers.get(name);
+        if (value !== null) refreshHeaders.set(name, value);
+      }
+      const refreshRequest = new Request(request.url, { method: UNSAFE.has(method) ? "POST" : method, headers: refreshHeaders, signal: request.signal });
       const body = await prepareBody(request, operation, defaultBodyBytes); const canRetry = body.replayable && (IDEMPOTENT.has(method) || !!idempotencyKey);
       options.onDiagnostic?.({ event: "request", operationId: operation.id, method });
       let activeSession = session; let response = await forward(activeSession, 0);
-      if (response.status === 401 && canRetry) { options.onDiagnostic?.({ event: "refresh", operationId: operation.id, method, status: 401 }); const refreshResult = await options.session.refresh(request); const refreshed = refreshResult ? await options.session.resolve(request) : undefined; if (sameAuthority(session, refreshed, options.plane)) { activeSession = refreshed; response = await forward(activeSession, 1); } }
-      if (await isContextMismatch(response)) { await options.session.invalidate(request, "context_mismatch"); options.onDiagnostic?.({ event: "context_mismatch", operationId: operation.id, method, status: response.status, requestId: response.headers.get("x-request-id") ?? undefined }); return problem(409, "AUTH_CONTEXT_MISMATCH", "Session context changed; select context again", response.headers.get("x-request-id") ?? undefined, { "x-athyper-session-action": "select_context" }); }
+      if (response.status === 401 && canRetry) { options.onDiagnostic?.({ event: "refresh", operationId: operation.id, method, status: 401 }); const refreshResult = await options.session.refresh(refreshRequest); const refreshed = refreshResult ? await options.session.resolve(request) : undefined; if (sameAuthority(session, refreshed, options.plane)) { activeSession = refreshed; response = await forward(activeSession, 1); } }
+      if (await isContextMismatch(response)) {
+        const clearedCookies = await options.session.invalidate(request, "context_mismatch");
+        options.onDiagnostic?.({ event: "context_mismatch", operationId: operation.id, method, status: response.status, requestId: response.headers.get("x-request-id") ?? undefined });
+        const recovery = problem(401, "AUTH_CONTEXT_MISMATCH", "Session context changed; sign in again", response.headers.get("x-request-id") ?? undefined, { "x-athyper-session-action": "login" });
+        // Only the local session authority can issue cookies; upstream
+        // Set-Cookie headers remain excluded from relay responses.
+        for (const value of clearedCookies ?? []) recovery.headers.append("set-cookie", value);
+        return recovery;
+      }
       return relayResponse(response, request.signal, operation.requestClass ?? "json");
 
       async function forward(authority: RelaySessionContext, attempt: number): Promise<Response> {

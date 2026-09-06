@@ -1,3 +1,4 @@
+import { JobValidationError } from "@athyper/server-contract-jobs";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -9,6 +10,7 @@ import type {
   ScheduleMutation,
 } from "@athyper/server-contract-jobs";
 import {
+  HttpError,
   defineRouteContract,
   registerContractRoute,
   type Application,
@@ -181,7 +183,7 @@ export function registerJobAdministrationRoutes(
         });
         response.status(200).json({ entries });
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -202,7 +204,7 @@ export function registerJobAdministrationRoutes(
           200: { description: "Command applied", body: objectSchema },
           400: { description: "Invalid command" },
           403: { description: "Forbidden", body: objectSchema },
-          409: { description: "Command not applied", body: objectSchema },
+          409: { description: "Command not applied: unsupported job state or cancellation not acknowledged by the worker", body: objectSchema },
         },
       }),
       options.authenticate,
@@ -223,7 +225,7 @@ export function registerJobAdministrationRoutes(
           const result = await options.jobs[command](input);
           response.status(result.applied ? 200 : 409).json(result);
         } catch (error) {
-          next(error);
+          next(toRequestError(error));
         }
       },
     );
@@ -254,7 +256,7 @@ function registerGovernanceRoutes(
           .status(200)
           .json({ entries: await options.governance.listQueues() });
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -279,7 +281,7 @@ function registerGovernanceRoutes(
           }),
         });
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -300,7 +302,7 @@ function registerGovernanceRoutes(
           entries: await options.governance.listSchedules(coordinate(context)),
         });
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -327,7 +329,7 @@ function registerGovernanceRoutes(
           }),
         );
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -365,7 +367,7 @@ function registerGovernanceRoutes(
         });
         response.status(204).send();
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -389,7 +391,7 @@ function registerGovernanceRoutes(
           }),
         });
       } catch (error) {
-        next(error);
+        next(toRequestError(error));
       }
     },
   );
@@ -430,7 +432,7 @@ async function mutateSchedule(
           });
     response.status(kind === "create" ? 201 : 200).json(result);
   } catch (error) {
-    next(error);
+    next(toRequestError(error));
   }
 }
 
@@ -447,13 +449,13 @@ function scheduleBody(body: Record<string, unknown>): ScheduleMutation {
 }
 function objectBody(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("JSON object body required");
+    throw new JobValidationError("JSON object body required");
   return value as Record<string, unknown>;
 }
 function text(body: Record<string, unknown>, field: string): string {
   const value = body[field];
   if (typeof value !== "string" || !value.trim())
-    throw new TypeError(`${field} is required`);
+    throw new JobValidationError(`${field} is required`);
   return value.trim();
 }
 
@@ -477,10 +479,10 @@ function coordinate(context: VerifiedRequestContext) {
 
 function requiredReason(value: unknown): string {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("JSON object body required");
+    throw new JobValidationError("JSON object body required");
   const reason = (value as Record<string, unknown>)["reason"];
   if (typeof reason !== "string" || !reason.trim())
-    throw new TypeError("reason is required");
+    throw new JobValidationError("reason is required");
   return reason.trim().slice(0, 1_000);
 }
 
@@ -488,7 +490,7 @@ function integer(value: unknown, fallback: number): number {
   if (value === undefined) return fallback;
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 200)
-    throw new TypeError("limit must be between 1 and 200");
+    throw new JobValidationError("limit must be between 1 and 200");
   return parsed;
 }
 
@@ -499,7 +501,13 @@ function uuid(value: unknown): string {
       result,
     )
   ) {
-    throw new TypeError("Invalid execution id");
+    throw new JobValidationError("Invalid execution id");
   }
   return result;
+}
+
+function toRequestError(error: unknown): unknown {
+  return error instanceof JobValidationError
+    ? new HttpError(400, "JOBS_INVALID_REQUEST", error.message)
+    : error;
 }

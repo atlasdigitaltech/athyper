@@ -25,17 +25,17 @@ class TestStore implements SessionStore {
 }
 
 function setup(overrides: Partial<VerifiedIdentity> = {}, refreshDelayMs = 0, contexts?: readonly AuthContextOption[], planeConfig: { readonly plane: "neon" | "mesh" | "studio"; readonly clientId: string; readonly authorizedRole: string; readonly origin: string } = { plane: "neon", clientId: "neon-web", authorizedRole: "grp:workbench:user", origin: "https://neon.example" }, rejectRefresh = false, registerTrustedDevice?: NonNullable<Parameters<typeof createAuthHandlers>[0]["registerTrustedDevice"]>) {
-  const store = new TestStore(); let refreshCount = 0;
+  const store = new TestStore(); let refreshCount = 0; let lastExchangedTokens: TokenResult | undefined;
   const tokens: TokenResult = { accessToken: "access-secret", refreshToken: "refresh-secret", idToken: "id-token", accessTokenExpiresAt: Date.now() + 60_000 };
   const identity = (): VerifiedIdentity => { const transaction = JSON.parse(store.lastState!) as { nonce: string }; return { issuer: "https://iam.example/realms/athyper", audience: planeConfig.clientId, subject: "principal-1", nonce: transaction.nonce, issuedAt: Date.now() - 100, expiresAt: Date.now() + 60_000, plane: planeConfig.plane, realmKey: "athyper", tenantId: "tenant-1", providerSessionId: "provider-1", roles: [planeConfig.authorizedRole], ...overrides }; };
   const provider: AuthProvider = {
-    exchangeCode: async () => tokens, verifyIdToken: async () => identity(),
+    exchangeCode: async ({ code }) => { lastExchangedTokens = code === "step-up" ? { ...tokens, accessToken: "issuer-step-up-access", refreshToken: "issuer-step-up-refresh", idToken: "issuer-step-up-id" } : tokens; return lastExchangedTokens; }, verifyIdToken: async () => identity(),
     refresh: async () => { refreshCount++; if (refreshDelayMs) await new Promise((resolve) => setTimeout(resolve, refreshDelayMs)); if (rejectRefresh) throw new AuthFlowError("auth.refresh_rejected", 401, "rejected"); return { ...tokens, accessToken: `new-access-${refreshCount}` }; },
     createEndSessionUrl: async ({ postLogoutRedirectUri, state }) => `https://iam.example/realms/athyper/protocol/openid-connect/logout?id_token_hint=id-token&post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}&state=${encodeURIComponent(state)}`,
     verifyBackchannelLogoutToken: async (token) => ({ issuer: "https://iam.example/realms/athyper", audience: planeConfig.clientId, providerSessionId: "provider-1", issuedAt: token === "stale" ? Date.now() - 10 * 60_000 : Date.now(), expiresAt: token === "expired" ? Date.now() - 1 : Date.now() + 60_000, tokenId: `logout-token-${planeConfig.plane}-${token}`, ...(token === "nonce" ? { nonce: "not-allowed" } : {}), events: { "http://schemas.openid.net/event/backchannel-logout": {} } }),
   };
-  const handlers = createAuthHandlers({ plane: planeConfig.plane, realmKey: "athyper", issuer: "https://iam.example/realms/athyper", clientId: planeConfig.clientId, redirectUri: `${planeConfig.origin}/api/auth/callback`, postLogoutRedirectUri: `${planeConfig.origin}/api/auth/logout/callback`, authorizedRole: planeConfig.authorizedRole, configurationRevision: "test-1", store, provider, resolveContexts: contexts ? async () => contexts : undefined, sealTokens: async () => "encrypted-server-only", deriveCsrfToken: () => "csrf-safe", deriveAcceptedCsrfTokens: () => ["csrf-safe", "csrf-previous"], production: true, ...(registerTrustedDevice ? { registerTrustedDevice } : {}) });
-  return { handlers, store, origin: planeConfig.origin, getRefreshCount: () => refreshCount };
+  const handlers = createAuthHandlers({ plane: planeConfig.plane, realmKey: "athyper", issuer: "https://iam.example/realms/athyper", clientId: planeConfig.clientId, redirectUri: `${planeConfig.origin}/api/auth/callback`, postLogoutRedirectUri: `${planeConfig.origin}/api/auth/logout/callback`, authorizedRole: planeConfig.authorizedRole, configurationRevision: "test-1", store, provider, resolveContexts: contexts ? async () => contexts : undefined, sealTokens: async (value) => `encrypted-server-only:${value.accessToken}:${value.refreshToken}`, deriveCsrfToken: () => "csrf-safe", deriveAcceptedCsrfTokens: () => ["csrf-safe", "csrf-previous"], production: true, ...(registerTrustedDevice ? { registerTrustedDevice } : {}) });
+  return { handlers, store, origin: planeConfig.origin, getRefreshCount: () => refreshCount, getLastExchangedTokens: () => lastExchangedTokens };
 }
 
 async function authenticate(setupValue = setup(), returnTo = "/records?view=open") {
@@ -138,6 +138,52 @@ describe("Phase 3 authentication foundation", () => {
     const authenticated = await authenticate(); const request = new Request("https://neon.example/api/auth/logout", { method: "POST", headers: { cookie: authenticated.cookie, origin: "https://evil.example", "content-type": "application/x-www-form-urlencoded" }, body: "scope=application&_csrf=csrf-safe" }); const response = await authenticated.handlers.logout(request); assert.equal(response.status, 403); assert.match(await response.text(), /auth.csrf_invalid/); assert.equal(response.headers.has("set-cookie"), false);
   });
 
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    it(`${plane}: protects anonymous logout from cross-origin cookie clearing`, async () => {
+      const origin = `https://${plane}.example`;
+      const value = await authenticate(setup({}, 0, undefined, { plane, origin, clientId: `${plane}-web`, authorizedRole: "AUTHORIZED" }));
+      const rejectedHeaders = [
+        { origin: "https://evil.example", "sec-fetch-site": "cross-site" },
+        { origin: "https://sibling.example", "sec-fetch-site": "same-site" },
+        { origin: "null", "sec-fetch-site": "cross-site" },
+        { "sec-fetch-site": "same-origin" },
+        { origin },
+        { origin, "sec-fetch-site": "cross-site" },
+        { origin, "sec-fetch-site": "same-site" },
+        { origin: "https://evil.example", "sec-fetch-site": "same-origin" },
+      ];
+      for (const extra of rejectedHeaders) {
+        const headers = new Headers({ "content-type": "application/x-www-form-urlencoded" });
+        for (const [key, entry] of Object.entries(extra)) if (entry) headers.set(key, entry);
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers, body: "scope=application" }));
+        assert.equal(response.status, 403);
+        assert.equal((await response.json() as { code: string }).code, "auth.csrf_invalid");
+        assert.equal(response.headers.get("set-cookie"), null);
+      }
+      const navigation = await logoutNavigationResponse(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { origin: "https://evil.example", "sec-fetch-site": "cross-site", accept: "text/html" } }), value.handlers.logout, origin);
+      assert.equal(navigation.status, 303);
+      assert.equal(navigation.headers.get("set-cookie"), null);
+      assert.equal(new URL(navigation.headers.get("location")!).searchParams.get("reason"), "logout-incomplete");
+      assert.equal(value.store.sessions.size, 1, "rejected anonymous logout cannot revoke the existing session");
+      const headers = { origin, "sec-fetch-site": "same-origin", "content-type": "application/x-www-form-urlencoded" };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers, body: "scope=application" }));
+        assert.equal(response.status, 204, "anonymous same-origin logout is idempotent and needs no CSRF token");
+        assert.equal(response.headers.getSetCookie().length, 2);
+        assert.ok(response.headers.getSetCookie().every(cookie => cookie.includes("Max-Age=0")));
+      }
+      for (const proof of [undefined, "incorrect"]) {
+        const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { ...headers, cookie: value.cookie, ...(proof ? { "x-csrf-token": proof } : {}) }, body: "scope=application" }));
+        assert.equal(response.status, 403);
+        assert.equal(response.headers.get("set-cookie"), null);
+        assert.equal(value.store.sessions.size, 1);
+      }
+      const response = await value.handlers.logout(new Request(`${origin}/api/auth/logout`, { method: "POST", headers: { ...headers, cookie: value.cookie }, body: "scope=application&_csrf=csrf-safe" }));
+      assert.equal(response.status, 204);
+      assert.equal(value.store.sessions.size, 0);
+    });
+  }
+
   it("accepts the previous CSRF key during a rolling key rotation", async () => {
     const authenticated = await authenticate();
     const headers = { cookie: authenticated.cookie, origin: "https://neon.example", "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-previous" };
@@ -195,6 +241,8 @@ describe("Phase 3 authentication foundation", () => {
     const completed = await authenticated.handlers.callback(new Request(`https://neon.example/api/auth/callback?code=step-up&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; ${authenticated.cookie}` } }));
     assert.equal(completed.status, 303, await completed.clone().text());
     assert.equal(completed.headers.get("location"), "/secure");
+    assert.equal(authenticated.getLastExchangedTokens()?.accessToken, "issuer-step-up-access");
+    assert.equal([...authenticated.store.sessions.values()][0]?.encryptedTokenBundle, "encrypted-server-only:issuer-step-up-access:issuer-step-up-refresh", "the rotated session stores the issuer's new tokens for subsequent Runtime calls");
     const elevatedCookie = completed.headers.getSetCookie().find((value) => value.startsWith("__Host-athyper-session="))?.split(";")[0]; assert.ok(elevatedCookie); assert.notEqual(elevatedCookie, authenticated.cookie);
     const superseded = await authenticated.handlers.session(new Request("https://neon.example/api/auth/session", { headers: { cookie: authenticated.cookie } })); assert.match(await superseded.text(), /"state":"anonymous"/);
     const session = await authenticated.handlers.session(new Request("https://neon.example/api/auth/session", { headers: { cookie: elevatedCookie } }));

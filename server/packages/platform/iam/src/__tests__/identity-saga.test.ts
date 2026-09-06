@@ -443,6 +443,40 @@ describe("privileged replay", () => {
       authorizationScopes: [],
     },
   } as VerifiedRequestContext;
+  it("rejects unverified approval and non-Studio callers before writing", async () => {
+    const replay = vi.fn(async () => true);
+    const repository = { replay } as unknown as IdentitySagaRepository;
+    const authorizer = {
+      authorize: vi.fn(async () => ({ allowed: true as const })),
+    };
+    const input = {
+      context,
+      deadLetterAttemptId: "attempt-1",
+      approvedBy: "approver-2",
+    };
+    await expect(
+      new IdentityReplayService(repository, authorizer).request(input),
+    ).rejects.toThrow("APPROVAL_REQUIRED");
+    const verifyApproval = vi.fn(async () => false);
+    const service = new IdentityReplayService(
+      repository,
+      authorizer,
+      () => now,
+      verifyApproval,
+    );
+    await expect(service.request(input)).rejects.toThrow("APPROVAL_REQUIRED");
+    expect(verifyApproval).toHaveBeenCalledWith({
+      authorityTenantId: context.tenantId,
+      deadLetterAttemptId: "attempt-1",
+      requestedBy: context.principalId,
+      approvedBy: "approver-2",
+    });
+    await expect(
+      service.request({ ...input, context: { ...context, planeKey: "neon" } }),
+    ).rejects.toThrow("FORBIDDEN");
+    expect(replay).not.toHaveBeenCalled();
+  });
+
   it("requires MFA, authorization, and a distinct SoD approver", async () => {
     const repository = {
       replay: vi.fn(async () => true),
@@ -450,7 +484,12 @@ describe("privileged replay", () => {
     const allowed = {
       authorize: vi.fn(async () => ({ allowed: true as const })),
     };
-    const service = new IdentityReplayService(repository, allowed, () => now);
+    const service = new IdentityReplayService(
+      repository,
+      allowed,
+      () => now,
+      async () => true,
+    );
     await expect(
       service.request({
         context,

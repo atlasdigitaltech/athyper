@@ -46,6 +46,10 @@ export interface ProvisioningVerticalOptions<Transaction> {
 export function createProvisioningVertical<Transaction>(options: ProvisioningVerticalOptions<Transaction>) {
   return {
     async request(command: ProvisioningCreateCommand): Promise<ProvisioningCreateResult> {
+      if (command.context.planeKey !== "studio" ||
+          (command.realmKey !== undefined && normalizeRealmKey(command.realmKey) !== command.context.realmKey)) {
+        return { kind: "Forbidden", permissionCode: CREATE_PROVISIONING_PERMISSION };
+      }
       const idempotency = parseIdempotencyKey(command.idempotencyKey);
       if (!idempotency.ok) return { kind: "IdempotencyConflict", reason: idempotency.reason };
       const authorization = await options.authorizer.authorize({ context: command.context, permissionCode: CREATE_PROVISIONING_PERMISSION });

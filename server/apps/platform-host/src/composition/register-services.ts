@@ -1,3 +1,4 @@
+import { checkMeshExchangeReadiness } from "./mesh-exchange-readiness.js";
 import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
 import { createBusinessPartnerDefinitionAuthorizer } from "./business-partner-definition-authorizer.js";
 import type {
@@ -1683,13 +1684,7 @@ export function registerServices(
         },
       }),
     );
-    container.runtimes.health.register("business-partner-network-exchange.mesh", async () => {
-      try {
-        const result = await sql<{ relationship_command:string|null; exchange_command:string|null; permission_count:number }>`SELECT to_regprocedure('mesh.command_request_network_relationship(uuid,uuid,uuid,uuid,text,date,date,text,text,uuid)')::text relationship_command,to_regprocedure('mesh.command_issue_registration_exchange(uuid,uuid,uuid,text,text,text,integer,text,jsonb,text,timestamptz,text,text,uuid)')::text exchange_command,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'mesh.business_partner_exchange.%' AND status='published') permission_count`.execute(meshDatabase);
-        const row=result.rows[0];
-        return row?.relationship_command&&row.exchange_command&&row.permission_count===3?{status:"healthy"}:{status:"unhealthy",message:"MESH relationship/exchange command or permission contract is incomplete"};
-      } catch(error) { return {status:"unhealthy",message:error instanceof Error?error.message:"MESH relationship/exchange readiness check failed"}; }
-    });
+    container.runtimes.health.register("business-partner-network-exchange.mesh", () => checkMeshExchangeReadiness(meshDatabase));
   }
   if (container.adapters.neonDatabase) {
     const neonDatabase = container.adapters.neonDatabase
@@ -2936,20 +2931,6 @@ export function registerServices(
       "athyper_bp360_mesh_fallback_total",
       "Business Partner 360 MESH local-projection fallbacks",
     );
-    const requestOldestOpen = container.adapters.openTelemetry?.metrics.gauge(
-      "athyper_business_partner_case_oldest_open_seconds",
-      "Age of the oldest non-terminal Business Partner case",
-    );
-    const requestNotificationOldestPending =
-      container.adapters.openTelemetry?.metrics.gauge(
-        "athyper_business_partner_notification_oldest_pending_seconds",
-        "Age of the oldest pending Business Partner notification plan",
-      );
-    const requestNotificationDeadLetters =
-      container.adapters.openTelemetry?.metrics.gauge(
-        "athyper_business_partner_notification_dead_letters",
-        "Current Business Partner notification planning dead letters",
-      );
     const invitationGuard = createBusinessPartnerInvitationExternalGuard({
       onRejected: (reason) =>
         invitationCount?.increment({
@@ -3412,49 +3393,7 @@ export function registerServices(
         }
       },
     );
-    container.runtimes.health.register(
-      "business-partner-case-age.neon",
-      async () => {
-        try {
-          const row = (
-            await sql<{
-              oldest_open_seconds: number;
-            }>`SELECT COALESCE(extract(epoch FROM clock_timestamp()-min(created_at)),0)::int AS oldest_open_seconds FROM document.entity_case WHERE entity_code='master.business_partner'AND status IN('draft','submitted','in_review','approved','materializing','conflicted')`.execute(
-              neonDatabase,
-            )
-          ).rows[0];
-          requestOldestOpen?.set(Number(row?.oldest_open_seconds ?? 0));
-          const notification = (
-            await sql<{
-              oldest_pending_seconds: number;
-              dead_letters: number;
-            }>`SELECT
-              COALESCE(extract(epoch FROM clock_timestamp()-(min(state.created_at) FILTER (WHERE state.status IN('pending','failed','processing')))),0)::int oldest_pending_seconds,
-              count(*) FILTER (WHERE state.status='dead_letter')::int dead_letters
-            FROM event.notification_outbox_state state
-            JOIN event.outbox outbox ON outbox.tenant_id=state.tenant_id AND outbox.id=state.outbox_id
-            WHERE outbox.event_type LIKE 'business_partner.%'`.execute(
-              neonDatabase,
-            )
-          ).rows[0];
-          requestNotificationOldestPending?.set(
-            Number(notification?.oldest_pending_seconds ?? 0),
-          );
-          requestNotificationDeadLetters?.set(
-            Number(notification?.dead_letters ?? 0),
-          );
-          return { status: "healthy" };
-        } catch (error) {
-          return {
-            status: "unhealthy",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Business Partner case age check failed",
-          };
-        }
-      },
-    );
+
   }
   registerStudioAuthoring(
     container,
@@ -3699,21 +3638,21 @@ export function registerServices(
         publisher: jobs,
       });
       const jobAdministration = container.services.jobs;
-      const jobGovernance = createJobGovernanceService({
-        store: createKyselyJobGovernanceStore(
-          container.runtimes.jobTransactions,
-        ),
-        catalog: createJobDefinitionCatalog(container.runtimes.jobDefinitions),
-      });
-      container.platform.httpRegistrars.push((application) =>
+      const governanceStore = createKyselyJobGovernanceStore(container.runtimes.jobTransactions);
+      container.platform.httpRegistrars.push((application) => {
+        // Registration has finished when HTTP registrars run; include late handlers.
+        const jobGovernance = createJobGovernanceService({
+          store: governanceStore,
+          catalog: createJobDefinitionCatalog(container.runtimes.jobDefinitions),
+        });
         registerJobAdministrationRoutes(application, {
           authenticate: createIamAuthenticationMiddleware(iam),
           readContext: readVerifiedRequestContext,
           authorizer,
           jobs: jobAdministration,
           governance: jobGovernance,
-        }),
-      );
+        });
+      });
     }
     jobs.register(
       NOTIFICATION_QUEUE,
@@ -3819,18 +3758,20 @@ export function registerServices(
         });
   }
   if (container.runtimes.scheduler) {
-    const reconciler = createJobScheduleReconciler({
-      planes: Object.keys(metadataDatabases) as PlaneKey[],
-      repository: createKyselyJobScheduleRepository(metadataDatabases),
-      scheduler: container.runtimes.scheduler,
-      catalog: createJobDefinitionCatalog(container.runtimes.jobDefinitions),
-      ignoreUnknownHandlers: true,
-      onRejected: (code, reason) =>
-        console.warn(
-          `[scheduler] schedule_rejected code=${code} reason=${reason}`,
-        ),
-    });
-    container.runtimes.scheduleReconcile = () => reconciler.reconcile();
+    const scheduler = container.runtimes.scheduler;
+    let reconciler: ReturnType<typeof createJobScheduleReconciler> | undefined;
+    container.runtimes.scheduleReconcile = () => {
+      // Resolve the same complete catalog used by API validation after composition.
+      reconciler ??= createJobScheduleReconciler({
+        planes: Object.keys(metadataDatabases) as PlaneKey[],
+        repository: createKyselyJobScheduleRepository(metadataDatabases),
+        scheduler,
+        catalog: createJobDefinitionCatalog(container.runtimes.jobDefinitions),
+        ignoreUnknownHandlers: true,
+        onRejected: (code, reason) => console.warn(`[scheduler] schedule_rejected code=${code} reason=${reason}`),
+      });
+      return reconciler.reconcile();
+    };
   }
   container.platform.httpRegistrars.push((application) =>
     registerNotificationRoutes(application, {
@@ -3839,6 +3780,9 @@ export function registerServices(
       inbox: notificationRepositories,
       push: notificationRepositories,
       webPushPublicKey: config?.webPush.publicKey,
+      webPushAvailable: container.adapters.pushTransports.some((transport) =>
+        transport.platforms.includes("web"),
+      ),
       events: notificationEvents,
       preferences: notificationPreferences,
       operations: notificationOperations,

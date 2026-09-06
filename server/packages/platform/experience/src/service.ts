@@ -39,6 +39,7 @@ import type {
   ExperienceCache,
   ExperienceCatalogRecord,
   ExperienceFeatureRecord,
+  ExperienceIdentityRecord,
   ExperienceInvalidationHooks,
   ExperienceLocaleCatalogGovernanceRecord,
   ExperienceRepositoryProvider,
@@ -99,36 +100,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       if (isBootstrap(cached)) return cached;
       const at = now();
       const identity = await repository.readIdentity(context, at);
-      if (!identity)
-        deny(
-          "EXPERIENCE_IDENTITY_NOT_FOUND",
-          "The verified identity is not present in this plane",
-        );
-      if (identity.tenantRealmKey !== context.realmKey)
-        deny(
-          "EXPERIENCE_REALM_MISMATCH",
-          "The tenant is not bound to the verified realm",
-        );
-      if (identity.tenantStatus !== "active")
-        deny("EXPERIENCE_TENANT_INACTIVE", "The tenant is not active");
-      if (
-        identity.principalStatus !== "active" ||
-        identity.principalAuthEpoch !== context.authEpoch
-      )
-        deny(
-          "EXPERIENCE_PRINCIPAL_INACTIVE",
-          "The principal is inactive or its authorization epoch changed",
-        );
-      if (!identity.identityBindingActive)
-        deny(
-          "EXPERIENCE_IDENTITY_BINDING_INVALID",
-          "No active identity binding exists for the verified realm",
-        );
-      if (!identity.membershipActive)
-        deny(
-          "EXPERIENCE_MEMBERSHIP_INACTIVE",
-          "The principal has no active membership in this plane",
-        );
+      assertIdentityAdmission(context, identity);
 
       const localePolicy = normalizeLocalePolicy(
         context.planeKey,
@@ -152,6 +124,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           presentation,
           revision({
             identity,
+            profile,
             localePolicy,
             auth: authorizationRevision(context),
           }),
@@ -172,6 +145,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           presentation,
           revision({
             identity,
+            profile,
             localePolicy,
             plan: catalog?.planRevision ?? "missing",
             auth: authorizationRevision(context),
@@ -241,6 +215,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       context: VerifiedRequestContext,
       targetPlane = context.planeKey,
     ): Promise<ExperienceLocalePolicy> {
+      assertSnapshotBoundToContext(context);
       if (
         targetPlane !== context.planeKey &&
         (context.planeKey !== "studio" ||
@@ -269,6 +244,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         readonly fallbackLocale: string;
       },
     ): Promise<ExperienceLocalePolicy> {
+      assertSnapshotBoundToContext(context);
       if (
         context.planeKey !== "studio" ||
         !context.permissions.allowed.includes("studio.platform.catalog.manage")
@@ -316,8 +292,11 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       context: VerifiedRequestContext,
       localeCode: string,
     ): Promise<ExperienceBootstrap> {
-      const repository = options.repositories.require(context.planeKey),
-        policy = normalizeLocalePolicy(
+      assertSnapshotBoundToContext(context);
+      // Check admission before persisting a preference, even when bootstrap is cached.
+      const repository = options.repositories.require(context.planeKey);
+      assertIdentityAdmission(context, await repository.readIdentity(context, now()));
+      const policy = normalizeLocalePolicy(
           context.planeKey,
           await repository.readLocalePolicy?.(context),
         ),
@@ -334,7 +313,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           new Error("Locale preference writer is unavailable"),
           { code: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
         );
-      await repository.updatePrincipalLocale(context, catalog);
+      await repository.updatePrincipalLocale(context, canonical);
       await options.cache?.invalidate([
         `${context.planeKey}:profile`,
         `${context.planeKey}:principal:${context.principalId}`,
@@ -1212,7 +1191,9 @@ function normalizeLocalePolicy(
     (definition): ExperienceLocaleCatalog => {
       const persisted = governance.get(definition.code);
       const compatibilityQualified =
-        !persisted && requestedEnabled.has(definition.code);
+        !persisted &&
+        (definition.code === "en" || !row?.catalogs) &&
+        requestedEnabled.has(definition.code);
       const status =
         validCatalogStatus(persisted?.status) ??
         (compatibilityQualified ? "qualified" : "draft");
@@ -1366,7 +1347,16 @@ function applyLocalePolicy(
   readonly localization: ExperienceLocalization;
 } {
   const catalog = catalogCodeForLocale(resolved.profile.localeCode);
-  if (catalog && policy.enabledLocales.includes(catalog)) return resolved;
+  if (
+    resolved.localization.source.uiLocale === "principal" &&
+    catalog &&
+    policy.enabledLocales.includes(catalog)
+  ) return resolved;
+  // Preserve regional formatting when the inherited locale matches the policy default.
+  if (
+    resolved.localization.source.uiLocale !== "principal" &&
+    catalog === policy.defaultLocale
+  ) return resolved;
   const profile = Object.freeze({
     ...resolved.profile,
     localeCode: policy.defaultLocale,
@@ -1618,4 +1608,40 @@ function revisionForLayer(
     : layer === "shared"
       ? { sharedRevision: revision }
       : { tenantRevision: revision };
+}
+
+function assertIdentityAdmission(
+  context: VerifiedRequestContext,
+  identity: ExperienceIdentityRecord | undefined,
+): asserts identity is ExperienceIdentityRecord {
+  if (!identity)
+    deny(
+      "EXPERIENCE_IDENTITY_NOT_FOUND",
+      "The verified identity is not present in this plane",
+    );
+  if (identity.tenantRealmKey !== context.realmKey)
+    deny(
+      "EXPERIENCE_REALM_MISMATCH",
+      "The tenant is not bound to the verified realm",
+    );
+  if (identity.tenantStatus !== "active")
+    deny("EXPERIENCE_TENANT_INACTIVE", "The tenant is not active");
+  if (
+    identity.principalStatus !== "active" ||
+    identity.principalAuthEpoch !== context.authEpoch
+  )
+    deny(
+      "EXPERIENCE_PRINCIPAL_INACTIVE",
+      "The principal is inactive or its authorization epoch changed",
+    );
+  if (!identity.identityBindingActive)
+    deny(
+      "EXPERIENCE_IDENTITY_BINDING_INVALID",
+      "No active identity binding exists for the verified realm",
+    );
+  if (!identity.membershipActive)
+    deny(
+      "EXPERIENCE_MEMBERSHIP_INACTIVE",
+      "The principal has no active membership in this plane",
+    );
 }

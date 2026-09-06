@@ -376,6 +376,13 @@ export class IdentityReplayService {
     private readonly repository: IdentitySagaRepository,
     private readonly authorizer: Authorizer,
     private readonly now: () => Date = () => new Date(),
+    /** Must verify persisted approval bound to this tenant, attempt, requester and approver. */
+    private readonly verifyApproval?: (input: {
+      readonly authorityTenantId: string;
+      readonly deadLetterAttemptId: string;
+      readonly requestedBy: string;
+      readonly approvedBy: string;
+    }) => Promise<boolean>,
   ) {}
 
   async request(input: {
@@ -383,6 +390,8 @@ export class IdentityReplayService {
     readonly deadLetterAttemptId: string;
     readonly approvedBy: string;
   }): Promise<boolean> {
+    if (input.context.planeKey !== "studio")
+      throw new Error("IAM_REPLAY_FORBIDDEN:studio_required");
     const decision = await this.authorizer.authorize({
       context: input.context,
       permissionCode: "studio.iam.application_projection.replay",
@@ -397,6 +406,16 @@ export class IdentityReplayService {
       throw new Error("IAM_REPLAY_MFA_REQUIRED");
     if (input.approvedBy === input.context.principalId)
       throw new Error("IAM_REPLAY_SOD_REQUIRED");
+    if (
+      !this.verifyApproval ||
+      !(await this.verifyApproval({
+        authorityTenantId: input.context.tenantId,
+        deadLetterAttemptId: input.deadLetterAttemptId,
+        requestedBy: input.context.principalId,
+        approvedBy: input.approvedBy,
+      }))
+    )
+      throw new Error("IAM_REPLAY_APPROVAL_REQUIRED");
     return this.repository.replay({
       authorityTenantId: input.context.tenantId,
       deadLetterAttemptId: input.deadLetterAttemptId,

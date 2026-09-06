@@ -1,9 +1,5 @@
 generator kysely {
-  provider = "prisma-kysely"
-  // Kysely types are generated into the mesh-plane adapter package (its runtime
-  // artifact). Path is relative to this schema file (server/db/prisma/).
-  // Note: generation is run by prisma/kysely-generate-from-ast.mjs, not the
-  // prisma-kysely binary — only `output` is read from this block.
+  provider        = "prisma-kysely"
   output          = "../../packages/adapters/database/mesh-postgres/src/generated/kysely-mesh"
   previewFeatures = ["partialIndexes"]
 }
@@ -3922,6 +3918,148 @@ model conversation_participant {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_case {
+  id                                                                                             String                         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                      String                         @db.Uuid
+  case_code                                                                                      String
+  entity_code                                                                                    String
+  operation_code                                                                                 String
+  target_entity_id                                                                               String?                        @db.Uuid
+  pre_materialization_ref                                                                        String?
+  entity_contract_id                                                                             String                         @db.Uuid
+  entity_contract_hash                                                                           String                         @db.Char(64)
+  form_template_release_id                                                                       String?                        @db.Uuid
+  form_template_release_no                                                                       BigInt?
+  form_template_hash                                                                             String?                        @db.Char(64)
+  current_snapshot_id                                                                            String                         @db.Uuid
+  submitted_snapshot_id                                                                          String?                        @db.Uuid
+  decision_snapshot_id                                                                           String?                        @db.Uuid
+  result_snapshot_id                                                                             String?                        @db.Uuid
+  status                                                                                         String                         @default("draft")
+  row_version                                                                                    BigInt                         @default(1)
+  idempotency_key                                                                                String
+  status_changed_at                                                                              DateTime?                      @db.Timestamptz(6)
+  status_changed_by                                                                              String?                        @db.Uuid
+  created_at                                                                                     DateTime                       @default(now()) @db.Timestamptz(6)
+  created_by                                                                                     String                         @db.Uuid
+  updated_at                                                                                     DateTime?                      @db.Timestamptz(6)
+  updated_by                                                                                     String?                        @db.Uuid
+  entity_contract                                                                                entity_contract                @relation(fields: [tenant_id, entity_contract_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_contract_fk")
+  principal_entity_case_tenant_id_created_byToprincipal                                          principal                      @relation("entity_case_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_created_by_fk")
+  entity_snapshot_identity_entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity   entity_snapshot_identity       @relation("entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity", fields: [tenant_id, current_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_current_snapshot_fk")
+  entity_snapshot_identity_entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity  entity_snapshot_identity?      @relation("entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity", fields: [tenant_id, decision_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_decision_snapshot_fk")
+  entity_snapshot_identity_entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity    entity_snapshot_identity?      @relation("entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity", fields: [tenant_id, result_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_result_snapshot_fk")
+  principal_entity_case_tenant_id_status_changed_byToprincipal                                   principal?                     @relation("entity_case_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_status_by_fk")
+  entity_snapshot_identity_entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity entity_snapshot_identity?      @relation("entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity", fields: [tenant_id, submitted_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_submitted_snapshot_fk")
+  tenant                                                                                         tenant                         @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_tenant_fk")
+  principal_entity_case_tenant_id_updated_byToprincipal                                          principal?                     @relation("entity_case_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_updated_by_fk")
+  entity_case_command_evidence                                                                   entity_case_command_evidence[]
+  entity_case_materialization                                                                    entity_case_materialization[]
+  entity_case_validation                                                                         entity_case_validation[]
+  cycle_subject                                                                                  cycle_subject[]
+  entity_case_snapshot_lineage                                                                   entity_case_snapshot_lineage[]
+
+  @@unique([tenant_id, case_code], map: "entity_case_code_uq")
+  @@unique([tenant_id, idempotency_key], map: "entity_case_idempotency_uq")
+  @@unique([tenant_id, id], map: "entity_case_tenant_id_uq")
+  @@index([tenant_id, status, updated_at, created_at], map: "entity_case_queue_idx")
+  @@index([tenant_id, entity_code, target_entity_id], map: "entity_case_target_idx", where: raw("(target_entity_id IS NOT NULL)"))
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_case_command_evidence {
+  id                       String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                    @db.Uuid
+  entity_case_id           String                    @db.Uuid
+  command_code             String
+  idempotency_key          String
+  request_fingerprint      String                    @db.Char(64)
+  expected_version         BigInt
+  before_version           BigInt
+  after_version            BigInt
+  before_status            String
+  after_status             String
+  outcome                  String
+  result_code              String
+  result_snapshot_id       String?                   @db.Uuid
+  result_evidence          Json                      @default("{}")
+  recorded_at              DateTime                  @default(now()) @db.Timestamptz(6)
+  recorded_by              String                    @db.Uuid
+  principal                principal                 @relation(fields: [tenant_id, recorded_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_command_evidence_actor_fk")
+  entity_case              entity_case               @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_command_evidence_case_fk")
+  entity_snapshot_identity entity_snapshot_identity? @relation(fields: [tenant_id, result_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_command_evidence_snapshot_fk")
+
+  @@unique([tenant_id, entity_case_id, command_code, idempotency_key], map: "entity_case_command_evidence_idem_uq")
+  @@unique([tenant_id, id], map: "entity_case_command_evidence_tenant_uq")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_case_materialization {
+  id                                                                                                          String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                                   String                    @db.Uuid
+  entity_case_id                                                                                              String                    @db.Uuid
+  attempt_no                                                                                                  Int
+  source_snapshot_id                                                                                          String                    @db.Uuid
+  result_snapshot_id                                                                                          String?                   @db.Uuid
+  materializer_code                                                                                           String
+  materializer_version                                                                                        String
+  request_fingerprint                                                                                         String                    @db.Char(64)
+  expected_target_version                                                                                     BigInt?
+  status                                                                                                      String                    @default("requested")
+  result_code                                                                                                 String?
+  requested_at                                                                                                DateTime                  @default(now()) @db.Timestamptz(6)
+  started_at                                                                                                  DateTime?                 @db.Timestamptz(6)
+  completed_at                                                                                                DateTime?                 @db.Timestamptz(6)
+  requested_by                                                                                                String                    @db.Uuid
+  completed_by                                                                                                String?                   @db.Uuid
+  entity_case                                                                                                 entity_case               @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_materialization_case_fk")
+  principal_entity_case_materialization_tenant_id_completed_byToprincipal                                     principal?                @relation("entity_case_materialization_tenant_id_completed_byToprincipal", fields: [tenant_id, completed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_materialization_completed_by_fk")
+  principal_entity_case_materialization_tenant_id_requested_byToprincipal                                     principal                 @relation("entity_case_materialization_tenant_id_requested_byToprincipal", fields: [tenant_id, requested_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_materialization_requested_by_fk")
+  entity_snapshot_identity_entity_case_materialization_tenant_id_result_snapshot_idToentity_snapshot_identity entity_snapshot_identity? @relation("entity_case_materialization_tenant_id_result_snapshot_idToentity_snapshot_identity", fields: [tenant_id, result_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_materialization_result_fk")
+  entity_snapshot_identity_entity_case_materialization_tenant_id_source_snapshot_idToentity_snapshot_identity entity_snapshot_identity  @relation("entity_case_materialization_tenant_id_source_snapshot_idToentity_snapshot_identity", fields: [tenant_id, source_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_materialization_source_fk")
+
+  @@unique([tenant_id, entity_case_id, attempt_no], map: "entity_case_materialization_attempt_uq")
+  @@unique([tenant_id, entity_case_id, request_fingerprint], map: "entity_case_materialization_fingerprint_uq")
+  @@unique([tenant_id, id], map: "entity_case_materialization_tenant_uq")
+  @@index([tenant_id, status, requested_at], map: "entity_case_materialization_queue_idx", where: raw("(status = ANY (ARRAY['requested'::text, 'running'::text]))"))
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_case_validation {
+  id                       String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                   @db.Uuid
+  entity_case_id           String                   @db.Uuid
+  evaluation_id            String                   @db.Uuid
+  ordinal                  Int
+  evaluated_snapshot_id    String                   @db.Uuid
+  ruleset_code             String
+  ruleset_release          String
+  ruleset_hash             String                   @db.Char(64)
+  finding_code             String
+  field_path               String?
+  severity                 String
+  message                  String
+  details                  Json                     @default("{}")
+  evaluated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  evaluated_by             String                   @db.Uuid
+  principal                principal                @relation(fields: [tenant_id, evaluated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_validation_actor_fk")
+  entity_case              entity_case              @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_validation_case_fk")
+  entity_snapshot_identity entity_snapshot_identity @relation(fields: [tenant_id, evaluated_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_validation_snapshot_fk")
+
+  @@unique([tenant_id, entity_case_id, evaluation_id, ordinal], map: "entity_case_validation_ordinal_uq")
+  @@unique([tenant_id, id], map: "entity_case_validation_tenant_uq")
+  @@index([tenant_id, entity_case_id, evaluated_at(sort: Desc)], map: "entity_case_validation_lookup_idx")
+  @@schema("document")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model multipart_upload {
   id                                                                     String                  @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                              String                  @db.Uuid
@@ -4871,6 +5009,7 @@ model cycle_run {
   tenant                                                                       tenant                             @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_tenant_fk")
   cycle_type                                                                   cycle_type                         @relation(fields: [tenant_id, cycle_type_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_type_fk")
   principal_cycle_run_tenant_id_updated_byToprincipal                          principal?                         @relation("cycle_run_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_run_updated_by_fk")
+  cycle_subject                                                                cycle_subject?
   cycle_task                                                                   cycle_task[]
   cycle_task_dependency                                                        governance_cycle_task_dependency[]
 
@@ -4880,6 +5019,35 @@ model cycle_run {
   @@unique([tenant_id, cycle_type_id, id], map: "cycle_run_type_id_uq")
   @@index([tenant_id, parent_cycle_run_id], map: "cycle_run_parent_idx", where: raw("(parent_cycle_run_id IS NOT NULL)"))
   @@index([tenant_id, cycle_type_id, status, scheduled_start_at], map: "cycle_run_type_status_idx")
+  @@schema("governance")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model cycle_subject {
+  id                       String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                String                    @db.Uuid
+  cycle_run_id             String                    @db.Uuid
+  cycle_task_id            String?                   @db.Uuid
+  subject_role             String
+  entity_case_id           String?                   @db.Uuid
+  entity_code              String?
+  entity_id                String?                   @db.Uuid
+  snapshot_id              String?                   @db.Uuid
+  external_reference       String?
+  is_primary               Boolean                   @default(false)
+  created_at               DateTime                  @default(now()) @db.Timestamptz(6)
+  created_by               String                    @db.Uuid
+  entity_case              entity_case?              @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "cycle_subject_case_fk")
+  principal                principal                 @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_subject_created_by_fk")
+  cycle_run                cycle_run                 @relation(fields: [tenant_id, cycle_run_id], references: [tenant_id, id], onUpdate: NoAction, map: "cycle_subject_run_fk")
+  entity_snapshot_identity entity_snapshot_identity? @relation(fields: [tenant_id, snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "cycle_subject_snapshot_fk")
+  cycle_task               cycle_task?               @relation(fields: [tenant_id, cycle_task_id], references: [tenant_id, id], onUpdate: NoAction, map: "cycle_subject_task_fk")
+
+  @@unique([tenant_id, cycle_run_id, subject_role, entity_case_id, entity_code, entity_id, snapshot_id, external_reference], map: "cycle_subject_coordinate_uq")
+  @@unique([tenant_id, cycle_run_id], map: "cycle_subject_primary_uq", where: raw("is_primary"))
+  @@unique([tenant_id, id], map: "cycle_subject_tenant_id_uq")
+  @@index([tenant_id, entity_case_id], map: "cycle_subject_case_idx", where: raw("(entity_case_id IS NOT NULL)"))
   @@schema("governance")
 }
 
@@ -4913,6 +5081,7 @@ model cycle_task {
   version                                                                                            Int                                @default(1)
   work_item                                                                                          work_item[]
   cycle_deviation                                                                                    cycle_deviation[]
+  cycle_subject                                                                                      cycle_subject[]
   principal_cycle_task_tenant_id_created_byToprincipal                                               principal                          @relation("cycle_task_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_created_by_fk")
   principal_cycle_task_tenant_id_owner_principal_idToprincipal                                       principal?                         @relation("cycle_task_tenant_id_owner_principal_idToprincipal", fields: [tenant_id, owner_principal_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_owner_fk")
   cycle_phase                                                                                        cycle_phase                        @relation(fields: [tenant_id, cycle_type_id, phase_id], references: [tenant_id, cycle_type_id, id], onDelete: NoAction, onUpdate: NoAction, map: "cycle_task_phase_fk")
@@ -5832,6 +6001,13 @@ model principal {
   conversation_participant_conversation_participant_tenant_id_left_byToprincipal                          conversation_participant[]                     @relation("conversation_participant_tenant_id_left_byToprincipal")
   conversation_participant_conversation_participant_tenant_id_principal_idToprincipal                     conversation_participant[]                     @relation("conversation_participant_tenant_id_principal_idToprincipal")
   conversation_participant_conversation_participant_tenant_id_updated_byToprincipal                       conversation_participant[]                     @relation("conversation_participant_tenant_id_updated_byToprincipal")
+  entity_case_entity_case_tenant_id_created_byToprincipal                                                 entity_case[]                                  @relation("entity_case_tenant_id_created_byToprincipal")
+  entity_case_entity_case_tenant_id_status_changed_byToprincipal                                          entity_case[]                                  @relation("entity_case_tenant_id_status_changed_byToprincipal")
+  entity_case_entity_case_tenant_id_updated_byToprincipal                                                 entity_case[]                                  @relation("entity_case_tenant_id_updated_byToprincipal")
+  entity_case_command_evidence                                                                            entity_case_command_evidence[]
+  entity_case_materialization_entity_case_materialization_tenant_id_completed_byToprincipal               entity_case_materialization[]                  @relation("entity_case_materialization_tenant_id_completed_byToprincipal")
+  entity_case_materialization_entity_case_materialization_tenant_id_requested_byToprincipal               entity_case_materialization[]                  @relation("entity_case_materialization_tenant_id_requested_byToprincipal")
+  entity_case_validation                                                                                  entity_case_validation[]
   multipart_upload_multipart_upload_tenant_id_created_byToprincipal                                       multipart_upload[]                             @relation("multipart_upload_tenant_id_created_byToprincipal")
   multipart_upload_multipart_upload_tenant_id_initiated_byToprincipal                                     multipart_upload[]                             @relation("multipart_upload_tenant_id_initiated_byToprincipal")
   multipart_upload_multipart_upload_tenant_id_updated_byToprincipal                                       multipart_upload[]                             @relation("multipart_upload_tenant_id_updated_byToprincipal")
@@ -5875,6 +6051,7 @@ model principal {
   cycle_run_cycle_run_tenant_id_owner_principal_idToprincipal                                             cycle_run[]                                    @relation("cycle_run_tenant_id_owner_principal_idToprincipal")
   cycle_run_cycle_run_tenant_id_status_changed_byToprincipal                                              cycle_run[]                                    @relation("cycle_run_tenant_id_status_changed_byToprincipal")
   cycle_run_cycle_run_tenant_id_updated_byToprincipal                                                     cycle_run[]                                    @relation("cycle_run_tenant_id_updated_byToprincipal")
+  cycle_subject                                                                                           cycle_subject[]
   cycle_task_cycle_task_tenant_id_created_byToprincipal                                                   cycle_task[]                                   @relation("cycle_task_tenant_id_created_byToprincipal")
   cycle_task_cycle_task_tenant_id_owner_principal_idToprincipal                                           cycle_task[]                                   @relation("cycle_task_tenant_id_owner_principal_idToprincipal")
   cycle_task_cycle_task_tenant_id_status_changed_byToprincipal                                            cycle_task[]                                   @relation("cycle_task_tenant_id_status_changed_byToprincipal")
@@ -5974,6 +6151,7 @@ model principal {
   usage_reservation_usage_reservation_tenant_id_updated_byToprincipal                                     usage_reservation[]                            @relation("usage_reservation_tenant_id_updated_byToprincipal")
   bank_account_disclosure                                                                                 snapshot_bank_account_disclosure[]
   content_item_version                                                                                    content_item_version[]
+  entity_case_snapshot_lineage                                                                            entity_case_snapshot_lineage[]
   entity_snapshot_identity                                                                                entity_snapshot_identity[]
   network_account_profile_publication                                                                     snapshot_network_account_profile_publication[]
   template_version                                                                                        template_version[]
@@ -6381,205 +6559,208 @@ model template_binding {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tenant {
-  id                                                                                      String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                                                                    String
-  name                                                                                    String
-  display_name                                                                            String
-  realm_key                                                                               String
-  canonical_party_id                                                                      String?                                   @unique(map: "tenant_canonical_party_uq") @db.Uuid
-  subscription_plan_id                                                                    String?                                   @db.Uuid
-  metadata                                                                                Json                                      @default("{}")
-  status                                                                                  String                                    @default("provisioning")
-  is_active                                                                               Boolean?                                  @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at                                                                       DateTime?                                 @db.Timestamptz(6)
-  status_changed_by                                                                       String?                                   @db.Uuid
-  created_at                                                                              DateTime                                  @default(now()) @db.Timestamptz(6)
-  created_by                                                                              String                                    @db.Uuid
-  updated_at                                                                              DateTime?                                 @db.Timestamptz(6)
-  updated_by                                                                              String?                                   @db.Uuid
-  ai_action_policy                                                                        ai_action_policy[]
-  ai_agent_call                                                                           ai_agent_call[]
-  ai_agent_run                                                                            ai_agent_run[]
-  ai_calibration_log                                                                      ai_calibration_log[]
-  ai_call_transcript                                                                      ai_call_transcript[]
-  ai_confidence_threshold                                                                 ai_confidence_threshold[]
-  ai_drift_baseline                                                                       ai_drift_baseline[]
-  ai_feedback_log                                                                         ai_feedback_log[]
-  ai_inference_log                                                                        ai_inference_log[]
-  ai_monitoring_log                                                                       ai_monitoring_log[]
-  ai_tool_invocation                                                                      ai_tool_invocation[]
-  atlas_message                                                                           atlas_message[]
-  atlas_run                                                                               atlas_run[]
-  atlas_tenant_provider_credential                                                        atlas_tenant_provider_credential[]
-  atlas_tenant_provider_credential_epoch                                                  atlas_tenant_provider_credential_epoch[]
-  atlas_tenant_quota_policy                                                               atlas_tenant_quota_policy?
-  atlas_tenant_quota_window                                                               atlas_tenant_quota_window[]
-  atlas_thread                                                                            atlas_thread[]
-  audit_log                                                                               audit_log[]
-  authorization_decision_evidence                                                         authorization_decision_evidence[]
-  export_manifest                                                                         export_manifest[]
-  export_request                                                                          export_request[]
-  hash_anchor                                                                             hash_anchor[]
-  integrity_check_evidence                                                                integrity_check_evidence[]
-  legal_hold                                                                              audit_legal_hold[]
-  legal_hold_manifest                                                                     audit_legal_hold_manifest[]
-  retention_policy                                                                        audit_retention_policy[]
-  security_event                                                                          security_event[]
-  application_projection                                                                  application_projection[]
-  delegation                                                                              delegation[]
-  delegation_grant                                                                        delegation_grant[]
-  deny_rule                                                                               deny_rule[]
-  entity_operation_binding                                                                entity_operation_binding[]
-  group_member                                                                            group_member[]
-  group_role                                                                              group_role[]
-  override                                                                                override[]
-  plane_membership                                                                        plane_membership[]
-  principal_group                                                                         principal_group[]
-  record_acl                                                                              record_acl[]
-  role                                                                                    role[]
-  role_permission                                                                         role_permission[]
-  scope_target                                                                            scope_target[]
-  trusted_device                                                                          trusted_device[]
-  connector_instance                                                                      connector_instance[]
-  cron_schedule                                                                           cron_schedule[]
-  cron_schedule_change_log                                                                cron_schedule_change_log[]
-  cycle_carryforward_rule                                                                 cycle_carryforward_rule[]
-  cycle_cross_dependency                                                                  cycle_cross_dependency[]
-  cycle_phase                                                                             cycle_phase[]
-  cycle_task_category                                                                     cycle_task_category[]
-  cycle_task_dependency                                                                   control_cycle_task_dependency[]
-  cycle_task_template                                                                     cycle_task_template[]
-  cycle_template_revision                                                                 cycle_template_revision[]
-  cycle_type                                                                              cycle_type[]
-  delivery_policy                                                                         delivery_policy[]
-  feature_flag_override                                                                   feature_flag_override[]
-  integration_endpoint                                                                    integration_endpoint[]
-  lookup_value                                                                            lookup_value[]
-  notification_routing_rule                                                               notification_routing_rule[]
-  notification_template                                                                   notification_template[]
-  numbering_policy                                                                        numbering_policy[]
-  owner_type                                                                              owner_type[]
-  policy_definition                                                                       policy_definition[]
-  quota_policy                                                                            quota_policy[]
-  retention_policy                                                                        control_retention_policy[]
-  rounding_context                                                                        rounding_context[]
-  rounding_rule                                                                           rounding_rule[]
-  routing_rule                                                                            routing_rule[]
-  tenant_parameter_value                                                                  tenant_parameter_value[]
-  tenant_usage_limit_override                                                             tenant_usage_limit_override[]
-  control_webhook_subscription                                                                    control_webhook_subscription[]
-  attachment                                                                              attachment[]
-  attachment_derivative                                                                   attachment_derivative[]
-  attachment_folder                                                                       attachment_folder[]
-  attachment_legal_hold                                                                   attachment_legal_hold[]
-  attachment_legal_hold_event                                                             attachment_legal_hold_event[]
-  attachment_link                                                                         attachment_link[]
-  attachment_series                                                                       attachment_series[]
-  comment                                                                                 comment[]
-  comment_draft                                                                           comment_draft[]
-  comment_feed_cursor                                                                     comment_feed_cursor[]
-  comment_mention                                                                         comment_mention[]
-  comment_reaction                                                                        comment_reaction[]
-  content_item                                                                            content_item[]
-  content_item_link                                                                       content_item_link[]
-  conversation                                                                            conversation[]
-  conversation_participant                                                                conversation_participant[]
-  multipart_upload                                                                        multipart_upload[]
-  work_item                                                                               work_item[]
-  authorization_invalidation_outbox                                                       authorization_invalidation_outbox[]
-  channel_consent_event                                                                   channel_consent_event[]
-  command_execution                                                                       command_execution[]
-  comment_flag                                                                            comment_flag[]
-  descriptor_invalidation_outbox                                                          descriptor_invalidation_outbox[]
-  digest_staging                                                                          digest_staging[]
-  notification_delivery                                                                   notification_delivery[]
-  notification_delivery_claim                                                             notification_delivery_claim[]
-  notification_email_suppression                                                          notification_email_suppression[]
-  notification_inbox_state                                                                notification_inbox_state[]
-  notification_message                                                                    notification_message[]
-  notification_message_attachment                                                         notification_message_attachment[]
-  notification_outbox_state                                                               notification_outbox_state[]
-  notification_provider_event                                                             notification_provider_event[]
-  outbox                                                                                  outbox[]
-  push_subscription                                                                       push_subscription[]
-  webhook_subscription                                                                    event_webhook_subscription[]
-  whatsapp_consent                                                                        whatsapp_consent[]
-  channel_consent                                                                         channel_consent[]
-  comment_moderation                                                                      comment_moderation[]
-  cycle_certification                                                                     cycle_certification[]
-  cycle_deviation                                                                         cycle_deviation[]
-  cycle_run                                                                               cycle_run[]
-  cycle_task                                                                              cycle_task[]
-  cycle_task_dependency                                                                   governance_cycle_task_dependency[]
-  legal_hold                                                                              governance_legal_hold[]
-  legal_hold_manifest                                                                     governance_legal_hold_manifest[]
-  report_pack                                                                             report_pack[]
-  notification_delivery_attempt                                                           notification_delivery_attempt[]
-  notification_dlq                                                                        notification_dlq[]
-  address                                                                                 address[]
-  address_event                                                                           address_event[]
-  address_link                                                                            address_link[]
-  audit_reason_code                                                                       audit_reason_code[]
-  brand_profile                                                                           brand_profile[]
-  contact_email                                                                           contact_email[]
-  contact_link                                                                            contact_link[]
-  contact_person                                                                          contact_person[]
-  contact_person_role                                                                     contact_person_role[]
-  contact_phone                                                                           contact_phone[]
-  external_reference                                                                      external_reference[]
-  letterhead                                                                              letterhead[]
-  principal                                                                               principal[]
-  principal_identity_binding                                                              principal_identity_binding[]
-  principal_notification_preference                                                       principal_notification_preference[]
-  principal_profile                                                                       principal_profile[]
-  principal_ui_preference                                                                 principal_ui_preference[]
-  principal_ui_profile                                                                    principal_ui_profile[]
-  print_profile                                                                           print_profile[]
-  record_bookmark                                                                         record_bookmark[]
-  saved_view                                                                              saved_view[]
-  team                                                                                    team[]
-  team_member                                                                             team_member[]
-  template                                                                                template[]
-  template_binding                                                                        template_binding[]
-  subscription_plan                                                                       subscription_plan?                        @relation(fields: [subscription_plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "tenant_subscription_plan_fk")
-  tenant_locale_activation                                                                tenant_locale_activation?
-  tenant_profile                                                                          tenant_profile?
-  tenant_relationship_tenant_relationship_from_tenant_idTotenant                          tenant_relationship[]                     @relation("tenant_relationship_from_tenant_idTotenant")
-  tenant_relationship_tenant_relationship_to_tenant_idTotenant                            tenant_relationship[]                     @relation("tenant_relationship_to_tenant_idTotenant")
-  bank_account_disclosure_event_bank_account_disclosure_event_owner_tenant_idTotenant     bank_account_disclosure_event[]           @relation("bank_account_disclosure_event_owner_tenant_idTotenant")
-  bank_account_disclosure_event_bank_account_disclosure_event_recipient_tenant_idTotenant bank_account_disclosure_event[]           @relation("bank_account_disclosure_event_recipient_tenant_idTotenant")
-  bank_party                                                                              bank_party[]
-  catalog                                                                                 catalog[]
-  certification                                                                           certification[]
-  certification_type                                                                      certification_type[]
-  network_account                                                                         network_account[]
-  network_account_identifier                                                              network_account_identifier[]
-  network_account_reference                                                               network_account_reference[]
-  network_command_evidence_network_command_evidence_actor_tenant_idTotenant               network_command_evidence[]                @relation("network_command_evidence_actor_tenant_idTotenant")
-  network_command_evidence_network_command_evidence_counterparty_tenant_idTotenant        network_command_evidence[]                @relation("network_command_evidence_counterparty_tenant_idTotenant")
-  network_lifecycle_event_network_lifecycle_event_counterparty_tenant_idTotenant          network_lifecycle_event[]                 @relation("network_lifecycle_event_counterparty_tenant_idTotenant")
-  network_lifecycle_event_network_lifecycle_event_owner_tenant_idTotenant                 network_lifecycle_event[]                 @relation("network_lifecycle_event_owner_tenant_idTotenant")
-  network_relationship                                                                    network_relationship[]
-  authorization_session_shadow_comparison                                                 authorization_session_shadow_comparison[]
-  authorization_shadow_comparison                                                         authorization_shadow_comparison[]
-  identity_admission_shadow_comparison                                                    identity_admission_shadow_comparison[]
-  job_execution                                                                           job_execution[]
-  job_execution_attempt                                                                   job_execution_attempt[]
-  job_execution_command                                                                   job_execution_command[]
-  record_edit_lock                                                                        record_edit_lock[]
-  applied_release_payload                                                                 applied_release_payload[]
-  authorization_epoch                                                                     authorization_epoch?
-  entity_contract                                                                         entity_contract[]
-  entity_descriptor                                                                       entity_descriptor[]
-  entity_number_allocation                                                                entity_number_allocation[]
-  entity_number_counter                                                                   entity_number_counter[]
-  tenant_usage_counter                                                                    tenant_usage_counter[]
-  usage_reservation                                                                       usage_reservation[]
-  bank_account_disclosure_bank_account_disclosure_owner_tenant_idTotenant                 snapshot_bank_account_disclosure[]        @relation("bank_account_disclosure_owner_tenant_idTotenant")
-  bank_account_disclosure_bank_account_disclosure_recipient_tenant_idTotenant             snapshot_bank_account_disclosure[]        @relation("bank_account_disclosure_recipient_tenant_idTotenant")
-  content_item_version                                                                    content_item_version[]
-  entity_snapshot_identity                                                                entity_snapshot_identity[]
-  template_version                                                                        template_version[]
+  id                                                                                             String                                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                                                                           String
+  name                                                                                           String
+  display_name                                                                                   String
+  realm_key                                                                                      String
+  canonical_party_id                                                                             String?                                   @unique(map: "tenant_canonical_party_uq") @db.Uuid
+  subscription_plan_id                                                                           String?                                   @db.Uuid
+  metadata                                                                                       Json                                      @default("{}")
+  status                                                                                         String                                    @default("provisioning")
+  is_active                                                                                      Boolean?                                  @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at                                                                              DateTime?                                 @db.Timestamptz(6)
+  status_changed_by                                                                              String?                                   @db.Uuid
+  created_at                                                                                     DateTime                                  @default(now()) @db.Timestamptz(6)
+  created_by                                                                                     String                                    @db.Uuid
+  updated_at                                                                                     DateTime?                                 @db.Timestamptz(6)
+  updated_by                                                                                     String?                                   @db.Uuid
+  ai_action_policy                                                                               ai_action_policy[]
+  ai_agent_call                                                                                  ai_agent_call[]
+  ai_agent_run                                                                                   ai_agent_run[]
+  ai_calibration_log                                                                             ai_calibration_log[]
+  ai_call_transcript                                                                             ai_call_transcript[]
+  ai_confidence_threshold                                                                        ai_confidence_threshold[]
+  ai_drift_baseline                                                                              ai_drift_baseline[]
+  ai_feedback_log                                                                                ai_feedback_log[]
+  ai_inference_log                                                                               ai_inference_log[]
+  ai_monitoring_log                                                                              ai_monitoring_log[]
+  ai_tool_invocation                                                                             ai_tool_invocation[]
+  atlas_message                                                                                  atlas_message[]
+  atlas_run                                                                                      atlas_run[]
+  atlas_tenant_provider_credential                                                               atlas_tenant_provider_credential[]
+  atlas_tenant_provider_credential_epoch                                                         atlas_tenant_provider_credential_epoch[]
+  atlas_tenant_quota_policy                                                                      atlas_tenant_quota_policy?
+  atlas_tenant_quota_window                                                                      atlas_tenant_quota_window[]
+  atlas_thread                                                                                   atlas_thread[]
+  audit_log                                                                                      audit_log[]
+  authorization_decision_evidence                                                                authorization_decision_evidence[]
+  export_manifest                                                                                export_manifest[]
+  export_request                                                                                 export_request[]
+  hash_anchor                                                                                    hash_anchor[]
+  integrity_check_evidence                                                                       integrity_check_evidence[]
+  legal_hold                                                                                     audit_legal_hold[]
+  legal_hold_manifest                                                                            audit_legal_hold_manifest[]
+  retention_policy                                                                               audit_retention_policy[]
+  security_event                                                                                 security_event[]
+  application_projection                                                                         application_projection[]
+  delegation                                                                                     delegation[]
+  delegation_grant                                                                               delegation_grant[]
+  deny_rule                                                                                      deny_rule[]
+  entity_operation_binding                                                                       entity_operation_binding[]
+  group_member                                                                                   group_member[]
+  group_role                                                                                     group_role[]
+  override                                                                                       override[]
+  plane_membership                                                                               plane_membership[]
+  principal_group                                                                                principal_group[]
+  record_acl                                                                                     record_acl[]
+  role                                                                                           role[]
+  role_permission                                                                                role_permission[]
+  scope_target                                                                                   scope_target[]
+  trusted_device                                                                                 trusted_device[]
+  connector_instance                                                                             connector_instance[]
+  cron_schedule                                                                                  cron_schedule[]
+  cron_schedule_change_log                                                                       cron_schedule_change_log[]
+  cycle_carryforward_rule                                                                        cycle_carryforward_rule[]
+  cycle_cross_dependency                                                                         cycle_cross_dependency[]
+  cycle_phase                                                                                    cycle_phase[]
+  cycle_task_category                                                                            cycle_task_category[]
+  cycle_task_dependency                                                                          control_cycle_task_dependency[]
+  cycle_task_template                                                                            cycle_task_template[]
+  cycle_template_revision                                                                        cycle_template_revision[]
+  cycle_type                                                                                     cycle_type[]
+  delivery_policy                                                                                delivery_policy[]
+  feature_flag_override                                                                          feature_flag_override[]
+  integration_endpoint                                                                           integration_endpoint[]
+  lookup_value                                                                                   lookup_value[]
+  notification_routing_rule                                                                      notification_routing_rule[]
+  notification_template                                                                          notification_template[]
+  numbering_policy                                                                               numbering_policy[]
+  owner_type                                                                                     owner_type[]
+  policy_definition                                                                              policy_definition[]
+  quota_policy                                                                                   quota_policy[]
+  retention_policy                                                                               control_retention_policy[]
+  rounding_context                                                                               rounding_context[]
+  rounding_rule                                                                                  rounding_rule[]
+  routing_rule                                                                                   routing_rule[]
+  tenant_parameter_value                                                                         tenant_parameter_value[]
+  tenant_usage_limit_override                                                                    tenant_usage_limit_override[]
+  control_webhook_subscription                                                                           control_webhook_subscription[]
+  attachment                                                                                     attachment[]
+  attachment_derivative                                                                          attachment_derivative[]
+  attachment_folder                                                                              attachment_folder[]
+  attachment_legal_hold                                                                          attachment_legal_hold[]
+  attachment_legal_hold_event                                                                    attachment_legal_hold_event[]
+  attachment_link                                                                                attachment_link[]
+  attachment_series                                                                              attachment_series[]
+  comment                                                                                        comment[]
+  comment_draft                                                                                  comment_draft[]
+  comment_feed_cursor                                                                            comment_feed_cursor[]
+  comment_mention                                                                                comment_mention[]
+  comment_reaction                                                                               comment_reaction[]
+  content_item                                                                                   content_item[]
+  content_item_link                                                                              content_item_link[]
+  conversation                                                                                   conversation[]
+  conversation_participant                                                                       conversation_participant[]
+  entity_case                                                                                    entity_case[]
+  multipart_upload                                                                               multipart_upload[]
+  work_item                                                                                      work_item[]
+  authorization_invalidation_outbox                                                              authorization_invalidation_outbox[]
+  channel_consent_event                                                                          channel_consent_event[]
+  command_execution                                                                              command_execution[]
+  comment_flag                                                                                   comment_flag[]
+  descriptor_invalidation_outbox                                                                 descriptor_invalidation_outbox[]
+  digest_staging                                                                                 digest_staging[]
+  notification_delivery                                                                          notification_delivery[]
+  notification_delivery_claim                                                                    notification_delivery_claim[]
+  notification_email_suppression                                                                 notification_email_suppression[]
+  notification_inbox_state                                                                       notification_inbox_state[]
+  notification_message                                                                           notification_message[]
+  notification_message_attachment                                                                notification_message_attachment[]
+  notification_outbox_state                                                                      notification_outbox_state[]
+  notification_provider_event                                                                    notification_provider_event[]
+  outbox                                                                                         outbox[]
+  push_subscription                                                                              push_subscription[]
+  webhook_subscription                                                                           event_webhook_subscription[]
+  whatsapp_consent                                                                               whatsapp_consent[]
+  channel_consent                                                                                channel_consent[]
+  comment_moderation                                                                             comment_moderation[]
+  cycle_certification                                                                            cycle_certification[]
+  cycle_deviation                                                                                cycle_deviation[]
+  cycle_run                                                                                      cycle_run[]
+  cycle_task                                                                                     cycle_task[]
+  cycle_task_dependency                                                                          governance_cycle_task_dependency[]
+  legal_hold                                                                                     governance_legal_hold[]
+  legal_hold_manifest                                                                            governance_legal_hold_manifest[]
+  report_pack                                                                                    report_pack[]
+  notification_delivery_attempt                                                                  notification_delivery_attempt[]
+  notification_dlq                                                                               notification_dlq[]
+  address                                                                                        address[]
+  address_event                                                                                  address_event[]
+  address_link                                                                                   address_link[]
+  audit_reason_code                                                                              audit_reason_code[]
+  brand_profile                                                                                  brand_profile[]
+  contact_email                                                                                  contact_email[]
+  contact_link                                                                                   contact_link[]
+  contact_person                                                                                 contact_person[]
+  contact_person_role                                                                            contact_person_role[]
+  contact_phone                                                                                  contact_phone[]
+  external_reference                                                                             external_reference[]
+  letterhead                                                                                     letterhead[]
+  principal                                                                                      principal[]
+  principal_identity_binding                                                                     principal_identity_binding[]
+  principal_notification_preference                                                              principal_notification_preference[]
+  principal_profile                                                                              principal_profile[]
+  principal_ui_preference                                                                        principal_ui_preference[]
+  principal_ui_profile                                                                           principal_ui_profile[]
+  print_profile                                                                                  print_profile[]
+  record_bookmark                                                                                record_bookmark[]
+  saved_view                                                                                     saved_view[]
+  team                                                                                           team[]
+  team_member                                                                                    team_member[]
+  template                                                                                       template[]
+  template_binding                                                                               template_binding[]
+  subscription_plan                                                                              subscription_plan?                        @relation(fields: [subscription_plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "tenant_subscription_plan_fk")
+  tenant_locale_activation                                                                       tenant_locale_activation?
+  tenant_profile                                                                                 tenant_profile?
+  tenant_relationship_tenant_relationship_from_tenant_idTotenant                                 tenant_relationship[]                     @relation("tenant_relationship_from_tenant_idTotenant")
+  tenant_relationship_tenant_relationship_to_tenant_idTotenant                                   tenant_relationship[]                     @relation("tenant_relationship_to_tenant_idTotenant")
+  bank_account_disclosure_event_bank_account_disclosure_event_owner_tenant_idTotenant            bank_account_disclosure_event[]           @relation("bank_account_disclosure_event_owner_tenant_idTotenant")
+  bank_account_disclosure_event_bank_account_disclosure_event_recipient_tenant_idTotenant        bank_account_disclosure_event[]           @relation("bank_account_disclosure_event_recipient_tenant_idTotenant")
+  bank_party                                                                                     bank_party[]
+  catalog                                                                                        catalog[]
+  certification                                                                                  certification[]
+  certification_type                                                                             certification_type[]
+  network_account                                                                                network_account[]
+  network_account_identifier                                                                     network_account_identifier[]
+  network_account_reference                                                                      network_account_reference[]
+  network_command_evidence_network_command_evidence_actor_tenant_idTotenant                      network_command_evidence[]                @relation("network_command_evidence_actor_tenant_idTotenant")
+  network_command_evidence_network_command_evidence_counterparty_tenant_idTotenant               network_command_evidence[]                @relation("network_command_evidence_counterparty_tenant_idTotenant")
+  network_lifecycle_event_network_lifecycle_event_counterparty_tenant_idTotenant                 network_lifecycle_event[]                 @relation("network_lifecycle_event_counterparty_tenant_idTotenant")
+  network_lifecycle_event_network_lifecycle_event_owner_tenant_idTotenant                        network_lifecycle_event[]                 @relation("network_lifecycle_event_owner_tenant_idTotenant")
+  network_relationship                                                                           network_relationship[]
+  network_relationship_capability_network_relationship_capability_approved_by_tenant_idTotenant  network_relationship_capability[]         @relation("network_relationship_capability_approved_by_tenant_idTotenant")
+  network_relationship_capability_network_relationship_capability_requested_by_tenant_idTotenant network_relationship_capability[]         @relation("network_relationship_capability_requested_by_tenant_idTotenant")
+  authorization_session_shadow_comparison                                                        authorization_session_shadow_comparison[]
+  authorization_shadow_comparison                                                                authorization_shadow_comparison[]
+  identity_admission_shadow_comparison                                                           identity_admission_shadow_comparison[]
+  job_execution                                                                                  job_execution[]
+  job_execution_attempt                                                                          job_execution_attempt[]
+  job_execution_command                                                                          job_execution_command[]
+  record_edit_lock                                                                               record_edit_lock[]
+  applied_release_payload                                                                        applied_release_payload[]
+  authorization_epoch                                                                            authorization_epoch?
+  entity_contract                                                                                entity_contract[]
+  entity_descriptor                                                                              entity_descriptor[]
+  entity_number_allocation                                                                       entity_number_allocation[]
+  entity_number_counter                                                                          entity_number_counter[]
+  tenant_usage_counter                                                                           tenant_usage_counter[]
+  usage_reservation                                                                              usage_reservation[]
+  bank_account_disclosure_bank_account_disclosure_owner_tenant_idTotenant                        snapshot_bank_account_disclosure[]        @relation("bank_account_disclosure_owner_tenant_idTotenant")
+  bank_account_disclosure_bank_account_disclosure_recipient_tenant_idTotenant                    snapshot_bank_account_disclosure[]        @relation("bank_account_disclosure_recipient_tenant_idTotenant")
+  content_item_version                                                                           content_item_version[]
+  entity_snapshot_identity                                                                       entity_snapshot_identity[]
+  template_version                                                                               template_version[]
 
   @@unique([realm_key, code], map: "tenant_realm_code_uq")
   @@index([realm_key, code], map: "tenant_active_lookup_idx", where: raw("(status = 'active'::text)"))
@@ -6707,7 +6888,7 @@ model bank_account {
   bank_party_id                                           String?                        @db.Uuid
   account_holder_name                                     String
   account_id_type                                         String
-  account_id_value                                        String
+  protected_value_token                                   String
   account_last4                                           String
   currency_code                                           String                         @db.Char(3)
   bic_override                                            String?
@@ -6727,6 +6908,8 @@ model bank_account {
   created_by                                              String                         @db.Uuid
   updated_at                                              DateTime?                      @db.Timestamptz(6)
   updated_by                                              String?                        @db.Uuid
+  identifier_fingerprint                                  String                         @db.Char(64)
+  protection_key_version                                  Int
   bank_party                                              bank_party?                    @relation(fields: [tenant_id, bank_party_id], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_bank_party_fk")
   country                                                 country?                       @relation(fields: [bank_country_override], references: [code], onDelete: Restrict, onUpdate: NoAction, map: "mesh_bank_account_country_fk")
   principal_bank_account_tenant_id_created_byToprincipal  principal                      @relation("bank_account_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "mesh_bank_account_created_by_fk")
@@ -6878,6 +7061,26 @@ model bank_party {
   @@unique([tenant_id, code], map: "mesh_bank_party_code_uq")
   @@unique([tenant_id, id], map: "mesh_bank_party_tenant_id_uq")
   @@index([bic], map: "mesh_bank_party_bic_idx", where: raw("(bic IS NOT NULL)"))
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model business_partner_delivery_acknowledgement {
+  id                        String   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  source_tenant_id          String   @db.Uuid
+  recipient_tenant_id       String   @db.Uuid
+  source_network_account_id String   @db.Uuid
+  outbox_id                 String   @db.Uuid
+  event_id                  String   @db.Uuid
+  delivery_lease_id         String
+  attempt_no                Int
+  disposition               String
+  reason_code               String?
+  acknowledged_at           DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+
+  @@unique([outbox_id, delivery_lease_id], map: "business_partner_delivery_ackno_outbox_id_delivery_lease_id_key")
+  @@index([source_tenant_id, source_network_account_id, acknowledged_at(sort: Desc), id], map: "business_partner_delivery_acknowledgement_source_idx")
   @@schema("mesh")
 }
 
@@ -7494,6 +7697,8 @@ model network_account {
   network_relationship_network_relationship_supplier_tenant_id_supplier_account_idTonetwork_account                                 network_relationship[]                         @relation("network_relationship_supplier_tenant_id_supplier_account_idTonetwork_account")
   network_relationship_identity_network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account                     network_relationship_identity[]                @relation("network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account")
   network_relationship_identity_network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account               network_relationship_identity[]                @relation("network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account")
+  registration_exchange_registration_exchange_counterparty_tenant_id_counterparty_account_idTonetwork_account                       registration_exchange[]                        @relation("registration_exchange_counterparty_tenant_id_counterparty_account_idTonetwork_account")
+  registration_exchange_registration_exchange_requester_tenant_id_requester_account_idTonetwork_account                             registration_exchange[]                        @relation("registration_exchange_requester_tenant_id_requester_account_idTonetwork_account")
   network_account_profile_publication_network_account_profile_publication_owner_tenant_id_owner_account_idTonetwork_account         snapshot_network_account_profile_publication[] @relation("network_account_profile_publication_owner_tenant_id_owner_account_idTonetwork_account")
   network_account_profile_publication_network_account_profile_publication_recipient_tenant_id_recipient_account_idTonetwork_account snapshot_network_account_profile_publication[] @relation("network_account_profile_publication_recipient_tenant_id_recipient_account_idTonetwork_account")
 
@@ -7504,6 +7709,7 @@ model network_account {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model network_account_commodity_capability {
   id                 String          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
@@ -7847,7 +8053,9 @@ model network_relationship {
   principal                                                                                    principal                                      @relation(fields: [created_by_tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_creator_principal_fk")
   tenant                                                                                       tenant                                         @relation(fields: [created_by_tenant_id], references: [id], onUpdate: NoAction, map: "network_relationship_creator_tenant_fk")
   network_relationship_identity                                                                network_relationship_identity                  @relation(fields: [relationship_identity_id], references: [id], onUpdate: NoAction, map: "network_relationship_identity_fk")
+  network_relationship_kind                                                                    network_relationship_kind                      @relation(fields: [relationship_kind], references: [code], onUpdate: NoAction, map: "network_relationship_kind_fk")
   network_account_network_relationship_supplier_tenant_id_supplier_account_idTonetwork_account network_account                                @relation("network_relationship_supplier_tenant_id_supplier_account_idTonetwork_account", fields: [supplier_tenant_id, supplier_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_supplier_account_fk")
+  network_relationship_capability                                                              network_relationship_capability[]
   network_account_profile_publication                                                          snapshot_network_account_profile_publication[]
 
   @@unique([relationship_identity_id, episode_no], map: "network_relationship_identity_episode_uq")
@@ -7859,24 +8067,104 @@ model network_relationship {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model network_relationship_capability {
+  id                                                                    String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  network_relationship_id                                               String               @db.Uuid
+  capability_code                                                       String
+  episode_no                                                            Int
+  requested_by_tenant_id                                                String               @db.Uuid
+  approved_by_tenant_id                                                 String?              @db.Uuid
+  effective_from                                                        DateTime             @db.Date
+  effective_until                                                       DateTime?            @db.Date
+  routing_policy                                                        Json                 @default("{}")
+  status                                                                String               @default("requested")
+  row_version                                                           BigInt               @default(1)
+  status_changed_at                                                     DateTime?            @db.Timestamptz(6)
+  status_changed_by                                                     String?              @db.Uuid
+  created_at                                                            DateTime             @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                                                            String               @db.Uuid
+  updated_at                                                            DateTime?            @db.Timestamptz(6)
+  updated_by                                                            String?              @db.Uuid
+  tenant_network_relationship_capability_approved_by_tenant_idTotenant  tenant?              @relation("network_relationship_capability_approved_by_tenant_idTotenant", fields: [approved_by_tenant_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "network_relationship_capability_approver_fk")
+  network_relationship                                                  network_relationship @relation(fields: [network_relationship_id], references: [id], onUpdate: NoAction, map: "network_relationship_capability_relationship_fk")
+  tenant_network_relationship_capability_requested_by_tenant_idTotenant tenant               @relation("network_relationship_capability_requested_by_tenant_idTotenant", fields: [requested_by_tenant_id], references: [id], onUpdate: NoAction, map: "network_relationship_capability_requester_fk")
+
+  @@unique([network_relationship_id, capability_code, episode_no], map: "network_relationship_capability_episode_uq")
+  @@index([network_relationship_id, capability_code, status, effective_from, effective_until], map: "network_relationship_capability_lookup_idx")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model network_relationship_identity {
-  id                                                                                                    String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  buyer_tenant_id                                                                                       String                 @db.Uuid
-  buyer_account_id                                                                                      String                 @db.Uuid
-  supplier_tenant_id                                                                                    String                 @db.Uuid
-  supplier_account_id                                                                                   String                 @db.Uuid
+  id                                                                                                    String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  buyer_tenant_id                                                                                       String                    @db.Uuid
+  buyer_account_id                                                                                      String                    @db.Uuid
+  supplier_tenant_id                                                                                    String                    @db.Uuid
+  supplier_account_id                                                                                   String                    @db.Uuid
   relationship_kind                                                                                     String
-  created_at                                                                                            DateTime               @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
-  created_by_tenant_id                                                                                  String                 @db.Uuid
-  created_by                                                                                            String                 @db.Uuid
+  created_at                                                                                            DateTime                  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by_tenant_id                                                                                  String                    @db.Uuid
+  created_by                                                                                            String                    @db.Uuid
   network_relationship                                                                                  network_relationship[]
-  network_account_network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account       network_account        @relation("network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account", fields: [buyer_tenant_id, buyer_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_buyer_fk")
-  principal                                                                                             principal              @relation(fields: [created_by_tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_created_by_fk")
-  network_account_network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account network_account        @relation("network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account", fields: [supplier_tenant_id, supplier_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_supplier_fk")
+  network_account_network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account       network_account           @relation("network_relationship_identity_buyer_tenant_id_buyer_account_idTonetwork_account", fields: [buyer_tenant_id, buyer_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_buyer_fk")
+  principal                                                                                             principal                 @relation(fields: [created_by_tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_created_by_fk")
+  network_relationship_kind                                                                             network_relationship_kind @relation(fields: [relationship_kind], references: [code], onUpdate: NoAction, map: "network_relationship_identity_kind_fk")
+  network_account_network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account network_account           @relation("network_relationship_identity_supplier_tenant_id_supplier_account_idTonetwork_account", fields: [supplier_tenant_id, supplier_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "network_relationship_identity_supplier_fk")
 
   @@unique([buyer_account_id, supplier_account_id, relationship_kind], map: "network_relationship_identity_coordinate_uq")
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model network_relationship_kind {
+  code                          String                          @id
+  name                          String
+  description                   String?
+  status                        String                          @default("active")
+  created_at                    DateTime                        @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                    String                          @db.Uuid
+  network_relationship          network_relationship[]
+  network_relationship_identity network_relationship_identity[]
+  registration_exchange         registration_exchange[]
+
+  @@schema("mesh")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model registration_exchange {
+  id                                                                                                    String                    @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  requester_tenant_id                                                                                   String                    @db.Uuid
+  counterparty_tenant_id                                                                                String                    @db.Uuid
+  requester_account_id                                                                                  String                    @db.Uuid
+  counterparty_account_id                                                                               String                    @db.Uuid
+  intent_kind                                                                                           String
+  relationship_kind                                                                                     String                    @default("commercial")
+  contract_name                                                                                         String
+  contract_version                                                                                      Int
+  contract_hash                                                                                         String                    @db.Char(64)
+  intent_snapshot                                                                                       Json
+  invitation_token_hash                                                                                 String                    @db.Char(64)
+  expires_at                                                                                            DateTime                  @db.Timestamptz(6)
+  status                                                                                                String                    @default("issued")
+  row_version                                                                                           BigInt                    @default(1)
+  status_changed_at                                                                                     DateTime?                 @db.Timestamptz(6)
+  status_changed_by                                                                                     String?                   @db.Uuid
+  created_at                                                                                            DateTime                  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  created_by                                                                                            String                    @db.Uuid
+  updated_at                                                                                            DateTime?                 @db.Timestamptz(6)
+  updated_by                                                                                            String?                   @db.Uuid
+  network_account_registration_exchange_counterparty_tenant_id_counterparty_account_idTonetwork_account network_account           @relation("registration_exchange_counterparty_tenant_id_counterparty_account_idTonetwork_account", fields: [counterparty_tenant_id, counterparty_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "registration_exchange_counterparty_fk")
+  network_relationship_kind                                                                             network_relationship_kind @relation(fields: [relationship_kind], references: [code], onUpdate: NoAction, map: "registration_exchange_kind_fk")
+  network_account_registration_exchange_requester_tenant_id_requester_account_idTonetwork_account       network_account           @relation("registration_exchange_requester_tenant_id_requester_account_idTonetwork_account", fields: [requester_tenant_id, requester_account_id], references: [tenant_id, id], onUpdate: NoAction, map: "registration_exchange_requester_fk")
+
   @@schema("mesh")
 }
 
@@ -8564,6 +8852,7 @@ model entity_contract {
   received_at             DateTime            @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
   status                  String              @default("staged")
   status_changed_at       DateTime?           @db.Timestamptz(6)
+  entity_case             entity_case[]
   document_envelope       document_envelope[]
   tenant                  tenant?             @relation(fields: [tenant_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "runtime_entity_contract_tenant_fk")
   entity_descriptor       entity_descriptor[]
@@ -9249,6 +9538,35 @@ model content_item_version {
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model entity_case_snapshot_lineage {
+  id                                                                                                           String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                                    String                   @db.Uuid
+  entity_case_id                                                                                               String                   @db.Uuid
+  source_snapshot_id                                                                                           String                   @db.Uuid
+  target_snapshot_id                                                                                           String                   @db.Uuid
+  lineage_role                                                                                                 String
+  source_member_path                                                                                           String?
+  target_authority_type                                                                                        String?
+  target_authority_id                                                                                          String?                  @db.Uuid
+  transformation_code                                                                                          String
+  transformation_version                                                                                       String
+  evidence_hash                                                                                                String                   @db.Char(64)
+  created_at                                                                                                   DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by                                                                                                   String                   @db.Uuid
+  principal                                                                                                    principal                @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "entity_case_snapshot_lineage_actor_fk")
+  entity_case                                                                                                  entity_case              @relation(fields: [tenant_id, entity_case_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_snapshot_lineage_case_fk")
+  entity_snapshot_identity_entity_case_snapshot_lineage_tenant_id_source_snapshot_idToentity_snapshot_identity entity_snapshot_identity @relation("entity_case_snapshot_lineage_tenant_id_source_snapshot_idToentity_snapshot_identity", fields: [tenant_id, source_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_snapshot_lineage_source_fk")
+  entity_snapshot_identity_entity_case_snapshot_lineage_tenant_id_target_snapshot_idToentity_snapshot_identity entity_snapshot_identity @relation("entity_case_snapshot_lineage_tenant_id_target_snapshot_idToentity_snapshot_identity", fields: [tenant_id, target_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_case_snapshot_lineage_target_fk")
+
+  @@unique([tenant_id, entity_case_id, source_snapshot_id, target_snapshot_id, lineage_role, source_member_path, target_authority_type, target_authority_id], map: "entity_case_snapshot_lineage_edge_uq")
+  @@unique([tenant_id, id], map: "entity_case_snapshot_lineage_tenant_uq")
+  @@index([tenant_id, entity_case_id, created_at], map: "entity_case_snapshot_lineage_case_idx")
+  @@index([tenant_id, target_authority_type, target_authority_id], map: "entity_case_snapshot_lineage_target_idx", where: raw("(target_authority_id IS NOT NULL)"))
+  @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_snapshot {
@@ -9266,35 +9584,46 @@ model entity_snapshot {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model entity_snapshot_identity {
-  id                             String                     @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                      String                     @db.Uuid
-  entity_type                    String
-  entity_id                      String                     @db.Uuid
-  entity_code                    String?
-  version_number                 Int
-  payload_schema_version         Int
-  entity_contract_hash           String
-  source_record_version          BigInt?
-  capture_event                  String
-  capture_kind                   String
-  payload_hash                   String
-  previous_snapshot_id           String?                    @db.Uuid
-  previous_payload_hash          String?
-  chain_seq                      Int
-  correlation_id                 String?                    @db.Uuid
-  audit_event_id                 String?                    @db.Uuid
-  valid_from                     DateTime?                  @db.Timestamptz(6)
-  valid_until                    DateTime?                  @db.Timestamptz(6)
-  retention_class                String                     @default("standard")
-  payload_size_bytes             BigInt
-  captured_at                    DateTime                   @default(now()) @db.Timestamptz(6)
-  captured_by                    String                     @db.Uuid
-  capture_source                 String                     @default("application")
-  entity_snapshot                entity_snapshot?
-  principal                      principal                  @relation(fields: [tenant_id, captured_by], references: [tenant_id, id], onUpdate: NoAction, map: "entity_snapshot_identity_captured_by_fk")
-  entity_snapshot_identity       entity_snapshot_identity?  @relation("entity_snapshot_identityToentity_snapshot_identity", fields: [tenant_id, previous_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_snapshot_identity_previous_fk")
-  other_entity_snapshot_identity entity_snapshot_identity[] @relation("entity_snapshot_identityToentity_snapshot_identity")
-  tenant                         tenant                     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "entity_snapshot_identity_tenant_fk")
+  id                                                                                                               String                         @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                                        String                         @db.Uuid
+  entity_type                                                                                                      String
+  entity_id                                                                                                        String                         @db.Uuid
+  entity_code                                                                                                      String?
+  version_number                                                                                                   Int
+  payload_schema_version                                                                                           Int
+  entity_contract_hash                                                                                             String
+  source_record_version                                                                                            BigInt?
+  capture_event                                                                                                    String
+  capture_kind                                                                                                     String
+  payload_hash                                                                                                     String
+  previous_snapshot_id                                                                                             String?                        @db.Uuid
+  previous_payload_hash                                                                                            String?
+  chain_seq                                                                                                        Int
+  correlation_id                                                                                                   String?                        @db.Uuid
+  audit_event_id                                                                                                   String?                        @db.Uuid
+  valid_from                                                                                                       DateTime?                      @db.Timestamptz(6)
+  valid_until                                                                                                      DateTime?                      @db.Timestamptz(6)
+  retention_class                                                                                                  String                         @default("standard")
+  payload_size_bytes                                                                                               BigInt
+  captured_at                                                                                                      DateTime                       @default(now()) @db.Timestamptz(6)
+  captured_by                                                                                                      String                         @db.Uuid
+  capture_source                                                                                                   String                         @default("application")
+  entity_case_entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity                                  entity_case[]                  @relation("entity_case_tenant_id_current_snapshot_idToentity_snapshot_identity")
+  entity_case_entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity                                 entity_case[]                  @relation("entity_case_tenant_id_decision_snapshot_idToentity_snapshot_identity")
+  entity_case_entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity                                   entity_case[]                  @relation("entity_case_tenant_id_result_snapshot_idToentity_snapshot_identity")
+  entity_case_entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity                                entity_case[]                  @relation("entity_case_tenant_id_submitted_snapshot_idToentity_snapshot_identity")
+  entity_case_command_evidence                                                                                     entity_case_command_evidence[]
+  entity_case_materialization_entity_case_materialization_tenant_id_result_snapshot_idToentity_snapshot_identity   entity_case_materialization[]  @relation("entity_case_materialization_tenant_id_result_snapshot_idToentity_snapshot_identity")
+  entity_case_materialization_entity_case_materialization_tenant_id_source_snapshot_idToentity_snapshot_identity   entity_case_materialization[]  @relation("entity_case_materialization_tenant_id_source_snapshot_idToentity_snapshot_identity")
+  entity_case_validation                                                                                           entity_case_validation[]
+  cycle_subject                                                                                                    cycle_subject[]
+  entity_case_snapshot_lineage_entity_case_snapshot_lineage_tenant_id_source_snapshot_idToentity_snapshot_identity entity_case_snapshot_lineage[] @relation("entity_case_snapshot_lineage_tenant_id_source_snapshot_idToentity_snapshot_identity")
+  entity_case_snapshot_lineage_entity_case_snapshot_lineage_tenant_id_target_snapshot_idToentity_snapshot_identity entity_case_snapshot_lineage[] @relation("entity_case_snapshot_lineage_tenant_id_target_snapshot_idToentity_snapshot_identity")
+  entity_snapshot                                                                                                  entity_snapshot?
+  principal                                                                                                        principal                      @relation(fields: [tenant_id, captured_by], references: [tenant_id, id], onUpdate: NoAction, map: "entity_snapshot_identity_captured_by_fk")
+  entity_snapshot_identity                                                                                         entity_snapshot_identity?      @relation("entity_snapshot_identityToentity_snapshot_identity", fields: [tenant_id, previous_snapshot_id], references: [tenant_id, id], onUpdate: NoAction, map: "entity_snapshot_identity_previous_fk")
+  other_entity_snapshot_identity                                                                                   entity_snapshot_identity[]     @relation("entity_snapshot_identityToentity_snapshot_identity")
+  tenant                                                                                                           tenant                         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "entity_snapshot_identity_tenant_fk")
 
   @@id([tenant_id, id])
   @@unique([tenant_id, entity_type, entity_id, payload_hash], map: "entity_snapshot_identity_entity_hash_uq")

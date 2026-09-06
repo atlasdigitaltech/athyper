@@ -22,9 +22,10 @@ export function registerIamRoutes(application: Application, options: IamRouteOpt
   registerContractRoute(application, defineRouteContract({
     method: "get", path: "/api/iam/me", operationId: "iam.getCurrentPrincipal",
     summary: "Get the verified request principal", tags: ["IAM"], authenticated: true, permission: "iam.profile.read",
-    responses: { 200: { description: "Verified principal", body: { type: "object" } }, 401: { description: "Authentication required" }, 403: { description: "Authentication rejected" } },
+    responses: { 200: { description: "Verified principal", body: { type: "object" } }, 401: { description: "Authentication required" }, 403: { description: "Authentication rejected" }, 503: { description: "Authentication authority unavailable" } },
   }), authenticate, (_request, response) => {
     const context = response.locals[CONTEXT_LOCAL] as VerifiedRequestContext;
+    response.setHeader("Cache-Control", "private, no-store");
     response.status(200).json({
       planeKey: context.planeKey,
       realmKey: context.realmKey,
@@ -45,9 +46,9 @@ function registerProvisioningRoute(application: Application, authenticate: Reque
     permission: "iam.provisioning.create",
     request: {
       headers: { type: "object", properties: { "idempotency-key": { type: "string", minLength: 16, maxLength: 128 } } },
-      body: { type: "object", properties: { identifier: { type: "string" }, realmKey: { type: "string" }, planes: { type: "array", items: { type: "string", enum: ["studio", "neon", "mesh"] } } }, required: ["identifier", "planes"] },
+      body: { type: "object", properties: { identifier: { type: "string" }, realmKey: { type: "string" }, planes: { type: "array", minItems: 1, items: { type: "string", enum: ["studio", "neon", "mesh"] } } }, required: ["identifier", "planes"] },
     },
-    responses: { 201: { description: "Provisioning request created", body: { type: "object" } }, 200: { description: "Idempotent replay", body: { type: "object" } }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 409: { description: "Idempotency conflict" }, 428: { description: "Idempotency key required" } },
+    responses: { 201: { description: "Provisioning request created", body: { type: "object" } }, 200: { description: "Idempotent replay", body: { type: "object" } }, 400: { description: "Invalid request" }, 401: { description: "Authentication required" }, 403: { description: "Forbidden" }, 503: { description: "Authentication authority unavailable" }, 409: { description: "Idempotency conflict" }, 428: { description: "Idempotency key required" } },
   }), authenticate, async (request, response, next) => {
     try {
       const value = request.body as { identifier?: unknown; realmKey?: unknown; planes?: unknown };

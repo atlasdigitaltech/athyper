@@ -8,6 +8,7 @@ import { createContainer } from "../../composition/create-container.js";
 import { registerAdapters } from "../../composition/register-adapters.js";
 import { registerPlatform } from "../../composition/register-platform.js";
 import { registerRuntimes } from "../../composition/register-runtimes.js";
+import { registerBusinessPartnerMetrics } from "../../composition/register-business-partner-metrics.js";
 import { registerServices } from "../../composition/register-services.js";
 import { captureOperationalError } from "../../monitoring/error-collector.js";
 
@@ -19,9 +20,12 @@ export async function start(): Promise<void> {
   registerRuntimes(container, config, lifecycle);
   registerPlatform(container, config);
   registerServices(container, {}, config);
+  registerBusinessPartnerMetrics(container, lifecycle, config.businessPartnerMetricsTargets ?? []);
 
   const drainController = new HttpDrainController();
+  let startupComplete = false;
   const app = createHttpApplication({
+    isReady: () => startupComplete,
     healthRegistry: container.runtimes.health,
     environment: config.env,
     onUnexpectedError(error, request) {
@@ -84,5 +88,6 @@ export async function start(): Promise<void> {
     });
   });
 
-  await lifecycle.signalReady();
+  await lifecycle.signalReady({ failOnError: true });
+  startupComplete = true;
 }

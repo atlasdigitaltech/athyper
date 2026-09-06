@@ -2,13 +2,8 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - develop
+    branches: ["**"]
   pull_request:
-    branches:
-      - main
-      - develop
   # Cleanup-plan v5 P5c — manual trigger for the screenshot parity gate
   # while activation prereqs land. See tests/e2e/README.md.
   workflow_dispatch:
@@ -123,6 +118,12 @@ jobs:
 
       - name: Verify OpenAPI route contracts and operation IDs
         run: pnpm run openapi:check
+
+      - name: Verify development URL catalogue coverage
+        run: pnpm run urls:check
+
+      - name: Test URL catalogue extraction
+        run: pnpm run test:url-catalogue
 
       - name: Verify DDL service coverage policy and generated artifact
         run: pnpm run ddl:coverage:check

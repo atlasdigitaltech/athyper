@@ -30,7 +30,7 @@ export interface RouteContract {
 }
 
 export interface ContractIssue {
-  readonly code: "DUPLICATE_OPERATION_ID" | "DUPLICATE_ROUTE" | "UNDOCUMENTED_ROUTE" | "MISSING_PERMISSION";
+  readonly code: "DUPLICATE_OPERATION_ID" | "DUPLICATE_ROUTE" | "UNDOCUMENTED_ROUTE" | "MISSING_PERMISSION" | "UNINSPECTABLE_ROUTE";
   readonly message: string;
 }
 
@@ -92,7 +92,9 @@ export function auditRouteContracts(application: Application, ignoredPaths: read
     if (routes.has(key)) issues.push({ code: "DUPLICATE_ROUTE", message: `Duplicate HTTP route contract: ${contract.method.toUpperCase()} ${contract.path}` });
     routes.add(key);
   }
-  for (const route of expressRoutes(application)) {
+  const registered = expressRoutes(application);
+  issues.push(...registered.issues);
+  for (const route of registered.routes) {
     if (!routes.has(`${route.method} ${route.path}`) && !ignoredPaths.includes(route.path)) {
       issues.push({ code: "UNDOCUMENTED_ROUTE", message: `Undocumented HTTP route: ${route.method.toUpperCase()} ${route.path}` });
     }
@@ -119,7 +121,10 @@ export function createOpenApiDocument(application: Application, info: { readonly
     };
     if (route.authenticated) operation["security"] = [{ bearerAuth: [] }];
     const parameters: Array<Record<string, unknown>> = [];
-    for (const match of route.path.matchAll(/:([A-Za-z0-9_]+)/g)) parameters.push({ name: match[1], in: "path", required: true, schema: { type: "string" } });
+    const pathProperties = route.request?.params
+      ? jsonSchema(route.request.params)["properties"] as Record<string, unknown> | undefined
+      : undefined;
+    for (const match of route.path.matchAll(/:([A-Za-z0-9_]+)/g)) parameters.push({ name: match[1], in: "path", required: true, schema: pathProperties?.[match[1]!] ?? { type: "string" } });
     addSchemaParameters(parameters, "header", route.request?.headers);
     addSchemaParameters(parameters, "query", route.request?.query);
     if (parameters.length) operation["parameters"] = parameters;
@@ -155,12 +160,30 @@ function addSchemaParameters(target: Array<Record<string, unknown>>, location: "
   for (const name of new Set([...Object.keys(properties), ...required])) target.push({ name, in: location, required: required.includes(name), schema: properties[name] ?? { type: "string" } });
 }
 
-function expressRoutes(application: Application): Array<{ method: HttpMethod; path: string }> {
-  const router = (application as unknown as { router?: { stack?: Array<{ route?: { path?: unknown; methods?: Record<string, boolean> } }> } }).router;
-  return (router?.stack ?? []).flatMap((layer) => {
-    if (!layer.route || typeof layer.route.path !== "string") return [];
-    return Object.entries(layer.route.methods ?? {}).filter(([, enabled]) => enabled).map(([method]) => ({ method: method as HttpMethod, path: layer.route!.path as string })).filter((item) => ["get", "post", "put", "patch", "delete"].includes(item.method));
-  });
+function expressRoutes(application: Application): { routes: Array<{ method: string; path: string }>; issues: ContractIssue[] } {
+  type Layer = { route?: { path?: unknown; methods?: Record<string, boolean> }; handle?: { stack?: unknown[] } };
+  const router = (application as unknown as { router?: { stack?: Layer[] } }).router;
+  const routes: Array<{ method: string; path: string }> = [];
+  const issues: ContractIssue[] = [];
+  for (const layer of router?.stack ?? []) {
+    if (layer.handle?.stack) {
+      // Express 5 does not expose original mount paths. Silently skipping nested
+      // routers would falsely report complete coverage. Register full paths on the host.
+      issues.push({ code: "UNINSPECTABLE_ROUTE", message: "Mounted Express router cannot be audited; register full paths through registerContractRoute on the host" });
+    }
+    if (!layer.route) continue;
+    const paths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
+    for (const path of paths) {
+      if (typeof path !== "string") {
+        issues.push({ code: "UNINSPECTABLE_ROUTE", message: "Non-literal Express route cannot be represented in OpenAPI" });
+        continue;
+      }
+      for (const [method, enabled] of Object.entries(layer.route.methods ?? {})) {
+        if (enabled) routes.push({ method, path });
+      }
+    }
+  }
+  return { routes, issues };
 }
 
 export function validateRuntimeSchema(schema: RuntimeSchema, value: unknown): unknown {

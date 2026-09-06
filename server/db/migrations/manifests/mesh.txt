@@ -1,1 +1,2 @@
 # Canonical local-development baseline. Add post-baseline Mesh migrations below.
+20260906_mesh_exchange_readiness.sql

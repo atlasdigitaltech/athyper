@@ -25,6 +25,8 @@ export function registerNotificationRoutes(
     readonly inbox: InAppNotificationRepository;
     readonly push: PushSubscriptionRepository;
     readonly webPushPublicKey?: string;
+    /** True only when a transport supporting browser push is registered. */
+    readonly webPushAvailable?: boolean;
     readonly events: NotificationEventPublisher & NotificationEventSubscriber;
     readonly preferences?: ReturnType<
       typeof createNotificationPreferenceService
@@ -37,7 +39,9 @@ export function registerNotificationRoutes(
     contracts.pushConfiguration,
     options.authenticate,
     (_request, response) => {
-      const publicKey = options.webPushPublicKey?.trim();
+      const publicKey = options.webPushAvailable
+        ? options.webPushPublicKey?.trim()
+        : undefined;
       response.status(200).json({
         webPush: {
           available: Boolean(publicKey),
@@ -246,7 +250,7 @@ export function registerNotificationRoutes(
           response.status(404).json({ error: "NOTIFICATION_NOT_FOUND" });
           return;
         }
-        await options.events.publish({
+        await publishInboxEvent(options.events, {
           type: "notification.read",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -273,7 +277,7 @@ export function registerNotificationRoutes(
           planeKey: context.planeKey,
           readAt: occurredAt,
         });
-        await options.events.publish({
+        await publishInboxEvent(options.events, {
           type: "notification.refresh",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -305,7 +309,7 @@ export function registerNotificationRoutes(
           response.status(404).json({ error: "NOTIFICATION_NOT_FOUND" });
           return;
         }
-        await options.events.publish({
+        await publishInboxEvent(options.events, {
           type: "notification.refresh",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -396,6 +400,24 @@ export function registerNotificationRoutes(
     },
   );
 }
+const uuidExpression =
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
+
+// The inbox transaction has committed before fan-out. An optional SSE/Redis
+// failure must not report the persisted mutation as a failed request.
+async function publishInboxEvent(
+  publisher: NotificationEventPublisher,
+  event: Parameters<NotificationEventPublisher["publish"]>[0],
+): Promise<void> {
+  try {
+    await publisher.publish(event);
+  } catch {
+    console.warn(
+      `[notifications] inbox_event_publish_failed type=${event.type}`,
+    );
+  }
+}
+
 const errorSchema = {
   type: "object",
   additionalProperties: false,
@@ -488,11 +510,18 @@ const contracts = {
         type: "object",
         additionalProperties: false,
         required: ["id"],
-        properties: { id: { type: "string", format: "uuid" } },
+        properties: {
+          id: {
+            type: "string",
+            format: "uuid",
+            pattern: uuidExpression.source,
+          },
+        },
       },
     },
     responses: {
       204: { description: "Notification dismissed" },
+      400: { description: "Invalid notification ID" },
       401: { description: "Authentication required" },
       404: { description: "Notification not found", body: errorSchema },
     },
@@ -507,12 +536,7 @@ function integer(value: unknown, fallback: number) {
 }
 function uuid(value: unknown) {
   const normalized = String(value ?? "");
-  if (
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-      normalized,
-    )
-  )
-    throw new TypeError("Invalid UUID");
+  if (!uuidExpression.test(normalized)) throw new TypeError("Invalid UUID");
   return normalized;
 }
 function record(value: unknown): Record<string, unknown> {

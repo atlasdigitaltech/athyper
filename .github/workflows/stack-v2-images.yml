@@ -23,6 +23,9 @@ permissions:
   contents: read
 
 jobs:
+  openapi-policy:
+    uses: ./.github/workflows/openapi-policy.yml
+
   authorize:
     name: Confirm publication
     runs-on: ubuntu-latest
@@ -38,7 +41,7 @@ jobs:
 
   publish:
     name: Build, scan, publish / ${{ matrix.id }}
-    needs: authorize
+    needs: [authorize, openapi-policy]
     runs-on: ubuntu-latest
     permissions:
       contents: read

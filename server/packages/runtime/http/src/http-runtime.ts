@@ -15,6 +15,10 @@ import { assertRouteContracts, configureContractRouteMiddleware, createOpenApiDo
 
 export interface HttpRuntimeOptions {
   readonly healthRegistry?: HealthRegistry;
+  /** Maximum wait per dependency check; defaults to 2 seconds. */
+  readonly healthCheckTimeoutMs?: number;
+  /** Host startup gate; dependencies are checked only after initialization completes. */
+  readonly isReady?: () => boolean;
   readonly jsonLimit?: string;
   readonly configure?: (application: Application) => void;
   readonly exposeErrorDetails?: boolean;
@@ -102,6 +106,9 @@ const requestAbortSignals = new WeakMap<Request, AbortSignal>();
 export function getRequestAbortSignal(request: Request): AbortSignal { return requestAbortSignals.get(request) ?? new AbortController().signal; }
 
 export function createHttpApplication(options: HttpRuntimeOptions = {}): Application {
+  const healthCheckTimeoutMs = options.healthCheckTimeoutMs ?? 2_000;
+  if (!Number.isSafeInteger(healthCheckTimeoutMs) || healthCheckTimeoutMs < 1) throw new TypeError("Health check timeout must be a positive integer");
+  const pendingChecks = new WeakMap<() => Promise<HealthContribution>, Promise<HealthContribution>>();
   const app = express();
   const openApi = options.openApi === false ? undefined : options.openApi ?? { title: "Athyper API", version: "0.1.0" };
   app.disable("x-powered-by");
@@ -139,11 +146,15 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
     response.status(200).json({ status: "alive", timestamp: new Date().toISOString() });
   });
   const readiness = async (_request: Request, response: Response): Promise<void> => {
+    if (options.drainController?.isDraining || options.isReady?.() === false) {
+      response.status(503).json({ status: "unhealthy", checks: {} });
+      return;
+    }
     const checks = options.healthRegistry?.entries() ?? [];
     const results = await Promise.all(
-      checks.map(async ([name, check]) => [name, await safeHealthCheck(check)] as const),
+      checks.map(async ([name, check]) => [name, await safeHealthCheck(check, healthCheckTimeoutMs, pendingChecks)] as const),
     );
-    const status = results.some(([, result]) => result.status === "unhealthy")
+    const status = options.drainController?.isDraining || options.isReady?.() === false || results.some(([, result]) => result.status === "unhealthy")
       ? "unhealthy"
       : results.some(([, result]) => result.status === "degraded")
         ? "degraded"
@@ -200,7 +211,9 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
 function createRequestCancellationMiddleware(timeoutMs: number | undefined, drain: HttpDrainController | undefined): RequestHandler {
   if (timeoutMs !== undefined && (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1)) throw new Error("HTTP request deadline must be a positive integer");
   return (request, response, next) => {
-    if (drain?.isDraining) {
+    const probe = (request.method === "GET" || request.method === "HEAD") && /^\/(livez|readyz|healthz|health)\/?$/i.test(request.path);
+    if (probe) response.setHeader("Cache-Control", "no-store");
+    if (drain?.isDraining && !probe) {
       response.setHeader("Connection", "close");
       sendProblem(response, request, new HttpError(503, "SERVER_DRAINING", "The server is draining and cannot accept new requests"));
       return;
@@ -260,7 +273,23 @@ function consumeLocal(entries: Map<string, { startedAt: number; count: number }>
 }
 
 function systemContract(method: "get", path: string, operationId: string): RouteContract {
-  return defineRouteContract({ method, path, operationId, summary: operationId, tags: ["System"], responses: { 200: { description: "Service status" }, 503: { description: "Service unavailable" } } });
+  const liveness = path === "/livez";
+  const body = liveness
+    ? { type: "object", required: ["status", "timestamp"], properties: { status: { const: "alive" }, timestamp: { type: "string" } }, additionalProperties: false }
+    : { type: "object", required: ["status", "checks"], properties: {
+      status: { enum: ["healthy", "degraded", "unhealthy"] },
+      checks: { type: "object", additionalProperties: { type: "object", required: ["status"], properties: {
+        status: { enum: ["healthy", "degraded", "unhealthy"] }, message: { type: "string" }, latencyMs: { type: "number" },
+      } } },
+    }, additionalProperties: false };
+  const summary = liveness ? "Process liveness (independent of dependencies)"
+    : path === "/readyz" ? "Readiness: healthy or degraded returns 200; unavailable returns 503"
+      : "Compatibility alias of GET /readyz (identical checks and status codes)";
+  const responses: Record<number, RouteContract["responses"][number]> = {
+    200: { description: liveness ? "Process is alive" : "Service is healthy or degraded", body },
+  };
+  if (!liveness) responses[503] = { description: "Service is starting, draining, or a dependency is unhealthy", body };
+  return defineRouteContract({ method, path, operationId, summary, tags: ["System"], responses });
 }
 
 function swaggerUi(title: string, artifactPath: string): string {
@@ -272,11 +301,32 @@ function escapeHtml(value: string): string { return value.replace(/[&<>"']/g, (c
 
 async function safeHealthCheck(
   check: () => Promise<HealthContribution>,
+  timeoutMs: number,
+  pending: WeakMap<() => Promise<HealthContribution>, Promise<HealthContribution>>,
 ): Promise<HealthContribution> {
+  let work = pending.get(check);
+  if (!work) {
+    work = Promise.resolve().then(check).then((result): HealthContribution => {
+      if (!result || !["healthy", "degraded", "unhealthy"].includes(result.status)) {
+        return { status: "unhealthy", message: "Invalid health check result" };
+      }
+      return result;
+    }).catch((): HealthContribution => ({ status: "unhealthy", message: "Health check failed" }))
+      .finally(() => pending.delete(check));
+    pending.set(check, work);
+  }
+  // Keep timed-out work registered until it settles: probes must not pile up
+  // more database/network operations behind an already stuck dependency.
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await check();
-  } catch {
-    return { status: "unhealthy", message: "Health check failed" };
+    return await Promise.race([
+      work,
+      new Promise<HealthContribution>((resolve) => {
+        timer = setTimeout(() => resolve({ status: "unhealthy", message: "Health check timed out" }), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 

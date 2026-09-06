@@ -191,8 +191,12 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
   const logout = async (request: Request): Promise<Response> => {
     let unsafeRequestValidated = false;
     try {
+      // Cross-site POST navigations can omit SameSite=Lax session cookies.
+      // Validate the caller even when anonymous before issuing cookie expiry.
+      const expectedOrigin = new URL(config.redirectUri).origin;
+      if (request.headers.get("origin") !== expectedOrigin || request.headers.get("sec-fetch-site") !== "same-origin") throw new AuthFlowError("auth.csrf_invalid", 403, "The logout request could not be verified");
       const command = await readLogoutCommand(request); const rawId = readCookie(request.headers.get("cookie"), cookieName);
-      if (rawId && config.deriveCsrfToken) { validateUnsafeSessionRequest(request, new URL(config.redirectUri).origin, csrfExpectations(config, rawId), command.csrfToken); unsafeRequestValidated = true; }
+      if (rawId) { validateUnsafeSessionRequest(request, expectedOrigin, csrfExpectations(config, rawId), command.csrfToken); unsafeRequestValidated = true; }
       if (command.scope === "global") {
         if (!rawId || !config.postLogoutRedirectUri) throw new AuthFlowError("auth.unauthenticated", 401, "No authenticated session is available for global logout");
         const id = hashOpaqueSessionId(rawId); const current = await currentById(id);
@@ -236,36 +240,19 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     } finally { await config.store.releaseRefreshLock(binding, id, owner); }
   });
   const backchannelLogout = run(async (request) => { const contentType = request.headers.get("content-type") ?? ""; const body = contentType.includes("application/json") ? await request.json() as { logout_token?: string } : Object.fromEntries(new URLSearchParams(await request.text())); const token = required(body.logout_token, "logout_token"); const identity = await config.provider.verifyBackchannelLogoutToken(token); validateBackchannel(identity, config, now(), logoutTokenMaxAge); const claimed = await config.store.claimLogoutToken(binding, hashOpaqueSessionId(identity.tokenId), logoutTokenMaxAge); if (!claimed) { config.observeSecurityEvent?.({ type: "backchannel_logout", plane: config.plane, outcome: "replay", revokedSessions: 0 }); return new Response(null, { status: 204 }); } const revoked = await config.store.revokeProviderSession(binding, identity.providerSessionId); config.observeSecurityEvent?.({ type: "backchannel_logout", plane: config.plane, outcome: revoked > 0 ? "revoked" : "no_match", revokedSessions: revoked }); return new Response(null, { status: 204 }); });
-  const elevateFromTrustedDevice = async (request: Request, requireDevice: boolean, suppliedCsrfToken?: string): Promise<Response | undefined> => {
+  const requireStepUpSession = async (request: Request, suppliedCsrfToken?: string): Promise<string> => {
     const rawId = readCookie(request.headers.get("cookie"), cookieName); if (!rawId) throw new AuthFlowError("auth.unauthenticated", 401, "No session");
     if (config.deriveCsrfToken) validateUnsafeSessionRequest(request, new URL(config.redirectUri).origin, csrfExpectations(config, rawId), suppliedCsrfToken);
     const id = hashOpaqueSessionId(rawId); const current = await currentById(id);
     if (!current?.tenantId || !current.encryptedTokenBundle) throw new AuthFlowError("auth.unauthenticated", 401, "No active tenant session");
-    const deviceToken = readCookie(request.headers.get("cookie"), trustedCookieName);
-    if (!deviceToken || !config.verifyTrustedDevice) {
-      if (requireDevice) throw new AuthFlowError("auth.step_up_required", 403, "Interactive step-up is required");
-      return undefined;
-    }
-    const effectiveAt = now();
-    const decision = await config.verifyTrustedDevice({ plane: config.plane, realmKey: config.realmKey, tenantId: current.tenantId, principalId: current.principalId, authEpoch: current.authEpoch, deviceTokenHash: createHash("sha256").update(deviceToken, "utf8").digest("hex"), sealedTokens: current.encryptedTokenBundle, effectiveAt });
-    if (!decision.active || !decision.expiresAt || decision.expiresAt <= effectiveAt) {
-      const denied = problemFrom(new AuthFlowError("auth.step_up_required", 403, "Interactive step-up is required"));
-      denied.headers.append("set-cookie", clearCookie(trustedCookieName, config.production)); return denied;
-    }
-    const replacement = elevateSession(current, effectiveAt, config.elevationTtlMs, decision.expiresAt);
-    const replacementId = randomBytes(32).toString("base64url");
-    await config.store.rotate(binding, id, hashOpaqueSessionId(replacementId), replacement);
-    const response = json(toSafe(replacement));
-    response.headers.append("set-cookie", cookie(cookieName, replacementId, config.production));
-    if (config.deriveCsrfToken) response.headers.append("set-cookie", csrfCookie(csrfCookieName, config.deriveCsrfToken(replacementId), config.production));
-    return response;
+    return id;
   };
   const stepUpStart = run(async (request) => {
     const contentType=request.headers.get("content-type")??"";
     const suppliedCsrfToken=contentType.includes("application/x-www-form-urlencoded")?new URLSearchParams(await request.text()).get("csrfToken")??undefined:undefined;
-    const remembered = await elevateFromTrustedDevice(request, false, suppliedCsrfToken); if (remembered) return remembered;
-    const rawId = readCookie(request.headers.get("cookie"), cookieName); if (!rawId) throw new AuthFlowError("auth.unauthenticated", 401, "No session");
-    const id = hashOpaqueSessionId(rawId); if (!await currentById(id)) throw new AuthFlowError("auth.unauthenticated", 401, "Session expired");
+    // Runtime derives assurance from issuer tokens. A device cookie cannot
+    // upgrade those tokens, so every step-up must complete the OIDC callback.
+    const id = await requireStepUpSession(request, suppliedCsrfToken);
     const url = new URL(request.url); const browserBinding = randomBytes(32).toString("base64url"); const transaction = { ...(await createPkceTransaction({ returnTo: sanitizeReturnTo(url.searchParams.get("returnTo") ?? "/"), browserBinding, now: now() })), purpose: "step_up" as const, sessionIdHash: id, ...(url.searchParams.get("rememberDevice") === "true" ? { rememberDevice: true } : {}) };
     await config.store.putOneTimeState(binding, oauthStateHash(transaction.state, transaction.browserBindingHash), JSON.stringify(transaction), stateTtl);
     const authorization = new URL(`${config.issuer.replace(/\/$/, "")}/protocol/openid-connect/auth`);
@@ -273,7 +260,12 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     authorization.searchParams.set("ui_locales", requestUiLocale(request, url));
     return new Response(null, { status: 302, headers: { location: authorization.toString(), "cache-control": "no-store", "set-cookie": transientCookie(oauthCookieName, browserBinding, stateTtl, config.production) } });
   });
-  const mfaVerify = run((request) => elevateFromTrustedDevice(request, true).then((response) => response!));
+  // Compatibility endpoint: MFA challenges are verified by the issuer and
+  // completed through /api/auth/callback, never by a local device-cookie check.
+  const mfaVerify = run(async (request) => {
+    await requireStepUpSession(request);
+    throw new AuthFlowError("auth.step_up_required", 403, "Start interactive MFA at /api/auth/step-up/start");
+  });
   return { login, callback, logout, logoutCallback, session, contexts, context, touch, refresh, backchannelLogout, stepUpStart, mfaVerify };
 }
 
@@ -354,6 +346,11 @@ function cookie(name: string, value: string, production = false): string { retur
 function transientCookie(name: string, value: string, ttlMs: number, production = false): string { return `${name}=${value}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.max(1, Math.floor(ttlMs / 1_000))}${production ? "; Secure" : ""}`; }
 function persistentSecretCookie(name: string, value: string, ttlMs: number, production = false): string { return `${name}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${Math.max(1, Math.floor(ttlMs / 1_000))}${production ? "; Secure" : ""}`; }
 function clearCookie(name: string, production = false, httpOnly = true): string { return `${name}=; Path=/;${httpOnly ? " HttpOnly;" : ""} SameSite=Lax; Max-Age=0${production ? "; Secure" : ""}`; }
+/** Cookie expirations issued by the session authority after server revocation. */
+export function clearedAuthSessionCookies(production = false): readonly string[] {
+  const prefix = production ? "__Host-" : "";
+  return [clearCookie(`${prefix}athyper-session`, production), clearCookie(`${prefix}athyper-csrf`, production, false)];
+}
 function csrfCookie(name: string, value: string, production = false): string { return `${name}=${value}; Path=/; SameSite=Strict${production ? "; Secure" : ""}`; }
 function withClearedCookies(response: Response, sessionCookie: string, csrfCookieName: string, production = false): Response { const headers = new Headers(response.headers); headers.append("set-cookie", clearCookie(sessionCookie, production)); headers.append("set-cookie", clearCookie(csrfCookieName, production, false)); headers.set("cache-control", "no-store"); return new Response(response.body, { status: response.status, statusText: response.statusText, headers }); }
 function redirect(location: string, setCookies: readonly string[]): Response { const response = new Response(null, { status: 303, headers: { location, "cache-control": "no-store" } }); for (const value of setCookies) response.headers.append("set-cookie", value); return response; }

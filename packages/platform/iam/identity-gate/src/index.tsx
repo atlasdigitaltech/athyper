@@ -29,7 +29,7 @@ const RECOVERY = Object.freeze({
   retry: { title: "We could not complete sign-in", message: "The sign-in request ended or could not be verified. Start a new secure sign-in to continue.", action: "Start again", mode: "retry" },
   expired: { title: "Your session has ended", message: "For your security, you have been signed out. Sign in again to continue your work.", action: "Sign in again", mode: "retry" },
   "signed-out": { title: "You are signed out", message: "Your application session has been closed securely.", action: "Sign in again", mode: "retry" },
-  "signed-out-everywhere": { title: "You are signed out everywhere", message: "Your Athyper identity session and participating application sessions have been closed.", action: "Sign in again", mode: "retry" },
+  "signed-out-everywhere": { title: "You are signed out of all Athyper applications", message: "Your Athyper identity session and participating application sessions have been closed.", action: "Sign in again", mode: "retry" },
   "logout-incomplete": { title: "Sign-out could not be fully verified", message: "This browser has discarded its application session, but server-side revocation could not be confirmed. Close this window and contact support if the issue continues.", action: "Return to sign-in", mode: "retry" },
 } satisfies Record<AuthRecoveryReason, { title: string; message: string; action: string; mode: "retry" | "switch" }>);
 
@@ -69,7 +69,7 @@ export function LogoutGatePage({ plane, csrfToken }: { readonly plane: BrandPlan
   return <AuthShell plane={plane}><div className="a-identity-panel"><Heading id="identity-title">Choose how to sign out</Heading><SupportingText>Close only this application, or end your Athyper identity session across all participating applications.</SupportingText>
     {!csrfToken ? <Notice title="Sign-out verification is unavailable" icon={<WarningIcon />} role="alert">Return to the application and try again. No session has been changed.</Notice> : <>
       <form action="/api/auth/logout" method="post"><input type="hidden" name="_csrf" value={csrfToken}/><input type="hidden" name="scope" value="application"/><ActionButton variant="primary" type="submit"><LockIcon />Sign out of {brand.shortName}</ActionButton></form>
-      <form action="/api/auth/logout" method="post"><input type="hidden" name="_csrf" value={csrfToken}/><input type="hidden" name="scope" value="global"/><ActionButton variant="secondary" type="submit">Sign out of Athyper everywhere</ActionButton></form>
+      <form action="/api/auth/logout" method="post"><input type="hidden" name="_csrf" value={csrfToken}/><input type="hidden" name="scope" value="global"/><ActionButton variant="secondary" type="submit">Sign out of all Athyper applications</ActionButton></form>
     </>}
     <MetaText>Application sign-out leaves your Athyper SSO session available. Global sign-out also ends participating Neon, Mesh and Studio sessions.</MetaText><ActionLink variant="ghost" href="/">Return to application</ActionLink></div></AuthShell>;
 }

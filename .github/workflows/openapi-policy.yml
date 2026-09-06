@@ -1,0 +1,45 @@
+name: OpenAPI policy
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    name: OpenAPI contracts and URL coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Determine comparison commit
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ -n "$PR_BASE_SHA" ]; then
+            echo "OPENAPI_BASE_REF=$(git merge-base HEAD "$PR_BASE_SHA")" >> "$GITHUB_ENV"
+          elif [ -n "$PUSH_BEFORE" ] && [ "$PUSH_BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            echo "OPENAPI_BASE_REF=$PUSH_BEFORE" >> "$GITHUB_ENV"
+          else
+            echo "OPENAPI_BASE_REF=$(git rev-parse HEAD^)" >> "$GITHUB_ENV"
+          fi
+      - run: pnpm test:openapi-policy
+      - run: pnpm test:url-catalogue
+      - run: pnpm openapi:bp360:check
+      - run: pnpm --filter @athyper/server-runtime-http test
+      - run: pnpm --filter @athyper/server-service-master-data test -- src/__tests__/business-partner-360-route-contracts.test.ts
+      - run: pnpm urls:check
+      - run: pnpm openapi:check

@@ -38,6 +38,7 @@ export interface JobEnvelope<
   readonly queue: string;
   readonly data: Payload;
   readonly attempt: number;
+  /** Total permitted attempts for this execution, including admitted manual retries. */
   readonly maxAttempts: number;
   readonly enqueuedAt: string;
   readonly correlationId?: string;

@@ -169,3 +169,73 @@ describe("experience effective-access projection", () => {
 
   it("resolves system, shared, tenant, and revision-bound personal layers in order",async()=>{let saved:unknown;const tenantDefinition={schema:"athyper-experience-surface/1",id:"neon.home",revision:3,scope:{kind:"home",plane:"neon"},title:"Tenant home",blocks:[{id:"visible.card",type:"text",text:"Visible"},{id:"hidden.card",type:"text",text:"Hidden"}]};const repo=repository({async readSurfaceProjections(){return[{surfaceKey:"neon.home",layer:"shared",sourceReleaseId:"shared",sourceRevision:2,definition:{...tenantDefinition,revision:2,title:"Shared home"},contentHash:"a".repeat(64)},{surfaceKey:"neon.home",layer:"tenant",sourceReleaseId:"tenant",sourceRevision:3,definition:tenantDefinition,contentHash:"b".repeat(64)}];},async readPersonalSurfaceArrangement(){return{surfaceKey:"neon.home",baseRevision:3,arrangement:{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:3,hidden:["hidden.card"],spans:{"visible.card":2}}};},async savePersonalSurfaceArrangement(_context,input){saved=input;return input;}});const projection=service(repo);await expect(projection.surface(context,"neon.home")).resolves.toMatchObject({surface:{title:"Tenant home",blocks:[{id:"visible.card",span:2}]},provenance:{systemRevision:1,sharedRevision:2,tenantRevision:3,personalApplied:true}});await projection.savePersonalArrangement(context,"neon.home",{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:3,hidden:[]});expect(saved).toMatchObject({surfaceKey:"neon.home",baseRevision:3});await expect(projection.savePersonalArrangement(context,"neon.home",{schema:"athyper-experience-arrangement/1",surfaceId:"neon.home",baseRevision:2})).rejects.toMatchObject({status:409,code:"EXPERIENCE_ARRANGEMENT_STALE"});});
 });
+
+
+describe("localization review regressions", () => {
+  const catalogs = LOCALE_REGISTRY.map(({code}) => ({localeCode:code,status:"qualified",coveragePct:100,linguisticReviewPassed:true,layoutReviewPassed:true,automatedTestsPassed:true}));
+  const policy = {catalogs,enabledLocales:["en","ar","fr"],defaultLocale:"ar",fallbackLocale:"en",revision:"policy:1"};
+  const studio: VerifiedRequestContext = {...context,planeKey:"studio",permissions:{...context.permissions,planeKey:"studio",allowed:["studio.platform.catalog.manage"]}};
+
+  it("uses the policy default for an inherited English profile while retaining personal choices", async () => {
+    const repo = repository({async readLocalePolicy(){return policy;},async readProfile(){return {tenant:{localeCode:"en-US"},revision:"1"};}});
+    expect(await service(repo).bootstrap(context)).toMatchObject({profile:{localeCode:"ar"},localization:{direction:"rtl",source:{uiLocale:"tenant"}}});
+    expect(await service({...repo,async readProfile(){return {principal:{localeCode:"fr-FR"},revision:"1"};}}).bootstrap(context)).toMatchObject({profile:{localeCode:"fr-FR"}});
+  });
+
+  it("does not qualify missing catalog evidence in an explicit governance record", async () => {
+    const result = await service(repository({async readLocalePolicy(){return {...policy,catalogs:catalogs.filter(row=>row.localeCode!=="ar")};}})).localePolicy(context);
+    expect(result.enabledLocales).not.toContain("ar");
+    expect(result.defaultLocale).toBe("en");
+  });
+
+  it("preserves a canonical regional preference, refreshes cached bootstrap, and changes context-not-ready revisions", async () => {
+    let localeCode = "en";
+    const base = await repository().readIdentity(context,new Date());
+    const repo = repository({async readIdentity(){return {...base!,subscriptionPlanId:undefined};},async readLocalePolicy(){return policy;},async readProfile(){return {principal:{localeCode},revision:"unchanged"};},async updatePrincipalLocale(_context,selected){localeCode=selected;}});
+    const projection = createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    const before = await projection.bootstrap(context);
+    const after = await projection.updatePrincipalLocale(context,"fr-fr");
+    expect(localeCode).toBe("fr-FR");
+    expect(after).toMatchObject({state:"context_not_ready",profile:{localeCode:"fr-FR"},localization:{formatLocale:"fr-FR"}});
+    expect(after.revision).not.toBe(before.revision);
+    expect(await projection.bootstrap(context)).toEqual(after);
+  });
+
+  it("rejects an inactive principal before writing even with a cached bootstrap", async () => {
+    let active=true,writes=0;
+    const base=await repository().readIdentity(context,new Date());
+    const repo=repository({async readIdentity(){return {...base!,principalStatus:active?"active":"disabled"};},async readLocalePolicy(){return policy;},async updatePrincipalLocale(){writes++;}});
+    const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    await projection.bootstrap(context);active=false;
+    await expect(projection.updatePrincipalLocale(context,"ar")).rejects.toMatchObject({status:403,code:"EXPERIENCE_PRINCIPAL_INACTIVE"});
+    expect(writes).toBe(0);
+  });
+
+  it("binds every localization operation to the authorization snapshot before repository access", async () => {
+    const projection=createExperienceService({repositories:{require(){throw new Error("must not access repository");}}});
+    const mismatched={...studio,tenantId:"another-tenant"};
+    for(const operation of [()=>projection.localePolicy(mismatched,"neon"),()=>projection.updateLocalePolicy(mismatched,"neon",policy),()=>projection.updatePrincipalLocale(mismatched,"en")]){
+      await expect(operation()).rejects.toMatchObject({status:403,code:"EXPERIENCE_AUTH_CONTEXT_MISMATCH"});
+    }
+  });
+
+  it("requires Studio catalog authority for cross-plane reads and all policy writes", async () => {
+    const projection=service();
+    await expect(projection.localePolicy(context,"mesh")).rejects.toMatchObject({status:403});
+    await expect(projection.updateLocalePolicy(context,"neon",policy)).rejects.toMatchObject({status:403});
+    await expect(projection.localePolicy({...studio,permissions:{...studio.permissions,allowed:[]}},"neon")).rejects.toMatchObject({status:403});
+  });
+
+  it("writes only the requested plane and invalidates its tenant's cached experience", async () => {
+    let current=policy;
+    const repo=repository({async readLocalePolicy(){return current;},async readProfile(){return {revision:"1"};},async updateLocalePolicy(target,input){expect(target).toMatchObject({planeKey:"neon",tenantId});current={...input,catalogs:input.catalogs!,revision:"2"} as typeof policy;return current;}});
+    const projection=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    expect((await projection.bootstrap(context)).profile.localeCode).toBe("ar");
+    await projection.updateLocalePolicy(studio,"neon",{...policy,defaultLocale:"fr"});
+    expect((await projection.bootstrap(context)).profile.localeCode).toBe("fr");
+  });
+
+  it.each(["invalid_locale","es-ES",""])("rejects unsupported or malformed principal locale %s", async (locale) => {
+    await expect(service(repository({async readLocalePolicy(){return policy;},async updatePrincipalLocale(){throw new Error("must not write");}})).updatePrincipalLocale(context,locale)).rejects.toMatchObject({status:400,code:"EXPERIENCE_LOCALE_NOT_ENABLED"});
+  });
+});

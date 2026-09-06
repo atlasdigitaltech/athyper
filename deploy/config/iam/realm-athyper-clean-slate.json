@@ -911,7 +911,10 @@
         "client.session.idle.timeout": "900",
         "client.session.max.lifespan": "14400",
         "client.offline.session.idle.timeout": "0",
-        "client.offline.session.max.lifespan": "0"
+        "client.offline.session.max.lifespan": "0",
+        "backchannel.logout.url": "http://studio-web:3000/api/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
@@ -1041,7 +1044,10 @@
         "dpop.bound.access.tokens": "false",
         "pkce.code.challenge.method": "S256",
         "realm_key": "athyper",
-        "plane": "mesh"
+        "plane": "mesh",
+        "backchannel.logout.url": "http://mesh-web:3000/api/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"
@@ -1142,7 +1148,10 @@
         "tenant_admin_surface": "neon_tenant_btp",
         "studio_plane_access": "false",
         "mutation_surface": "tenant_owned_neon_only",
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "backchannel.logout.url": "http://neon-web:3000/api/auth/backchannel-logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
       },
       "authenticationFlowBindingOverrides": {
         "browser": "c4f7b626-43ef-4cb4-a8df-b531dfc38d5a"

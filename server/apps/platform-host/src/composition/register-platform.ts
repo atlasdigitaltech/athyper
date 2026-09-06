@@ -89,6 +89,9 @@ export interface PlatformRegistrationDependencies {
     IamServiceOptions["resolveIdentityContext"]
   >;
   readonly provisioning?: ProvisioningVertical;
+  readonly verifyIdentityReplayApproval?: ConstructorParameters<
+    typeof IdentityReplayService
+  >[3];
 }
 
 export function registerPlatform(
@@ -255,7 +258,13 @@ export function registerPlatform(
   registerIdentitySagaWorker(container, config);
   if (studioDatabase)
     container.platform.httpRegistrars.push((application) =>
-      registerIdentitySagaRoutes(application, studioDatabase, iam, authorizer),
+      registerIdentitySagaRoutes(
+        application,
+        studioDatabase,
+        iam,
+        authorizer,
+        dependencies.verifyIdentityReplayApproval,
+      ),
     );
   container.platform.httpRegistrars.push((application) =>
     registerIamRoutes(application, {
@@ -423,12 +432,18 @@ function registerIdentitySagaRoutes(
   studio: NonNullable<Container["adapters"]["athyperDatabase"]>,
   iam: ReturnType<typeof createIamService>,
   authorizer: ReturnType<typeof createPermissionAuthorizer>,
+  verifyApproval?: ConstructorParameters<typeof IdentityReplayService>[3],
 ): void {
   const authenticate = createIamAuthenticationMiddleware(iam),
     repository = new KyselyIdentitySagaRepository((work) =>
       studio.withTenantTransaction((transaction) => work(transaction as never)),
     ),
-    replay = new IdentityReplayService(repository, authorizer);
+    replay = new IdentityReplayService(
+      repository,
+      authorizer,
+      undefined,
+      verifyApproval,
+    );
   registerContractRoute(
     application,
     defineRouteContract({
@@ -453,6 +468,9 @@ function registerIdentitySagaRoutes(
       },
       responses: {
         202: { description: "Replay accepted", body: { type: "object" } },
+        400: { description: "Invalid request" },
+        401: { description: "Authentication required" },
+        503: { description: "Authentication authority unavailable" },
         403: { description: "Forbidden" },
         404: { description: "Dead letter not found" },
       },
@@ -496,11 +514,21 @@ function registerIdentitySagaRoutes(
       tags: ["IAM"],
       authenticated: true,
       permission: "studio.iam.application_projection.read",
+      request: {
+        params: {
+          type: "object",
+          properties: { attemptId: UUID_SCHEMA },
+          required: ["attemptId"],
+        },
+      },
       responses: {
         200: {
           description: "Sanitized identity saga evidence",
           body: { type: "object" },
         },
+        400: { description: "Invalid request" },
+        401: { description: "Authentication required" },
+        503: { description: "Authentication authority unavailable" },
         403: { description: "Forbidden" },
         404: { description: "Evidence not found" },
       },
@@ -808,6 +836,9 @@ function registerProjectionReconciliationRoutes(
           description: "Projection reconciliation health",
           body: { type: "object" },
         },
+        400: { description: "Invalid request" },
+        401: { description: "Authentication required" },
+        503: { description: "Authentication authority unavailable" },
         403: { description: "Forbidden" },
       },
     }),
@@ -843,6 +874,7 @@ function registerProjectionReconciliationRoutes(
               )
             ).rows[0],
         );
+        response.setHeader("Cache-Control", "private, no-store");
         response.status(200).json(result);
       } catch (error) {
         next(error);
@@ -860,8 +892,18 @@ function registerProjectionReconciliationRoutes(
       tags: ["IAM"],
       authenticated: true,
       permission: "studio.iam.application_projection.replay",
+      request: {
+        params: {
+          type: "object",
+          properties: { attemptId: UUID_SCHEMA },
+          required: ["attemptId"],
+        },
+      },
       responses: {
         202: { description: "Replay accepted", body: { type: "object" } },
+        400: { description: "Invalid request" },
+        401: { description: "Authentication required" },
+        503: { description: "Authentication authority unavailable" },
         403: { description: "Forbidden" },
         404: { description: "Dead letter not found" },
       },
@@ -1553,7 +1595,9 @@ function identityReplayHttpError(error: unknown): unknown {
         ? "Identity saga replay requires an elevated session"
         : code === "IAM_REPLAY_SOD_REQUIRED"
           ? "Identity saga replay requires an approver distinct from the requester"
-          : undefined;
+          : code === "IAM_REPLAY_APPROVAL_REQUIRED"
+            ? "Identity saga replay requires verified approval for this attempt and requester"
+            : undefined;
   return detail ? new HttpError(403, code, detail) : error;
 }
 

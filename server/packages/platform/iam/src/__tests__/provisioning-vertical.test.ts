@@ -68,6 +68,13 @@ describe("IAM provisioning vertical", () => {
     expect(test.requests.size).toBe(0); expect(test.outbox).toHaveLength(0); expect(test.audit).toHaveLength(0);
   });
 
+  it("rejects non-Studio authority and cross-realm provisioning before writing", async () => {
+    const test = harness();
+    await expect(test.service.request({ ...command, context: { ...context, planeKey: "neon" } })).resolves.toMatchObject({ kind: "Forbidden" });
+    await expect(test.service.request({ ...command, realmKey: "other-realm" })).resolves.toMatchObject({ kind: "Forbidden" });
+    expect(test.run).not.toHaveBeenCalled();
+  });
+
   it("denies before opening a transaction", async () => {
     const test = harness({ deny: true });
     await expect(test.service.request(command)).resolves.toEqual({ kind: "Forbidden", permissionCode: "iam.provisioning.create" });

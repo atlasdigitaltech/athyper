@@ -4030,6 +4030,9 @@ importers:
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      '@athyper/server-runtime-http':
+        specifier: workspace:*
+        version: link:../../runtime/http
       express:
         specifier: ^5.0.0
         version: 5.2.1

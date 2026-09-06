@@ -50,7 +50,8 @@ test("provisioned P9 dashboards retain every required operational panel", () => 
 test("invitation guard and request-age source metrics are registered", () => {
   const host = readFileSync(join(defaultRepoRoot, "server/apps/platform-host/src/composition/register-services.ts"), "utf8");
   const routes = readFileSync(join(defaultRepoRoot, "server/packages/services/master-data/src/business-partner-invitation-routes.ts"), "utf8");
+  const collector = readFileSync(join(defaultRepoRoot, "server/apps/platform-host/src/monitoring/business-partner-metrics.ts"), "utf8");
   assert.match(host, /athyper_business_partner_invitation_http_total/u);
-  assert.match(host, /athyper_business_partner_request_oldest_open_seconds/u);
+  assert.match(collector, /athyper_business_partner_request_oldest_open_seconds/u);
   assert.match(routes, /onRejected\?: \(reason:"payload_too_large"\|"rate_limited"\)/u);
 });

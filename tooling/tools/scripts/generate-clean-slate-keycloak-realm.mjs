@@ -46,10 +46,12 @@ for (const client of realm.clients ?? []) {
           logoutRedirect,
         ]),
       ].join("##");
+      // Keycloak delivers signed logout tokens over the private app network.
+      client.frontchannelLogout = false;
+      client.attributes["backchannel.logout.url"] = `http://${policy.host}-web:3000/api/auth/backchannel-logout`;
+      client.attributes["backchannel.logout.session.required"] = "true";
+      client.attributes["backchannel.logout.revoke.offline.tokens"] = "false";
     }
-    // Back-channel logout is activated only after the DEV endpoints expose and
-    // pass their logout handlers; importing an unqualified URL blocks Keycloak.
-    delete client.attributes["backchannel.logout.url"];
     continue;
   }
   if (Object.hasOwn(client, "secret")) delete client.secret;

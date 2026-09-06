@@ -768,16 +768,19 @@ function ChainBody({ steps }: { readonly steps: readonly ChainStep[] }) {
     }, 1250);
     return () => clearInterval(id);
   }, [steps, reduced]);
-  return <div className="a-ws-chain">
-    {steps.map((step, i) => <div className={`a-ws-link${i < activeIndex ? " done" : ""}${i === activeIndex ? " now" : ""}`} key={step.ref}>
-      <div className="a-ws-track"><i className="a-ws-node" /></div>
-      <div className="a-ws-link-main">
-        <div className="a-ws-link-top"><b>{step.name}</b><code>{step.ref}</code>
-          {step.who ? <span className={`a-ws-who a-ws-who-${step.side ?? "both"}`}>{step.who}</span> : null}</div>
-        <div className="a-ws-link-meta">{step.meta}</div>
-      </div>
-      <div className="a-ws-link-side"><b>{step.val}</b><span>{step.state}</span></div>
-    </div>)}
+  return <div className="a-ws-chain-wrap">
+    <div className="a-ws-chain-head"><i /><span>Step</span><span>Result</span></div>
+    <div className="a-ws-chain">
+      {steps.map((step, i) => <div className={`a-ws-link${i < activeIndex ? " done" : ""}${i === activeIndex ? " now" : ""}`} key={step.ref}>
+        <div className="a-ws-track"><i className="a-ws-node" /></div>
+        <div className="a-ws-link-main">
+          <div className="a-ws-link-top"><b>{step.name}</b><code>{step.ref}</code>
+            {step.who ? <span className={`a-ws-who a-ws-who-${step.side ?? "both"}`}>{step.who}</span> : null}</div>
+          <div className="a-ws-link-meta">{step.meta}</div>
+        </div>
+        <div className="a-ws-link-side"><b>{step.val}</b><span>{step.state}</span></div>
+      </div>)}
+    </div>
   </div>;
 }
 
@@ -1155,7 +1158,7 @@ function AtlasBar({ acts, workspaceKey }: { readonly acts: readonly Act[]; reado
    Fill overridden for the dark marketing panel (source files are tuned for
    light backgrounds); font falls back to the app sans-serif since the
    brand's display face isn't bundled in this repo. */
-const SLOGAN_FONT = "'Conthrax-SemiBold','Conthrax',Inter,ui-sans-serif,system-ui,sans-serif";
+const SLOGAN_FONT = "'Conthrax-SemiBold','Conthrax',var(--a-font-sans)";
 
 function SloganMark({ text }: { readonly text: string }) {
   return <svg viewBox="0 440 1300 70" className="a-ws-slogan-mark" role="img" aria-label={text}>

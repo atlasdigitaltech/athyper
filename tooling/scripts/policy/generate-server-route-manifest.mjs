@@ -154,11 +154,16 @@ function directRoutes(source, environment, constants, mounts, offset = 0) {
   const routes = [];
   const pattern = /\b([A-Za-z_$][\w$]*)\s*\.\s*(get|post|put|patch|delete)\s*\(\s*/g;
   for (const match of source.matchAll(pattern)) {
-    const parsed = readQuoted(source, match.index + match[0].length);
-    if (!parsed) continue;
-    const declaredPath = expandTemplate(parsed.value, environment, constants);
-    if (!declaredPath || !declaredPath.startsWith("/")) continue;
-    routes.push({ method: match[2], declaredPath: `${receiverPrefix(match[1], mounts)}/${declaredPath}`.replace(/\/+/g, "/"), kind: Object.keys(environment).length ? "loop" : "direct", index: offset + match.index });
+    const start = match.index + match[0].length;
+    const parsed = readQuoted(source, start);
+    const end = source[start] === "[" ? matching(source, start, "[", "]") : -1;
+    const paths = parsed ? [parsed.value] : end > start ? parseArray(source.slice(start, end + 1)) : [];
+    for (const value of paths ?? []) {
+      if (typeof value !== "string") continue;
+      const declaredPath = expandTemplate(value, environment, constants);
+      if (!declaredPath || !declaredPath.startsWith("/")) continue;
+      routes.push({ method: match[2], declaredPath: `${receiverPrefix(match[1], mounts)}/${declaredPath}`.replace(/\/+/g, "/"), kind: Object.keys(environment).length ? "loop" : "direct", index: offset + match.index });
+    }
   }
   return routes;
 }

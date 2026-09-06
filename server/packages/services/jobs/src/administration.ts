@@ -36,7 +36,7 @@ export function createJobAdministrationService(options: {
       applied,
       detail: { jobId: source.jobId, queue: source.queue },
     });
-    return { command, applied, ...(applied ? { jobId: source.jobId } : { reason: "BullMQ job was not available" }) };
+    return { command, applied, ...(applied ? { jobId: source.jobId } : { reason: command === "cancel" ? "Job is not cancellable or the owning worker did not acknowledge cancellation" : "BullMQ job was not available" }) };
   };
 
   return {

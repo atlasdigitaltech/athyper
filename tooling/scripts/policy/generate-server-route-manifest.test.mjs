@@ -2,6 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { extractRoutesFromSource, normalizeRoutePath } from "./generate-server-route-manifest.mjs";
 
+test("retains native and compatibility paths declared in Express arrays", () => {
+  const routes = extractRoutesFromSource('app.post(["/api/neon/business-partner-cases/:requestId/materialize", "/api/neon/business-partner-requests/:requestId/apply"], handler);');
+  assert.deepEqual(routes.map(({ method, declaredPath }) => [method, declaredPath]), [
+    ["POST", "/api/neon/business-partner-cases/:requestId/materialize"],
+    ["POST", "/api/neon/business-partner-requests/:requestId/apply"],
+  ]);
+});
+
 test("normalizes parameter names and the legacy API mount", () => {
   assert.equal(normalizeRoutePath("/records/:entityCode/:recordId/", { defaultMount: "/api" }), "/api/records/:param/:param");
   assert.equal(normalizeRoutePath("/health/live", { defaultMount: "/api" }), "/health/live");

@@ -23,7 +23,7 @@ describe("production identity-gate experience", () => {
     assert.match(failure, /Access could not be confirmed/); assert.match(failure, /Use a different account/); assert.match(failure, /Try this account again/); assert.match(failure, /req-safe-42/); assert.match(failure, /returnTo=%2F/);
     assert.match(failure, /mode=switch/); assert.match(failure, /mode=retry/); assert.doesNotMatch(failure, /active membership|evil\.example|auth\.invalid_identity/);
     assert.match(renderToStaticMarkup(<ContextGatePage plane="mesh" />), /No active context is available/);
-    const logout = renderToStaticMarkup(<LogoutGatePage plane="studio" csrfToken="csrf-safe" />); assert.match(logout, /Sign out of Studio/); assert.match(logout, /Sign out of Athyper everywhere/); assert.match(logout, /name="_csrf" value="csrf-safe"/);
+    const logout = renderToStaticMarkup(<LogoutGatePage plane="studio" csrfToken="csrf-safe" />); assert.match(logout, /Sign out of Studio/); assert.match(logout, /Sign out of all Athyper applications/); assert.match(logout, /name="_csrf" value="csrf-safe"/);
   });
 
   it("renders exact-plane context choices with plane-specific work-scope summaries", () => {

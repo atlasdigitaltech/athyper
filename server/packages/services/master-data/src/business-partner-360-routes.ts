@@ -13,6 +13,8 @@ import type {
   RequestHandler,
   Response,
 } from "express";
+import { registerContractRoute } from "@athyper/server-runtime-http";
+import { businessPartner360RouteContracts as contracts } from "./business-partner-360-route-contracts.js";
 import { MasterDataError } from "./errors.js";
 
 export interface BusinessPartner360TelemetryEvent {
@@ -85,15 +87,15 @@ export function registerBusinessPartner360Routes(
         });
       }
     };
-  app.get(
-    "/api/neon/business-partners/:businessPartnerId/360/summary",
+  registerContractRoute(
+    app, contracts.summary,
     options.authenticate,
     route("summary", (request, context) =>
       options.service.summary(query(request, context)),
     ),
   );
-  app.post(
-    "/api/neon/business-partners/:businessPartnerId/360/identifiers-tax/reveal",
+  registerContractRoute(
+    app, contracts.taxReveal,
     options.authenticate,
     route("tax-reveal", (request, context) =>
       options.service.revealTaxRegistration({
@@ -112,8 +114,8 @@ export function registerBusinessPartner360Routes(
       }),
     ),
   );
-  app.post(
-    "/api/neon/business-partners/:businessPartnerId/360/banking/reveal",
+  registerContractRoute(
+    app, contracts.bankReveal,
     options.authenticate,
     route("bank-reveal", (request, context) =>
       options.service.revealBankAccount({
@@ -132,8 +134,8 @@ export function registerBusinessPartner360Routes(
       }),
     ),
   );
-  app.get(
-    "/api/neon/business-partners/:businessPartnerId/360/:section",
+  registerContractRoute(
+    app, contracts.section,
     options.authenticate,
     route("section", (request, context) =>
       options.service.section({

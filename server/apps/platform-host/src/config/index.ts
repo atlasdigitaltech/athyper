@@ -1,3 +1,5 @@
+import { parseBusinessPartnerMetricsTargets, type BusinessPartnerMetricsTarget } from "../monitoring/business-partner-metrics.js";
+
 export interface HostConfig {
   port: number;
   logLevel: string;
@@ -16,6 +18,7 @@ export interface HostConfig {
     connectionString: string | undefined;
     poolMax: number;
   };
+  businessPartnerMetricsTargets?: readonly BusinessPartnerMetricsTarget[];
   businessPartner360: {
     meshLiveBaseUrl: string | undefined;
     meshLiveCredentialReference: string | undefined;
@@ -693,6 +696,7 @@ export function loadConfig(): HostConfig {
   }
 
   const config: HostConfig = {
+    businessPartnerMetricsTargets: parseBusinessPartnerMetricsTargets(process.env["BUSINESS_PARTNER_METRICS_TARGETS"]),
     port,
     logLevel: process.env["LOG_LEVEL"] ?? "info",
     shutdownTimeoutMs,

@@ -56,6 +56,7 @@ export interface BullMqJobSchedulerOptions {
 }
 
 export interface ClosableJobScheduler extends JobScheduler {
+  listScheduleIds(): Promise<readonly string[]>;
   close(): Promise<void>;
 }
 
@@ -99,6 +100,11 @@ export function createBullMqJobScheduler(
   };
 
   return {
+    async listScheduleIds() {
+      assertOpen(closed);
+      return ownerRegistry.listScheduleIds();
+    },
+
     async upsert(definition) {
       assertOpen(closed);
       const fencingToken = await acquireMutationFence();
@@ -129,7 +135,9 @@ export function createBullMqJobScheduler(
       if (!owner) return false;
       await assertMutationFence();
       const removed = await queueFor(owner).removeJobScheduler(scheduleId);
-      if (removed) await ownerRegistry.release(scheduleId, owner, fencingToken);
+      // Removal is idempotent: a prior process may have removed the scheduler
+      // but crashed before releasing its durable owner entry.
+      await ownerRegistry.release(scheduleId, owner, fencingToken);
       return removed;
     },
 

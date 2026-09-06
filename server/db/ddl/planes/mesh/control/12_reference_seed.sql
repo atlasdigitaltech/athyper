@@ -171,7 +171,7 @@ ON CONFLICT(permission_id,scope_kind,propagation_mode) DO UPDATE SET status='act
 
 DO $assertions$
 BEGIN
-  IF (SELECT count(*) FROM authz.permission WHERE canonical_code LIKE 'mesh.business_partner_exchange.%' AND status='published')<>3 THEN
+  IF EXISTS(SELECT 1 FROM (VALUES ('mesh.business_partner_exchange.read'),('mesh.business_partner_exchange.relationship'),('mesh.business_partner_exchange.registration')) required(code) WHERE NOT EXISTS(SELECT 1 FROM authz.permission permission WHERE permission.canonical_code=required.code AND permission.status='published')) THEN
     RAISE EXCEPTION 'MESH Business Partner exchange permission contract is incomplete';
   END IF;
 END $assertions$;

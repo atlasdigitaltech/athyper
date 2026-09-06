@@ -12,6 +12,7 @@ const cases = [
   ["required-action", { status: 403, code: "MFA_REQUIRED" }],
   ["permission-denied", { status: 403, code: "PERMISSION_DENIED" }],
   ["context-mismatch", { status: 409, code: "AUTH_CONTEXT_MISMATCH" }],
+  ["authentication", { status: 401, code: "AUTH_CONTEXT_MISMATCH" }],
   ["conflict", new ApiTransportError("conflict", "secret", 409)],
   ["validation", new ApiTransportError("validation", "secret", 422)],
   ["rate-limit", new ApiTransportError("rate-limit", "secret", 429, undefined, "req-rate", undefined, "9999")],

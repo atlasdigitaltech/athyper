@@ -95,6 +95,7 @@ describe("BullMQ job scheduler", () => {
   it("discovers a durable owner after restart so remove targets the original queue", async () => {
     const owners = new Map<string, string>();
     const registry: ScheduleOwnerRegistry = {
+      listScheduleIds: async () => [...owners.keys()],
       get: async (scheduleId) => owners.get(scheduleId),
       async claim(scheduleId, queue) { const previous = owners.get(scheduleId); owners.set(scheduleId, queue); return previous; },
       async release(scheduleId, queue) { return owners.get(scheduleId) === queue && owners.delete(scheduleId); },
@@ -106,11 +107,37 @@ describe("BullMQ job scheduler", () => {
     await first.upsert({ scheduleId: "restart.hourly", queue: "maintenance", name: "cleanup", data: {}, pattern: { kind: "interval", everyMs: 3_600_000 } });
 
     const restarted = createBullMqJobScheduler({ redisUrl: "redis://localhost/3", ownerRegistry: registry, createQueue: () => queue });
+    await first.close();
+    await expect(restarted.listScheduleIds()).resolves.toEqual(["restart.hourly"]);
     await expect(restarted.remove("restart.hourly")).resolves.toBe(true);
     expect(removeJobScheduler).toHaveBeenCalledWith("restart.hourly");
     expect(owners.has("restart.hourly")).toBe(false);
     await first.close();
     await restarted.close();
+  });
+
+  it("releases orphan owner entries when the scheduler was already removed", async () => {
+    const registry = createInMemoryScheduleOwnerRegistry();
+    await registry.claim("neon:old-schedule", "old-queue", "fence");
+    const removeJobScheduler = vi.fn(async () => false);
+    const createQueue = vi.fn(() => ({ upsertJobScheduler: vi.fn(), removeJobScheduler, close: vi.fn() }));
+    const scheduler = createBullMqJobScheduler({ redisUrl: "redis://localhost", ownerRegistry: registry, createQueue });
+    await expect(scheduler.listScheduleIds()).resolves.toEqual(["neon:old-schedule"]);
+    await expect(scheduler.remove("neon:old-schedule")).resolves.toBe(false);
+    expect(createQueue).toHaveBeenCalledWith("old-queue", expect.any(Object));
+    await expect(scheduler.listScheduleIds()).resolves.toEqual([]);
+    await scheduler.close();
+  });
+
+  it("keeps owner entries discoverable when Redis scheduler removal fails", async () => {
+    const registry = createInMemoryScheduleOwnerRegistry();
+    await registry.claim("neon:old-schedule", "old-queue", "fence");
+    const scheduler = createBullMqJobScheduler({ redisUrl: "redis://localhost", ownerRegistry: registry,
+      createQueue: () => ({ upsertJobScheduler: vi.fn(), removeJobScheduler: async () => { throw new Error("Redis unavailable"); }, close: vi.fn() }),
+    });
+    await expect(scheduler.remove("neon:old-schedule")).rejects.toThrow("Redis unavailable");
+    await expect(scheduler.listScheduleIds()).resolves.toEqual(["neon:old-schedule"]);
+    await scheduler.close();
   });
 
   it("migrates durable queue ownership and preserves DST-aware IANA timezones", async () => {

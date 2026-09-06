@@ -31,4 +31,22 @@ describe("LifecycleManager", () => {
       second.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
     );
   });
+  it("fails critical startup after running all initialization hooks", async () => {
+    const lifecycle = new LifecycleManager();
+    const failure = new Error("dependency unavailable");
+    const remaining = vi.fn();
+    lifecycle.onReady(async () => { throw failure; });
+    lifecycle.onReady(remaining);
+    await expect(lifecycle.signalReady({ failOnError: true })).rejects.toMatchObject({
+      message: "Startup initialization failed", errors: [failure],
+    });
+    expect(remaining).toHaveBeenCalledOnce();
+  });
+
+  it("preserves best-effort readiness observers by default", async () => {
+    const lifecycle = new LifecycleManager();
+    lifecycle.onReady(() => { throw new Error("observer failed"); });
+    await expect(lifecycle.signalReady()).resolves.toBeUndefined();
+  });
+
 });

@@ -80,6 +80,7 @@ services:
     <<: *runtime-common
     environment:
       MODE: api
+      BUSINESS_PARTNER_METRICS_TARGETS: ${BUSINESS_PARTNER_METRICS_TARGETS:-[]}
       ATHYPER_DOMAIN_SUFFIX: ${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
       # Enabled after bearer-authenticated, exact-plane CSV/XLSX/JSON acceptance.
       # Operators can still disable the contract explicitly per environment.

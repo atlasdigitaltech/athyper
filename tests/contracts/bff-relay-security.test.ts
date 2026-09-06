@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createServer } from "node:http";
+import { gzipSync } from "node:zlib";
+import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
 import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
@@ -9,6 +12,70 @@ function authority(current = session()): RelaySessionAuthority & { invalidated: 
 function relay(input: { plane?: string; operation?: RelayOperation; authority?: RelaySessionAuthority; fetch?: typeof fetch; diagnostics?: RelayDiagnostic[]; timeout?: number } = {}) { return createRelayHandler({ plane: input.plane ?? "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [input.operation ?? IAM_ME_OPERATION], session: input.authority ?? authority(), fetch: input.fetch ?? (async () => new Response("{}", { headers: { "content-type": "application/json" } })), timeouts: input.timeout ? { json: input.timeout, stream: input.timeout, upload: input.timeout, download: input.timeout } : undefined, onDiagnostic: (value) => input.diagnostics?.push(value) }); }
 
 describe("Phase 4 hardened BFF relay", () => {
+  it("clears local session cookies and requires login after Runtime context revocation", async () => {
+    for (const plane of ["neon", "mesh", "studio"]) for (const production of [true, false]) {
+      let active: RelaySessionContext | undefined = session(plane);
+      let calls = 0;
+      const handler = relay({ plane, authority: {
+        resolve: async () => active,
+        refresh: async () => assert.fail("context mismatch must not refresh"),
+        invalidate: async () => { active = undefined; return clearedAuthSessionCookies(production); },
+      }, fetch: async () => { calls++; return Response.json({ code: "AUTH_CONTEXT_MISMATCH" }, { status: 403, headers: { "set-cookie": "upstream=untrusted" } }); } });
+      const request = () => new Request(`https://${plane}.example/api/relay/iam/me`);
+      const response = await handler(request(), context("iam", "me"));
+      assert.equal(response.status, 401);
+      assert.equal(response.headers.get("x-athyper-session-action"), "login");
+      const cookies = response.headers.getSetCookie();
+      const prefix = production ? "__Host-" : "";
+      assert.deepEqual(cookies, [
+        `${prefix}athyper-session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${production ? "; Secure" : ""}`,
+        `${prefix}athyper-csrf=; Path=/; SameSite=Lax; Max-Age=0${production ? "; Secure" : ""}`,
+      ]);
+      assert.equal(response.headers.get("cache-control"), "no-store");
+      const after = await handler(request(), context("iam", "me"));
+      assert.equal(after.status, 401);
+      assert.equal(calls, 1, "revoked sessions cannot call Runtime");
+    }
+  });
+
+  it("relays the complete gzip-decoded body without compressed framing headers", async () => {
+    const payload = "x".repeat(10_000);
+    const compressed = gzipSync(payload);
+    assert.notEqual(compressed.length, Buffer.byteLength(payload));
+    const upstream = createServer((_request, response) => {
+      response.writeHead(200, { "content-type": "text/plain", "content-encoding": "gzip", "content-length": String(compressed.length), "x-request-id": "gzip-test" });
+      response.end(compressed);
+    });
+    await new Promise<void>((resolve, reject) => { upstream.once("error", reject); upstream.listen(0, "127.0.0.1", resolve); });
+    try {
+      const address = upstream.address();
+      assert.ok(address && typeof address !== "string");
+      for (const plane of ["neon", "mesh", "studio"]) {
+        const handler = createRelayHandler({ plane, runtimeApiUrl: `http://127.0.0.1:${address.port}`, appOrigin: `https://${plane}.example`, operations: [IAM_ME_OPERATION], session: authority(session(plane)) });
+        const response = await handler(new Request(`https://${plane}.example/api/relay/iam/me`), context("iam", "me"));
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get("content-length"), null);
+        assert.equal(response.headers.get("content-encoding"), null);
+        assert.equal(response.headers.get("content-type"), "text/plain");
+        assert.equal(response.headers.get("x-request-id"), "gzip-test");
+        assert.equal(await response.text(), payload);
+      }
+    } finally {
+      await new Promise<void>((resolve, reject) => { upstream.close(error => error ? reject(error) : resolve()); upstream.closeAllConnections(); });
+    }
+  });
+
+  it("leaves framing to the server for uncompressed and bodyless responses", async () => {
+    for (const status of [200, 204, 304]) {
+      const handler = relay({ fetch: async () => new Response(status === 200 ? "hello" : null, { status, headers: { "content-length": status === 200 ? "5" : "0", etag: "v1" } }) });
+      const response = await handler(new Request("https://neon.example/api/relay/iam/me"), context("iam", "me"));
+      assert.equal(response.status, status);
+      assert.equal(response.headers.get("content-length"), null);
+      assert.equal(response.headers.get("etag"), "v1");
+      assert.equal(await response.text(), status === 200 ? "hello" : "");
+    }
+  });
+
   it("requires session, CSRF and idempotency before relaying a bounded invitation create", async () => {
     let calls = 0;
     const handler = relay({ operation: NEON_BP_INVITATION_CREATE_OPERATION, fetch: async () => { calls++; return Response.json({ invitation: { id: "fixture" } }, { status: 201 }); } });
@@ -93,6 +160,31 @@ describe("Phase 4 hardened BFF relay", () => {
     assert.equal((await handler(new Request("https://neon.example/api/relay/iam/me", { method: "POST" }), context("iam", "me"))).status, 404);
   });
 
+  it("preserves encoded query data across all planes without treating it as a path attack", async () => {
+    const queries = ["?filter=ACME%2FUK", "?date=2026%2E09%2E06", "?url=https%3A%2F%2Fexample", "?filter=%252e%252e%252f&filter=a%5Cb&value=%23fragment"];
+    for (const plane of ["neon", "mesh", "studio"]) {
+      const forwarded: string[] = [];
+      const handler = relay({ plane, authority: authority(session(plane)), fetch: async (url) => { forwarded.push(String(url)); return Response.json({ ok: true }); } });
+      for (const query of queries) {
+        const response = await handler(new Request(`https://${plane}.example/api/relay/iam/me${query}#ignored%2Ffragment`), context("iam", "me"));
+        assert.equal(response.status, 200, query);
+        assert.equal(forwarded.at(-1), `http://platform-host:4000/api/iam/me${query}`, "query encoding and repeated values are preserved; fragments are not forwarded");
+      }
+      assert.equal(forwarded.length, queries.length);
+    }
+  });
+
+  it("rejects dangerous encodings in allowlisted path parameters even with a valid query", async () => {
+    let calls = 0;
+    const handler = relay({ operation: { id: "item", method: "GET", path: "/api/items/:id" }, fetch: async () => { calls++; return Response.json({}); } });
+    for (const segment of ["a%2Fb", "a%5Cb", "a%2Eb", "%252e%252e", "a%252Fb", "a%255Cb"]) {
+      const response = await handler(new Request(`https://neon.example/api/relay/items/${segment}?filter=ACME%2FUK`), context("items", decodeURIComponent(segment)));
+      assert.equal(response.status, 400, segment);
+      assert.equal((await response.json() as { code: string }).code, "RELAY_INVALID_PATH");
+    }
+    assert.equal(calls, 0, "unsafe paths never reach Runtime");
+  });
+
   it("enforces same-origin CSRF and tenant/plane binding for unsafe operations", async () => {
     const operation: RelayOperation = { id: "tenant.item", method: "POST", path: "/api/tenants/:tenantId/items", tenantParam: "tenantId", idempotency: "required" }; const handler = relay({ operation });
     const request = (headers: HeadersInit = {}, tenant = "tenant-1") => new Request(`https://neon.example/api/relay/tenants/${tenant}/items`, { method: "POST", headers: { origin: "https://neon.example", "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-proof", "idempotency-key": "create-1", "content-type": "application/json", ...headers }, body: "{}" });
@@ -122,6 +214,53 @@ describe("Phase 4 hardened BFF relay", () => {
     let refreshCalls = 0; let active = session(); const sharedAuthority: RelaySessionAuthority = { resolve: async () => active, refresh: async () => { refreshCalls++; await new Promise((resolve) => setTimeout(resolve, 20)); active = { ...active, accessToken: "refreshed-token" }; return active; }, invalidate: async () => undefined };
     let upstreamCalls = 0; const handler = relay({ authority: sharedAuthority, fetch: async (_url, init) => { upstreamCalls++; return new Headers(init?.headers).get("authorization") === "Bearer refreshed-token" ? new Response("{}") : new Response("", { status: 401 }); } }); const request = () => handler(new Request("https://neon.example/api/relay/iam/me"), context("iam", "me")); const [first, second] = await Promise.all([request(), request()]); assert.equal(first.status, 200); assert.equal(second.status, 200); assert.equal(refreshCalls, 2); assert.equal(upstreamCalls, 4);
   });
+
+  for (const plane of ["neon", "studio", "mesh"]) {
+    for (const method of ["POST", "PUT", "PATCH"] as const) {
+      it(`${plane}: refreshes and replays a consumed ${method} body exactly once`, async () => {
+        let active = session(plane); let refreshCalls = 0;
+        const origin = `https://${plane}.example`;
+        const payload = JSON.stringify({ name: "Supplier العربية", amount: 123 });
+        const headers = { cookie: "athyper-session=opaque", origin, "sec-fetch-site": "same-origin", "x-csrf-token": "csrf-proof", "content-type": "application/json", "content-length": String(Buffer.byteLength(payload)), "idempotency-key": "mutation-1" };
+        const original = new Request(`${origin}/api/relay/command`, { method, headers, body: payload });
+        const attempts: Array<{ method: string; body: string; token: string | null; key: string | null }> = [];
+        const handler = createRelayHandler({
+          plane, runtimeApiUrl: "http://runtime:4000", appOrigin: origin,
+          operations: [{ id: "command", method, path: "/api/command", idempotency: "required" }],
+          session: {
+            resolve: async () => active,
+            refresh: async (request) => {
+              refreshCalls++;
+              assert.equal(original.bodyUsed, true);
+              // Match the environment adapter, which clones the refresh request.
+              const cloned = request.clone();
+              assert.equal(cloned.body, null);
+              assert.equal(await cloned.text(), "");
+              assert.equal(cloned.method, "POST", "unsafe refresh retains auth-handler CSRF enforcement");
+              for (const name of ["cookie", "origin", "sec-fetch-site", "x-csrf-token"] as const) assert.equal(cloned.headers.get(name), headers[name]);
+              assert.equal(cloned.headers.get("content-length"), null);
+              active = { ...active, accessToken: "refreshed-token" };
+              return active;
+            },
+            invalidate: async () => assert.fail("authority must remain unchanged"),
+          },
+          fetch: async (_url, init) => {
+            const forwarded = new Headers(init?.headers);
+            attempts.push({ method: init!.method!, body: await new Response(init?.body).text(), token: forwarded.get("authorization"), key: forwarded.get("idempotency-key") });
+            return attempts.length === 1 ? new Response(null, { status: 401 }) : Response.json({ saved: true });
+          },
+        });
+        const result = await handler(original, context("command"));
+        assert.equal(result.status, 200);
+        assert.deepEqual(await result.json(), { saved: true });
+        assert.equal(refreshCalls, 1);
+        assert.deepEqual(attempts, [
+          { method, body: payload, token: "Bearer server-token", key: "mutation-1" },
+          { method, body: payload, token: "Bearer refreshed-token", key: "mutation-1" },
+        ]);
+      });
+    }
+  }
 
   it("never shares refreshed authority between concurrent browser sessions", async () => {
     const sessions = new Map<string, RelaySessionContext>([
@@ -153,6 +292,6 @@ describe("Phase 4 hardened BFF relay", () => {
   });
 
   it("invalidates context mismatch without refresh loops and keeps diagnostics redacted", async () => {
-    const auth = authority(); const diagnostics: RelayDiagnostic[] = []; const handler = relay({ authority: auth, diagnostics, fetch: async () => new Response(JSON.stringify({ code: "AUTH_CONTEXT_MISMATCH", detail: "secret-body" }), { status: 403, headers: { "content-type": "application/problem+json", "x-request-id": "request-7" } }) }); const response = await handler(new Request("https://neon.example/api/relay/iam/me", { headers: { cookie: "secret-cookie", authorization: "Bearer browser-secret" } }), context("iam", "me")); assert.equal(response.status, 409); assert.equal(response.headers.get("x-athyper-session-action"), "select_context"); assert.equal(auth.invalidated, 1); assert.equal(auth.refreshed, 0); const serialized = JSON.stringify(diagnostics); assert.doesNotMatch(serialized, /server-token|secret-cookie|browser-secret|secret-body/);
+    const auth = authority(); const diagnostics: RelayDiagnostic[] = []; const handler = relay({ authority: auth, diagnostics, fetch: async () => new Response(JSON.stringify({ code: "AUTH_CONTEXT_MISMATCH", detail: "secret-body" }), { status: 403, headers: { "content-type": "application/problem+json", "x-request-id": "request-7" } }) }); const response = await handler(new Request("https://neon.example/api/relay/iam/me", { headers: { cookie: "secret-cookie", authorization: "Bearer browser-secret" } }), context("iam", "me")); assert.equal(response.status, 401); assert.equal(response.headers.get("x-athyper-session-action"), "login"); assert.equal(auth.invalidated, 1); assert.equal(auth.refreshed, 0); const serialized = JSON.stringify(diagnostics); assert.doesNotMatch(serialized, /server-token|secret-cookie|browser-secret|secret-body/);
   });
 });

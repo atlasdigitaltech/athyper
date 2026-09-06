@@ -2,7 +2,7 @@ import { parseInstant } from "@athyper/platform-temporal";
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { createRedisClient, createRedisSessionStore, hashOpaqueSessionId, type SessionBinding, type SessionStore } from "@athyper/platform-iam-session-store";
-import { AuthFlowError, createAuthHandlers, type AuthContextOption, type AuthHandlers, type AuthProvider, type BackchannelIdentity, type TokenResult, type VerifiedIdentity } from "./index";
+import { AuthFlowError, clearedAuthSessionCookies, createAuthHandlers, type AuthContextOption, type AuthHandlers, type AuthProvider, type BackchannelIdentity, type TokenResult, type VerifiedIdentity } from "./index";
 import { shouldTouchSession, type SessionPlane } from "@athyper/platform-iam-session";
 
 /** Mirrors the effective Keycloak realm/client session policy in realm-athyper.json. */
@@ -14,7 +14,7 @@ export const KEYCLOAK_SESSION_TTLS_MS = Object.freeze({
 
 export interface EnvironmentAuthOptions { readonly plane: SessionPlane; readonly clientId: string; readonly authorizedRole: string; readonly origin: string; readonly idleTtlMs: number; readonly absoluteTtlMs: number; readonly configurationRevision?: string; readonly trustedDeviceTtlMs?: number; }
 export interface EnvironmentRelaySession { readonly accessToken: string; readonly plane: SessionPlane; readonly realmKey: string; readonly tenantId?: string; readonly principalId: string; readonly authEpoch: number; readonly assurance: "baseline" | "elevated"; readonly csrfToken: string; readonly acceptedCsrfTokens: readonly string[]; }
-export interface EnvironmentAuthRuntime { readonly handlers: AuthHandlers; resolveRelaySession(request: Request): Promise<EnvironmentRelaySession | undefined>; refreshRelaySession(request: Request): Promise<EnvironmentRelaySession | undefined>; invalidateRelaySession(request: Request): Promise<void>; }
+export interface EnvironmentAuthRuntime { readonly handlers: AuthHandlers; resolveRelaySession(request: Request): Promise<EnvironmentRelaySession | undefined>; refreshRelaySession(request: Request): Promise<EnvironmentRelaySession | undefined>; invalidateRelaySession(request: Request): Promise<readonly string[]>; }
 
 export function createEnvironmentAuthHandlers(options: EnvironmentAuthOptions): AuthHandlers {
   return createEnvironmentAuthRuntime(options).handlers;
@@ -52,7 +52,7 @@ function buildRuntime(options: EnvironmentAuthOptions): EnvironmentAuthRuntime {
   const deriveAcceptedCsrfTokens = (opaqueId: string) => [...keyRing.keys.values()].map((key) => createHmac("sha256", key).update(`csrf:${opaqueId}`, "utf8").digest("base64url"));
   const handlers = createAuthHandlers({ plane: options.plane, realmKey, issuer, clientId, redirectUri: `${options.origin}/api/auth/callback`, postLogoutRedirectUri: `${options.origin}/api/auth/logout/callback`, authorizedRole: options.authorizedRole, configurationRevision, store, provider, resolveContexts: ({ accessToken }) => discoverContexts(accessToken, options.plane, realmKey), verifyTrustedDevice: (input) => verifyTrustedDevice(input, keyRing), registerTrustedDevice: (input) => registerTrustedDevice(input, keyRing), sealTokens: (tokens) => Promise.resolve(seal(JSON.stringify(tokens), keyRing.currentVersion, keyRing.keys.get(keyRing.currentVersion)!)), sessionKeyVersion: keyVersion, deriveCsrfToken, deriveAcceptedCsrfTokens, idleTtlMs: options.idleTtlMs, absoluteTtlMs: options.absoluteTtlMs, trustedDeviceTtlMs, production, observeSecurityEvent: (event) => process.stderr.write(`${JSON.stringify({ level: event.outcome === "no_match" ? "warn" : "info", event: "auth.backchannel_logout", ...event })}\n`) });
   const resolve = (request: Request) => resolveRelaySession({ request, store, binding, sessionCookie, configurationRevision, keyRing, deriveCsrfToken, idleTtlMs: options.idleTtlMs });
-  return { handlers, resolveRelaySession: resolve, refreshRelaySession: async (request) => { const response = await handlers.refresh(request.clone()); return response.ok ? resolve(request) : undefined; }, invalidateRelaySession: async (request) => { const id = readCookie(request.headers.get("cookie"), sessionCookie); if (id) await store.revoke(binding, hashOpaqueSessionId(id)); } };
+  return { handlers, resolveRelaySession: resolve, refreshRelaySession: async (request) => { const response = await handlers.refresh(request.clone()); return response.ok ? resolve(request) : undefined; }, invalidateRelaySession: async (request) => { const id = readCookie(request.headers.get("cookie"), sessionCookie); if (id) await store.revoke(binding, hashOpaqueSessionId(id)); return clearedAuthSessionCookies(production); } };
 }
 
 interface EncryptionKeyRing { readonly currentVersion: number; readonly keys: ReadonlyMap<number, Buffer>; }

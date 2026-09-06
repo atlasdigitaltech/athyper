@@ -133,6 +133,16 @@ describe("IAM service", () => {
     expect(JSON.stringify(record.mock.calls)).not.toContain("secret-jwt");
   });
 
+  it.each(["shadow", "off"] as const)("enforces AUTHORIZED despite context mismatches in %s mode", async (claimContextMode) => {
+    const service = createIamService({
+      tokenVerifier: { verify: async () => ({ ...token, claims: { ...token.claims, resource_access: {} } }) },
+      audit: { record: async (input) => ({ ...input, id: "a", occurredAt: "2026-09-06T00:00:00Z", severity: "info" }) },
+      config: createIamConfig({ environment: "local", claimContextMode, requireAuthorizedRole: true }),
+    });
+    await expect(service.authenticate({ token: "jwt", planeKey: "neon", requestId: "r", requestedContext: { tenantId: "other-tenant" } }))
+      .resolves.toMatchObject({ ok: false, status: 403, code: "AUTH_ACCESS_DENIED" });
+  });
+
   it("fails closed when a successful authentication cannot be audited", async () => {
     const service = createIamService({ tokenVerifier: { verify: async () => token }, audit: { record: async () => { throw new Error("offline"); } }, config: createIamConfig({ environment: "production" }) });
     await expect(service.authenticate({ token: "jwt", planeKey: "neon", requestId: "request-1" })).resolves.toMatchObject({ ok: false, status: 503, code: "AUTH_AUDIT_UNAVAILABLE" });

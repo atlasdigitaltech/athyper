@@ -189,7 +189,7 @@ test("release instances use an image-contained fail-closed forward migration run
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
     const names = manifest.split(/\r?\n/u).filter(line => line && !line.startsWith("#"));
-    assert.deepEqual(names, []);
+    assert.deepEqual(names, plane === "mesh" ? ["20260906_mesh_exchange_readiness.sql"] : []);
     for (const name of names) assert.ok(readFileSync(join(repoRoot, "server/db/migrations", name), "utf8").includes("BEGIN;"));
   }
 });
@@ -296,6 +296,9 @@ test("OIDC uses public HTTPS issuers with private backchannel endpoints", () => 
     assert.ok(client.redirectUris.includes(`${origin}/api/auth/callback`));
     assert.ok(client.webOrigins.includes(origin));
     assert.ok(client.attributes["post.logout.redirect.uris"].split("##").includes(`${origin}/api/auth/logout/callback`));
+    assert.equal(client.frontchannelLogout, false);
+    assert.equal(client.attributes["backchannel.logout.url"], `http://${plane}-web:3000/api/auth/backchannel-logout`);
+    assert.equal(client.attributes["backchannel.logout.session.required"], "true");
   }
 });
 

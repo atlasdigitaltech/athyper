@@ -10,7 +10,7 @@ describe("optional capability readiness", () => {
       "utf8",
     );
 
-    expect(source).toContain('message:"Governance compliance routes are disabled"');
-    expect(source).toContain('message:"Studio onboarding routes are disabled"');
+    expect(source).toMatch(/message:\s*"Governance compliance routes are disabled"/);
+    expect(source).toMatch(/message:\s*"Studio onboarding routes are disabled"/);
   });
 });

@@ -1,11 +1,11 @@
-import type { JobDefinitionCatalog, JobExecutionCoordinate, JobScheduleRepository, JobScheduler, ScheduledJobDefinition } from "@athyper/server-contract-jobs";
+import type { JobDefinitionCatalog, JobExecutionCoordinate, JobScheduleRepository, JobScheduler, GovernedScheduleRecord } from "@athyper/server-contract-jobs";
 
 type PlaneKey = JobExecutionCoordinate["planeKey"];
 
 export interface JobScheduleReconcilerOptions {
   readonly planes: readonly PlaneKey[];
   readonly repository: JobScheduleRepository;
-  readonly scheduler: JobScheduler;
+  readonly scheduler: JobScheduler & Required<Pick<JobScheduler, "listScheduleIds">>;
   readonly catalog: JobDefinitionCatalog;
   readonly now?: () => Date;
   readonly ignoreUnknownHandlers?: boolean;
@@ -17,11 +17,11 @@ export interface JobScheduleReconciler {
 }
 
 export function createJobScheduleReconciler(options: JobScheduleReconcilerOptions): JobScheduleReconciler {
-  const activeScheduleIds = new Set<string>();
   const now = options.now ?? (() => new Date());
   return {
     async reconcile() {
       const nextScheduleIds = new Set<string>();
+      const schedules: GovernedScheduleRecord[] = [];
       let upserted = 0;
       let removed = 0;
       for (const planeKey of options.planes) {
@@ -39,25 +39,35 @@ export function createJobScheduleReconciler(options: JobScheduleReconcilerOption
             throw new Error(`Schedule ${record.code} handler type ${record.handlerType} does not match ${registered.code}`);
           }
           if (registered.scope === "tenant" && !record.tenantId) throw new Error(`Tenant-scoped schedule ${record.code} requires tenantId`);
-          const definition = withPlaneScheduleId(planeKey, record.definition);
+          const definition = { ...record.definition, scheduleId: `${planeKey}:${record.id}` };
           if (nextScheduleIds.has(definition.scheduleId)) throw new Error(`Duplicate governed schedule: ${definition.scheduleId}`);
           nextScheduleIds.add(definition.scheduleId);
-          await options.scheduler.upsert(definition);
-          await options.repository.markReconciled({ planeKey, scheduleId: record.id, reconciledAt: now().toISOString() });
-          upserted += 1;
+          schedules.push({ ...record, definition });
         }
       }
-      for (const scheduleId of activeScheduleIds) {
-        if (!nextScheduleIds.has(scheduleId) && await options.scheduler.remove(scheduleId)) removed += 1;
+      const ownedScheduleIds = await options.scheduler.listScheduleIds();
+      // Install every tenant's replacement before retiring a shared legacy ID.
+      // The durable scheduler owner registry locates the legacy queue after restart.
+      for (const record of schedules) {
+        await options.scheduler.upsert(record.definition);
+        upserted += 1;
       }
-      activeScheduleIds.clear();
-      for (const scheduleId of nextScheduleIds) activeScheduleIds.add(scheduleId);
+      // Plane-qualified IDs are reserved for database-governed schedules (both
+      // legacy plane:code and canonical plane:UUID). Code-owned IDs are unqualified.
+      const managedPrefixes = options.planes.map((planeKey) => `${planeKey}:`);
+      for (const scheduleId of ownedScheduleIds) {
+        if (managedPrefixes.some((prefix) => scheduleId.startsWith(prefix))
+          && !nextScheduleIds.has(scheduleId)
+          && await options.scheduler.remove(scheduleId)) removed += 1;
+      }
+      for (const record of schedules) {
+        await options.repository.markReconciled({
+          planeKey: record.planeKey,
+          scheduleId: record.id,
+          reconciledAt: now().toISOString(),
+        });
+      }
       return { upserted, removed };
     },
   };
-}
-
-function withPlaneScheduleId(planeKey: PlaneKey, definition: ScheduledJobDefinition): ScheduledJobDefinition {
-  const prefix = `${planeKey}:`;
-  return definition.scheduleId.startsWith(prefix) ? definition : { ...definition, scheduleId: `${prefix}${definition.scheduleId}` };
 }

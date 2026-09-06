@@ -45,8 +45,8 @@ export function classifyAppError(input: ClassifyAppErrorInput): AppErrorModel {
   const requestId = safeRequestId(facts.requestId);
   const common = { ...(facts.status ? { status: facts.status } : {}), ...(requestId ? { requestId } : {}), requiredActions };
 
-  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if (facts.status === 401 || facts.transportKind === "authentication") return model("authentication", "Sign in required", "Your session is no longer available. Sign in again to continue.", "login", false, false, common);
+  if (facts.code === "AUTH_CONTEXT_MISMATCH") return model("context-mismatch", "Your access context changed", "Choose an active context before continuing.", "select-context", false, false, common);
   if ((facts.status === 403 && REQUIRED_ACTION_CODES.has(facts.code ?? "")) || requiredActions.length > 0) return model("required-action", "Action required", "Complete the required identity action before continuing.", "complete-action", false, true, common);
   if (facts.status === 403 || facts.transportKind === "authorization") return model("permission-denied", "Access denied", "You do not have permission to view this resource.", "none", false, false, common);
   if (facts.status === 409 || facts.transportKind === "conflict") return model("conflict", "This item changed", "Keep your input while you reload the latest version or compare changes.", "reload-compare", false, true, common);
