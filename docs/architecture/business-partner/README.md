@@ -47,6 +47,11 @@ Every case is pinned to an immutable definition release. Every mutation validate
 
 ## Sources of truth
 
+Detailed references:
+
+- [Field extensibility and 360 aggregation](field-extensibility-and-360-aggregation.md) defines the Meta Entity boundary, persistence decision matrix and typed 360 resolver model.
+- [Development URL catalogue](development-url-catalogue.md) lists the Studio, NEON, MESH and Runtime API development entry points.
+
 Executable contracts and canonical DDL define implemented behavior:
 
 - `server/db/ddl/planes/{studio,neon,mesh}`
