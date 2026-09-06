@@ -6,6 +6,8 @@ Last verified: 2026-09-06
 
 All application URLs resolved through the development gateway when last verified. Authentication, selected tenant context and permissions determine whether an experience or operation is available.
 
+This catalogue contains every frontend page and browser API route currently declared under `apps/studio/app`, `apps/neon/app` and `apps/mesh/app`. It lists the Business Partner Runtime APIs relevant to this architecture package. The generated Runtime OpenAPI document is the authoritative exhaustive inventory for backend endpoints outside this capability.
+
 ## Runtime discovery and health
 
 - API base: `https://api.dev.athyper.test`
@@ -15,6 +17,40 @@ All application URLs resolved through the development gateway when last verified
 - [Readiness](https://api.dev.athyper.test/readyz)
 
 Readiness returned `503` at the last verification because of unrelated MESH exchange-contract and tenant-less case-age checks. Check release-specific services independently before attributing that result to Business Partner onboarding.
+
+## Common application routes
+
+These routes exist on all three application origins:
+
+| Function | Studio | NEON | MESH |
+| --- | --- | --- | --- |
+| Application root | [Open](https://studio.dev.athyper.test/) | [Open](https://neon.dev.athyper.test/) | [Open](https://mesh.dev.athyper.test/) |
+| Sign in | [Open](https://studio.dev.athyper.test/sign-in) | [Open](https://neon.dev.athyper.test/sign-in) | [Open](https://mesh.dev.athyper.test/sign-in) |
+| Sign out page | [Open](https://studio.dev.athyper.test/logout) | [Open](https://neon.dev.athyper.test/logout) | [Open](https://mesh.dev.athyper.test/logout) |
+| Select tenant/context | [Open](https://studio.dev.athyper.test/select-context) | [Open](https://neon.dev.athyper.test/select-context) | [Open](https://mesh.dev.athyper.test/select-context) |
+| Home | [Open](https://studio.dev.athyper.test/home) | [Open](https://neon.dev.athyper.test/home) | [Open](https://mesh.dev.athyper.test/home) |
+| Inbox | [Open](https://studio.dev.athyper.test/inbox) | [Open](https://neon.dev.athyper.test/inbox) | [Open](https://mesh.dev.athyper.test/inbox) |
+| Notifications | [Open](https://studio.dev.athyper.test/notifications) | [Open](https://neon.dev.athyper.test/notifications) | [Open](https://mesh.dev.athyper.test/notifications) |
+| Atlas | [Open](https://studio.dev.athyper.test/atlas) | [Open](https://neon.dev.athyper.test/atlas) | [Open](https://mesh.dev.athyper.test/atlas) |
+| Master Data Governance | [Open](https://studio.dev.athyper.test/mdg) | [Open](https://neon.dev.athyper.test/mdg) | [Open](https://mesh.dev.athyper.test/mdg) |
+| Application liveness | [Open](https://studio.dev.athyper.test/livez) | [Open](https://neon.dev.athyper.test/livez) | [Open](https://mesh.dev.athyper.test/livez) |
+| Application readiness | [Open](https://studio.dev.athyper.test/readyz) | [Open](https://neon.dev.athyper.test/readyz) | [Open](https://mesh.dev.athyper.test/readyz) |
+| Notification service worker | [Open](https://studio.dev.athyper.test/notification-sw.js) | [Open](https://neon.dev.athyper.test/notification-sw.js) | [Open](https://mesh.dev.athyper.test/notification-sw.js) |
+
+The application shells also declare descriptor-driven routes:
+
+```text
+/{workspaceSlug}
+/{workspaceSlug}/{moduleSlug}
+```
+
+NEON additionally supports deeper descriptor-driven segments:
+
+```text
+/{workspaceSlug}/{moduleSlug}/{segments...}
+```
+
+These are route patterns, not individually reviewable pages until a workspace/module descriptor supplies concrete slugs.
 
 ## Studio applications
 
@@ -28,6 +64,7 @@ Readiness returned `503` at the last verification because of unrelated MESH exch
 | Workflow | [Open](https://studio.dev.athyper.test/mdg/business-partner/workflows) | Read-only overview; not the complete administration designer |
 | Operations | [Open](https://studio.dev.athyper.test/mdg/business-partner/operations) | Operations experience |
 | AI experience | [Open](https://studio.dev.athyper.test/mdg/business-partner/ai-experience) | AI experience |
+| Entity experiences | [Open](https://studio.dev.athyper.test/entity/experiences) | Entity experience configuration |
 
 ## NEON applications
 
@@ -50,6 +87,12 @@ Readiness returned `503` at the last verification because of unrelated MESH exch
 | External Supplier application | [Open](https://neon.dev.athyper.test/supplier-application) |
 | Workflow inbox | [Open](https://neon.dev.athyper.test/inbox) |
 | Notifications | [Open](https://neon.dev.athyper.test/notifications) |
+| Data transfers | [Open](https://neon.dev.athyper.test/operations/data-transfers) |
+| New data transfer | [Open](https://neon.dev.athyper.test/operations/data-transfers/new) |
+| Workforce requests | [Open](https://neon.dev.athyper.test/people/workforce/requests) |
+| New Workforce request | [Open](https://neon.dev.athyper.test/people/workforce/requests/new) |
+| Workforce request detail | `https://neon.dev.athyper.test/people/workforce/requests/{requestId}` |
+| Workforce requisitions | [Open](https://neon.dev.athyper.test/people/workforce/requisitions) |
 
 The canonical master-list route is `/mdg/business-partner/partners`; `/mdg/business-partner` is the module landing page.
 
@@ -66,6 +109,38 @@ Development workflow examples:
 | Organization profile | [Open](https://mesh.dev.athyper.test/mdg/business-partner/profile) |
 | Network relationships | [Open](https://mesh.dev.athyper.test/mdg/business-partner/relationships) |
 | Profile and change requests | [Open](https://mesh.dev.athyper.test/mdg/business-partner/requests) |
+| Data transfers | [Open](https://mesh.dev.athyper.test/operations/data-transfers) |
+| New data transfer | [Open](https://mesh.dev.athyper.test/operations/data-transfers/new) |
+
+## Browser authentication and relay APIs
+
+The following browser-facing routes are implemented independently on each application origin:
+
+```text
+https://studio.dev.athyper.test
+https://neon.dev.athyper.test
+https://mesh.dev.athyper.test
+```
+
+Replace `{appOrigin}` below with one of those origins.
+
+| Method | Route | Purpose |
+| --- | --- | --- |
+| `GET` | `{appOrigin}/api/auth/login` | Start the OIDC login flow |
+| `GET` | `{appOrigin}/api/auth/callback` | IAM callback; not a manual review entry point |
+| `GET` | `{appOrigin}/api/auth/contexts` | List permitted tenant/application contexts |
+| `GET` | `{appOrigin}/api/auth/session` | Read the current browser session |
+| `POST` | `{appOrigin}/api/auth/session/context` | Change the active tenant/context |
+| `POST` | `{appOrigin}/api/auth/refresh` | Refresh the application session |
+| `POST` | `{appOrigin}/api/auth/touch` | Extend/touch active session state |
+| `POST` | `{appOrigin}/api/auth/step-up/start` | Start elevated-assurance authentication |
+| `POST` | `{appOrigin}/api/auth/mfa/verify` | Verify the MFA challenge |
+| `POST` | `{appOrigin}/api/auth/logout` | Start authenticated logout |
+| `GET` | `{appOrigin}/api/auth/logout/callback` | IAM logout callback; not a manual review entry point |
+| `POST` | `{appOrigin}/api/auth/backchannel-logout` | IAM back-channel logout; IAM-to-application only |
+| `GET/POST/PUT/PATCH/DELETE` | `{appOrigin}/api/relay/{path...}` | Authenticated same-origin relay to the Runtime API |
+
+Use the `/sign-in`, `/logout` and `/select-context` pages for manual UX review. Callback, back-channel and relay routes are protocol endpoints and should not be opened as ordinary pages.
 
 ## Studio and cycle APIs
 
