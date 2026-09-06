@@ -1,8 +1,4 @@
 import { createHash } from "node:crypto";
-import type {
-  Authorizer,
-  VerifiedRequestContext,
-} from "@athyper/server-contract-auth";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
 export type IamOrganizationPurpose =
@@ -103,13 +99,7 @@ export interface IdentitySagaRepository {
       readonly receipt: Readonly<Record<string, unknown>>;
     },
   ): Promise<boolean>;
-  replay(input: {
-    readonly authorityTenantId: string;
-    readonly deadLetterAttemptId: string;
-    readonly requestedBy: string;
-    readonly approvedBy: string;
-    readonly requestedAt: string;
-  }): Promise<boolean>;
+
 }
 
 export interface IdentityProviderAdapter {
@@ -368,61 +358,6 @@ export class IdentitySagaWorker {
           ? "dead_letter"
           : "retry";
     }
-  }
-}
-
-export class IdentityReplayService {
-  constructor(
-    private readonly repository: IdentitySagaRepository,
-    private readonly authorizer: Authorizer,
-    private readonly now: () => Date = () => new Date(),
-    /** Must verify persisted approval bound to this tenant, attempt, requester and approver. */
-    private readonly verifyApproval?: (input: {
-      readonly authorityTenantId: string;
-      readonly deadLetterAttemptId: string;
-      readonly requestedBy: string;
-      readonly approvedBy: string;
-    }) => Promise<boolean>,
-  ) {}
-
-  async request(input: {
-    readonly context: VerifiedRequestContext;
-    readonly deadLetterAttemptId: string;
-    readonly approvedBy: string;
-  }): Promise<boolean> {
-    if (input.context.planeKey !== "studio")
-      throw new Error("IAM_REPLAY_FORBIDDEN:studio_required");
-    const decision = await this.authorizer.authorize({
-      context: input.context,
-      permissionCode: "studio.iam.application_projection.replay",
-      resource: {
-        tenantId: input.context.tenantId,
-        attemptId: input.deadLetterAttemptId,
-      },
-    });
-    if (!decision.allowed)
-      throw new Error(`IAM_REPLAY_FORBIDDEN:${decision.reason}`);
-    if (input.context.assurance !== "elevated")
-      throw new Error("IAM_REPLAY_MFA_REQUIRED");
-    if (input.approvedBy === input.context.principalId)
-      throw new Error("IAM_REPLAY_SOD_REQUIRED");
-    if (
-      !this.verifyApproval ||
-      !(await this.verifyApproval({
-        authorityTenantId: input.context.tenantId,
-        deadLetterAttemptId: input.deadLetterAttemptId,
-        requestedBy: input.context.principalId,
-        approvedBy: input.approvedBy,
-      }))
-    )
-      throw new Error("IAM_REPLAY_APPROVAL_REQUIRED");
-    return this.repository.replay({
-      authorityTenantId: input.context.tenantId,
-      deadLetterAttemptId: input.deadLetterAttemptId,
-      requestedBy: input.context.principalId,
-      approvedBy: input.approvedBy,
-      requestedAt: this.now().toISOString(),
-    });
   }
 }
 

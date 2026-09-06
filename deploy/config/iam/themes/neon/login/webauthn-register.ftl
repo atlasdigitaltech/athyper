@@ -81,6 +81,7 @@
     </div><!-- /.kc-form-wrapper -->
   </div><!-- /.kc-panel-right -->
   <#include "_footer.ftl">
+  <#include "_iam-story.ftl">
 
 </div><!-- /.kc-page -->
 

@@ -97,6 +97,8 @@ async function main(): Promise<void> {
     const source = await readFile(path.join(loginRoot, page), "utf8");
     const checks: Array<[string, boolean]> = [
       ["shared IAM context include", source.includes('<#include "_iam-context.ftl">')],
+      ["shared brand include", source.includes('<#include "_iam-header.ftl">')],
+      ["workspace follows authentication", source.indexOf('<#include "_iam-story.ftl">') > source.indexOf('<#include "_footer.ftl">')],
       ["shared resolver include", source.includes('<#include "_theme-resolver.ftl">')],
       ["unified shell class", source.includes('class="iam-shell kc-page"')],
       ["client-derived plane binding", source.includes('data-plane="${iamPlane}"')],

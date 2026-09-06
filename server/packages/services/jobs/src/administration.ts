@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { JobAdministration, JobAdministrationCommand, JobAdministrationRequest, JobAdministrationResult, JobDeadLetterSummary, JobExecutionCoordinate, JobPublisher, JobReplaySource, JobTransportControl } from "@athyper/server-contract-jobs";
 
 export interface JobAdministrationStore {
@@ -7,6 +8,7 @@ export interface JobAdministrationStore {
     readonly command: JobAdministrationCommand;
     readonly applied: boolean;
     readonly replacementJobId?: string;
+    readonly expectedAttempt?: number;
     readonly detail?: Readonly<Record<string, unknown>>;
   }): Promise<void>;
   listDeadLetters(input: {
@@ -34,6 +36,7 @@ export function createJobAdministrationService(options: {
       request,
       command,
       applied,
+      ...(source.attempt !== undefined ? { expectedAttempt: source.attempt } : {}),
       detail: { jobId: source.jobId, queue: source.queue },
     });
     return { command, applied, ...(applied ? { jobId: source.jobId } : { reason: command === "cancel" ? "Job is not cancellable or the owning worker did not acknowledge cancellation" : "BullMQ job was not available" }) };
@@ -47,9 +50,11 @@ export function createJobAdministrationService(options: {
       const source = await options.store.load(request);
       if (!source) return { command: "replay", applied: false, reason: "Job execution was not found" };
       const publishedId = await options.publisher.enqueue(source.queue, source.name, source.data, {
-        enqueueKey: `replay:${source.executionKey}:${request.executionId}`,
+        enqueueKey: `replay:${request.executionId}:${randomUUID()}`,
         maxAttempts: source.maxAttempts,
         execution: request.execution,
+        ...(source.subject ? { subject: source.subject } : {}),
+        ...(source.payloadSchema ? { payloadSchema: source.payloadSchema } : {}),
         removeOnComplete: 1_000,
         removeOnFail: 5_000,
       });

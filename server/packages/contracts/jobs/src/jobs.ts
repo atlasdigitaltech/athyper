@@ -43,6 +43,8 @@ export interface JobEnvelope<
   readonly enqueuedAt: string;
   readonly correlationId?: string;
   readonly idempotencyKey?: string;
+  /** Durable execution identity, qualified by queue independently of handler idempotency. */
+  readonly executionKey?: string;
   readonly execution?: JobExecutionCoordinate;
   readonly subject?: JobSubject;
   readonly payloadSchema?: JobPayloadSchema;

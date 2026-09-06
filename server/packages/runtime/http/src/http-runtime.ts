@@ -196,6 +196,12 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
     sendProblem(response, request, new HttpError(404, "ROUTE_NOT_FOUND", "Route not found"));
   });
   const errors: ErrorRequestHandler = (error, request, response, _next) => {
+    // Express JSON parsing runs before route handlers; malformed bodies never
+    // reach the route's validation error mapping.
+    if (error instanceof SyntaxError && "type" in error && error.type === "entity.parse.failed") {
+      sendProblem(response, request, new HttpError(400, "INVALID_JSON", "Request body must contain valid JSON"));
+      return;
+    }
     if (error instanceof HttpError) {
       sendProblem(response, request, error);
       return;

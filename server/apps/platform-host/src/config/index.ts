@@ -35,6 +35,7 @@ export interface HostConfig {
     claimContextMode: "off" | "shadow" | "enforce" | "on";
     requireAuthorizedRole: boolean;
     enforceRequiredActions: boolean;
+    identityReplayEnabled: boolean;
     requiredActionsMatrixJson: string | undefined;
   };
   identityProvider: {
@@ -731,6 +732,7 @@ export function loadConfig(): HostConfig {
       claimContextMode,
       requireAuthorizedRole,
       enforceRequiredActions,
+      identityReplayEnabled: readBoolean("IAM_IDENTITY_REPLAY_ENABLED", false),
       requiredActionsMatrixJson: requiredActionsMatrixJson || undefined,
     },
     identityProvider: {

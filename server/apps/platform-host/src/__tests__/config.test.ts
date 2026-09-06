@@ -28,6 +28,7 @@ describe("loadConfig", () => {
     "KEYCLOAK_ADMIN_CREDENTIAL_REFERENCE",
     "IAM_ISSUER_URL",
     "IAM_CLIENT_ID",
+    "IAM_IDENTITY_REPLAY_ENABLED",
     "REDIS_URL",
     "REDIS_KEY_PREFIX",
     "REDIS_CONNECT_TIMEOUT_MS",
@@ -212,6 +213,7 @@ describe("loadConfig", () => {
       claimContextMode: "shadow",
       requireAuthorizedRole: true,
       enforceRequiredActions: true,
+      identityReplayEnabled: false,
       requiredActionsMatrixJson: undefined,
     });
     expect(config.identityProvider).toEqual({
@@ -400,6 +402,7 @@ describe("loadConfig", () => {
     process.env["AUTH_CLAIM_FIRST_CONTEXT"] = "on";
     process.env["AUTH_REQUIRE_AUTHORIZED_ROLE"] = "false";
     process.env["AUTH_VERIFY_ENFORCE_REQUIRED_ACTIONS"] = "false";
+    process.env["IAM_IDENTITY_REPLAY_ENABLED"] = "true";
     process.env["AUTH_REQUIRED_ACTIONS_MATRIX"] =
       '{"UPDATE_PASSWORD":["/api/"]}';
     expect(loadConfig().iam).toEqual({
@@ -407,6 +410,7 @@ describe("loadConfig", () => {
       claimContextMode: "on",
       requireAuthorizedRole: false,
       enforceRequiredActions: false,
+      identityReplayEnabled: true,
       requiredActionsMatrixJson: '{"UPDATE_PASSWORD":["/api/"]}',
     });
   });

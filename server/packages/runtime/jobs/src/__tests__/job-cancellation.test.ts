@@ -68,6 +68,34 @@ describe("cross-process cancellation", () => {
     } finally { commit.resolve(); await api.close(); await worker.close(); }
   });
 
+  it("includes connection initialization in the acknowledgement timeout and closes without waiting for Redis", async () => {
+    const client = new Promise<unknown>(() => undefined);
+    const close = vi.fn(async () => undefined);
+    const transport = createRedisJobCancellationTransport("redis://localhost", { timeoutMs: 20, createConnection: () => ({ client, close }) });
+    await expect(transport.request("reports", "job-1", 1)).resolves.toBe(false);
+    await transport.close();
+    expect(close).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledWith(true);
+  });
+
+  it("recovers after a failed initial subscription", async () => {
+    const createConnection = broker();
+    const owner = createRedisJobCancellationTransport("redis://localhost/2", { createConnection });
+    let failSubscription = true;
+    const api = createRedisJobCancellationTransport("redis://localhost/2", { timeoutMs: 50, createConnection: () => {
+      const connection = createConnection();
+      return { ...connection, client: connection.client.then((client) => ({ ...client, subscribe: async (channel: string) => {
+        if (failSubscription) { failSubscription = false; throw new Error("Subscription failed"); }
+        return client.subscribe(channel);
+      } })) };
+    } });
+    try {
+      await owner.listen(async () => true);
+      await expect(api.request("reports", "job-1", 1)).rejects.toThrow("Subscription failed");
+      await expect(api.request("reports", "job-1", 1)).resolves.toBe(true);
+    } finally { await api.close(); await owner.close(); }
+  });
+
   it("times out without a matching owner and isolates Redis databases", async () => {
     const createConnection = broker();
     const owner = createRedisJobCancellationTransport("redis://localhost/1", { createConnection, timeoutMs: 20 });

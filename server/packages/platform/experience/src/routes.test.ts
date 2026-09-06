@@ -35,6 +35,7 @@ describe("localization HTTP errors with response enforcement", () => {
     ["PUT","/api/platform/localization/policies/neon","updateLocalePolicy",403],
     ["PUT","/api/platform/localization/policies/neon","updateLocalePolicy",503],
     ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",403],
+    ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",409],
     ["PATCH","/api/platform/profile/locale","updatePrincipalLocale",503],
   ] as const)("preserves %s %s error status %s %i", async (method,path,operation,status) => {
     const application=express();application.use(express.json());enforceContractResponses(application);

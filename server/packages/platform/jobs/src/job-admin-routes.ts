@@ -1,4 +1,4 @@
-import { JobValidationError } from "@athyper/server-contract-jobs";
+import { JobValidationError, JobScheduleNotFoundError, JobScheduleConflictError } from "@athyper/server-contract-jobs";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -102,6 +102,7 @@ const contracts = {
     responses: {
       201: { description: "Schedule created", body: objectSchema },
       400: { description: "Invalid schedule" },
+      409: { description: "Schedule code already exists", body: objectSchema },
       403: { description: "Forbidden", body: objectSchema },
     },
   }),
@@ -117,6 +118,8 @@ const contracts = {
     responses: {
       200: { description: "Schedule updated", body: objectSchema },
       400: { description: "Invalid schedule" },
+      404: { description: "Schedule not found", body: objectSchema },
+      409: { description: "Schedule code already exists", body: objectSchema },
       403: { description: "Forbidden", body: objectSchema },
     },
   }),
@@ -132,6 +135,7 @@ const contracts = {
     responses: {
       204: { description: "Schedule deactivated" },
       400: { description: "Invalid request" },
+      404: { description: "Schedule not found", body: objectSchema },
       403: { description: "Forbidden", body: objectSchema },
     },
   }),
@@ -275,7 +279,7 @@ function registerGovernanceRoutes(
           entries: await options.governance.listExecutions({
             execution: coordinate(context),
             limit: integer(request.query["limit"], 50),
-            ...(request.query["cursor"]
+            ...(request.query["cursor"] !== undefined
               ? { cursor: uuid(request.query["cursor"]) }
               : {}),
           }),
@@ -324,8 +328,8 @@ function registerGovernanceRoutes(
           options.governance.previewCron({
             expression: text(body, "expression"),
             timezone: text(body, "timezone"),
-            ...(body["from"] ? { from: text(body, "from") } : {}),
-            ...(body["count"] ? { count: Number(body["count"]) } : {}),
+            ...(body["from"] !== undefined ? { from: text(body, "from") } : {}),
+            ...(body["count"] !== undefined ? { count: previewCount(body["count"]) } : {}),
           }),
         );
       } catch (error) {
@@ -488,6 +492,7 @@ function requiredReason(value: unknown): string {
 
 function integer(value: unknown, fallback: number): number {
   if (value === undefined) return fallback;
+  if (typeof value !== "string" || !/^[0-9]+$/.test(value)) throw new JobValidationError("limit must be an integer between 1 and 200");
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 200)
     throw new JobValidationError("limit must be between 1 and 200");
@@ -495,7 +500,7 @@ function integer(value: unknown, fallback: number): number {
 }
 
 function uuid(value: unknown): string {
-  const result = String(value ?? "");
+  const result = typeof value === "string" ? value : "";
   if (
     !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
       result,
@@ -507,7 +512,16 @@ function uuid(value: unknown): string {
 }
 
 function toRequestError(error: unknown): unknown {
+  if (error instanceof JobScheduleNotFoundError) return new HttpError(404, "JOBS_SCHEDULE_NOT_FOUND", error.message);
+  if (error instanceof JobScheduleConflictError) return new HttpError(409, "JOBS_SCHEDULE_CONFLICT", error.message);
   return error instanceof JobValidationError
     ? new HttpError(400, "JOBS_INVALID_REQUEST", error.message)
     : error;
+}
+
+function previewCount(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    throw new JobValidationError("count must be a positive integer");
+  }
+  return value;
 }

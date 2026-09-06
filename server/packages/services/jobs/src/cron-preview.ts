@@ -14,9 +14,13 @@ export function previewCron(input: {
   const timezone = input.timezone.trim();
   if (!expression) throw new JobValidationError("cron expression is required");
   if (!timezone || timezone.length > 64) throw new JobValidationError("timezone is invalid");
-  const count = Math.max(1, Math.min(MAX_PREVIEW, Math.trunc(input.count ?? 5)));
-  const currentDate = input.from ? validDate(input.from) : new Date();
+  if (input.count !== undefined && (!Number.isSafeInteger(input.count) || input.count < 1)) {
+    throw new JobValidationError("count must be a positive integer");
+  }
+  const count = Math.min(MAX_PREVIEW, input.count ?? 5);
+  const currentDate = input.from !== undefined ? validDate(input.from) : new Date();
   try {
+    new Intl.DateTimeFormat("en-US", { timeZone: timezone });
     const interval = parser.parseExpression(expression, { currentDate, tz: timezone });
     return {
       expression,

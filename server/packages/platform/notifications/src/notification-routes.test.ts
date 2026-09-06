@@ -175,9 +175,15 @@ async function fixture(
     inbox,
     events,
     readContext,
-    request: (method: string, path: string, authenticated = true) =>
+    request: (
+      method: string,
+      path: string,
+      authenticated = true,
+      signal?: AbortSignal,
+    ) =>
       fetch(`${url}${path}`, {
         method,
+        signal,
         headers: authenticated ? { authorization: "Bearer test" } : {},
       }),
   };
@@ -324,6 +330,108 @@ describe("notification HTTP behavior", () => {
       f.events.publish.mockRejectedValue(new Error("Redis unavailable"));
       const response = await f.request("POST", path);
       expect(response.status).toBe(status);
+      expect(f.events.publish).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each([
+    ["/api/notifications/read-all", 200, "markAllRead"],
+    [`/api/notifications/${notificationId}/dismiss`, 204, "dismiss"],
+    [`/api/notifications/${notificationId}/read`, 204, "markRead"],
+  ] as const)(
+    "responds after commit without waiting for a stalled publisher: %s",
+    async (path, status, operation) => {
+      const f = await fixture();
+      let finishPublishing!: () => void;
+      f.events.publish.mockImplementation(
+        () =>
+          new Promise<void>((resolve) => {
+            finishPublishing = resolve;
+          }),
+      );
+      try {
+        const response = await f.request(
+          "POST",
+          path,
+          true,
+          AbortSignal.timeout(1000),
+        );
+        expect(response.status).toBe(status);
+        expect(f.inbox[operation]).toHaveBeenCalledOnce();
+        expect(f.events.publish).toHaveBeenCalledOnce();
+        if (status === 200)
+          expect(await response.json()).toEqual({
+            updated: 3,
+            readAt: expect.any(String),
+          });
+        else expect(await response.text()).toBe("");
+      } finally {
+        finishPublishing?.();
+      }
+    },
+  );
+
+  it("handles a broadcast rejection after the committed response has been sent", async () => {
+    const f = await fixture();
+    const warning = vi
+      .spyOn(console, "warn")
+      .mockImplementation(() => undefined);
+    let failPublishing!: (error: Error) => void;
+    f.events.publish.mockImplementation(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          failPublishing = reject;
+        }),
+    );
+    try {
+      const response = await f.request(
+        "POST",
+        "/api/notifications/read-all",
+        true,
+        AbortSignal.timeout(1000),
+      );
+      expect(response.status).toBe(200);
+    } finally {
+      failPublishing?.(new Error("Redis disconnected after commit"));
+    }
+    await vi.waitFor(() =>
+      expect(warning).toHaveBeenCalledExactlyOnceWith(
+        "[notifications] inbox_event_publish_failed type=notification.refresh",
+      ),
+    );
+  });
+
+  it.each([
+    ["/api/notifications/read-all", 200, "markAllRead", 3],
+    [`/api/notifications/${notificationId}/dismiss`, 204, "dismiss", true],
+  ] as const)(
+    "waits for persistence before responding or broadcasting: %s",
+    async (path, status, operation, result) => {
+      const f = await fixture();
+      let commit!: (value: number | boolean) => void;
+      f.inbox[operation].mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            commit = resolve;
+          }),
+      );
+      let responded = false;
+      const response = f
+        .request("POST", path, true, AbortSignal.timeout(1000))
+        .then((value) => {
+          responded = true;
+          return value;
+        });
+      try {
+        await vi.waitFor(() =>
+          expect(f.inbox[operation]).toHaveBeenCalledOnce(),
+        );
+        expect(responded).toBe(false);
+        expect(f.events.publish).not.toHaveBeenCalled();
+      } finally {
+        commit?.(result);
+      }
+      expect((await response).status).toBe(status);
       expect(f.events.publish).toHaveBeenCalledOnce();
     },
   );

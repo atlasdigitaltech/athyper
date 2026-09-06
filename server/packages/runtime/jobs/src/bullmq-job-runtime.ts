@@ -175,8 +175,8 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
         data,
         maxAttempts: effectiveOptions.maxAttempts ?? 1,
         // Match the worker envelope: semantic enqueue keys are transport inputs,
-        // while the resolved job ID identifies the durable execution.
-        executionKey: resolvedJobId ?? job.id,
+        // while queue plus resolved job ID identifies the durable execution.
+        executionKey: `${queue}:${resolvedJobId ?? job.id}`,
         ...(effectiveOptions.execution ? { execution: effectiveOptions.execution } : {}),
         ...(effectiveOptions.subject ? { subject: effectiveOptions.subject } : {}),
         ...(effectiveOptions.payloadSchema ? { payloadSchema: effectiveOptions.payloadSchema } : {}),
@@ -212,8 +212,15 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
       validateName("queue", queue);
       const target = await queueFor(queue).getJob?.(jobId);
       if (!target) return false;
-      await target.retry("failed");
-      return true;
+      if (target.getState && await target.getState() !== "failed") return false;
+      try {
+        await target.retry("failed");
+        return true;
+      } catch (error) {
+        // Another operator or worker may have moved the job since the state read.
+        if (target.getState && await target.getState() !== "failed") return false;
+        throw error;
+      }
     },
 
     async listDeadLetters(queue, input = {}) {
@@ -267,6 +274,7 @@ export function createBullMqJobRuntime(options: BullMqJobRuntimeOptions): JobRun
             id: job.id ?? `${queue}:${job.name}:unknown`,
             name: job.name,
             queue,
+            executionKey: `${queue}:${job.opts.jobId ?? job.id ?? `${queue}:${job.name}:unknown`}`,
             data: stored.data,
             attempt: job.attemptsMade + 1,
             // BullMQ manual retry preserves attemptsMade and admits one more run

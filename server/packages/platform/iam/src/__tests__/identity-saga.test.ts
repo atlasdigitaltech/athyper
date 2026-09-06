@@ -1,7 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
-  IdentityReplayService,
   IdentitySagaWorker,
   ProviderIdentityCallbackConsumer,
   PeriodicIdentityReconciliationJob,
@@ -414,108 +412,5 @@ describe("provider callbacks and reconciliation", () => {
       identityId: "extra",
       observedAt: now.toISOString(),
     });
-  });
-});
-
-describe("privileged replay", () => {
-  const context = {
-    planeKey: "studio",
-    realmKey: "studio",
-    tenantId: "tenant-1",
-    principalId: "operator-1",
-    authEpoch: 1,
-    assurance: "elevated",
-    profileHash: "p",
-    requestId: "r",
-    permissions: {
-      planeKey: "studio",
-      tenantId: "tenant-1",
-      principalId: "operator-1",
-      principalFingerprint: "p",
-      profileHash: "p",
-      schemaHash: "s",
-      resolvedAt: 1,
-      allowed: [],
-      denied: [],
-      planLocked: [],
-      planeExcluded: [],
-      entries: [],
-      authorizationScopes: [],
-    },
-  } as VerifiedRequestContext;
-  it("rejects unverified approval and non-Studio callers before writing", async () => {
-    const replay = vi.fn(async () => true);
-    const repository = { replay } as unknown as IdentitySagaRepository;
-    const authorizer = {
-      authorize: vi.fn(async () => ({ allowed: true as const })),
-    };
-    const input = {
-      context,
-      deadLetterAttemptId: "attempt-1",
-      approvedBy: "approver-2",
-    };
-    await expect(
-      new IdentityReplayService(repository, authorizer).request(input),
-    ).rejects.toThrow("APPROVAL_REQUIRED");
-    const verifyApproval = vi.fn(async () => false);
-    const service = new IdentityReplayService(
-      repository,
-      authorizer,
-      () => now,
-      verifyApproval,
-    );
-    await expect(service.request(input)).rejects.toThrow("APPROVAL_REQUIRED");
-    expect(verifyApproval).toHaveBeenCalledWith({
-      authorityTenantId: context.tenantId,
-      deadLetterAttemptId: "attempt-1",
-      requestedBy: context.principalId,
-      approvedBy: "approver-2",
-    });
-    await expect(
-      service.request({ ...input, context: { ...context, planeKey: "neon" } }),
-    ).rejects.toThrow("FORBIDDEN");
-    expect(replay).not.toHaveBeenCalled();
-  });
-
-  it("requires MFA, authorization, and a distinct SoD approver", async () => {
-    const repository = {
-      replay: vi.fn(async () => true),
-    } as unknown as IdentitySagaRepository;
-    const allowed = {
-      authorize: vi.fn(async () => ({ allowed: true as const })),
-    };
-    const service = new IdentityReplayService(
-      repository,
-      allowed,
-      () => now,
-      async () => true,
-    );
-    await expect(
-      service.request({
-        context,
-        deadLetterAttemptId: "attempt-1",
-        approvedBy: "operator-1",
-      }),
-    ).rejects.toThrow("SOD_REQUIRED");
-    await expect(
-      service.request({
-        context: { ...context, assurance: "baseline" },
-        deadLetterAttemptId: "attempt-1",
-        approvedBy: "approver-2",
-      }),
-    ).rejects.toThrow("MFA_REQUIRED");
-    await expect(
-      service.request({
-        context,
-        deadLetterAttemptId: "attempt-1",
-        approvedBy: "approver-2",
-      }),
-    ).resolves.toBe(true);
-    expect(repository.replay).toHaveBeenCalledWith(
-      expect.objectContaining({
-        requestedBy: "operator-1",
-        approvedBy: "approver-2",
-      }),
-    );
   });
 });

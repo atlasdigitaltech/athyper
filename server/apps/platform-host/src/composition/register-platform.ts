@@ -43,7 +43,10 @@ import {
   EXTERNAL_WORKER_IDENTITY_DELIVERY_QUEUE,
   DELIVER_EXTERNAL_WORKER_IDENTITY_INTENTS_JOB,
   createExternalWorkerIdentityDeliveryHandler,
-  IdentityReplayService,
+  IdentityReplayApprovalService,
+  createIdentityReplayAuthorizer,
+  KyselyIdentityReplayApprovalRepository,
+  registerIdentityReplayRoutes,
   IdentitySagaWorker,
   KeycloakIdentityProviderAdapter,
   KyselyDesiredOrganizationReader,
@@ -89,9 +92,6 @@ export interface PlatformRegistrationDependencies {
     IamServiceOptions["resolveIdentityContext"]
   >;
   readonly provisioning?: ProvisioningVertical;
-  readonly verifyIdentityReplayApproval?: ConstructorParameters<
-    typeof IdentityReplayService
-  >[3];
 }
 
 export function registerPlatform(
@@ -263,7 +263,8 @@ export function registerPlatform(
         studioDatabase,
         iam,
         authorizer,
-        dependencies.verifyIdentityReplayApproval,
+        audit,
+        config.iam.identityReplayEnabled,
       ),
     );
   container.platform.httpRegistrars.push((application) =>
@@ -432,77 +433,18 @@ function registerIdentitySagaRoutes(
   studio: NonNullable<Container["adapters"]["athyperDatabase"]>,
   iam: ReturnType<typeof createIamService>,
   authorizer: ReturnType<typeof createPermissionAuthorizer>,
-  verifyApproval?: ConstructorParameters<typeof IdentityReplayService>[3],
+  audit: AuditRecorder,
+  replayEnabled: boolean,
 ): void {
-  const authenticate = createIamAuthenticationMiddleware(iam),
-    repository = new KyselyIdentitySagaRepository((work) =>
-      studio.withTenantTransaction((transaction) => work(transaction as never)),
-    ),
-    replay = new IdentityReplayService(
-      repository,
-      authorizer,
-      undefined,
-      verifyApproval,
-    );
-  registerContractRoute(
+  const authenticate = createIamAuthenticationMiddleware(iam);
+  const repository = new KyselyIdentityReplayApprovalRepository(
+    (work) => studio.withTenantTransaction((transaction) => work(transaction as never)),
+    audit,
+  );
+  registerIdentityReplayRoutes(
     application,
-    defineRouteContract({
-      method: "post",
-      path: "/api/iam/identity-saga-attempts/:attemptId/replay",
-      operationId: "iam.replayIdentitySaga",
-      summary: "Request maker-checker replay of an identity saga dead letter",
-      tags: ["IAM"],
-      authenticated: true,
-      permission: "studio.iam.application_projection.replay",
-      request: {
-        params: {
-          type: "object",
-          properties: { attemptId: UUID_SCHEMA },
-          required: ["attemptId"],
-        },
-        body: {
-          type: "object",
-          properties: { approvedBy: UUID_SCHEMA },
-          required: ["approvedBy"],
-        },
-      },
-      responses: {
-        202: { description: "Replay accepted", body: { type: "object" } },
-        400: { description: "Invalid request" },
-        401: { description: "Authentication required" },
-        503: { description: "Authentication authority unavailable" },
-        403: { description: "Forbidden" },
-        404: { description: "Dead letter not found" },
-      },
-    }),
     authenticate,
-    async (request, response, next) => {
-      try {
-        const context = readVerifiedRequestContext(response),
-          approvedBy = String(request.body?.approvedBy ?? ""),
-          attemptId = String(request.params.attemptId ?? "");
-        const accepted = await replay.request({
-          context,
-          deadLetterAttemptId: attemptId,
-          approvedBy,
-        });
-        if (!accepted) {
-          response
-            .status(404)
-            .json(
-              problem(
-                404,
-                "AUTH_IDENTITY_SAGA_DEAD_LETTER_NOT_FOUND",
-                "Replayable identity saga dead letter was not found",
-              ),
-            );
-          return;
-        }
-        response.status(202).json({ accepted: true, attemptId });
-      } catch (error) {
-        next(identityReplayHttpError(error));
-      }
-    },
+    new IdentityReplayApprovalService(repository, createIdentityReplayAuthorizer(), replayEnabled),
   );
   registerContractRoute(
     application,
@@ -852,6 +794,7 @@ function registerProjectionReconciliationRoutes(
             await authorizer.authorize({
               context,
               permissionCode: "studio.iam.application_projection.read",
+              resource: { tenantId: context.tenantId },
             })
           ).allowed
         ) {
@@ -918,6 +861,7 @@ function registerProjectionReconciliationRoutes(
             await authorizer.authorize({
               context,
               permissionCode: "studio.iam.application_projection.replay",
+              resource: { tenantId: context.tenantId, attemptId: String(request.params.attemptId) },
             })
           ).allowed
         ) {
@@ -1583,22 +1527,6 @@ function issuerRealm(issuer: string): string | undefined {
 }
 function problem(status: number, code: string, title: string) {
   return { type: `https://athyper.dev/problems/${code}`, title, status, code };
-}
-
-function identityReplayHttpError(error: unknown): unknown {
-  if (!(error instanceof Error)) return error;
-  const code = error.message.split(":", 1)[0] ?? "";
-  const detail =
-    code === "IAM_REPLAY_FORBIDDEN"
-      ? "Identity saga replay requires Studio projection-replay authority"
-      : code === "IAM_REPLAY_MFA_REQUIRED"
-        ? "Identity saga replay requires an elevated session"
-        : code === "IAM_REPLAY_SOD_REQUIRED"
-          ? "Identity saga replay requires an approver distinct from the requester"
-          : code === "IAM_REPLAY_APPROVAL_REQUIRED"
-            ? "Identity saga replay requires verified approval for this attempt and requester"
-            : undefined;
-  return detail ? new HttpError(403, code, detail) : error;
 }
 
 function createIamOutboxWriter(): OutboxWriter<

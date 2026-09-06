@@ -1,6 +1,6 @@
 # Notification API review — 2026-09-06
 
-Reviewed the four Notifications operations against route handlers, HTTP contracts, host composition, the Redis event adapter, repository SQL, inbox DDL, exact-plane transaction routing, and notification client response parsers. Fixes are in the workspace; they have not been deployed.
+Reviewed the four Notifications operations against route handlers, HTTP contracts, host composition, the Redis event adapter, repository SQL, inbox DDL, exact-plane transaction routing, and notification client response parsers. The initial fixes are now present in the checked-out branch. A follow-up review found and fixed a remaining stalled-publication bug; that additional fix is local and has not been deployed. See the follow-up evidence below.
 
 | Finding | Impact and evidence | Fix |
 | --- | --- | --- |
@@ -23,4 +23,24 @@ Validation completed:
 - `git diff --check` passed.
 - Retrieved the development OpenAPI document and confirmed all four unauthenticated operations return **401**. These local checks used curl's per-request certificate bypass for the development self-signed certificate; no credentials were sent.
 
-Limits: authenticated development mutations and actual browser push delivery were not exercised. A failed fan-out can leave other connected clients stale until they refetch; committed inbox data remains authoritative. Publication is still awaited, so this fix handles rejected publication rather than introducing a new timeout policy. Redeployment is required before the development API and its documentation reflect these changes.
+Limits: authenticated development mutations and actual browser push delivery were not exercised. A failed fan-out can leave other connected clients stale until they refetch; committed inbox data remains authoritative. The initial fix handled rejected publication only. The follow-up below removes publication from the HTTP response wait; connected clients still rely on refetching if a broadcast is lost.
+
+
+## Follow-up review of the current branch
+
+Reviewed local branch `stack-v2-foundation` at base commit `7dbd0401`, including the earlier fixes. The supplied GitHub source URL returned 404 to the browser tool, so remote source equivalence was not independently verified. The development OpenAPI document was accessible locally and matched all four operation IDs, including the dismiss 400 response. Each of the four endpoints again returned 401 to an unauthenticated request. As before, these credential-free development probes bypassed the self-signed certificate check for that request only.
+
+**Additional P2 bug fixed:** read-all and dismiss still awaited `publishInboxEvent` after committing their database transaction. Catching rejection does not handle a publisher that remains pending. The Redis event adapter awaits subscription readiness and publication, and the in-memory adapter awaits listeners, so neither interface guarantees prompt completion. A stalled publisher could leave a completed mutation without an HTTP response.
+
+The routes now start the optional broadcast without awaiting it. The helper handles both synchronous throws and promise rejections and logs failures. Single-notification read uses the same helper and receives the same correction. Persistence remains awaited; missing/foreign notifications and database failures retain their original error behavior. This does not add durable event delivery or cancel a pending Redis command. A process exit can drop an unfinished broadcast; PostgreSQL remains authoritative.
+
+Four new regression cases failed with request timeouts before the fix: stalled publication for read-all, dismiss, and single-read, plus delayed rejection after the response. They pass after the fix. Two additional tests verify that neither the response nor the broadcast precedes completion of persistence.
+
+| Endpoint | Current review result |
+| --- | --- |
+| `GET /api/notifications/counts` | Verified tenant/principal/plane propagation, spoofed query scope rejection by construction, zero and positive counts, and persistence error behavior. Rechecked SQL predicates and database routing; no additional confirmed defect. |
+| `GET /api/notifications/push-configuration` | Existing transport/public-key fix remains intact. Revalidated absent and mobile-only transports, browser transport, missing/blank key, and authentication. Availability describes configured capability, not a live provider delivery probe. |
+| `POST /api/notifications/read-all` | Fixed stalled post-commit publication. Revalidated response count/timestamp, verified scope, empty updates, and persistence errors. |
+| `POST /api/notifications/{id}/dismiss` | Fixed stalled post-commit publication. Revalidated UUID validation/OpenAPI schema, missing/foreign result handling, scoped mutation, and empty 204 response. |
+
+Current verification: **96 notification tests, 18 host notification/adapter tests, and 29 shared HTTP runtime tests passed (143 total)**. Notification production and test TypeScript checks passed, as did `git diff --check`. The isolated PostgreSQL verification described above belongs to the initial review and was not rerun in this follow-up; repository SQL was unchanged. Authenticated development mutations and browser push delivery were not exercised. The new broadcast-wait fix requires deployment.

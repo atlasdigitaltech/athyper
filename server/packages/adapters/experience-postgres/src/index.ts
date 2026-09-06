@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { ExperienceAccessError } from "@athyper/server-platform-experience";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { ExperienceCatalogRecord, ExperienceFeatureRecord, ExperienceIdentityRecord, ExperienceLocalePolicyRecord, ExperienceNetworkAccountRecord, ExperienceOperatingOrganizationRecord, ExperiencePlaneRepository, ExperienceProfileRecord, ExperienceSurfaceProjectionRecord, ExperienceSurfaceReleaseRecord, ExperienceWorkContextRecord, PersonalSurfaceArrangementRecord, RouteSlugRedirectRecord } from "@athyper/server-platform-experience/ports";
 import { sql, type Kysely } from "kysely";
@@ -237,6 +238,15 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
   async updateLocalePolicy(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord> {
     return this.withContext(context, async (database) => {
       const write = async (transaction: Database) => {
+        await lockLocaleTenant(transaction, context);
+        const requested = (policy.catalogs ?? []).map(({localeCode}) => localeCode);
+        const registered = await sql<{localeCode:string}>`
+          SELECT locale_code AS "localeCode" FROM control.ui_locale_catalog
+          WHERE locale_code=ANY(${requested}::text[]) FOR SHARE`.execute(transaction);
+        const available = new Set(registered.rows.map(row => row.localeCode));
+        if (requested.some(code => !available.has(code)) || policy.enabledLocales.some(code => !available.has(code))) {
+          throw new ExperienceAccessError(503, "EXPERIENCE_EXACT_PLANE_CATALOG_UNAVAILABLE", "The target plane is missing requested locale catalogs");
+        }
         const governance = Object.fromEntries((policy.catalogs ?? []).map(({localeCode, ...catalog}) => [localeCode, catalog]));
         // This upsert also locks the tenant profile, serializing concurrent policy replacements.
         // Catalog review choices belong to this tenant; never mutate the shared plane catalog.
@@ -269,11 +279,23 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     });
   }
 
-  async updatePrincipalLocale(context: VerifiedRequestContext, localeCode: string): Promise<void> {
-    await this.withContext(context, async (database) => { await sql`
-      INSERT INTO master.principal_ui_profile(tenant_id,principal_id,locale_code,language_code,created_by)
-      VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${localeCode},${new Intl.Locale(localeCode).language},${context.principalId}::uuid)
-      ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(database); });
+  async updatePrincipalLocale(context: VerifiedRequestContext, localeCode: string, expectedPolicyRevision: string): Promise<void> {
+    await this.withContext(context, async (database) => {
+      const write = async (transaction: Database) => {
+        // Serialize with policy replacement, then verify the policy used by service validation.
+        await lockLocaleTenant(transaction, context);
+        const current = await readTenantLocalePolicy(transaction, context);
+        if (current.revision !== expectedPolicyRevision) {
+          throw new ExperienceAccessError(409, "EXPERIENCE_LOCALE_POLICY_CHANGED", "Locale policy changed; reload before selecting a locale");
+        }
+        await sql`
+          INSERT INTO master.principal_ui_profile(tenant_id,principal_id,locale_code,language_code,created_by)
+          VALUES(${context.tenantId}::uuid,${context.principalId}::uuid,${localeCode},${new Intl.Locale(localeCode).language},${context.principalId}::uuid)
+          ON CONFLICT ON CONSTRAINT principal_ui_profile_tenant_principal_uq DO UPDATE
+          SET locale_code=EXCLUDED.locale_code,language_code=EXCLUDED.language_code,updated_at=clock_timestamp(),updated_by=${context.principalId}::uuid`.execute(transaction);
+      };
+      return database.isTransaction ? write(database) : database.transaction().execute(write);
+    });
   }
 
   async saveSurfaceDraft(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string; layer: "shared" | "tenant"; definition: Readonly<Record<string, unknown>>; contentHash: string; source: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord> {
@@ -389,4 +411,14 @@ async function readTenantLocalePolicy(database: Database, context: VerifiedReque
     fallbackLocale: row.activations.find((activation) => activation.isFallback)?.localeCode ?? "en",
     revision: row.revision || "locale-policy:default",
   };
+}
+
+async function lockLocaleTenant(database: Database, context: VerifiedRequestContext): Promise<void> {
+  // Runtime roles can read tenants but cannot UPDATE-lock them. A transaction advisory
+  // lock also serializes the first policy write before a tenant profile exists.
+  await sql`SELECT pg_advisory_xact_lock(hashtextextended(${"experience-locale-policy:" + context.tenantId.toLowerCase()},0))`.execute(database);
+  const result = await sql<{id:string}>`SELECT id FROM master.tenant WHERE id=${context.tenantId}::uuid`.execute(database);
+  if (!result.rows.length) {
+    throw new ExperienceAccessError(403, "EXPERIENCE_TENANT_NOT_FOUND", "The tenant is not available in the target plane");
+  }
 }

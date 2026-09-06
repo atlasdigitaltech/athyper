@@ -10,11 +10,19 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 127 |
 | Swagger paths | 119 |
-| Backend method/path identities extracted from source | 501 |
-| Source identities absent from Swagger | 374 |
+| Backend method/path identities extracted from source | 505 |
+| Source identities absent from Swagger | 378 |
 | studio URL entries (including patterns) | 78 |
 | neon URL entries (including patterns) | 124 |
 | mesh URL entries (including patterns) | 63 |
+
+## Jump to
+
+- [Studio](#studio-application-urls) · [NEON](#neon-application-urls) · [MESH](#mesh-application-urls)
+- [Runtime discovery](#runtime-discovery) · [Deployed Swagger APIs](#runtime-apis-in-deployed-swagger)
+- [Additional source APIs](#additional-backend-apis-declared-in-source) · [Refresh instructions](#how-to-use-and-refresh)
+
+Each entry shows its method and path, followed by its details and source. Fixed paths link to the full development URL; parameterized paths are templates to combine with the section’s base URL. All entries stay expanded for browser Find.
 
 ## How to use and refresh
 
@@ -44,921 +52,2602 @@ The offline check cannot detect an independently changed deployment. Run the liv
 
 ## Runtime discovery
 
-| Method | URL |
-| --- | --- |
-| GET | [https://api.dev.athyper.test/docs](https://api.dev.athyper.test/docs) |
-| GET | [https://api.dev.athyper.test/openapi.json](https://api.dev.athyper.test/openapi.json) |
+Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths below are relative to this origin.
+
+- **GET** [/docs](https://api.dev.athyper.test/docs)
+- **GET** [/openapi.json](https://api.dev.athyper.test/openapi.json)
 
 ## Studio application URLs
 
-| Methods | URL or pattern | Kind / name | Source |
-| --- | --- | --- | --- |
-| GET | [https://studio.dev.athyper.test/](https://studio.dev.athyper.test/) | Page | [source](../../../apps/studio/app/(shell)/page.tsx) |
-| POST | [https://studio.dev.athyper.test/api/auth/backchannel-logout](https://studio.dev.athyper.test/api/auth/backchannel-logout) | Browser endpoint | [source](../../../apps/studio/app/api/auth/backchannel-logout/route.ts) |
-| GET | [https://studio.dev.athyper.test/api/auth/callback](https://studio.dev.athyper.test/api/auth/callback) | Browser endpoint | [source](../../../apps/studio/app/api/auth/callback/route.ts) |
-| GET | [https://studio.dev.athyper.test/api/auth/contexts](https://studio.dev.athyper.test/api/auth/contexts) | Browser endpoint | [source](../../../apps/studio/app/api/auth/contexts/route.ts) |
-| GET | [https://studio.dev.athyper.test/api/auth/login](https://studio.dev.athyper.test/api/auth/login) | Browser endpoint | [source](../../../apps/studio/app/api/auth/login/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/logout](https://studio.dev.athyper.test/api/auth/logout) | Browser endpoint | [source](../../../apps/studio/app/api/auth/logout/route.ts) |
-| GET | [https://studio.dev.athyper.test/api/auth/logout/callback](https://studio.dev.athyper.test/api/auth/logout/callback) | Browser endpoint | [source](../../../apps/studio/app/api/auth/logout/callback/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/mfa/verify](https://studio.dev.athyper.test/api/auth/mfa/verify) | Browser endpoint | [source](../../../apps/studio/app/api/auth/mfa/verify/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/refresh](https://studio.dev.athyper.test/api/auth/refresh) | Browser endpoint | [source](../../../apps/studio/app/api/auth/refresh/route.ts) |
-| GET | [https://studio.dev.athyper.test/api/auth/session](https://studio.dev.athyper.test/api/auth/session) | Browser endpoint | [source](../../../apps/studio/app/api/auth/session/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/session/context](https://studio.dev.athyper.test/api/auth/session/context) | Browser endpoint | [source](../../../apps/studio/app/api/auth/session/context/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/step-up/start](https://studio.dev.athyper.test/api/auth/step-up/start) | Browser endpoint | [source](../../../apps/studio/app/api/auth/step-up/start/route.ts) |
-| POST | [https://studio.dev.athyper.test/api/auth/touch](https://studio.dev.athyper.test/api/auth/touch) | Browser endpoint | [source](../../../apps/studio/app/api/auth/touch/route.ts) |
-| DELETE, GET, PATCH, POST, PUT | `https://studio.dev.athyper.test/api/relay/{path...}` | Browser endpoint | [source](../../../apps/studio/app/api/relay/[...path]/route.ts) |
-| GET | [https://studio.dev.athyper.test/atlas](https://studio.dev.athyper.test/atlas) | Page | [source](../../../apps/studio/app/(shell)/atlas/page.tsx) |
-| GET | [https://studio.dev.athyper.test/atlas-ai](https://studio.dev.athyper.test/atlas-ai) | Workspace — Atlas AI Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/atlas-ai/agents](https://studio.dev.athyper.test/atlas-ai/agents) | Module — Agents & Governed Tools | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/atlas-ai/governance](https://studio.dev.athyper.test/atlas-ai/governance) | Module — AI Governance & Safety | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/atlas-ai/knowledge](https://studio.dev.athyper.test/atlas-ai/knowledge) | Module — Knowledge & Retrieval | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/atlas-ai/providers](https://studio.dev.athyper.test/atlas-ai/providers) | Module — AI Provider & Model Management | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/communications](https://studio.dev.athyper.test/communications) | Workspace — Communications Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/communications/activity](https://studio.dev.athyper.test/communications/activity) | Module — Activity & Commentary | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/communications/notifications](https://studio.dev.athyper.test/communications/notifications) | Module — Notifications & Messaging | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity](https://studio.dev.athyper.test/entity) | Workspace — Entity Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/content](https://studio.dev.athyper.test/entity/content) | Module — Content & Object Storage | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/documents](https://studio.dev.athyper.test/entity/documents) | Module — Document Generation & Processing | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/experiences](https://studio.dev.athyper.test/entity/experiences) | Page — Experience & Navigation Design | [source](../../../apps/studio/app/(shell)/entity/experiences/page.tsx) |
-| GET | [https://studio.dev.athyper.test/entity/metadata](https://studio.dev.athyper.test/entity/metadata) | Module — Metadata & Entity Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/policies](https://studio.dev.athyper.test/entity/policies) | Module — Policy & Rules Engine | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/publishing](https://studio.dev.athyper.test/entity/publishing) | Module — Publication & Release Management | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/entity/workflows](https://studio.dev.athyper.test/entity/workflows) | Module — Workflow Designer | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/extensions](https://studio.dev.athyper.test/extensions) | Workspace — Extension Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/extensions/developer-tools](https://studio.dev.athyper.test/extensions/developer-tools) | Module — Developer Tools & SDK | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/extensions/plugins](https://studio.dev.athyper.test/extensions/plugins) | Module — Plugins & Extensions | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/foundation](https://studio.dev.athyper.test/foundation) | Workspace — Platform Foundation | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/foundation/foundation](https://studio.dev.athyper.test/foundation/foundation) | Module — Foundation Runtime | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/foundation/reference-data](https://studio.dev.athyper.test/foundation/reference-data) | Module — Reference & Shared Data | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/home](https://studio.dev.athyper.test/home) | Page | [source](../../../apps/studio/app/(shell)/home/page.tsx) |
-| GET | [https://studio.dev.athyper.test/inbox](https://studio.dev.athyper.test/inbox) | Page | [source](../../../apps/studio/app/(shell)/inbox/page.tsx) |
-| GET | [https://studio.dev.athyper.test/integration](https://studio.dev.athyper.test/integration) | Workspace — Integration & Automation Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/integration/automation](https://studio.dev.athyper.test/integration/automation) | Module — Automation & Jobs | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/integration/integration-hub](https://studio.dev.athyper.test/integration/integration-hub) | Module — Integration Hub | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/livez](https://studio.dev.athyper.test/livez) | Browser endpoint | [source](../../../apps/studio/app/livez/route.ts) |
-| GET | [https://studio.dev.athyper.test/logout](https://studio.dev.athyper.test/logout) | Page | [source](../../../apps/studio/app/(public)/logout/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg](https://studio.dev.athyper.test/mdg) | Page | [source](../../../apps/studio/app/(shell)/mdg/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner](https://studio.dev.athyper.test/mdg/business-partner) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/ai-experience](https://studio.dev.athyper.test/mdg/business-partner/ai-experience) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/ai-experience/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/matching](https://studio.dev.athyper.test/mdg/business-partner/matching) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/matching/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/model](https://studio.dev.athyper.test/mdg/business-partner/model) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/model/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/operations](https://studio.dev.athyper.test/mdg/business-partner/operations) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/operations/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/publication](https://studio.dev.athyper.test/mdg/business-partner/publication) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/publication/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/validation](https://studio.dev.athyper.test/mdg/business-partner/validation) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/validation/page.tsx) |
-| GET | [https://studio.dev.athyper.test/mdg/business-partner/workflows](https://studio.dev.athyper.test/mdg/business-partner/workflows) | Page | [source](../../../apps/studio/app/(shell)/mdg/business-partner/workflows/page.tsx) |
-| GET | [https://studio.dev.athyper.test/notification-sw.js](https://studio.dev.athyper.test/notification-sw.js) | Browser endpoint | [source](../../../apps/studio/app/notification-sw.js/route.ts) |
-| GET | [https://studio.dev.athyper.test/notifications](https://studio.dev.athyper.test/notifications) | Page | [source](../../../apps/studio/app/(shell)/notifications/page.tsx) |
-| GET | [https://studio.dev.athyper.test/observability](https://studio.dev.athyper.test/observability) | Workspace — Observability Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/observability/errors](https://studio.dev.athyper.test/observability/errors) | Module — Error Tracking | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/observability/platform-observability](https://studio.dev.athyper.test/observability/platform-observability) | Module — Platform Observability | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/observability/reliability](https://studio.dev.athyper.test/observability/reliability) | Module — Service Reliability | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/plans](https://studio.dev.athyper.test/plans) | Workspace — Plans & Entitlements Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/plans/entitlements](https://studio.dev.athyper.test/plans/entitlements) | Module — Plan & Module Entitlements | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/plans/platform-catalog](https://studio.dev.athyper.test/plans/platform-catalog) | Module — Platform Catalog Management | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/plans/subscriptions](https://studio.dev.athyper.test/plans/subscriptions) | Module — Subscription Management | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/plans/usage](https://studio.dev.athyper.test/plans/usage) | Module — Usage & Quota | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/platform-operations](https://studio.dev.athyper.test/platform-operations) | Workspace — Platform Operations Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/platform-operations/analytics](https://studio.dev.athyper.test/platform-operations/analytics) | Module — Platform Analytics | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/platform-operations/operations](https://studio.dev.athyper.test/platform-operations/operations) | Module — Platform Operations | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/platform-operations/search](https://studio.dev.athyper.test/platform-operations/search) | Module — Search | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/platform-operations/security](https://studio.dev.athyper.test/platform-operations/security) | Module — Secrets & Security | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/readyz](https://studio.dev.athyper.test/readyz) | Browser endpoint | [source](../../../apps/studio/app/readyz/route.ts) |
-| GET | [https://studio.dev.athyper.test/select-context](https://studio.dev.athyper.test/select-context) | Page | [source](../../../apps/studio/app/(public)/select-context/page.tsx) |
-| GET | [https://studio.dev.athyper.test/sign-in](https://studio.dev.athyper.test/sign-in) | Page | [source](../../../apps/studio/app/(public)/sign-in/page.tsx) |
-| GET | [https://studio.dev.athyper.test/trust-iam](https://studio.dev.athyper.test/trust-iam) | Workspace — TrustIAM Studio | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/trust-iam/governance-audit](https://studio.dev.athyper.test/trust-iam/governance-audit) | Module — Identity Governance & Audit | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/trust-iam/identity-access](https://studio.dev.athyper.test/trust-iam/identity-access) | Module — Identity & Access Management | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | [https://studio.dev.athyper.test/trust-iam/onboarding](https://studio.dev.athyper.test/trust-iam/onboarding) | Module — Trust & Onboarding | [source](../../../apps/studio/lib/catalog-routes.ts) |
-| GET | `https://studio.dev.athyper.test/{workspaceSlug}` | Page | [source](../../../apps/studio/app/(shell)/[workspaceSlug]/page.tsx) |
-| GET | `https://studio.dev.athyper.test/{workspaceSlug}/{moduleSlug}` | Page | [source](../../../apps/studio/app/(shell)/[workspaceSlug]/[moduleSlug]/page.tsx) |
+Base URL: [https://studio.dev.athyper.test](https://studio.dev.athyper.test). Paths below are relative to this origin.
+
+- **GET** [/](https://studio.dev.athyper.test/)  
+  Page · [source](../../../apps/studio/app/(shell)/page.tsx)
+
+- **POST** [/api/auth/backchannel-logout](https://studio.dev.athyper.test/api/auth/backchannel-logout)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/backchannel-logout/route.ts)
+
+- **GET** [/api/auth/callback](https://studio.dev.athyper.test/api/auth/callback)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/callback/route.ts)
+
+- **GET** [/api/auth/contexts](https://studio.dev.athyper.test/api/auth/contexts)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/contexts/route.ts)
+
+- **GET** [/api/auth/login](https://studio.dev.athyper.test/api/auth/login)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/login/route.ts)
+
+- **POST** [/api/auth/logout](https://studio.dev.athyper.test/api/auth/logout)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/logout/route.ts)
+
+- **GET** [/api/auth/logout/callback](https://studio.dev.athyper.test/api/auth/logout/callback)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/logout/callback/route.ts)
+
+- **POST** [/api/auth/mfa/verify](https://studio.dev.athyper.test/api/auth/mfa/verify)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/mfa/verify/route.ts)
+
+- **POST** [/api/auth/refresh](https://studio.dev.athyper.test/api/auth/refresh)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/refresh/route.ts)
+
+- **GET** [/api/auth/session](https://studio.dev.athyper.test/api/auth/session)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/session/route.ts)
+
+- **POST** [/api/auth/session/context](https://studio.dev.athyper.test/api/auth/session/context)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/session/context/route.ts)
+
+- **POST** [/api/auth/step-up/start](https://studio.dev.athyper.test/api/auth/step-up/start)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/step-up/start/route.ts)
+
+- **POST** [/api/auth/touch](https://studio.dev.athyper.test/api/auth/touch)  
+  Browser endpoint · [source](../../../apps/studio/app/api/auth/touch/route.ts)
+
+- **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
+  Browser endpoint · [source](../../../apps/studio/app/api/relay/[...path]/route.ts)
+
+- **GET** [/atlas](https://studio.dev.athyper.test/atlas)  
+  Page · [source](../../../apps/studio/app/(shell)/atlas/page.tsx)
+
+- **GET** [/atlas-ai](https://studio.dev.athyper.test/atlas-ai)  
+  Workspace — Atlas AI Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/atlas-ai/agents](https://studio.dev.athyper.test/atlas-ai/agents)  
+  Module — Agents & Governed Tools · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/atlas-ai/governance](https://studio.dev.athyper.test/atlas-ai/governance)  
+  Module — AI Governance & Safety · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/atlas-ai/knowledge](https://studio.dev.athyper.test/atlas-ai/knowledge)  
+  Module — Knowledge & Retrieval · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/atlas-ai/providers](https://studio.dev.athyper.test/atlas-ai/providers)  
+  Module — AI Provider & Model Management · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/communications](https://studio.dev.athyper.test/communications)  
+  Workspace — Communications Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/communications/activity](https://studio.dev.athyper.test/communications/activity)  
+  Module — Activity & Commentary · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/communications/notifications](https://studio.dev.athyper.test/communications/notifications)  
+  Module — Notifications & Messaging · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity](https://studio.dev.athyper.test/entity)  
+  Workspace — Entity Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/content](https://studio.dev.athyper.test/entity/content)  
+  Module — Content & Object Storage · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/documents](https://studio.dev.athyper.test/entity/documents)  
+  Module — Document Generation & Processing · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/experiences](https://studio.dev.athyper.test/entity/experiences)  
+  Page — Experience & Navigation Design · [source](../../../apps/studio/app/(shell)/entity/experiences/page.tsx)
+
+- **GET** [/entity/metadata](https://studio.dev.athyper.test/entity/metadata)  
+  Module — Metadata & Entity Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/policies](https://studio.dev.athyper.test/entity/policies)  
+  Module — Policy & Rules Engine · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/publishing](https://studio.dev.athyper.test/entity/publishing)  
+  Module — Publication & Release Management · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/entity/workflows](https://studio.dev.athyper.test/entity/workflows)  
+  Module — Workflow Designer · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/extensions](https://studio.dev.athyper.test/extensions)  
+  Workspace — Extension Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/extensions/developer-tools](https://studio.dev.athyper.test/extensions/developer-tools)  
+  Module — Developer Tools & SDK · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/extensions/plugins](https://studio.dev.athyper.test/extensions/plugins)  
+  Module — Plugins & Extensions · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/foundation](https://studio.dev.athyper.test/foundation)  
+  Workspace — Platform Foundation · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/foundation/foundation](https://studio.dev.athyper.test/foundation/foundation)  
+  Module — Foundation Runtime · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/foundation/reference-data](https://studio.dev.athyper.test/foundation/reference-data)  
+  Module — Reference & Shared Data · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/home](https://studio.dev.athyper.test/home)  
+  Page · [source](../../../apps/studio/app/(shell)/home/page.tsx)
+
+- **GET** [/inbox](https://studio.dev.athyper.test/inbox)  
+  Page · [source](../../../apps/studio/app/(shell)/inbox/page.tsx)
+
+- **GET** [/integration](https://studio.dev.athyper.test/integration)  
+  Workspace — Integration & Automation Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/integration/automation](https://studio.dev.athyper.test/integration/automation)  
+  Module — Automation & Jobs · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/integration/integration-hub](https://studio.dev.athyper.test/integration/integration-hub)  
+  Module — Integration Hub · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/livez](https://studio.dev.athyper.test/livez)  
+  Browser endpoint · [source](../../../apps/studio/app/livez/route.ts)
+
+- **GET** [/logout](https://studio.dev.athyper.test/logout)  
+  Page · [source](../../../apps/studio/app/(public)/logout/page.tsx)
+
+- **GET** [/mdg](https://studio.dev.athyper.test/mdg)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/page.tsx)
+
+- **GET** [/mdg/business-partner](https://studio.dev.athyper.test/mdg/business-partner)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/page.tsx)
+
+- **GET** [/mdg/business-partner/ai-experience](https://studio.dev.athyper.test/mdg/business-partner/ai-experience)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/ai-experience/page.tsx)
+
+- **GET** [/mdg/business-partner/matching](https://studio.dev.athyper.test/mdg/business-partner/matching)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/matching/page.tsx)
+
+- **GET** [/mdg/business-partner/model](https://studio.dev.athyper.test/mdg/business-partner/model)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/model/page.tsx)
+
+- **GET** [/mdg/business-partner/operations](https://studio.dev.athyper.test/mdg/business-partner/operations)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/operations/page.tsx)
+
+- **GET** [/mdg/business-partner/publication](https://studio.dev.athyper.test/mdg/business-partner/publication)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/publication/page.tsx)
+
+- **GET** [/mdg/business-partner/validation](https://studio.dev.athyper.test/mdg/business-partner/validation)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/validation/page.tsx)
+
+- **GET** [/mdg/business-partner/workflows](https://studio.dev.athyper.test/mdg/business-partner/workflows)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/workflows/page.tsx)
+
+- **GET** [/notification-sw.js](https://studio.dev.athyper.test/notification-sw.js)  
+  Browser endpoint · [source](../../../apps/studio/app/notification-sw.js/route.ts)
+
+- **GET** [/notifications](https://studio.dev.athyper.test/notifications)  
+  Page · [source](../../../apps/studio/app/(shell)/notifications/page.tsx)
+
+- **GET** [/observability](https://studio.dev.athyper.test/observability)  
+  Workspace — Observability Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/observability/errors](https://studio.dev.athyper.test/observability/errors)  
+  Module — Error Tracking · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/observability/platform-observability](https://studio.dev.athyper.test/observability/platform-observability)  
+  Module — Platform Observability · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/observability/reliability](https://studio.dev.athyper.test/observability/reliability)  
+  Module — Service Reliability · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/plans](https://studio.dev.athyper.test/plans)  
+  Workspace — Plans & Entitlements Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/plans/entitlements](https://studio.dev.athyper.test/plans/entitlements)  
+  Module — Plan & Module Entitlements · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/plans/platform-catalog](https://studio.dev.athyper.test/plans/platform-catalog)  
+  Module — Platform Catalog Management · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/plans/subscriptions](https://studio.dev.athyper.test/plans/subscriptions)  
+  Module — Subscription Management · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/plans/usage](https://studio.dev.athyper.test/plans/usage)  
+  Module — Usage & Quota · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/platform-operations](https://studio.dev.athyper.test/platform-operations)  
+  Workspace — Platform Operations Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/platform-operations/analytics](https://studio.dev.athyper.test/platform-operations/analytics)  
+  Module — Platform Analytics · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/platform-operations/operations](https://studio.dev.athyper.test/platform-operations/operations)  
+  Module — Platform Operations · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/platform-operations/search](https://studio.dev.athyper.test/platform-operations/search)  
+  Module — Search · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/platform-operations/security](https://studio.dev.athyper.test/platform-operations/security)  
+  Module — Secrets & Security · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/readyz](https://studio.dev.athyper.test/readyz)  
+  Browser endpoint · [source](../../../apps/studio/app/readyz/route.ts)
+
+- **GET** [/select-context](https://studio.dev.athyper.test/select-context)  
+  Page · [source](../../../apps/studio/app/(public)/select-context/page.tsx)
+
+- **GET** [/sign-in](https://studio.dev.athyper.test/sign-in)  
+  Page · [source](../../../apps/studio/app/(public)/sign-in/page.tsx)
+
+- **GET** [/trust-iam](https://studio.dev.athyper.test/trust-iam)  
+  Workspace — TrustIAM Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/trust-iam/governance-audit](https://studio.dev.athyper.test/trust-iam/governance-audit)  
+  Module — Identity Governance & Audit · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/trust-iam/identity-access](https://studio.dev.athyper.test/trust-iam/identity-access)  
+  Module — Identity & Access Management · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** [/trust-iam/onboarding](https://studio.dev.athyper.test/trust-iam/onboarding)  
+  Module — Trust & Onboarding · [source](../../../apps/studio/lib/catalog-routes.ts)
+
+- **GET** `/{workspaceSlug}`  
+  Page · [source](../../../apps/studio/app/(shell)/[workspaceSlug]/page.tsx)
+
+- **GET** `/{workspaceSlug}/{moduleSlug}`  
+  Page · [source](../../../apps/studio/app/(shell)/[workspaceSlug]/[moduleSlug]/page.tsx)
+
 
 ## NEON application URLs
 
-| Methods | URL or pattern | Kind / name | Source |
-| --- | --- | --- | --- |
-| GET | [https://neon.dev.athyper.test/](https://neon.dev.athyper.test/) | Page | [source](../../../apps/neon/app/(shell)/page.tsx) |
-| POST | [https://neon.dev.athyper.test/api/auth/backchannel-logout](https://neon.dev.athyper.test/api/auth/backchannel-logout) | Browser endpoint | [source](../../../apps/neon/app/api/auth/backchannel-logout/route.ts) |
-| GET | [https://neon.dev.athyper.test/api/auth/callback](https://neon.dev.athyper.test/api/auth/callback) | Browser endpoint | [source](../../../apps/neon/app/api/auth/callback/route.ts) |
-| GET | [https://neon.dev.athyper.test/api/auth/contexts](https://neon.dev.athyper.test/api/auth/contexts) | Browser endpoint | [source](../../../apps/neon/app/api/auth/contexts/route.ts) |
-| GET | [https://neon.dev.athyper.test/api/auth/login](https://neon.dev.athyper.test/api/auth/login) | Browser endpoint | [source](../../../apps/neon/app/api/auth/login/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/logout](https://neon.dev.athyper.test/api/auth/logout) | Browser endpoint | [source](../../../apps/neon/app/api/auth/logout/route.ts) |
-| GET | [https://neon.dev.athyper.test/api/auth/logout/callback](https://neon.dev.athyper.test/api/auth/logout/callback) | Browser endpoint | [source](../../../apps/neon/app/api/auth/logout/callback/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/mfa/verify](https://neon.dev.athyper.test/api/auth/mfa/verify) | Browser endpoint | [source](../../../apps/neon/app/api/auth/mfa/verify/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/refresh](https://neon.dev.athyper.test/api/auth/refresh) | Browser endpoint | [source](../../../apps/neon/app/api/auth/refresh/route.ts) |
-| GET | [https://neon.dev.athyper.test/api/auth/session](https://neon.dev.athyper.test/api/auth/session) | Browser endpoint | [source](../../../apps/neon/app/api/auth/session/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/session/context](https://neon.dev.athyper.test/api/auth/session/context) | Browser endpoint | [source](../../../apps/neon/app/api/auth/session/context/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/step-up/start](https://neon.dev.athyper.test/api/auth/step-up/start) | Browser endpoint | [source](../../../apps/neon/app/api/auth/step-up/start/route.ts) |
-| POST | [https://neon.dev.athyper.test/api/auth/touch](https://neon.dev.athyper.test/api/auth/touch) | Browser endpoint | [source](../../../apps/neon/app/api/auth/touch/route.ts) |
-| DELETE, GET, PATCH, POST, PUT | `https://neon.dev.athyper.test/api/relay/{path...}` | Browser endpoint | [source](../../../apps/neon/app/api/relay/[...path]/route.ts) |
-| GET | [https://neon.dev.athyper.test/assets-facilities](https://neon.dev.athyper.test/assets-facilities) | Workspace — Assets & Facilities | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/assets-facilities/enterprise-assets](https://neon.dev.athyper.test/assets-facilities/enterprise-assets) | Module — Enterprise Asset Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/assets-facilities/facilities](https://neon.dev.athyper.test/assets-facilities/facilities) | Module — Facilities Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/assets-facilities/real-estate](https://neon.dev.athyper.test/assets-facilities/real-estate) | Module — Real Estate Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/atlas](https://neon.dev.athyper.test/atlas) | Page | [source](../../../apps/neon/app/(shell)/atlas/page.tsx) |
-| GET | [https://neon.dev.athyper.test/commercial](https://neon.dev.athyper.test/commercial) | Workspace — Commercial | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/commercial/crm](https://neon.dev.athyper.test/commercial/crm) | Module — Customer Relationship Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/commercial/pricing](https://neon.dev.athyper.test/commercial/pricing) | Module — Pricing & Commercial Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/commercial/sales-orders](https://neon.dev.athyper.test/commercial/sales-orders) | Module — Sales & Order Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core](https://neon.dev.athyper.test/core) | Workspace — Core Platform | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/activity](https://neon.dev.athyper.test/core/activity) | Module — Activity & Commentary | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/audit](https://neon.dev.athyper.test/core/audit) | Module — Audit & Governance | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/automation](https://neon.dev.athyper.test/core/automation) | Module — Automation & Jobs | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/content](https://neon.dev.athyper.test/core/content) | Module — Content Services | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/documents](https://neon.dev.athyper.test/core/documents) | Module — Document Services | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/foundation](https://neon.dev.athyper.test/core/foundation) | Module — Foundation Runtime | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/identity-access](https://neon.dev.athyper.test/core/identity-access) | Module — Identity & Access Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/integration](https://neon.dev.athyper.test/core/integration) | Module — Integration Hub | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/metadata](https://neon.dev.athyper.test/core/metadata) | Module — Metadata Runtime | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/notification-services](https://neon.dev.athyper.test/core/notification-services) | Module — Notification Services | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/policies](https://neon.dev.athyper.test/core/policies) | Module — Policy & Rules Engine | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/reference-data](https://neon.dev.athyper.test/core/reference-data) | Module — Reference & Shared Data | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/core/workflows](https://neon.dev.athyper.test/core/workflows) | Module — Workflow Engine | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance](https://neon.dev.athyper.test/finance) | Workspace — Finance | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/accounts-payable](https://neon.dev.athyper.test/finance/accounts-payable) | Module — Accounts Payable | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/accounts-receivable](https://neon.dev.athyper.test/finance/accounts-receivable) | Module — Accounts Receivable | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/budget-control](https://neon.dev.athyper.test/finance/budget-control) | Module — Budget Management & Control | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/cash-treasury](https://neon.dev.athyper.test/finance/cash-treasury) | Module — Cash & Treasury Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/financial-accounting](https://neon.dev.athyper.test/finance/financial-accounting) | Module — Financial Accounting | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/fixed-assets](https://neon.dev.athyper.test/finance/fixed-assets) | Module — Fixed Asset Accounting | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/finance/tax](https://neon.dev.athyper.test/finance/tax) | Module — Tax Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/home](https://neon.dev.athyper.test/home) | Page | [source](../../../apps/neon/app/(shell)/home/page.tsx) |
-| GET | [https://neon.dev.athyper.test/inbox](https://neon.dev.athyper.test/inbox) | Page | [source](../../../apps/neon/app/(shell)/inbox/page.tsx) |
-| GET | [https://neon.dev.athyper.test/livez](https://neon.dev.athyper.test/livez) | Browser endpoint | [source](../../../apps/neon/app/livez/route.ts) |
-| GET | [https://neon.dev.athyper.test/logout](https://neon.dev.athyper.test/logout) | Page | [source](../../../apps/neon/app/(public)/logout/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg](https://neon.dev.athyper.test/mdg) | Page — Master Data Governance | [source](../../../apps/neon/app/(shell)/mdg/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner](https://neon.dev.athyper.test/mdg/business-partner) | Page — Business Partner Management | [source](../../../apps/neon/app/(shell)/mdg/business-partner/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/business-partners](https://neon.dev.athyper.test/mdg/business-partner/business-partners) | Entity list — Business Partners | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/business-partners/new](https://neon.dev.athyper.test/mdg/business-partner/business-partners/new) | Entity create — Business Partners | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/business-partners/{entityId}` | Entity detail — Business Partners | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/customer/new](https://neon.dev.athyper.test/mdg/business-partner/customer/new) | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/mesh-proposals](https://neon.dev.athyper.test/mdg/business-partner/mesh-proposals) | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/mesh-proposals/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/new](https://neon.dev.athyper.test/mdg/business-partner/new) | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/new/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/partners](https://neon.dev.athyper.test/mdg/business-partner/partners) | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/partners/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/person/new](https://neon.dev.athyper.test/mdg/business-partner/person/new) | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/person/new/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/requests](https://neon.dev.athyper.test/mdg/business-partner/requests) | Page — Business Partner Requests | [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/business-partner/requests/new](https://neon.dev.athyper.test/mdg/business-partner/requests/new) | Entity create — Business Partner Requests | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/requests/{entityId}` | Entity detail — Business Partner Requests | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/requests/{requestId}` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/requests/{requestId}/edit` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/edit/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/{recordId}` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/{recordId}/customer` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/customer/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/{recordId}/roles/new` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/roles/new/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/{recordId}/scope/new` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/scope/new/page.tsx) |
-| GET | `https://neon.dev.athyper.test/mdg/business-partner/{recordId}/supplier` | Page | [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/supplier/page.tsx) |
-| GET | [https://neon.dev.athyper.test/mdg/data-quality](https://neon.dev.athyper.test/mdg/data-quality) | Module — Data Quality & Stewardship | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/financial-master](https://neon.dev.athyper.test/mdg/financial-master) | Module — Financial Master Data | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/location-address](https://neon.dev.athyper.test/mdg/location-address) | Module — Location & Address Governance | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/organization-reference](https://neon.dev.athyper.test/mdg/organization-reference) | Module — Organization & Reference Data | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/mdg/product-item](https://neon.dev.athyper.test/mdg/product-item) | Module — Product & Item Governance | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/notification-sw.js](https://neon.dev.athyper.test/notification-sw.js) | Browser endpoint | [source](../../../apps/neon/app/notification-sw.js/route.ts) |
-| GET | [https://neon.dev.athyper.test/notifications](https://neon.dev.athyper.test/notifications) | Page | [source](../../../apps/neon/app/(shell)/notifications/page.tsx) |
-| GET | [https://neon.dev.athyper.test/operations-management](https://neon.dev.athyper.test/operations-management) | Workspace — Operations | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/operations-management/maintenance](https://neon.dev.athyper.test/operations-management/maintenance) | Module — Maintenance Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/operations-management/manufacturing](https://neon.dev.athyper.test/operations-management/manufacturing) | Module — Manufacturing | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/operations/data-transfers](https://neon.dev.athyper.test/operations/data-transfers) | Page | [source](../../../apps/neon/app/(shell)/operations/data-transfers/page.tsx) |
-| GET | [https://neon.dev.athyper.test/operations/data-transfers/new](https://neon.dev.athyper.test/operations/data-transfers/new) | Page | [source](../../../apps/neon/app/(shell)/operations/data-transfers/new/page.tsx) |
-| GET | [https://neon.dev.athyper.test/people](https://neon.dev.athyper.test/people) | Workspace — People | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/core-hr](https://neon.dev.athyper.test/people/core-hr) | Module — Core Human Resources | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/external-workforce](https://neon.dev.athyper.test/people/external-workforce) | Module — External Workforce | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/payroll](https://neon.dev.athyper.test/people/payroll) | Module — Payroll | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/talent](https://neon.dev.athyper.test/people/talent) | Module — Talent Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/time-attendance](https://neon.dev.athyper.test/people/time-attendance) | Module — Time & Attendance | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/people/workforce/requests](https://neon.dev.athyper.test/people/workforce/requests) | Page | [source](../../../apps/neon/app/(shell)/people/workforce/requests/page.tsx) |
-| GET | [https://neon.dev.athyper.test/people/workforce/requests/new](https://neon.dev.athyper.test/people/workforce/requests/new) | Page | [source](../../../apps/neon/app/(shell)/people/workforce/requests/new/page.tsx) |
-| GET | `https://neon.dev.athyper.test/people/workforce/requests/{requestId}` | Page | [source](../../../apps/neon/app/(shell)/people/workforce/requests/[requestId]/page.tsx) |
-| GET | [https://neon.dev.athyper.test/people/workforce/requisitions](https://neon.dev.athyper.test/people/workforce/requisitions) | Page | [source](../../../apps/neon/app/(shell)/people/workforce/requisitions/page.tsx) |
-| GET | [https://neon.dev.athyper.test/projects-services](https://neon.dev.athyper.test/projects-services) | Workspace — Projects & Services | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/projects-services/professional-services](https://neon.dev.athyper.test/projects-services/professional-services) | Module — Professional Services | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/projects-services/projects](https://neon.dev.athyper.test/projects-services/projects) | Module — Project Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/projects-services/service-management](https://neon.dev.athyper.test/projects-services/service-management) | Module — Service Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/readyz](https://neon.dev.athyper.test/readyz) | Browser endpoint | [source](../../../apps/neon/app/readyz/route.ts) |
-| GET | [https://neon.dev.athyper.test/select-context](https://neon.dev.athyper.test/select-context) | Page | [source](../../../apps/neon/app/(public)/select-context/page.tsx) |
-| GET | [https://neon.dev.athyper.test/sign-in](https://neon.dev.athyper.test/sign-in) | Page | [source](../../../apps/neon/app/(public)/sign-in/page.tsx) |
-| GET | [https://neon.dev.athyper.test/supplier-application](https://neon.dev.athyper.test/supplier-application) | Page | [source](../../../apps/neon/app/(public)/supplier-application/page.tsx) |
-| GET | [https://neon.dev.athyper.test/supply-chain](https://neon.dev.athyper.test/supply-chain) | Workspace — Supply Chain | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/contracts](https://neon.dev.athyper.test/supply-chain/contracts) | Module — Contract Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/inventory](https://neon.dev.athyper.test/supply-chain/inventory) | Module — Inventory Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/planning](https://neon.dev.athyper.test/supply-chain/planning) | Module — Demand & Supply Planning | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement](https://neon.dev.athyper.test/supply-chain/procurement) | Module — Procurement | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/documents](https://neon.dev.athyper.test/supply-chain/procurement/documents) | Entity list — Purchasing Documents | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/documents/new](https://neon.dev.athyper.test/supply-chain/procurement/documents/new) | Entity create — Purchasing Documents | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/supply-chain/procurement/documents/{entityId}` | Entity detail — Purchasing Documents | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/invoices](https://neon.dev.athyper.test/supply-chain/procurement/invoices) | Entity list — Supplier Invoices | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/invoices/new](https://neon.dev.athyper.test/supply-chain/procurement/invoices/new) | Entity create — Supplier Invoices | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/supply-chain/procurement/invoices/{entityId}` | Entity detail — Supplier Invoices | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/new](https://neon.dev.athyper.test/supply-chain/procurement/new) | Default entity create | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders](https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders) | Entity list — Purchase Orders | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders/new](https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders/new) | Entity create — Purchase Orders | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders/{entityId}` | Entity detail — Purchase Orders | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests](https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests) | Entity list — Purchase Requests | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests/new](https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests/new) | Entity create — Purchase Requests | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests/{entityId}` | Entity detail — Purchase Requests | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/quality](https://neon.dev.athyper.test/supply-chain/quality) | Module — Quality Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/strategic-sourcing](https://neon.dev.athyper.test/supply-chain/strategic-sourcing) | Module — Strategic Sourcing | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/supplier-management](https://neon.dev.athyper.test/supply-chain/supplier-management) | Module — Supplier Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/transport-logistics](https://neon.dev.athyper.test/supply-chain/transport-logistics) | Module — Transportation & Logistics | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | [https://neon.dev.athyper.test/supply-chain/warehouse](https://neon.dev.athyper.test/supply-chain/warehouse) | Module — Warehouse Management | [source](../../../apps/neon/lib/catalog-routes.ts) |
-| GET | `https://neon.dev.athyper.test/{workspaceSlug}` | Page | [source](../../../apps/neon/app/(shell)/[workspaceSlug]/page.tsx) |
-| GET | `https://neon.dev.athyper.test/{workspaceSlug}/{moduleSlug}/{segments...?}` | Page | [source](../../../apps/neon/app/(shell)/[workspaceSlug]/[moduleSlug]/[[...segments]]/page.tsx) |
+Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths below are relative to this origin.
+
+- **GET** [/](https://neon.dev.athyper.test/)  
+  Page · [source](../../../apps/neon/app/(shell)/page.tsx)
+
+- **POST** [/api/auth/backchannel-logout](https://neon.dev.athyper.test/api/auth/backchannel-logout)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/backchannel-logout/route.ts)
+
+- **GET** [/api/auth/callback](https://neon.dev.athyper.test/api/auth/callback)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/callback/route.ts)
+
+- **GET** [/api/auth/contexts](https://neon.dev.athyper.test/api/auth/contexts)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/contexts/route.ts)
+
+- **GET** [/api/auth/login](https://neon.dev.athyper.test/api/auth/login)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/login/route.ts)
+
+- **POST** [/api/auth/logout](https://neon.dev.athyper.test/api/auth/logout)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/logout/route.ts)
+
+- **GET** [/api/auth/logout/callback](https://neon.dev.athyper.test/api/auth/logout/callback)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/logout/callback/route.ts)
+
+- **POST** [/api/auth/mfa/verify](https://neon.dev.athyper.test/api/auth/mfa/verify)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/mfa/verify/route.ts)
+
+- **POST** [/api/auth/refresh](https://neon.dev.athyper.test/api/auth/refresh)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/refresh/route.ts)
+
+- **GET** [/api/auth/session](https://neon.dev.athyper.test/api/auth/session)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/session/route.ts)
+
+- **POST** [/api/auth/session/context](https://neon.dev.athyper.test/api/auth/session/context)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/session/context/route.ts)
+
+- **POST** [/api/auth/step-up/start](https://neon.dev.athyper.test/api/auth/step-up/start)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/step-up/start/route.ts)
+
+- **POST** [/api/auth/touch](https://neon.dev.athyper.test/api/auth/touch)  
+  Browser endpoint · [source](../../../apps/neon/app/api/auth/touch/route.ts)
+
+- **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
+  Browser endpoint · [source](../../../apps/neon/app/api/relay/[...path]/route.ts)
+
+- **GET** [/assets-facilities](https://neon.dev.athyper.test/assets-facilities)  
+  Workspace — Assets & Facilities · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/assets-facilities/enterprise-assets](https://neon.dev.athyper.test/assets-facilities/enterprise-assets)  
+  Module — Enterprise Asset Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/assets-facilities/facilities](https://neon.dev.athyper.test/assets-facilities/facilities)  
+  Module — Facilities Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/assets-facilities/real-estate](https://neon.dev.athyper.test/assets-facilities/real-estate)  
+  Module — Real Estate Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/atlas](https://neon.dev.athyper.test/atlas)  
+  Page · [source](../../../apps/neon/app/(shell)/atlas/page.tsx)
+
+- **GET** [/commercial](https://neon.dev.athyper.test/commercial)  
+  Workspace — Commercial · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/commercial/crm](https://neon.dev.athyper.test/commercial/crm)  
+  Module — Customer Relationship Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/commercial/pricing](https://neon.dev.athyper.test/commercial/pricing)  
+  Module — Pricing & Commercial Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/commercial/sales-orders](https://neon.dev.athyper.test/commercial/sales-orders)  
+  Module — Sales & Order Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core](https://neon.dev.athyper.test/core)  
+  Workspace — Core Platform · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/activity](https://neon.dev.athyper.test/core/activity)  
+  Module — Activity & Commentary · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/audit](https://neon.dev.athyper.test/core/audit)  
+  Module — Audit & Governance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/automation](https://neon.dev.athyper.test/core/automation)  
+  Module — Automation & Jobs · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/content](https://neon.dev.athyper.test/core/content)  
+  Module — Content Services · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/documents](https://neon.dev.athyper.test/core/documents)  
+  Module — Document Services · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/foundation](https://neon.dev.athyper.test/core/foundation)  
+  Module — Foundation Runtime · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/identity-access](https://neon.dev.athyper.test/core/identity-access)  
+  Module — Identity & Access Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/integration](https://neon.dev.athyper.test/core/integration)  
+  Module — Integration Hub · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/metadata](https://neon.dev.athyper.test/core/metadata)  
+  Module — Metadata Runtime · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/notification-services](https://neon.dev.athyper.test/core/notification-services)  
+  Module — Notification Services · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/policies](https://neon.dev.athyper.test/core/policies)  
+  Module — Policy & Rules Engine · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/reference-data](https://neon.dev.athyper.test/core/reference-data)  
+  Module — Reference & Shared Data · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/core/workflows](https://neon.dev.athyper.test/core/workflows)  
+  Module — Workflow Engine · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance](https://neon.dev.athyper.test/finance)  
+  Workspace — Finance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/accounts-payable](https://neon.dev.athyper.test/finance/accounts-payable)  
+  Module — Accounts Payable · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/accounts-receivable](https://neon.dev.athyper.test/finance/accounts-receivable)  
+  Module — Accounts Receivable · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/budget-control](https://neon.dev.athyper.test/finance/budget-control)  
+  Module — Budget Management & Control · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/cash-treasury](https://neon.dev.athyper.test/finance/cash-treasury)  
+  Module — Cash & Treasury Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/financial-accounting](https://neon.dev.athyper.test/finance/financial-accounting)  
+  Module — Financial Accounting · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/fixed-assets](https://neon.dev.athyper.test/finance/fixed-assets)  
+  Module — Fixed Asset Accounting · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/finance/tax](https://neon.dev.athyper.test/finance/tax)  
+  Module — Tax Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/home](https://neon.dev.athyper.test/home)  
+  Page · [source](../../../apps/neon/app/(shell)/home/page.tsx)
+
+- **GET** [/inbox](https://neon.dev.athyper.test/inbox)  
+  Page · [source](../../../apps/neon/app/(shell)/inbox/page.tsx)
+
+- **GET** [/livez](https://neon.dev.athyper.test/livez)  
+  Browser endpoint · [source](../../../apps/neon/app/livez/route.ts)
+
+- **GET** [/logout](https://neon.dev.athyper.test/logout)  
+  Page · [source](../../../apps/neon/app/(public)/logout/page.tsx)
+
+- **GET** [/mdg](https://neon.dev.athyper.test/mdg)  
+  Page — Master Data Governance · [source](../../../apps/neon/app/(shell)/mdg/page.tsx)
+
+- **GET** [/mdg/business-partner](https://neon.dev.athyper.test/mdg/business-partner)  
+  Page — Business Partner Management · [source](../../../apps/neon/app/(shell)/mdg/business-partner/page.tsx)
+
+- **GET** [/mdg/business-partner/business-partners](https://neon.dev.athyper.test/mdg/business-partner/business-partners)  
+  Entity list — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/business-partner/business-partners/new](https://neon.dev.athyper.test/mdg/business-partner/business-partners/new)  
+  Entity create — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/business-partner/business-partners/{entityId}`  
+  Entity detail — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/business-partner/customer/new](https://neon.dev.athyper.test/mdg/business-partner/customer/new)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx)
+
+- **GET** [/mdg/business-partner/mesh-proposals](https://neon.dev.athyper.test/mdg/business-partner/mesh-proposals)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/mesh-proposals/page.tsx)
+
+- **GET** [/mdg/business-partner/new](https://neon.dev.athyper.test/mdg/business-partner/new)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/new/page.tsx)
+
+- **GET** [/mdg/business-partner/partners](https://neon.dev.athyper.test/mdg/business-partner/partners)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/partners/page.tsx)
+
+- **GET** [/mdg/business-partner/person/new](https://neon.dev.athyper.test/mdg/business-partner/person/new)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/person/new/page.tsx)
+
+- **GET** [/mdg/business-partner/requests](https://neon.dev.athyper.test/mdg/business-partner/requests)  
+  Page — Business Partner Requests · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/page.tsx)
+
+- **GET** [/mdg/business-partner/requests/new](https://neon.dev.athyper.test/mdg/business-partner/requests/new)  
+  Entity create — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/business-partner/requests/{entityId}`  
+  Entity detail — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/business-partner/requests/{requestId}`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/page.tsx)
+
+- **GET** `/mdg/business-partner/requests/{requestId}/edit`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/[requestId]/edit/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}/customer`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/customer/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}/roles/new`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/roles/new/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}/scope/new`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/scope/new/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}/supplier`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/supplier/page.tsx)
+
+- **GET** [/mdg/data-quality](https://neon.dev.athyper.test/mdg/data-quality)  
+  Module — Data Quality & Stewardship · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/financial-master](https://neon.dev.athyper.test/mdg/financial-master)  
+  Module — Financial Master Data · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/location-address](https://neon.dev.athyper.test/mdg/location-address)  
+  Module — Location & Address Governance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/organization-reference](https://neon.dev.athyper.test/mdg/organization-reference)  
+  Module — Organization & Reference Data · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/product-item](https://neon.dev.athyper.test/mdg/product-item)  
+  Module — Product & Item Governance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/notification-sw.js](https://neon.dev.athyper.test/notification-sw.js)  
+  Browser endpoint · [source](../../../apps/neon/app/notification-sw.js/route.ts)
+
+- **GET** [/notifications](https://neon.dev.athyper.test/notifications)  
+  Page · [source](../../../apps/neon/app/(shell)/notifications/page.tsx)
+
+- **GET** [/operations-management](https://neon.dev.athyper.test/operations-management)  
+  Workspace — Operations · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/operations-management/maintenance](https://neon.dev.athyper.test/operations-management/maintenance)  
+  Module — Maintenance Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/operations-management/manufacturing](https://neon.dev.athyper.test/operations-management/manufacturing)  
+  Module — Manufacturing · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/operations/data-transfers](https://neon.dev.athyper.test/operations/data-transfers)  
+  Page · [source](../../../apps/neon/app/(shell)/operations/data-transfers/page.tsx)
+
+- **GET** [/operations/data-transfers/new](https://neon.dev.athyper.test/operations/data-transfers/new)  
+  Page · [source](../../../apps/neon/app/(shell)/operations/data-transfers/new/page.tsx)
+
+- **GET** [/people](https://neon.dev.athyper.test/people)  
+  Workspace — People · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/core-hr](https://neon.dev.athyper.test/people/core-hr)  
+  Module — Core Human Resources · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/external-workforce](https://neon.dev.athyper.test/people/external-workforce)  
+  Module — External Workforce · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/payroll](https://neon.dev.athyper.test/people/payroll)  
+  Module — Payroll · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/talent](https://neon.dev.athyper.test/people/talent)  
+  Module — Talent Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/time-attendance](https://neon.dev.athyper.test/people/time-attendance)  
+  Module — Time & Attendance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/people/workforce/requests](https://neon.dev.athyper.test/people/workforce/requests)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/requests/page.tsx)
+
+- **GET** [/people/workforce/requests/new](https://neon.dev.athyper.test/people/workforce/requests/new)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/requests/new/page.tsx)
+
+- **GET** `/people/workforce/requests/{requestId}`  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/requests/[requestId]/page.tsx)
+
+- **GET** [/people/workforce/requisitions](https://neon.dev.athyper.test/people/workforce/requisitions)  
+  Page · [source](../../../apps/neon/app/(shell)/people/workforce/requisitions/page.tsx)
+
+- **GET** [/projects-services](https://neon.dev.athyper.test/projects-services)  
+  Workspace — Projects & Services · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/projects-services/professional-services](https://neon.dev.athyper.test/projects-services/professional-services)  
+  Module — Professional Services · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/projects-services/projects](https://neon.dev.athyper.test/projects-services/projects)  
+  Module — Project Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/projects-services/service-management](https://neon.dev.athyper.test/projects-services/service-management)  
+  Module — Service Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/readyz](https://neon.dev.athyper.test/readyz)  
+  Browser endpoint · [source](../../../apps/neon/app/readyz/route.ts)
+
+- **GET** [/select-context](https://neon.dev.athyper.test/select-context)  
+  Page · [source](../../../apps/neon/app/(public)/select-context/page.tsx)
+
+- **GET** [/sign-in](https://neon.dev.athyper.test/sign-in)  
+  Page · [source](../../../apps/neon/app/(public)/sign-in/page.tsx)
+
+- **GET** [/supplier-application](https://neon.dev.athyper.test/supplier-application)  
+  Page · [source](../../../apps/neon/app/(public)/supplier-application/page.tsx)
+
+- **GET** [/supply-chain](https://neon.dev.athyper.test/supply-chain)  
+  Workspace — Supply Chain · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/contracts](https://neon.dev.athyper.test/supply-chain/contracts)  
+  Module — Contract Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/inventory](https://neon.dev.athyper.test/supply-chain/inventory)  
+  Module — Inventory Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/planning](https://neon.dev.athyper.test/supply-chain/planning)  
+  Module — Demand & Supply Planning · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement](https://neon.dev.athyper.test/supply-chain/procurement)  
+  Module — Procurement · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/documents](https://neon.dev.athyper.test/supply-chain/procurement/documents)  
+  Entity list — Purchasing Documents · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/documents/new](https://neon.dev.athyper.test/supply-chain/procurement/documents/new)  
+  Entity create — Purchasing Documents · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/supply-chain/procurement/documents/{entityId}`  
+  Entity detail — Purchasing Documents · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/invoices](https://neon.dev.athyper.test/supply-chain/procurement/invoices)  
+  Entity list — Supplier Invoices · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/invoices/new](https://neon.dev.athyper.test/supply-chain/procurement/invoices/new)  
+  Entity create — Supplier Invoices · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/supply-chain/procurement/invoices/{entityId}`  
+  Entity detail — Supplier Invoices · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/new](https://neon.dev.athyper.test/supply-chain/procurement/new)  
+  Default entity create · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/purchase-orders](https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders)  
+  Entity list — Purchase Orders · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/purchase-orders/new](https://neon.dev.athyper.test/supply-chain/procurement/purchase-orders/new)  
+  Entity create — Purchase Orders · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/supply-chain/procurement/purchase-orders/{entityId}`  
+  Entity detail — Purchase Orders · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/purchase-requests](https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests)  
+  Entity list — Purchase Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/procurement/purchase-requests/new](https://neon.dev.athyper.test/supply-chain/procurement/purchase-requests/new)  
+  Entity create — Purchase Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/supply-chain/procurement/purchase-requests/{entityId}`  
+  Entity detail — Purchase Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/quality](https://neon.dev.athyper.test/supply-chain/quality)  
+  Module — Quality Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/strategic-sourcing](https://neon.dev.athyper.test/supply-chain/strategic-sourcing)  
+  Module — Strategic Sourcing · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/supplier-management](https://neon.dev.athyper.test/supply-chain/supplier-management)  
+  Module — Supplier Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/transport-logistics](https://neon.dev.athyper.test/supply-chain/transport-logistics)  
+  Module — Transportation & Logistics · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/supply-chain/warehouse](https://neon.dev.athyper.test/supply-chain/warehouse)  
+  Module — Warehouse Management · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/{workspaceSlug}`  
+  Page · [source](../../../apps/neon/app/(shell)/[workspaceSlug]/page.tsx)
+
+- **GET** `/{workspaceSlug}/{moduleSlug}/{segments...?}`  
+  Page · [source](../../../apps/neon/app/(shell)/[workspaceSlug]/[moduleSlug]/[[...segments]]/page.tsx)
+
 
 ## MESH application URLs
 
-| Methods | URL or pattern | Kind / name | Source |
-| --- | --- | --- | --- |
-| GET | [https://mesh.dev.athyper.test/](https://mesh.dev.athyper.test/) | Page | [source](../../../apps/mesh/app/(shell)/page.tsx) |
-| POST | [https://mesh.dev.athyper.test/api/auth/backchannel-logout](https://mesh.dev.athyper.test/api/auth/backchannel-logout) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/backchannel-logout/route.ts) |
-| GET | [https://mesh.dev.athyper.test/api/auth/callback](https://mesh.dev.athyper.test/api/auth/callback) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/callback/route.ts) |
-| GET | [https://mesh.dev.athyper.test/api/auth/contexts](https://mesh.dev.athyper.test/api/auth/contexts) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/contexts/route.ts) |
-| GET | [https://mesh.dev.athyper.test/api/auth/login](https://mesh.dev.athyper.test/api/auth/login) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/login/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/logout](https://mesh.dev.athyper.test/api/auth/logout) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/logout/route.ts) |
-| GET | [https://mesh.dev.athyper.test/api/auth/logout/callback](https://mesh.dev.athyper.test/api/auth/logout/callback) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/logout/callback/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/mfa/verify](https://mesh.dev.athyper.test/api/auth/mfa/verify) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/mfa/verify/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/refresh](https://mesh.dev.athyper.test/api/auth/refresh) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/refresh/route.ts) |
-| GET | [https://mesh.dev.athyper.test/api/auth/session](https://mesh.dev.athyper.test/api/auth/session) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/session/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/session/context](https://mesh.dev.athyper.test/api/auth/session/context) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/session/context/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/step-up/start](https://mesh.dev.athyper.test/api/auth/step-up/start) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/step-up/start/route.ts) |
-| POST | [https://mesh.dev.athyper.test/api/auth/touch](https://mesh.dev.athyper.test/api/auth/touch) | Browser endpoint | [source](../../../apps/mesh/app/api/auth/touch/route.ts) |
-| DELETE, GET, PATCH, POST, PUT | `https://mesh.dev.athyper.test/api/relay/{path...}` | Browser endpoint | [source](../../../apps/mesh/app/api/relay/[...path]/route.ts) |
-| GET | [https://mesh.dev.athyper.test/atlas](https://mesh.dev.athyper.test/atlas) | Page | [source](../../../apps/mesh/app/(shell)/atlas/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/commercial-collaboration](https://mesh.dev.athyper.test/commercial-collaboration) | Workspace — Commercial Collaboration | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/commercial-collaboration/contract](https://mesh.dev.athyper.test/commercial-collaboration/contract) | Module — Contract | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/commercial-collaboration/sourcing](https://mesh.dev.athyper.test/commercial-collaboration/sourcing) | Module — Sourcing | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/commercial-collaboration/transaction](https://mesh.dev.athyper.test/commercial-collaboration/transaction) | Module — Business Transaction | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core](https://mesh.dev.athyper.test/core) | Workspace — Core Platform | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/activity](https://mesh.dev.athyper.test/core/activity) | Module — Activity & Commentary | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/audit](https://mesh.dev.athyper.test/core/audit) | Module — Audit & Governance | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/automation](https://mesh.dev.athyper.test/core/automation) | Module — Automation & Jobs | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/content](https://mesh.dev.athyper.test/core/content) | Module — Content Services | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/documents](https://mesh.dev.athyper.test/core/documents) | Module — Document Services | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/foundation](https://mesh.dev.athyper.test/core/foundation) | Module — Foundation Runtime | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/identity-access](https://mesh.dev.athyper.test/core/identity-access) | Module — Identity & Access Management | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/integration](https://mesh.dev.athyper.test/core/integration) | Module — Integration Hub | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/notifications](https://mesh.dev.athyper.test/core/notifications) | Module — Notification Services | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/policies](https://mesh.dev.athyper.test/core/policies) | Module — Policy & Rules Engine | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/reference-data](https://mesh.dev.athyper.test/core/reference-data) | Module — Reference & Shared Data | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/core/workflows](https://mesh.dev.athyper.test/core/workflows) | Module — Workflow Engine | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/financial-collaboration](https://mesh.dev.athyper.test/financial-collaboration) | Workspace — Financial Collaboration | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/financial-collaboration/financing-programs](https://mesh.dev.athyper.test/financial-collaboration/financing-programs) | Module — Financing Programs | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/financial-collaboration/partner-network](https://mesh.dev.athyper.test/financial-collaboration/partner-network) | Module — Financial Partner Network | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/financial-collaboration/payments-working-capital](https://mesh.dev.athyper.test/financial-collaboration/payments-working-capital) | Module — Payments & Working Capital | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/financial-collaboration/trade-finance](https://mesh.dev.athyper.test/financial-collaboration/trade-finance) | Module — Trade Finance | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/home](https://mesh.dev.athyper.test/home) | Page | [source](../../../apps/mesh/app/(shell)/home/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/inbox](https://mesh.dev.athyper.test/inbox) | Page | [source](../../../apps/mesh/app/(shell)/inbox/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/livez](https://mesh.dev.athyper.test/livez) | Browser endpoint | [source](../../../apps/mesh/app/livez/route.ts) |
-| GET | [https://mesh.dev.athyper.test/logout](https://mesh.dev.athyper.test/logout) | Page | [source](../../../apps/mesh/app/(public)/logout/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/mdg](https://mesh.dev.athyper.test/mdg) | Page | [source](../../../apps/mesh/app/(shell)/mdg/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/mdg/business-partner](https://mesh.dev.athyper.test/mdg/business-partner) | Page | [source](../../../apps/mesh/app/(shell)/mdg/business-partner/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/mdg/business-partner/profile](https://mesh.dev.athyper.test/mdg/business-partner/profile) | Page | [source](../../../apps/mesh/app/(shell)/mdg/business-partner/profile/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/mdg/business-partner/relationships](https://mesh.dev.athyper.test/mdg/business-partner/relationships) | Page | [source](../../../apps/mesh/app/(shell)/mdg/business-partner/relationships/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/mdg/business-partner/requests](https://mesh.dev.athyper.test/mdg/business-partner/requests) | Page | [source](../../../apps/mesh/app/(shell)/mdg/business-partner/requests/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/network-relationships](https://mesh.dev.athyper.test/network-relationships) | Workspace — Network & Relationships | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/network-relationships/intelligence](https://mesh.dev.athyper.test/network-relationships/intelligence) | Module — Network Intelligence | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/network-relationships/marketplace](https://mesh.dev.athyper.test/network-relationships/marketplace) | Module — Marketplace & Discovery | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/network-relationships/partner-network](https://mesh.dev.athyper.test/network-relationships/partner-network) | Module — Network & Partner Management | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/network-relationships/relationships](https://mesh.dev.athyper.test/network-relationships/relationships) | Module — Relationship Collaboration | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/notification-sw.js](https://mesh.dev.athyper.test/notification-sw.js) | Browser endpoint | [source](../../../apps/mesh/app/notification-sw.js/route.ts) |
-| GET | [https://mesh.dev.athyper.test/notifications](https://mesh.dev.athyper.test/notifications) | Page | [source](../../../apps/mesh/app/(shell)/notifications/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/operations/data-transfers](https://mesh.dev.athyper.test/operations/data-transfers) | Page | [source](../../../apps/mesh/app/(shell)/operations/data-transfers/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/operations/data-transfers/new](https://mesh.dev.athyper.test/operations/data-transfers/new) | Page | [source](../../../apps/mesh/app/(shell)/operations/data-transfers/new/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/readyz](https://mesh.dev.athyper.test/readyz) | Browser endpoint | [source](../../../apps/mesh/app/readyz/route.ts) |
-| GET | [https://mesh.dev.athyper.test/select-context](https://mesh.dev.athyper.test/select-context) | Page | [source](../../../apps/mesh/app/(public)/select-context/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/sign-in](https://mesh.dev.athyper.test/sign-in) | Page | [source](../../../apps/mesh/app/(public)/sign-in/page.tsx) |
-| GET | [https://mesh.dev.athyper.test/supply-services](https://mesh.dev.athyper.test/supply-services) | Workspace — Supply & Services Collaboration | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/supply-services/supply-chain](https://mesh.dev.athyper.test/supply-services/supply-chain) | Module — Supply Chain | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | [https://mesh.dev.athyper.test/supply-services/workforce-services](https://mesh.dev.athyper.test/supply-services/workforce-services) | Module — Workforce & Services | [source](../../../apps/mesh/lib/catalog-routes.ts) |
-| GET | `https://mesh.dev.athyper.test/{workspaceSlug}` | Page | [source](../../../apps/mesh/app/(shell)/[workspaceSlug]/page.tsx) |
-| GET | `https://mesh.dev.athyper.test/{workspaceSlug}/{moduleSlug}` | Page | [source](../../../apps/mesh/app/(shell)/[workspaceSlug]/[moduleSlug]/page.tsx) |
+Base URL: [https://mesh.dev.athyper.test](https://mesh.dev.athyper.test). Paths below are relative to this origin.
+
+- **GET** [/](https://mesh.dev.athyper.test/)  
+  Page · [source](../../../apps/mesh/app/(shell)/page.tsx)
+
+- **POST** [/api/auth/backchannel-logout](https://mesh.dev.athyper.test/api/auth/backchannel-logout)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/backchannel-logout/route.ts)
+
+- **GET** [/api/auth/callback](https://mesh.dev.athyper.test/api/auth/callback)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/callback/route.ts)
+
+- **GET** [/api/auth/contexts](https://mesh.dev.athyper.test/api/auth/contexts)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/contexts/route.ts)
+
+- **GET** [/api/auth/login](https://mesh.dev.athyper.test/api/auth/login)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/login/route.ts)
+
+- **POST** [/api/auth/logout](https://mesh.dev.athyper.test/api/auth/logout)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/logout/route.ts)
+
+- **GET** [/api/auth/logout/callback](https://mesh.dev.athyper.test/api/auth/logout/callback)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/logout/callback/route.ts)
+
+- **POST** [/api/auth/mfa/verify](https://mesh.dev.athyper.test/api/auth/mfa/verify)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/mfa/verify/route.ts)
+
+- **POST** [/api/auth/refresh](https://mesh.dev.athyper.test/api/auth/refresh)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/refresh/route.ts)
+
+- **GET** [/api/auth/session](https://mesh.dev.athyper.test/api/auth/session)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/session/route.ts)
+
+- **POST** [/api/auth/session/context](https://mesh.dev.athyper.test/api/auth/session/context)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/session/context/route.ts)
+
+- **POST** [/api/auth/step-up/start](https://mesh.dev.athyper.test/api/auth/step-up/start)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/step-up/start/route.ts)
+
+- **POST** [/api/auth/touch](https://mesh.dev.athyper.test/api/auth/touch)  
+  Browser endpoint · [source](../../../apps/mesh/app/api/auth/touch/route.ts)
+
+- **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
+  Browser endpoint · [source](../../../apps/mesh/app/api/relay/[...path]/route.ts)
+
+- **GET** [/atlas](https://mesh.dev.athyper.test/atlas)  
+  Page · [source](../../../apps/mesh/app/(shell)/atlas/page.tsx)
+
+- **GET** [/commercial-collaboration](https://mesh.dev.athyper.test/commercial-collaboration)  
+  Workspace — Commercial Collaboration · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/commercial-collaboration/contract](https://mesh.dev.athyper.test/commercial-collaboration/contract)  
+  Module — Contract · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/commercial-collaboration/sourcing](https://mesh.dev.athyper.test/commercial-collaboration/sourcing)  
+  Module — Sourcing · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/commercial-collaboration/transaction](https://mesh.dev.athyper.test/commercial-collaboration/transaction)  
+  Module — Business Transaction · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core](https://mesh.dev.athyper.test/core)  
+  Workspace — Core Platform · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/activity](https://mesh.dev.athyper.test/core/activity)  
+  Module — Activity & Commentary · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/audit](https://mesh.dev.athyper.test/core/audit)  
+  Module — Audit & Governance · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/automation](https://mesh.dev.athyper.test/core/automation)  
+  Module — Automation & Jobs · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/content](https://mesh.dev.athyper.test/core/content)  
+  Module — Content Services · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/documents](https://mesh.dev.athyper.test/core/documents)  
+  Module — Document Services · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/foundation](https://mesh.dev.athyper.test/core/foundation)  
+  Module — Foundation Runtime · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/identity-access](https://mesh.dev.athyper.test/core/identity-access)  
+  Module — Identity & Access Management · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/integration](https://mesh.dev.athyper.test/core/integration)  
+  Module — Integration Hub · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/notifications](https://mesh.dev.athyper.test/core/notifications)  
+  Module — Notification Services · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/policies](https://mesh.dev.athyper.test/core/policies)  
+  Module — Policy & Rules Engine · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/reference-data](https://mesh.dev.athyper.test/core/reference-data)  
+  Module — Reference & Shared Data · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/core/workflows](https://mesh.dev.athyper.test/core/workflows)  
+  Module — Workflow Engine · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/financial-collaboration](https://mesh.dev.athyper.test/financial-collaboration)  
+  Workspace — Financial Collaboration · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/financial-collaboration/financing-programs](https://mesh.dev.athyper.test/financial-collaboration/financing-programs)  
+  Module — Financing Programs · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/financial-collaboration/partner-network](https://mesh.dev.athyper.test/financial-collaboration/partner-network)  
+  Module — Financial Partner Network · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/financial-collaboration/payments-working-capital](https://mesh.dev.athyper.test/financial-collaboration/payments-working-capital)  
+  Module — Payments & Working Capital · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/financial-collaboration/trade-finance](https://mesh.dev.athyper.test/financial-collaboration/trade-finance)  
+  Module — Trade Finance · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/home](https://mesh.dev.athyper.test/home)  
+  Page · [source](../../../apps/mesh/app/(shell)/home/page.tsx)
+
+- **GET** [/inbox](https://mesh.dev.athyper.test/inbox)  
+  Page · [source](../../../apps/mesh/app/(shell)/inbox/page.tsx)
+
+- **GET** [/livez](https://mesh.dev.athyper.test/livez)  
+  Browser endpoint · [source](../../../apps/mesh/app/livez/route.ts)
+
+- **GET** [/logout](https://mesh.dev.athyper.test/logout)  
+  Page · [source](../../../apps/mesh/app/(public)/logout/page.tsx)
+
+- **GET** [/mdg](https://mesh.dev.athyper.test/mdg)  
+  Page · [source](../../../apps/mesh/app/(shell)/mdg/page.tsx)
+
+- **GET** [/mdg/business-partner](https://mesh.dev.athyper.test/mdg/business-partner)  
+  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/page.tsx)
+
+- **GET** [/mdg/business-partner/profile](https://mesh.dev.athyper.test/mdg/business-partner/profile)  
+  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/profile/page.tsx)
+
+- **GET** [/mdg/business-partner/relationships](https://mesh.dev.athyper.test/mdg/business-partner/relationships)  
+  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/relationships/page.tsx)
+
+- **GET** [/mdg/business-partner/requests](https://mesh.dev.athyper.test/mdg/business-partner/requests)  
+  Page · [source](../../../apps/mesh/app/(shell)/mdg/business-partner/requests/page.tsx)
+
+- **GET** [/network-relationships](https://mesh.dev.athyper.test/network-relationships)  
+  Workspace — Network & Relationships · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/network-relationships/intelligence](https://mesh.dev.athyper.test/network-relationships/intelligence)  
+  Module — Network Intelligence · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/network-relationships/marketplace](https://mesh.dev.athyper.test/network-relationships/marketplace)  
+  Module — Marketplace & Discovery · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/network-relationships/partner-network](https://mesh.dev.athyper.test/network-relationships/partner-network)  
+  Module — Network & Partner Management · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/network-relationships/relationships](https://mesh.dev.athyper.test/network-relationships/relationships)  
+  Module — Relationship Collaboration · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/notification-sw.js](https://mesh.dev.athyper.test/notification-sw.js)  
+  Browser endpoint · [source](../../../apps/mesh/app/notification-sw.js/route.ts)
+
+- **GET** [/notifications](https://mesh.dev.athyper.test/notifications)  
+  Page · [source](../../../apps/mesh/app/(shell)/notifications/page.tsx)
+
+- **GET** [/operations/data-transfers](https://mesh.dev.athyper.test/operations/data-transfers)  
+  Page · [source](../../../apps/mesh/app/(shell)/operations/data-transfers/page.tsx)
+
+- **GET** [/operations/data-transfers/new](https://mesh.dev.athyper.test/operations/data-transfers/new)  
+  Page · [source](../../../apps/mesh/app/(shell)/operations/data-transfers/new/page.tsx)
+
+- **GET** [/readyz](https://mesh.dev.athyper.test/readyz)  
+  Browser endpoint · [source](../../../apps/mesh/app/readyz/route.ts)
+
+- **GET** [/select-context](https://mesh.dev.athyper.test/select-context)  
+  Page · [source](../../../apps/mesh/app/(public)/select-context/page.tsx)
+
+- **GET** [/sign-in](https://mesh.dev.athyper.test/sign-in)  
+  Page · [source](../../../apps/mesh/app/(public)/sign-in/page.tsx)
+
+- **GET** [/supply-services](https://mesh.dev.athyper.test/supply-services)  
+  Workspace — Supply & Services Collaboration · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/supply-services/supply-chain](https://mesh.dev.athyper.test/supply-services/supply-chain)  
+  Module — Supply Chain · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/supply-services/workforce-services](https://mesh.dev.athyper.test/supply-services/workforce-services)  
+  Module — Workforce & Services · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** `/{workspaceSlug}`  
+  Page · [source](../../../apps/mesh/app/(shell)/[workspaceSlug]/page.tsx)
+
+- **GET** `/{workspaceSlug}/{moduleSlug}`  
+  Page · [source](../../../apps/mesh/app/(shell)/[workspaceSlug]/[moduleSlug]/page.tsx)
+
 
 ## Runtime APIs in deployed Swagger
 
 Every operation below comes directly from the captured OpenAPI document. Group names, operation IDs, summaries, methods and parameter names match Swagger. Use Swagger for request bodies, responses and permissions.
 
+Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths below are relative to this origin.
+
 ### Atlas
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/atlas/experience](https://api.dev.athyper.test/api/atlas/experience) | atlas.experience.get — Read the permission-filtered Atlas experience | [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts) |
+- **GET** [/api/atlas/experience](https://api.dev.athyper.test/api/atlas/experience)  
+  atlas.experience.get — Read the permission-filtered Atlas experience  
+  Source match: [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts)
+
 
 ### Atlas Administration
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/admin/atlas/experience/draft](https://api.dev.athyper.test/api/admin/atlas/experience/draft) | atlas.admin.experience.draft — Read the Studio Atlas experience draft | [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts) |
-| PUT | [https://api.dev.athyper.test/api/admin/atlas/experience/draft](https://api.dev.athyper.test/api/admin/atlas/experience/draft) | atlas.admin.experience.saveDraft — Save a versioned Studio Atlas experience draft | [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/admin/atlas/experience/publish](https://api.dev.athyper.test/api/admin/atlas/experience/publish) | atlas.admin.experience.publish — Publish the current Studio Atlas experience draft | [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts) |
+- **GET** [/api/admin/atlas/experience/draft](https://api.dev.athyper.test/api/admin/atlas/experience/draft)  
+  atlas.admin.experience.draft — Read the Studio Atlas experience draft  
+  Source match: [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts)
+
+- **PUT** [/api/admin/atlas/experience/draft](https://api.dev.athyper.test/api/admin/atlas/experience/draft)  
+  atlas.admin.experience.saveDraft — Save a versioned Studio Atlas experience draft  
+  Source match: [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts)
+
+- **POST** [/api/admin/atlas/experience/publish](https://api.dev.athyper.test/api/admin/atlas/experience/publish)  
+  atlas.admin.experience.publish — Publish the current Studio Atlas experience draft  
+  Source match: [source](../../../server/packages/platform/ai/src/atlas-experience-routes.ts)
+
 
 ### Entity runtime
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | `https://api.dev.athyper.test/api/entity-runtime/{entityCode}/detail-descriptor` | entityDetail.descriptor — Compile an authorized browser-safe entity detail descriptor | [source](../../../server/packages/services/records/src/entity-list-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/entity-runtime/{entityCode}/form-descriptor` | entityForm.descriptor — Compile an authorized browser-safe entity form descriptor | [source](../../../server/packages/services/records/src/entity-list-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/entity-runtime/{entityCode}/list` | entityList.list — Query an authorized normalized entity list | [source](../../../server/packages/services/records/src/entity-list-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/entity-runtime/{entityCode}/list-descriptor` | entityList.descriptor — Compile an authorized browser-safe entity list descriptor | [source](../../../server/packages/services/records/src/entity-list-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/entity-runtime/{entityCode}/records/{recordId}` | entityDetail.record — Read an authorized record in a storage-independent envelope | [source](../../../server/packages/services/records/src/entity-list-routes.ts) |
+- **GET** `/api/entity-runtime/{entityCode}/detail-descriptor`  
+  entityDetail.descriptor — Compile an authorized browser-safe entity detail descriptor  
+  Source match: [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/form-descriptor`  
+  entityForm.descriptor — Compile an authorized browser-safe entity form descriptor  
+  Source match: [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/list`  
+  entityList.list — Query an authorized normalized entity list  
+  Source match: [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/list-descriptor`  
+  entityList.descriptor — Compile an authorized browser-safe entity list descriptor  
+  Source match: [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/records/{recordId}`  
+  entityDetail.record — Read an authorized record in a storage-independent envelope  
+  Source match: [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
 
 ### IAM
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/iam/contexts](https://api.dev.athyper.test/api/iam/contexts) | iam.listIdentityContexts — List active exact-plane tenant memberships for the verified identity | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| GET | `https://api.dev.athyper.test/api/iam/identity-saga-attempts/{attemptId}/evidence` | iam.readIdentitySagaEvidence — Read bounded identity saga audit evidence | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| POST | `https://api.dev.athyper.test/api/iam/identity-saga-attempts/{attemptId}/replay` | iam.replayIdentitySaga — Request maker-checker replay of an identity saga dead letter | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| GET | [https://api.dev.athyper.test/api/iam/me](https://api.dev.athyper.test/api/iam/me) | iam.getCurrentPrincipal — Get the verified request principal | [source](../../../server/packages/platform/iam/src/iam-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/iam/projection-health](https://api.dev.athyper.test/api/iam/projection-health) | iam.getProjectionHealth — Read Studio-authoritative projection reconciliation health | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| POST | `https://api.dev.athyper.test/api/iam/projection-reconciliation-attempts/{attemptId}/replay` | iam.replayProjectionReconciliation — Request a reviewed replay of one dead-lettered projection attempt | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| POST | [https://api.dev.athyper.test/api/iam/provisioning-requests](https://api.dev.athyper.test/api/iam/provisioning-requests) | iam.createProvisioningRequest — Create an idempotent identity provisioning request | [source](../../../server/packages/platform/iam/src/iam-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/iam/trusted-devices](https://api.dev.athyper.test/api/iam/trusted-devices) | iam.registerTrustedDevice — Register remembered-device evidence after verified step-up | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
-| POST | [https://api.dev.athyper.test/api/iam/trusted-devices/verify](https://api.dev.athyper.test/api/iam/trusted-devices/verify) | iam.verifyTrustedDevice — Verify remembered-device evidence in the exact authenticated plane | [source](../../../server/apps/platform-host/src/composition/register-platform.ts) |
+- **GET** [/api/iam/contexts](https://api.dev.athyper.test/api/iam/contexts)  
+  iam.listIdentityContexts — List active exact-plane tenant memberships for the verified identity  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
+- **GET** `/api/iam/identity-saga-attempts/{attemptId}/evidence`  
+  iam.readIdentitySagaEvidence — Read bounded identity saga audit evidence  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
+- **POST** `/api/iam/identity-saga-attempts/{attemptId}/replay`  
+  iam.replayIdentitySaga — Request maker-checker replay of an identity saga dead letter  
+  Source match: [source](../../../server/packages/platform/iam/src/identity-replay-routes.ts)
+
+- **GET** [/api/iam/me](https://api.dev.athyper.test/api/iam/me)  
+  iam.getCurrentPrincipal — Get the verified request principal  
+  Source match: [source](../../../server/packages/platform/iam/src/iam-routes.ts)
+
+- **GET** [/api/iam/projection-health](https://api.dev.athyper.test/api/iam/projection-health)  
+  iam.getProjectionHealth — Read Studio-authoritative projection reconciliation health  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
+- **POST** `/api/iam/projection-reconciliation-attempts/{attemptId}/replay`  
+  iam.replayProjectionReconciliation — Request a reviewed replay of one dead-lettered projection attempt  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
+- **POST** [/api/iam/provisioning-requests](https://api.dev.athyper.test/api/iam/provisioning-requests)  
+  iam.createProvisioningRequest — Create an idempotent identity provisioning request  
+  Source match: [source](../../../server/packages/platform/iam/src/iam-routes.ts)
+
+- **POST** [/api/iam/trusted-devices](https://api.dev.athyper.test/api/iam/trusted-devices)  
+  iam.registerTrustedDevice — Register remembered-device evidence after verified step-up  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
+- **POST** [/api/iam/trusted-devices/verify](https://api.dev.athyper.test/api/iam/trusted-devices/verify)  
+  iam.verifyTrustedDevice — Verify remembered-device evidence in the exact authenticated plane  
+  Source match: [source](../../../server/apps/platform-host/src/composition/register-platform.ts)
+
 
 ### Jobs
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/jobs/admin/dead-letters](https://api.dev.athyper.test/api/jobs/admin/dead-letters) | jobs.listDeadLetters — List dead-lettered jobs | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/jobs/admin/executions](https://api.dev.athyper.test/api/jobs/admin/executions) | jobs.listExecutions — List job executions | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/jobs/admin/executions/{id}/cancel` | jobs.cancelExecution — cancel a job execution | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/jobs/admin/executions/{id}/replay` | jobs.replayExecution — replay a job execution | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/jobs/admin/executions/{id}/retry` | jobs.retryExecution — retry a job execution | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/jobs/admin/queues](https://api.dev.athyper.test/api/jobs/admin/queues) | jobs.listQueues — List job queues | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/jobs/admin/schedules](https://api.dev.athyper.test/api/jobs/admin/schedules) | jobs.listSchedules — List job schedules | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/jobs/admin/schedules](https://api.dev.athyper.test/api/jobs/admin/schedules) | jobs.createSchedule — Create a job schedule | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/jobs/admin/schedules/preview](https://api.dev.athyper.test/api/jobs/admin/schedules/preview) | jobs.previewSchedule — Preview a job schedule | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/jobs/admin/schedules/{id}` | jobs.updateSchedule — Update a job schedule | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/jobs/admin/schedules/{id}/audit` | jobs.getScheduleAudit — Get job schedule audit history | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/jobs/admin/schedules/{id}/deactivate` | jobs.deactivateSchedule — Deactivate a job schedule | [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts) |
+- **GET** [/api/jobs/admin/dead-letters](https://api.dev.athyper.test/api/jobs/admin/dead-letters)  
+  jobs.listDeadLetters — List dead-lettered jobs  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **GET** [/api/jobs/admin/executions](https://api.dev.athyper.test/api/jobs/admin/executions)  
+  jobs.listExecutions — List job executions  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** `/api/jobs/admin/executions/{id}/cancel`  
+  jobs.cancelExecution — cancel a job execution  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** `/api/jobs/admin/executions/{id}/replay`  
+  jobs.replayExecution — replay a job execution  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** `/api/jobs/admin/executions/{id}/retry`  
+  jobs.retryExecution — retry a job execution  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **GET** [/api/jobs/admin/queues](https://api.dev.athyper.test/api/jobs/admin/queues)  
+  jobs.listQueues — List job queues  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **GET** [/api/jobs/admin/schedules](https://api.dev.athyper.test/api/jobs/admin/schedules)  
+  jobs.listSchedules — List job schedules  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** [/api/jobs/admin/schedules](https://api.dev.athyper.test/api/jobs/admin/schedules)  
+  jobs.createSchedule — Create a job schedule  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** [/api/jobs/admin/schedules/preview](https://api.dev.athyper.test/api/jobs/admin/schedules/preview)  
+  jobs.previewSchedule — Preview a job schedule  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **PUT** `/api/jobs/admin/schedules/{id}`  
+  jobs.updateSchedule — Update a job schedule  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **GET** `/api/jobs/admin/schedules/{id}/audit`  
+  jobs.getScheduleAudit — Get job schedule audit history  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
+- **POST** `/api/jobs/admin/schedules/{id}/deactivate`  
+  jobs.deactivateSchedule — Deactivate a job schedule  
+  Source match: [source](../../../server/packages/platform/jobs/src/job-admin-routes.ts)
+
 
 ### Mesh experience
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/mesh/network-accounts](https://api.dev.athyper.test/api/mesh/network-accounts) | meshNetworkAccounts — Resolve principal-authorized Mesh network accounts | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** [/api/mesh/network-accounts](https://api.dev.athyper.test/api/mesh/network-accounts)  
+  meshNetworkAccounts — Resolve principal-authorized Mesh network accounts  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### NEON Business Partner Definitions
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-definitions/active-descriptors](https://api.dev.athyper.test/api/neon/business-partner-definitions/active-descriptors) | neon.activeBusinessPartnerDefinitionDescriptors — Read verified locally active Business Partner forms and views | [source](../../../server/packages/services/publication/src/business-partner-definition-consumer-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-definitions/active-request-form](https://api.dev.athyper.test/api/neon/business-partner-definitions/active-request-form) | neon.activeBusinessPartnerRequestForm — Read the verified locally active Supplier request form | [source](../../../server/packages/services/publication/src/business-partner-definition-consumer-routes.ts) |
+- **GET** [/api/neon/business-partner-definitions/active-descriptors](https://api.dev.athyper.test/api/neon/business-partner-definitions/active-descriptors)  
+  neon.activeBusinessPartnerDefinitionDescriptors — Read verified locally active Business Partner forms and views  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-consumer-routes.ts)
+
+- **GET** [/api/neon/business-partner-definitions/active-request-form](https://api.dev.athyper.test/api/neon/business-partner-definitions/active-request-form)  
+  neon.activeBusinessPartnerRequestForm — Read the verified locally active Supplier request form  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-consumer-routes.ts)
+
 
 ### Neon experience
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/neon/operating-organizations](https://api.dev.athyper.test/api/neon/operating-organizations) | neonOperatingOrganizations — Resolve permitted effective Neon operating organizations | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/work-contexts](https://api.dev.athyper.test/api/neon/work-contexts) | neonWorkContexts — Resolve permitted Neon company work contexts | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** [/api/neon/operating-organizations](https://api.dev.athyper.test/api/neon/operating-organizations)  
+  neonOperatingOrganizations — Resolve permitted effective Neon operating organizations  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **GET** [/api/neon/work-contexts](https://api.dev.athyper.test/api/neon/work-contexts)  
+  neonWorkContexts — Resolve permitted Neon company work contexts  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### Notifications
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/notifications/counts](https://api.dev.athyper.test/api/notifications/counts) | notifications.getCounts — Get notification counts for the authenticated principal | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/notifications/push-configuration](https://api.dev.athyper.test/api/notifications/push-configuration) | notifications.getPushConfiguration — Get browser push-notification availability | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/notifications/read-all](https://api.dev.athyper.test/api/notifications/read-all) | notifications.markAllRead — Mark all notifications as read for the authenticated principal | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/notifications/{id}/dismiss` | notifications.dismiss — Dismiss a notification for the authenticated principal | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
+- **GET** [/api/notifications/counts](https://api.dev.athyper.test/api/notifications/counts)  
+  notifications.getCounts — Get notification counts for the authenticated principal  
+  Source match: [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** [/api/notifications/push-configuration](https://api.dev.athyper.test/api/notifications/push-configuration)  
+  notifications.getPushConfiguration — Get browser push-notification availability  
+  Source match: [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **POST** [/api/notifications/read-all](https://api.dev.athyper.test/api/notifications/read-all)  
+  notifications.markAllRead — Mark all notifications as read for the authenticated principal  
+  Source match: [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **POST** `/api/notifications/{id}/dismiss`  
+  notifications.dismiss — Dismiss a notification for the authenticated principal  
+  Source match: [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
 
 ### Platform experience
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/platform/experience/bootstrap](https://api.dev.athyper.test/api/platform/experience/bootstrap) | platformExperienceBootstrap — Resolve the sanitized effective application experience | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| GET | `https://api.dev.athyper.test/api/platform/experience/surfaces/{surfaceKey}` | getExperienceSurface — Resolve the effective system, shared, tenant, and personal experience surface | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/platform/experience/surfaces/{surfaceKey}/arrangement` | deletePersonalSurfaceArrangement — Reset the current principal's arrangement for one surface | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/platform/experience/surfaces/{surfaceKey}/arrangement` | savePersonalSurfaceArrangement — Persist the current principal's arrangement for one effective surface revision | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** [/api/platform/experience/bootstrap](https://api.dev.athyper.test/api/platform/experience/bootstrap)  
+  platformExperienceBootstrap — Resolve the sanitized effective application experience  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **GET** `/api/platform/experience/surfaces/{surfaceKey}`  
+  getExperienceSurface — Resolve the effective system, shared, tenant, and personal experience surface  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **DELETE** `/api/platform/experience/surfaces/{surfaceKey}/arrangement`  
+  deletePersonalSurfaceArrangement — Reset the current principal's arrangement for one surface  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **PUT** `/api/platform/experience/surfaces/{surfaceKey}/arrangement`  
+  savePersonalSurfaceArrangement — Persist the current principal's arrangement for one effective surface revision  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### Platform localization
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | `https://api.dev.athyper.test/api/platform/localization/policies/{planeKey}` | platformLocalePolicy — Read one exact-plane tenant locale policy | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/platform/localization/policies/{planeKey}` | updatePlatformLocalePolicy — Activate tenant locales for a target plane from Studio | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| PATCH | [https://api.dev.athyper.test/api/platform/profile/locale](https://api.dev.athyper.test/api/platform/profile/locale) | updatePrincipalLocale — Select an enabled locale for the current principal and plane | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** `/api/platform/localization/policies/{planeKey}`  
+  platformLocalePolicy — Read one exact-plane tenant locale policy  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **PUT** `/api/platform/localization/policies/{planeKey}`  
+  updatePlatformLocalePolicy — Activate tenant locales for a target plane from Studio  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **PATCH** [/api/platform/profile/locale](https://api.dev.athyper.test/api/platform/profile/locale)  
+  updatePrincipalLocale — Select an enabled locale for the current principal and plane  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### Platform navigation
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/platform/navigation/slug-redirect](https://api.dev.athyper.test/api/platform/navigation/slug-redirect) | resolveRouteSlugRedirect — Resolve an active historical route slug in the exact plane | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** [/api/platform/navigation/slug-redirect](https://api.dev.athyper.test/api/platform/navigation/slug-redirect)  
+  resolveRouteSlugRedirect — Resolve an active historical route slug in the exact plane  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### Platform verification
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/platform/verification](https://api.dev.athyper.test/api/platform/verification) | platform.verification.snapshot — Run authenticated read-only platform verification | [source](../../../server/apps/platform-host/src/composition/verification-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/platform/verification/runs](https://api.dev.athyper.test/api/platform/verification/runs) | platform.verification.run — Run bounded synthetic platform verification | [source](../../../server/apps/platform-host/src/composition/verification-routes.ts) |
+- **GET** [/api/platform/verification](https://api.dev.athyper.test/api/platform/verification)  
+  platform.verification.snapshot — Run authenticated read-only platform verification  
+  Source match: [source](../../../server/apps/platform-host/src/composition/verification-routes.ts)
+
+- **POST** [/api/platform/verification/runs](https://api.dev.athyper.test/api/platform/verification/runs)  
+  platform.verification.run — Run bounded synthetic platform verification  
+  Source match: [source](../../../server/apps/platform-host/src/composition/verification-routes.ts)
+
 
 ### Public Records Transfer V1
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| POST | `https://api.dev.athyper.test/api/v1/records/exports/{exportRequestId}/cancel` | public.v1.records.cancelExport — public.v1.records.cancelExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/v1/records/exports/{exportRequestId}/download` | public.v1.records.downloadExport — public.v1.records.downloadExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/exports/{exportRequestId}/restart` | public.v1.records.restartExport — public.v1.records.restartExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}` | public.v1.records.getImport — public.v1.records.getImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/cancel` | public.v1.records.cancelImport — public.v1.records.cancelImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/chunks/{chunkIndex}` | public.v1.records.appendImportChunk — public.v1.records.appendImportChunk | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/commit` | public.v1.records.commitImport — public.v1.records.commitImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/complete` | public.v1.records.completeImportUpload — public.v1.records.completeImportUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/error-report` | public.v1.records.getImportErrorReport — public.v1.records.getImportErrorReport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/file-complete` | public.v1.records.completeFileUpload — public.v1.records.completeFileUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/file-upload` | public.v1.records.prepareFileUpload — public.v1.records.prepareFileUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/preview` | public.v1.records.previewImport — public.v1.records.previewImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/restart` | public.v1.records.restartImport — public.v1.records.restartImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/validate` | public.v1.records.validateImport — public.v1.records.validateImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/workbook-complete` | public.v1.records.completeWorkbookUpload — public.v1.records.completeWorkbookUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/imports/{sessionId}/workbook-upload` | public.v1.records.prepareWorkbookUpload — public.v1.records.prepareWorkbookUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/v1/records/transfers](https://api.dev.athyper.test/api/v1/records/transfers) | public.v1.records.listOwnTransfers — public.v1.records.listOwnTransfers | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/{entityCode}/exports` | public.v1.records.requestExport — public.v1.records.requestExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/v1/records/{entityCode}/import-template.xlsx` | public.v1.records.createWorkbookTemplate — public.v1.records.createWorkbookTemplate | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/v1/records/{entityCode}/imports` | public.v1.records.beginImport — public.v1.records.beginImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
+- **POST** `/api/v1/records/exports/{exportRequestId}/cancel`  
+  public.v1.records.cancelExport — public.v1.records.cancelExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/v1/records/exports/{exportRequestId}/download`  
+  public.v1.records.downloadExport — public.v1.records.downloadExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/exports/{exportRequestId}/restart`  
+  public.v1.records.restartExport — public.v1.records.restartExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/v1/records/imports/{sessionId}`  
+  public.v1.records.getImport — public.v1.records.getImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/cancel`  
+  public.v1.records.cancelImport — public.v1.records.cancelImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **PUT** `/api/v1/records/imports/{sessionId}/chunks/{chunkIndex}`  
+  public.v1.records.appendImportChunk — public.v1.records.appendImportChunk  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/commit`  
+  public.v1.records.commitImport — public.v1.records.commitImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/complete`  
+  public.v1.records.completeImportUpload — public.v1.records.completeImportUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/v1/records/imports/{sessionId}/error-report`  
+  public.v1.records.getImportErrorReport — public.v1.records.getImportErrorReport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/file-complete`  
+  public.v1.records.completeFileUpload — public.v1.records.completeFileUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/file-upload`  
+  public.v1.records.prepareFileUpload — public.v1.records.prepareFileUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/preview`  
+  public.v1.records.previewImport — public.v1.records.previewImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/restart`  
+  public.v1.records.restartImport — public.v1.records.restartImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/validate`  
+  public.v1.records.validateImport — public.v1.records.validateImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/workbook-complete`  
+  public.v1.records.completeWorkbookUpload — public.v1.records.completeWorkbookUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/imports/{sessionId}/workbook-upload`  
+  public.v1.records.prepareWorkbookUpload — public.v1.records.prepareWorkbookUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** [/api/v1/records/transfers](https://api.dev.athyper.test/api/v1/records/transfers)  
+  public.v1.records.listOwnTransfers — public.v1.records.listOwnTransfers  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/{entityCode}/exports`  
+  public.v1.records.requestExport — public.v1.records.requestExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/v1/records/{entityCode}/import-template.xlsx`  
+  public.v1.records.createWorkbookTemplate — public.v1.records.createWorkbookTemplate  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/v1/records/{entityCode}/imports`  
+  public.v1.records.beginImport — public.v1.records.beginImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
 
 ### Publication
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | `https://api.dev.athyper.test/api/publication/deployments/{deploymentId}` | publication.getDeployment — Get a publication deployment | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/publication/deployments/{deploymentId}/retry` | publication.retryDeployment — Retry a publication deployment | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/publication/publication-keys/{key}/rollback` | publication.rollbackRelease — Roll back a publication key | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/publication/releases/{releaseId}` | publication.getRelease — Get a publication release | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/publication/releases/{releaseId}/publish` | publication.publishRelease — Publish a release | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
+- **GET** `/api/publication/deployments/{deploymentId}`  
+  publication.getDeployment — Get a publication deployment  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **POST** `/api/publication/deployments/{deploymentId}/retry`  
+  publication.retryDeployment — Retry a publication deployment  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **POST** `/api/publication/publication-keys/{key}/rollback`  
+  publication.rollbackRelease — Roll back a publication key  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **GET** `/api/publication/releases/{releaseId}`  
+  publication.getRelease — Get a publication release  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **POST** `/api/publication/releases/{releaseId}/publish`  
+  publication.publishRelease — Publish a release  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
 
 ### Publication Operations
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | `https://api.dev.athyper.test/api/publication/deployments/{deploymentId}/provenance` | publication.getDeploymentProvenance — Get publication deployment provenance | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/publication/operations/dead-letters](https://api.dev.athyper.test/api/publication/operations/dead-letters) | publication.listDeadLetters — List publication delivery dead letters | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/publication/operations/deliveries/{deliveryId}/replay` | publication.replayDelivery — Replay a publication delivery | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/publication/operations/destinations/{plane}/{targetInstance}/health` | publication.getDestinationHealth — Get publication destination health | [source](../../../server/packages/services/publication/src/publication-routes.ts) |
+- **GET** `/api/publication/deployments/{deploymentId}/provenance`  
+  publication.getDeploymentProvenance — Get publication deployment provenance  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **GET** [/api/publication/operations/dead-letters](https://api.dev.athyper.test/api/publication/operations/dead-letters)  
+  publication.listDeadLetters — List publication delivery dead letters  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **POST** `/api/publication/operations/deliveries/{deliveryId}/replay`  
+  publication.replayDelivery — Replay a publication delivery  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
+- **GET** `/api/publication/operations/destinations/{plane}/{targetInstance}/health`  
+  publication.getDestinationHealth — Get publication destination health  
+  Source match: [source](../../../server/packages/services/publication/src/publication-routes.ts)
+
 
 ### Record favourites
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/record-bookmarks](https://api.dev.athyper.test/api/record-bookmarks) | recordBookmarks.list — List the authenticated principal's record favourites | [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/record-bookmarks/{entityCode}` | recordBookmarks.remove — Idempotently remove explicit record favourites | [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/record-bookmarks/{entityCode}` | recordBookmarks.add — Idempotently add explicit record favourites | [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/record-bookmarks/{entityCode}/membership` | recordBookmarks.membership — Resolve favourite membership for a visible page | [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts) |
+- **GET** [/api/record-bookmarks](https://api.dev.athyper.test/api/record-bookmarks)  
+  recordBookmarks.list — List the authenticated principal's record favourites  
+  Source match: [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts)
+
+- **DELETE** `/api/record-bookmarks/{entityCode}`  
+  recordBookmarks.remove — Idempotently remove explicit record favourites  
+  Source match: [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts)
+
+- **PUT** `/api/record-bookmarks/{entityCode}`  
+  recordBookmarks.add — Idempotently add explicit record favourites  
+  Source match: [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts)
+
+- **GET** `/api/record-bookmarks/{entityCode}/membership`  
+  recordBookmarks.membership — Resolve favourite membership for a visible page  
+  Source match: [source](../../../server/packages/services/records/src/bookmarks/record-bookmark-routes.ts)
+
 
 ### Records
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | `https://api.dev.athyper.test/api/records/{entityCode}` | records.list — List records | [source](../../../server/packages/services/records/src/records-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/{entityCode}` | records.create — Create a record | [source](../../../server/packages/services/records/src/records-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/records/{entityCode}/{recordId}` | records.delete — Delete a record | [source](../../../server/packages/services/records/src/records-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/records/{entityCode}/{recordId}` | records.get — Get a record | [source](../../../server/packages/services/records/src/records-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/records/{entityCode}/{recordId}` | records.patch — Patch a record | [source](../../../server/packages/services/records/src/records-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/{entityCode}/{recordId}/transitions/{transitionCode}` | records.transition — Transition a record | [source](../../../server/packages/services/records/src/records-routes.ts) |
+- **GET** `/api/records/{entityCode}`  
+  records.list — List records  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
+- **POST** `/api/records/{entityCode}`  
+  records.create — Create a record  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
+- **DELETE** `/api/records/{entityCode}/{recordId}`  
+  records.delete — Delete a record  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
+- **GET** `/api/records/{entityCode}/{recordId}`  
+  records.get — Get a record  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
+- **PATCH** `/api/records/{entityCode}/{recordId}`  
+  records.patch — Patch a record  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
+- **POST** `/api/records/{entityCode}/{recordId}/transitions/{transitionCode}`  
+  records.transition — Transition a record  
+  Source match: [source](../../../server/packages/services/records/src/records-routes.ts)
+
 
 ### Records Transfer
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| POST | `https://api.dev.athyper.test/api/records/exports/{exportRequestId}/cancel` | records.cancelExport — records.cancelExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/records/exports/{exportRequestId}/download` | records.downloadExport — records.downloadExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/exports/{exportRequestId}/restart` | records.restartExport — records.restartExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/records/imports/{sessionId}` | records.getImport — records.getImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/cancel` | records.cancelImport — records.cancelImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/records/imports/{sessionId}/chunks/{chunkIndex}` | records.appendImportChunk — records.appendImportChunk | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/commit` | records.commitImport — records.commitImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/complete` | records.completeImportUpload — records.completeImportUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/records/imports/{sessionId}/error-report` | records.getImportErrorReport — records.getImportErrorReport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/file-complete` | records.completeFileUpload — records.completeFileUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/file-upload` | records.prepareFileUpload — records.prepareFileUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/preview` | records.previewImport — records.previewImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/restart` | records.restartImport — records.restartImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/validate` | records.validateImport — records.validateImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/workbook-complete` | records.completeWorkbookUpload — records.completeWorkbookUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/imports/{sessionId}/workbook-upload` | records.prepareWorkbookUpload — records.prepareWorkbookUpload | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/records/transfers](https://api.dev.athyper.test/api/records/transfers) | records.listOwnTransfers — records.listOwnTransfers | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/{entityCode}/exports` | records.requestExport — records.requestExport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/records/{entityCode}/import-template.xlsx` | records.createWorkbookTemplate — records.createWorkbookTemplate | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/{entityCode}/imports` | records.beginImport — records.beginImport | [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts) |
+- **POST** `/api/records/exports/{exportRequestId}/cancel`  
+  records.cancelExport — records.cancelExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/records/exports/{exportRequestId}/download`  
+  records.downloadExport — records.downloadExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/exports/{exportRequestId}/restart`  
+  records.restartExport — records.restartExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/records/imports/{sessionId}`  
+  records.getImport — records.getImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/cancel`  
+  records.cancelImport — records.cancelImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **PUT** `/api/records/imports/{sessionId}/chunks/{chunkIndex}`  
+  records.appendImportChunk — records.appendImportChunk  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/commit`  
+  records.commitImport — records.commitImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/complete`  
+  records.completeImportUpload — records.completeImportUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/records/imports/{sessionId}/error-report`  
+  records.getImportErrorReport — records.getImportErrorReport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/file-complete`  
+  records.completeFileUpload — records.completeFileUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/file-upload`  
+  records.prepareFileUpload — records.prepareFileUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/preview`  
+  records.previewImport — records.previewImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/restart`  
+  records.restartImport — records.restartImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/validate`  
+  records.validateImport — records.validateImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/workbook-complete`  
+  records.completeWorkbookUpload — records.completeWorkbookUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/imports/{sessionId}/workbook-upload`  
+  records.prepareWorkbookUpload — records.prepareWorkbookUpload  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** [/api/records/transfers](https://api.dev.athyper.test/api/records/transfers)  
+  records.listOwnTransfers — records.listOwnTransfers  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/{entityCode}/exports`  
+  records.requestExport — records.requestExport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **GET** `/api/records/{entityCode}/import-template.xlsx`  
+  records.createWorkbookTemplate — records.createWorkbookTemplate  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
+- **POST** `/api/records/{entityCode}/imports`  
+  records.beginImport — records.beginImport  
+  Source match: [source](../../../server/packages/services/records/src/transfer/transfer-routes.ts)
+
 
 ### STUDIO Business Partner Definitions
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| POST | [https://api.dev.athyper.test/api/studio/business-partner-case-contracts](https://api.dev.athyper.test/api/studio/business-partner-case-contracts) | studio.authorBusinessPartnerCaseContract — Author an immutable Business Partner case contract revision | [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/business-partner-case-contracts/simulations](https://api.dev.athyper.test/api/studio/business-partner-case-contracts/simulations) | studio.simulateBusinessPartnerCaseContract — Dry-run Business Partner case contract compatibility without publication authority | [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/studio/business-partner-case-contracts/{revisionId}` | studio.getBusinessPartnerCaseContract — Get a Business Partner case contract revision | [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/business-partner-case-contracts/{revisionId}/publish` | studio.publishBusinessPartnerCaseContract — Approve and queue a signed Business Partner case contract publication | [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/business-partner-definitions](https://api.dev.athyper.test/api/studio/business-partner-definitions) | studio.authorBusinessPartnerDefinition — Author an immutable Business Partner definition revision | [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/business-partner-definitions/simulations](https://api.dev.athyper.test/api/studio/business-partner-definitions/simulations) | studio.simulateBusinessPartnerDefinition — Dry-run Business Partner definition compatibility without publication authority | [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/studio/business-partner-definitions/{revisionId}` | studio.getBusinessPartnerDefinition — Get a Business Partner definition revision | [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/business-partner-definitions/{revisionId}/publish` | studio.publishBusinessPartnerDefinition — Approve and queue a signed Business Partner definition publication | [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts) |
+- **POST** [/api/studio/business-partner-case-contracts](https://api.dev.athyper.test/api/studio/business-partner-case-contracts)  
+  studio.authorBusinessPartnerCaseContract — Author an immutable Business Partner case contract revision  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+
+- **POST** [/api/studio/business-partner-case-contracts/simulations](https://api.dev.athyper.test/api/studio/business-partner-case-contracts/simulations)  
+  studio.simulateBusinessPartnerCaseContract — Dry-run Business Partner case contract compatibility without publication authority  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+
+- **GET** `/api/studio/business-partner-case-contracts/{revisionId}`  
+  studio.getBusinessPartnerCaseContract — Get a Business Partner case contract revision  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+
+- **POST** `/api/studio/business-partner-case-contracts/{revisionId}/publish`  
+  studio.publishBusinessPartnerCaseContract — Approve and queue a signed Business Partner case contract publication  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-case-contract-routes.ts)
+
+- **POST** [/api/studio/business-partner-definitions](https://api.dev.athyper.test/api/studio/business-partner-definitions)  
+  studio.authorBusinessPartnerDefinition — Author an immutable Business Partner definition revision  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+
+- **POST** [/api/studio/business-partner-definitions/simulations](https://api.dev.athyper.test/api/studio/business-partner-definitions/simulations)  
+  studio.simulateBusinessPartnerDefinition — Dry-run Business Partner definition compatibility without publication authority  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+
+- **GET** `/api/studio/business-partner-definitions/{revisionId}`  
+  studio.getBusinessPartnerDefinition — Get a Business Partner definition revision  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+
+- **POST** `/api/studio/business-partner-definitions/{revisionId}/publish`  
+  studio.publishBusinessPartnerDefinition — Approve and queue a signed Business Partner definition publication  
+  Source match: [source](../../../server/packages/services/publication/src/business-partner-definition-routes.ts)
+
 
 ### Studio experience
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/api/studio/experience-surfaces](https://api.dev.athyper.test/api/studio/experience-surfaces) | listExperienceSurfaceHistory — Load Studio release history for one surface | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/experience-surfaces/atlas-drafts](https://api.dev.athyper.test/api/studio/experience-surfaces/atlas-drafts) | generateAtlasExperienceSurfaceDraft — Generate, validate, and persist an Atlas-authored surface draft without publication | [source](../../../server/packages/platform/ai/src/atlas-surface-draft-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/experience-surfaces/drafts](https://api.dev.athyper.test/api/studio/experience-surfaces/drafts) | saveExperienceSurfaceDraft — Validate and persist a human-authored experience surface draft | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/experience-surfaces/{releaseId}/publish` | publishExperienceSurface — Publish a validated draft and apply its exact-plane projection | [source](../../../server/packages/platform/experience/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/experience-surfaces/{releaseId}/rollback` | rollbackExperienceSurface — Clone a historical release into a new human-review draft | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **GET** [/api/studio/experience-surfaces](https://api.dev.athyper.test/api/studio/experience-surfaces)  
+  listExperienceSurfaceHistory — Load Studio release history for one surface  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **POST** [/api/studio/experience-surfaces/atlas-drafts](https://api.dev.athyper.test/api/studio/experience-surfaces/atlas-drafts)  
+  generateAtlasExperienceSurfaceDraft — Generate, validate, and persist an Atlas-authored surface draft without publication  
+  Source match: [source](../../../server/packages/platform/ai/src/atlas-surface-draft-routes.ts)
+
+- **POST** [/api/studio/experience-surfaces/drafts](https://api.dev.athyper.test/api/studio/experience-surfaces/drafts)  
+  saveExperienceSurfaceDraft — Validate and persist a human-authored experience surface draft  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **POST** `/api/studio/experience-surfaces/{releaseId}/publish`  
+  publishExperienceSurface — Publish a validated draft and apply its exact-plane projection  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
+- **POST** `/api/studio/experience-surfaces/{releaseId}/rollback`  
+  rollbackExperienceSurface — Clone a historical release into a new human-review draft  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### Studio navigation
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| POST | [https://api.dev.athyper.test/api/studio/navigation/slug-redirects](https://api.dev.athyper.test/api/studio/navigation/slug-redirects) | registerRouteSlugRedirect — Register a catalog slug change in its exact target plane | [source](../../../server/packages/platform/experience/src/routes.ts) |
+- **POST** [/api/studio/navigation/slug-redirects](https://api.dev.athyper.test/api/studio/navigation/slug-redirects)  
+  registerRouteSlugRedirect — Register a catalog slug change in its exact target plane  
+  Source match: [source](../../../server/packages/platform/experience/src/routes.ts)
+
 
 ### System
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/health](https://api.dev.athyper.test/health) | system.getHealth — system.getHealth | [source](../../../server/packages/runtime/http/src/http-runtime.ts) |
-| GET | [https://api.dev.athyper.test/healthz](https://api.dev.athyper.test/healthz) | system.getHealthz — system.getHealthz | [source](../../../server/packages/runtime/http/src/http-runtime.ts) |
-| GET | [https://api.dev.athyper.test/livez](https://api.dev.athyper.test/livez) | system.getLiveness — system.getLiveness | [source](../../../server/packages/runtime/http/src/http-runtime.ts) |
-| GET | [https://api.dev.athyper.test/readyz](https://api.dev.athyper.test/readyz) | system.getReadiness — system.getReadiness | [source](../../../server/packages/runtime/http/src/http-runtime.ts) |
+- **GET** [/health](https://api.dev.athyper.test/health)  
+  system.getHealth — system.getHealth  
+  Source match: [source](../../../server/packages/runtime/http/src/http-runtime.ts)
+
+- **GET** [/healthz](https://api.dev.athyper.test/healthz)  
+  system.getHealthz — system.getHealthz  
+  Source match: [source](../../../server/packages/runtime/http/src/http-runtime.ts)
+
+- **GET** [/livez](https://api.dev.athyper.test/livez)  
+  system.getLiveness — system.getLiveness  
+  Source match: [source](../../../server/packages/runtime/http/src/http-runtime.ts)
+
+- **GET** [/readyz](https://api.dev.athyper.test/readyz)  
+  system.getReadiness — system.getReadiness  
+  Source match: [source](../../../server/packages/runtime/http/src/http-runtime.ts)
+
 
 ### Telemetry
 
-| Method | API URL | Operation ID / summary | Source match |
-| --- | --- | --- | --- |
-| GET | [https://api.dev.athyper.test/metrics](https://api.dev.athyper.test/metrics) | telemetry.getPrometheusMetrics — Export Prometheus metrics | [source](../../../server/packages/runtime/http/src/http-runtime.ts) |
+- **GET** [/metrics](https://api.dev.athyper.test/metrics)  
+  telemetry.getPrometheusMetrics — Export Prometheus metrics  
+  Source match: [source](../../../server/packages/runtime/http/src/http-runtime.ts)
+
 
 ## Additional backend APIs declared in source
 
 **These operations are absent from the captured deployed Swagger.** They may be raw Express routes without OpenAPI contracts, newer source contracts, or conditionally composed capabilities. They are included here so the catalogue does not silently omit them; this section does not claim they are deployed or Swagger-documented.
 
-| Method | API URL | Declaration | Source |
-| --- | --- | --- | --- |
-| PUT | [https://api.dev.athyper.test/api/admin/atlas/action-policies](https://api.dev.athyper.test/api/admin/atlas/action-policies) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| PUT | [https://api.dev.athyper.test/api/admin/atlas/confidence-thresholds](https://api.dev.athyper.test/api/admin/atlas/confidence-thresholds) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/admin/atlas/credentials/{providerId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/admin/atlas/credentials/{providerId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/admin/atlas/knowledge/sources](https://api.dev.athyper.test/api/admin/atlas/knowledge/sources) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/admin/atlas/knowledge/sources/retract](https://api.dev.athyper.test/api/admin/atlas/knowledge/sources/retract) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/admin/atlas/monitoring/calibration](https://api.dev.athyper.test/api/admin/atlas/monitoring/calibration) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/admin/atlas/monitoring/drift](https://api.dev.athyper.test/api/admin/atlas/monitoring/drift) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/admin/atlas/quota](https://api.dev.athyper.test/api/admin/atlas/quota) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| PUT | [https://api.dev.athyper.test/api/admin/atlas/quota](https://api.dev.athyper.test/api/admin/atlas/quota) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/atlas/admission](https://api.dev.athyper.test/api/atlas/admission) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/atlas/threads](https://api.dev.athyper.test/api/atlas/threads) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/atlas/threads](https://api.dev.athyper.test/api/atlas/threads) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/atlas/threads/{id}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/atlas/threads/{id}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/atlas/threads/{id}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/atlas/threads/{id}/archive` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/atlas/threads/{id}/export` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/atlas/threads/{id}/messages` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/atlas/threads/{id}/participants/{principalId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/atlas/threads/{id}/participants/{principalId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/atlas/threads/{id}/runs` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/atlas/tools/{proposalId}/cancel` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/atlas/tools/{proposalId}/run` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/atlas/tools/history](https://api.dev.athyper.test/api/atlas/tools/history) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/atlas/tools/preview](https://api.dev.athyper.test/api/atlas/tools/preview) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/ai/src/atlas-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/attachments/{attachmentId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/attachments/{attachmentId}/download` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/attachments/{attachmentId}/finalize` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/attachments/{attachmentId}/status` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/attachments/stage](https://api.dev.athyper.test/api/attachments/stage) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/audit/status](https://api.dev.athyper.test/api/audit/status) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/audit/src/audit-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/collab/comments](https://api.dev.athyper.test/api/collab/comments) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/collab/comments/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/collab/comments/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/collab/comments/{id}/flag` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/collab/comments/{id}/reactions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/collab/comments/{id}/reactions/{code}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/collab/comments/{id}/replies` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/collab/comments/mark-all-read](https://api.dev.athyper.test/api/collab/comments/mark-all-read) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| DELETE | [https://api.dev.athyper.test/api/collab/drafts](https://api.dev.athyper.test/api/collab/drafts) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/collab/drafts](https://api.dev.athyper.test/api/collab/drafts) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/content/items](https://api.dev.athyper.test/api/content/items) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/content/items](https://api.dev.athyper.test/api/content/items) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/content/items/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/acl` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/acl` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/content/items/{id}/acl/{grantId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/archive` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/attachments` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/attachments` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/content/items/{id}/attachments/{attachmentId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/attachments/{attachmentId}/versions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/attachments/{attachmentId}/versions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/attachments/src/attachment-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/links` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/links` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/content/items/{id}/links/{linkId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/publish` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/reindex` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/versions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/versions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/content/items/{id}/versions/{versionId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/content/items/{id}/versions/{versionId}/restore` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/content/quota](https://api.dev.athyper.test/api/content/quota) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/content/search](https://api.dev.athyper.test/api/content/search) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/content/src/content-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/authorization](https://api.dev.athyper.test/api/control-admin/authorization) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/authorization/approve](https://api.dev.athyper.test/api/control-admin/authorization/approve) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/authorization/break-glass](https://api.dev.athyper.test/api/control-admin/authorization/break-glass) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/authorization/manage](https://api.dev.athyper.test/api/control-admin/authorization/manage) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/authorization/revoke](https://api.dev.athyper.test/api/control-admin/authorization/revoke) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/bank-validation/rules](https://api.dev.athyper.test/api/control-admin/bank-validation/rules) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/bank-validation/rules/publish](https://api.dev.athyper.test/api/control-admin/bank-validation/rules/publish) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/bank-validation/verify](https://api.dev.athyper.test/api/control-admin/bank-validation/verify) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/connectors/{id}/activate` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/connectors/{id}/deprecate` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/control-admin/connectors/{id}/draft` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/connectors/{id}/health-checks` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/connectors/{id}/suspend` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/connectors/validate](https://api.dev.athyper.test/api/control-admin/connectors/validate) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/control-admin/cycle-config/{cycleTypeId}/revisions/{version}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/control-admin/cycle-config/{cycleTypeId}/revisions/latest` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/cycle-config/desired-state/apply](https://api.dev.athyper.test/api/control-admin/cycle-config/desired-state/apply) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/cycle-config/preview](https://api.dev.athyper.test/api/control-admin/cycle-config/preview) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/cycle-config/publish](https://api.dev.athyper.test/api/control-admin/cycle-config/publish) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/cycle-config/validate](https://api.dev.athyper.test/api/control-admin/cycle-config/validate) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/entitlements/modules](https://api.dev.athyper.test/api/control-admin/entitlements/modules) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/control-admin/entitlements/overrides/{id}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/entitlements/overrides/{id}/expire` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/entitlements/plans](https://api.dev.athyper.test/api/control-admin/entitlements/plans) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/features](https://api.dev.athyper.test/api/control-admin/features) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/control-admin/features/{code}/evaluation` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/control-admin/features/{code}/override` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/features/overrides/{id}/expire` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/lookups](https://api.dev.athyper.test/api/control-admin/lookups) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/control-admin/lookups/{code}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/lookups/{code}/values/{valueCode}/retire` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/lookups/desired-state/apply](https://api.dev.athyper.test/api/control-admin/lookups/desired-state/apply) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/parameters](https://api.dev.athyper.test/api/control-admin/parameters) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/control-admin/parameters/{code}/effective` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/control-admin/parameters/{code}/value` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/parameters/values/{id}/expire` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/rounding](https://api.dev.athyper.test/api/control-admin/rounding) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/control-admin/rounding/{id}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/rounding/{id}/retire` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/rounding/simulate](https://api.dev.athyper.test/api/control-admin/rounding/simulate) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/control-admin/runtime-approvals/{id}/decisions` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/runtime-commands](https://api.dev.athyper.test/api/control-admin/runtime-commands) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/control-admin/runtime-commands/dry-run](https://api.dev.athyper.test/api/control-admin/runtime-commands/dry-run) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/control-admin/runtime-history](https://api.dev.athyper.test/api/control-admin/runtime-history) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/documents/{documentId}/download` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/documents/src/document-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/documents/render](https://api.dev.athyper.test/api/documents/render) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/documents/src/document-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions` | Route contract; absent from deployed Swagger | [source](../../../server/apps/platform-host/src/composition/finance-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/budget/balance](https://api.dev.athyper.test/api/finance/budget/balance) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/budget/command](https://api.dev.athyper.test/api/finance/budget/command) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/budget/rebuild](https://api.dev.athyper.test/api/finance/budget/rebuild) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/budget/reverse](https://api.dev.athyper.test/api/finance/budget/reverse) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/close/recover](https://api.dev.athyper.test/api/finance/close/recover) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/close/reverse](https://api.dev.athyper.test/api/finance/close/reverse) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/close/run](https://api.dev.athyper.test/api/finance/close/run) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/close/status](https://api.dev.athyper.test/api/finance/close/status) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/commitment/fulfill](https://api.dev.athyper.test/api/finance/commitment/fulfill) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/commitment/reverse](https://api.dev.athyper.test/api/finance/commitment/reverse) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/cross-book/execute](https://api.dev.athyper.test/api/finance/cross-book/execute) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/gl/post](https://api.dev.athyper.test/api/finance/gl/post) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/gl/reconcile](https://api.dev.athyper.test/api/finance/gl/reconcile) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/inventory/balance](https://api.dev.athyper.test/api/finance/inventory/balance) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/inventory/move](https://api.dev.athyper.test/api/finance/inventory/move) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/inventory/rebuild](https://api.dev.athyper.test/api/finance/inventory/rebuild) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/inventory/reverse](https://api.dev.athyper.test/api/finance/inventory/reverse) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/numbering/allocations](https://api.dev.athyper.test/api/finance/numbering/allocations) | Route contract; absent from deployed Swagger | [source](../../../server/apps/platform-host/src/composition/finance-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/numbering/reconciliation](https://api.dev.athyper.test/api/finance/numbering/reconciliation) | Route contract; absent from deployed Swagger | [source](../../../server/apps/platform-host/src/composition/finance-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/planning/output](https://api.dev.athyper.test/api/finance/planning/output) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/planning/run](https://api.dev.athyper.test/api/finance/planning/run) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/posting-admissions](https://api.dev.athyper.test/api/finance/posting-admissions) | Route contract; absent from deployed Swagger | [source](../../../server/apps/platform-host/src/composition/finance-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/rounding/resolve](https://api.dev.athyper.test/api/finance/rounding/resolve) | Route contract; absent from deployed Swagger | [source](../../../server/apps/platform-host/src/composition/finance-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/tax/calculate](https://api.dev.athyper.test/api/finance/tax/calculate) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/tax/credit/move](https://api.dev.athyper.test/api/finance/tax/credit/move) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| GET | [https://api.dev.athyper.test/api/finance/tax/point-in-time](https://api.dev.athyper.test/api/finance/tax/point-in-time) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/tax/rebuild](https://api.dev.athyper.test/api/finance/tax/rebuild) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/finance/tax/reverse](https://api.dev.athyper.test/api/finance/tax/reverse) | Route contract; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/register-finance.ts) |
-| POST | [https://api.dev.athyper.test/api/governance/channel-consents](https://api.dev.athyper.test/api/governance/channel-consents) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-certifications/{certificationId}/certify` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-certifications/{certificationId}/reject` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-certifications/{certificationId}/submit` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-deviations/{deviationId}/carry-forward` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-deviations/{deviationId}/resolve` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-deviations/{deviationId}/waive` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/governance/cycle-runs](https://api.dev.athyper.test/api/governance/cycle-runs) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-runs/{runId}/certifications` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-runs/{runId}/deviations` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/governance/cycle-runs/{runId}/readiness` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-runs/{runId}/transitions` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/block` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/claim` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/complete` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/reopen` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/start` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/cycle-tasks/{taskId}/waive` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/governance/legal-holds](https://api.dev.athyper.test/api/governance/legal-holds) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/governance/legal-holds/{holdId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/legal-holds/{holdId}/activate` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/legal-holds/{holdId}/release` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/governance/legal-holds/{holdId}/resources` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/governance/legal-holds/{holdId}/resources/{resourceId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/governance/report-packs](https://api.dev.athyper.test/api/governance/report-packs) | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/governance/report-packs/{reportPackId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/governance/report-packs/{reportPackId}/download` | Route contract; absent from deployed Swagger | [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/integration/connections/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/integration/connections/{id}/test` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/integration/connector-types](https://api.dev.athyper.test/api/integration/connector-types) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/integration/connector-types/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/integration/deliveries/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/integration/deliveries/{id}/replay` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/integration/endpoints/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/integration/endpoints/{id}/deliveries` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/master/addresses/{addressLinkId}/deactivate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/master/contacts/{contactId}/deactivate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/master/contacts/{contactId}/verification` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/addresses` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/contacts` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/profile` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/master-data-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/me/saved-views](https://api.dev.athyper.test/api/me/saved-views) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/me/saved-views/{viewId}/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/me/saved-views/{viewId}/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/me/saved-views/{viewId}/clone` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures](https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures/{disclosureId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures/{disclosureId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures/{disclosureId}/revocations` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-network-capabilities/{capabilityId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/mesh/business-partner-network-relationships](https://api.dev.athyper.test/api/mesh/business-partner-network-relationships) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-network-relationships/{relationshipId}/capabilities` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-network-relationships/{relationshipId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/mesh/business-partner-network-workspace](https://api.dev.athyper.test/api/mesh/business-partner-network-workspace) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/mesh/business-partner-profile-publications/{publicationId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-profile-publications/{publicationId}/withdrawals` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/mesh/business-partner-registration-exchanges](https://api.dev.athyper.test/api/mesh/business-partner-registration-exchanges) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/mesh/business-partner-registration-exchanges/{exchangeId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/meta-entity-authoring/change-sets](https://api.dev.athyper.test/api/meta-entity-authoring/change-sets) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/approve` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/graph` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/publish` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/test` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/change-sets/{id}/validate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/releases/{id}/activate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/meta-entity-authoring/releases/{id}/rollback` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-bank-verifications](https://api.dev.athyper.test/api/neon/business-partner-bank-verifications) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-bank-verifications/{verificationId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-bank-verifications/{verificationId}/applications` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-bank-verifications/{verificationId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}/materialize` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}/validate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-cases/{requestId}/view` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-invitation-templates/{journeyKind}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-invitations](https://api.dev.athyper.test/api/neon/business-partner-invitations) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-invitations/{invitationId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-invitations/{invitationId}/cancel` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-invitations/{invitationId}/resend` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-invitations/{invitationId}/support-recovery` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-preferences/{preferenceId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-preferences/{preferenceId}/revocations` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-profile-change-previews](https://api.dev.athyper.test/api/neon/business-partner-profile-change-previews) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-profile-change-resolutions](https://api.dev.athyper.test/api/neon/business-partner-profile-change-resolutions) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-profile-events](https://api.dev.athyper.test/api/neon/business-partner-profile-events) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-profile-events/{eventId}/replays` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-profile-events/quarantine](https://api.dev.athyper.test/api/neon/business-partner-profile-events/quarantine) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-profile-events/receipts](https://api.dev.athyper.test/api/neon/business-partner-profile-events/receipts) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-profile-matches](https://api.dev.athyper.test/api/neon/business-partner-profile-matches) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-profile-matches/{matchId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-profile-matches/{matchId}/requests` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-profile-projections](https://api.dev.athyper.test/api/neon/business-partner-profile-projections) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-qualifications/{qualificationId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}/apply` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}/validate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partner-requests/{requestId}/view` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/360/{section}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/360/banking/reveal` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/360/identifiers-tax/reveal` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/360/summary` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/customer-designations` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/customer-designations` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/customer-lifecycle` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/eligibility` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/preferences` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/preferences` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/protected-bank-registrations` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/qualifications` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/business-partners/{businessPartnerId}/supplier-activation` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/candidate-registration-invitations](https://api.dev.athyper.test/api/neon/candidate-registration-invitations) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/customer-credit-reviews/{reviewId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/customer-designations/{designationId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/customer-registration-invitations](https://api.dev.athyper.test/api/neon/customer-registration-invitations) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/accept` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/correction` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/complete` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/stage` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/status` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/external/candidate-registrations/{requestId}/correction` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/candidate-registrations/{requestId}/evidence` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/external/candidate-registrations/{requestId}/status` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/external/candidate-registrations/accept](https://api.dev.athyper.test/api/neon/external/candidate-registrations/accept) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/external/customer-registrations/{requestId}/correction` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/customer-registrations/{requestId}/evidence` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/external/customer-registrations/{requestId}/status` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/external/customer-registrations/accept](https://api.dev.athyper.test/api/neon/external/customer-registrations/accept) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/neon/external/supplier-registrations/{requestId}/correction` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/external/supplier-registrations/{requestId}/evidence` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/external/supplier-registrations/{requestId}/status` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/external/supplier-registrations/accept](https://api.dev.athyper.test/api/neon/external/supplier-registrations/accept) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/governed-business-partner-cases](https://api.dev.athyper.test/api/neon/governed-business-partner-cases) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/governed-business-partner-cases/{caseId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/governed-business-partner-cases/{caseId}/materialize` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/governed-business-partner-cases/{caseId}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/mesh-bank-account-events](https://api.dev.athyper.test/api/neon/mesh-bank-account-events) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links](https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links/{linkId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links/{linkId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/people/{personId}/restricted-evidence/read` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/protected-bank-registrations/{bankAccountLinkId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/protected-bank-registrations/{bankAccountLinkId}/applications` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/protected-bank-registrations/{bankAccountLinkId}/decisions` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/supplier-registration-invitations](https://api.dev.athyper.test/api/neon/supplier-registration-invitations) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/supplier-workforce/engagements/{workerEngagementId}/iam-projections` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/worker-engagement-iam-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/supplier-workforce/engagements/{workerEngagementId}/placements` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/supplier-workforce/engagements/{workerEngagementId}/termination` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/supplier-workforce/policy-readiness](https://api.dev.athyper.test/api/neon/supplier-workforce/policy-readiness) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/supplier-workforce/requisitions](https://api.dev.athyper.test/api/neon/supplier-workforce/requisitions) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/supplier-workforce/requisitions/{requisitionId}/publications` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/workforce](https://api.dev.athyper.test/api/neon/workforce) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests) | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/workforce-requests/{requestId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce-requests/{requestId}/apply` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce-requests/{requestId}/decision` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce-requests/{requestId}/submit` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce-requests/{requestId}/validate` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce-source-adapters/{source}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/iam-projection/retry` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/offboarding` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/offboarding/{caseId}/resources/{itemCode}/complete` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/onboarding-checklist` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/onboarding-checklist/{itemCode}/complete` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/neon/workforce/{employeeId}/readiness` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/master-data/src/workforce-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/notifications/{id}/read` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/notifications/deliveries/{id}/timeline` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/notifications/inbox](https://api.dev.athyper.test/api/notifications/inbox) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/notifications/preferences](https://api.dev.athyper.test/api/notifications/preferences) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| PATCH | [https://api.dev.athyper.test/api/notifications/preferences](https://api.dev.athyper.test/api/notifications/preferences) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/notifications/preferences/preview](https://api.dev.athyper.test/api/notifications/preferences/preview) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/notifications/push-subscriptions](https://api.dev.athyper.test/api/notifications/push-subscriptions) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/notifications/push-subscriptions/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/notifications/stream](https://api.dev.athyper.test/api/notifications/stream) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/operations/notifications/deliveries/{id}/replay` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/operations/notifications/deliveries/{id}/timeline` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/notifications/src/notification-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/platform/preferences/saved-views](https://api.dev.athyper.test/api/platform/preferences/saved-views) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/platform/preferences/saved-views](https://api.dev.athyper.test/api/platform/preferences/saved-views) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/platform/preferences/saved-views/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PUT | `https://api.dev.athyper.test/api/platform/preferences/saved-views/{id}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/platform/preferences/saved-views/{id}/actions/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/platform/preferences/saved-views/{id}/actions/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/platform/preferences/saved-views/{id}/clone` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/platform/saved-views](https://api.dev.athyper.test/api/platform/saved-views) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/platform/saved-views/{entity}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/platform/saved-views/{entity}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/platform/saved-views/{entity}/{viewId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/platform/saved-views/{entity}/{viewId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/platform/saved-views/{entity}/{viewId}/default` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/platform/saved-views/{entity}/default` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/policy/evaluate](https://api.dev.athyper.test/api/policy/evaluate) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/policy/src/policy-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/policy/simulate](https://api.dev.athyper.test/api/policy/simulate) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/policy/src/policy-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/record-snapshots/{snapshotId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/record-snapshots/{fromSnapshotId}/compare/{toSnapshotId}` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/record-snapshots/{snapshotId}/restore` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/records/{entityCode}/{recordId}/snapshots` | Route contract; absent from deployed Swagger | [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/search/documents](https://api.dev.athyper.test/api/search/documents) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/search/src/document-search-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/studio/onboarding/cases](https://api.dev.athyper.test/api/studio/onboarding/cases) | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/onboarding/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/onboarding/cases/{caseId}/actions/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/onboarding/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/onboarding/cases/{caseId}/reconcile` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/onboarding/src/routes.ts) |
-| POST | `https://api.dev.athyper.test/api/studio/onboarding/cases/{caseId}/work-items/{workItemId}/resolve` | Raw route; absent from deployed Swagger | [source](../../../server/packages/planes/studio/onboarding/src/routes.ts) |
-| GET | [https://api.dev.athyper.test/api/user/saved-views](https://api.dev.athyper.test/api/user/saved-views) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| DELETE | `https://api.dev.athyper.test/api/user/saved-views/{viewId}/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| PATCH | `https://api.dev.athyper.test/api/user/saved-views/{viewId}/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/user/saved-views/{viewId}/clone` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/webhooks/{subscriptionId}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/services/integration/src/integration-routes.ts) |
-| GET | [https://api.dev.athyper.test/api/workflow/inbox](https://api.dev.athyper.test/api/workflow/inbox) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/workflow/items/{id}/actions/{action}` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| GET | `https://api.dev.athyper.test/api/workflow/requests/{id}/context` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| POST | [https://api.dev.athyper.test/api/workflow/work-items](https://api.dev.athyper.test/api/workflow/work-items) | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/workflow/work-items/{workItemId}/cancel` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/workflow/work-items/{workItemId}/claim` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
-| POST | `https://api.dev.athyper.test/api/workflow/work-items/{workItemId}/complete` | Raw route; absent from deployed Swagger | [source](../../../server/packages/platform/workflow/src/workflow-routes.ts) |
+Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths below are relative to this origin.
+
+### Source routes: /api/admin
+
+- **PUT** [/api/admin/atlas/action-policies](https://api.dev.athyper.test/api/admin/atlas/action-policies)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **PUT** [/api/admin/atlas/confidence-thresholds](https://api.dev.athyper.test/api/admin/atlas/confidence-thresholds)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **DELETE** `/api/admin/atlas/credentials/{providerId}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **PUT** `/api/admin/atlas/credentials/{providerId}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **POST** [/api/admin/atlas/knowledge/sources](https://api.dev.athyper.test/api/admin/atlas/knowledge/sources)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **POST** [/api/admin/atlas/knowledge/sources/retract](https://api.dev.athyper.test/api/admin/atlas/knowledge/sources/retract)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **GET** [/api/admin/atlas/monitoring/calibration](https://api.dev.athyper.test/api/admin/atlas/monitoring/calibration)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **GET** [/api/admin/atlas/monitoring/drift](https://api.dev.athyper.test/api/admin/atlas/monitoring/drift)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **GET** [/api/admin/atlas/quota](https://api.dev.athyper.test/api/admin/atlas/quota)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+- **PUT** [/api/admin/atlas/quota](https://api.dev.athyper.test/api/admin/atlas/quota)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-admin-routes.ts)
+
+### Source routes: /api/atlas
+
+- **GET** [/api/atlas/admission](https://api.dev.athyper.test/api/atlas/admission)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **GET** [/api/atlas/threads](https://api.dev.athyper.test/api/atlas/threads)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** [/api/atlas/threads](https://api.dev.athyper.test/api/atlas/threads)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **DELETE** `/api/atlas/threads/{id}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **GET** `/api/atlas/threads/{id}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **PATCH** `/api/atlas/threads/{id}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** `/api/atlas/threads/{id}/archive`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **GET** `/api/atlas/threads/{id}/export`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **GET** `/api/atlas/threads/{id}/messages`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **DELETE** `/api/atlas/threads/{id}/participants/{principalId}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **PUT** `/api/atlas/threads/{id}/participants/{principalId}`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** `/api/atlas/threads/{id}/runs`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** `/api/atlas/tools/{proposalId}/cancel`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** `/api/atlas/tools/{proposalId}/run`  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **GET** [/api/atlas/tools/history](https://api.dev.athyper.test/api/atlas/tools/history)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** [/api/atlas/tools/preview](https://api.dev.athyper.test/api/atlas/tools/preview)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+### Source routes: /api/attachments
+
+- **DELETE** `/api/attachments/{attachmentId}`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** `/api/attachments/{attachmentId}/download`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** `/api/attachments/{attachmentId}/finalize`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **GET** `/api/attachments/{attachmentId}/status`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **POST** [/api/attachments/stage](https://api.dev.athyper.test/api/attachments/stage)  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+### Source routes: /api/audit
+
+- **GET** [/api/audit/status](https://api.dev.athyper.test/api/audit/status)  
+  Raw route · [source](../../../server/packages/platform/audit/src/audit-routes.ts)
+
+### Source routes: /api/collab
+
+- **POST** [/api/collab/comments](https://api.dev.athyper.test/api/collab/comments)  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **DELETE** `/api/collab/comments/{id}`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **PATCH** `/api/collab/comments/{id}`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **POST** `/api/collab/comments/{id}/flag`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **POST** `/api/collab/comments/{id}/reactions`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **DELETE** `/api/collab/comments/{id}/reactions/{code}`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **POST** `/api/collab/comments/{id}/replies`  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **POST** [/api/collab/comments/mark-all-read](https://api.dev.athyper.test/api/collab/comments/mark-all-read)  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **DELETE** [/api/collab/drafts](https://api.dev.athyper.test/api/collab/drafts)  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+- **POST** [/api/collab/drafts](https://api.dev.athyper.test/api/collab/drafts)  
+  Raw route · [source](../../../server/packages/platform/collaboration/src/collaboration-routes.ts)
+
+### Source routes: /api/content
+
+- **GET** [/api/content/items](https://api.dev.athyper.test/api/content/items)  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** [/api/content/items](https://api.dev.athyper.test/api/content/items)  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **PATCH** `/api/content/items/{id}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}/acl`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/acl`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **DELETE** `/api/content/items/{id}/acl/{grantId}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/archive`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}/attachments`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/attachments`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **DELETE** `/api/content/items/{id}/attachments/{attachmentId}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}/attachments/{attachmentId}/versions`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/attachments/{attachmentId}/versions`  
+  Raw route · [source](../../../server/packages/services/attachments/src/attachment-routes.ts)
+
+- **GET** `/api/content/items/{id}/links`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/links`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **DELETE** `/api/content/items/{id}/links/{linkId}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/publish`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/reindex`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/submit`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}/versions`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/versions`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** `/api/content/items/{id}/versions/{versionId}`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **POST** `/api/content/items/{id}/versions/{versionId}/restore`  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** [/api/content/quota](https://api.dev.athyper.test/api/content/quota)  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+- **GET** [/api/content/search](https://api.dev.athyper.test/api/content/search)  
+  Raw route · [source](../../../server/packages/services/content/src/content-routes.ts)
+
+### Source routes: /api/control-admin
+
+- **GET** [/api/control-admin/authorization](https://api.dev.athyper.test/api/control-admin/authorization)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts)
+
+- **POST** [/api/control-admin/authorization/approve](https://api.dev.athyper.test/api/control-admin/authorization/approve)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts)
+
+- **POST** [/api/control-admin/authorization/break-glass](https://api.dev.athyper.test/api/control-admin/authorization/break-glass)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts)
+
+- **POST** [/api/control-admin/authorization/manage](https://api.dev.athyper.test/api/control-admin/authorization/manage)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts)
+
+- **POST** [/api/control-admin/authorization/revoke](https://api.dev.athyper.test/api/control-admin/authorization/revoke)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/authorization-management-routes.ts)
+
+- **GET** [/api/control-admin/bank-validation/rules](https://api.dev.athyper.test/api/control-admin/bank-validation/rules)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** [/api/control-admin/bank-validation/rules/publish](https://api.dev.athyper.test/api/control-admin/bank-validation/rules/publish)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** [/api/control-admin/bank-validation/verify](https://api.dev.athyper.test/api/control-admin/bank-validation/verify)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/connectors/{id}/activate`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/connectors/{id}/deprecate`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **PUT** `/api/control-admin/connectors/{id}/draft`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/connectors/{id}/health-checks`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/connectors/{id}/suspend`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** [/api/control-admin/connectors/validate](https://api.dev.athyper.test/api/control-admin/connectors/validate)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** `/api/control-admin/cycle-config/{cycleTypeId}/revisions/{version}`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **GET** `/api/control-admin/cycle-config/{cycleTypeId}/revisions/latest`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **POST** [/api/control-admin/cycle-config/desired-state/apply](https://api.dev.athyper.test/api/control-admin/cycle-config/desired-state/apply)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **POST** [/api/control-admin/cycle-config/preview](https://api.dev.athyper.test/api/control-admin/cycle-config/preview)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **POST** [/api/control-admin/cycle-config/publish](https://api.dev.athyper.test/api/control-admin/cycle-config/publish)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **POST** [/api/control-admin/cycle-config/validate](https://api.dev.athyper.test/api/control-admin/cycle-config/validate)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/cycle/cycle-config-routes.ts)
+
+- **GET** [/api/control-admin/entitlements/modules](https://api.dev.athyper.test/api/control-admin/entitlements/modules)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **PUT** `/api/control-admin/entitlements/overrides/{id}`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/entitlements/overrides/{id}/expire`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** [/api/control-admin/entitlements/plans](https://api.dev.athyper.test/api/control-admin/entitlements/plans)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** [/api/control-admin/features](https://api.dev.athyper.test/api/control-admin/features)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** `/api/control-admin/features/{code}/evaluation`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **PUT** `/api/control-admin/features/{code}/override`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/features/overrides/{id}/expire`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** [/api/control-admin/lookups](https://api.dev.athyper.test/api/control-admin/lookups)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** `/api/control-admin/lookups/{code}`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/lookups/{code}/values/{valueCode}/retire`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** [/api/control-admin/lookups/desired-state/apply](https://api.dev.athyper.test/api/control-admin/lookups/desired-state/apply)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** [/api/control-admin/parameters](https://api.dev.athyper.test/api/control-admin/parameters)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** `/api/control-admin/parameters/{code}/effective`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **PUT** `/api/control-admin/parameters/{code}/value`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/parameters/values/{id}/expire`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **GET** [/api/control-admin/rounding](https://api.dev.athyper.test/api/control-admin/rounding)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **PUT** `/api/control-admin/rounding/{id}`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/rounding/{id}/retire`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** [/api/control-admin/rounding/simulate](https://api.dev.athyper.test/api/control-admin/rounding/simulate)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/control-service-routes.ts)
+
+- **POST** `/api/control-admin/runtime-approvals/{id}/decisions`  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts)
+
+- **POST** [/api/control-admin/runtime-commands](https://api.dev.athyper.test/api/control-admin/runtime-commands)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts)
+
+- **POST** [/api/control-admin/runtime-commands/dry-run](https://api.dev.athyper.test/api/control-admin/runtime-commands/dry-run)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts)
+
+- **GET** [/api/control-admin/runtime-history](https://api.dev.athyper.test/api/control-admin/runtime-history)  
+  Route contract · [source](../../../server/packages/platform/control-admin/src/runtime-command-routes.ts)
+
+### Source routes: /api/documents
+
+- **POST** `/api/documents/{documentId}/download`  
+  Raw route · [source](../../../server/packages/services/documents/src/document-routes.ts)
+
+- **POST** [/api/documents/render](https://api.dev.athyper.test/api/documents/render)  
+  Raw route · [source](../../../server/packages/services/documents/src/document-routes.ts)
+
+### Source routes: /api/finance
+
+- **POST** `/api/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions`  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/finance/budget/balance](https://api.dev.athyper.test/api/finance/budget/balance)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/budget/command](https://api.dev.athyper.test/api/finance/budget/command)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/budget/rebuild](https://api.dev.athyper.test/api/finance/budget/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/budget/reverse](https://api.dev.athyper.test/api/finance/budget/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/close/recover](https://api.dev.athyper.test/api/finance/close/recover)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/close/reverse](https://api.dev.athyper.test/api/finance/close/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/close/run](https://api.dev.athyper.test/api/finance/close/run)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/finance/close/status](https://api.dev.athyper.test/api/finance/close/status)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/commitment/fulfill](https://api.dev.athyper.test/api/finance/commitment/fulfill)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/commitment/reverse](https://api.dev.athyper.test/api/finance/commitment/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/cross-book/execute](https://api.dev.athyper.test/api/finance/cross-book/execute)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/gl/post](https://api.dev.athyper.test/api/finance/gl/post)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/finance/gl/reconcile](https://api.dev.athyper.test/api/finance/gl/reconcile)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/finance/inventory/balance](https://api.dev.athyper.test/api/finance/inventory/balance)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/inventory/move](https://api.dev.athyper.test/api/finance/inventory/move)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/inventory/rebuild](https://api.dev.athyper.test/api/finance/inventory/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/inventory/reverse](https://api.dev.athyper.test/api/finance/inventory/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/numbering/allocations](https://api.dev.athyper.test/api/finance/numbering/allocations)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/finance/numbering/reconciliation](https://api.dev.athyper.test/api/finance/numbering/reconciliation)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/finance/planning/output](https://api.dev.athyper.test/api/finance/planning/output)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/planning/run](https://api.dev.athyper.test/api/finance/planning/run)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/posting-admissions](https://api.dev.athyper.test/api/finance/posting-admissions)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **POST** [/api/finance/rounding/resolve](https://api.dev.athyper.test/api/finance/rounding/resolve)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **POST** [/api/finance/tax/calculate](https://api.dev.athyper.test/api/finance/tax/calculate)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/tax/credit/move](https://api.dev.athyper.test/api/finance/tax/credit/move)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/finance/tax/point-in-time](https://api.dev.athyper.test/api/finance/tax/point-in-time)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/tax/rebuild](https://api.dev.athyper.test/api/finance/tax/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/finance/tax/reverse](https://api.dev.athyper.test/api/finance/tax/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+### Source routes: /api/governance
+
+- **POST** [/api/governance/channel-consents](https://api.dev.athyper.test/api/governance/channel-consents)  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-certifications/{certificationId}/certify`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-certifications/{certificationId}/reject`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-certifications/{certificationId}/submit`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-deviations/{deviationId}/carry-forward`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-deviations/{deviationId}/resolve`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-deviations/{deviationId}/waive`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** [/api/governance/cycle-runs](https://api.dev.athyper.test/api/governance/cycle-runs)  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-runs/{runId}/certifications`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-runs/{runId}/deviations`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **GET** `/api/governance/cycle-runs/{runId}/readiness`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-runs/{runId}/transitions`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/block`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/claim`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/complete`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/reopen`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/start`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** `/api/governance/cycle-tasks/{taskId}/waive`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/governance-routes.ts)
+
+- **POST** [/api/governance/legal-holds](https://api.dev.athyper.test/api/governance/legal-holds)  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **GET** `/api/governance/legal-holds/{holdId}`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **POST** `/api/governance/legal-holds/{holdId}/activate`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **POST** `/api/governance/legal-holds/{holdId}/release`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **POST** `/api/governance/legal-holds/{holdId}/resources`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **DELETE** `/api/governance/legal-holds/{holdId}/resources/{resourceId}`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **POST** [/api/governance/report-packs](https://api.dev.athyper.test/api/governance/report-packs)  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **GET** `/api/governance/report-packs/{reportPackId}`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+- **GET** `/api/governance/report-packs/{reportPackId}/download`  
+  Route contract · [source](../../../server/packages/platform/governance/src/routes/compliance-routes.ts)
+
+### Source routes: /api/iam
+
+- **GET** `/api/iam/identity-replay-approvals/{approvalId}`  
+  Route contract · [source](../../../server/packages/platform/iam/src/identity-replay-routes.ts)
+
+- **POST** `/api/iam/identity-replay-approvals/{approvalId}/approve`  
+  Route contract · [source](../../../server/packages/platform/iam/src/identity-replay-routes.ts)
+
+- **POST** `/api/iam/identity-replay-approvals/{approvalId}/revoke`  
+  Route contract · [source](../../../server/packages/platform/iam/src/identity-replay-routes.ts)
+
+- **POST** `/api/iam/identity-saga-attempts/{attemptId}/replay-approvals`  
+  Route contract · [source](../../../server/packages/platform/iam/src/identity-replay-routes.ts)
+
+### Source routes: /api/integration
+
+- **GET** `/api/integration/connections/{id}`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **POST** `/api/integration/connections/{id}/test`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **GET** [/api/integration/connector-types](https://api.dev.athyper.test/api/integration/connector-types)  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **GET** `/api/integration/connector-types/{id}`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **GET** `/api/integration/deliveries/{id}`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **POST** `/api/integration/deliveries/{id}/replay`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **GET** `/api/integration/endpoints/{id}`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+- **POST** `/api/integration/endpoints/{id}/deliveries`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+### Source routes: /api/master
+
+- **POST** `/api/master/addresses/{addressLinkId}/deactivate`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **POST** `/api/master/contacts/{contactId}/deactivate`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **PATCH** `/api/master/contacts/{contactId}/verification`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **POST** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/addresses`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **POST** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/contacts`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **GET** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/profile`  
+  Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+### Source routes: /api/me
+
+- **GET** [/api/me/saved-views](https://api.dev.athyper.test/api/me/saved-views)  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/me/saved-views/{viewId}/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** `/api/me/saved-views/{viewId}/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** `/api/me/saved-views/{viewId}/clone`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+### Source routes: /api/mesh
+
+- **POST** [/api/mesh/business-partner-bank-disclosures](https://api.dev.athyper.test/api/mesh/business-partner-bank-disclosures)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
+
+- **GET** `/api/mesh/business-partner-bank-disclosures/{disclosureId}`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
+
+- **POST** `/api/mesh/business-partner-bank-disclosures/{disclosureId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
+
+- **POST** `/api/mesh/business-partner-bank-disclosures/{disclosureId}/revocations`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-bank-disclosure-routes.ts)
+
+- **POST** `/api/mesh/business-partner-network-capabilities/{capabilityId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **POST** [/api/mesh/business-partner-network-relationships](https://api.dev.athyper.test/api/mesh/business-partner-network-relationships)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **POST** `/api/mesh/business-partner-network-relationships/{relationshipId}/capabilities`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **POST** `/api/mesh/business-partner-network-relationships/{relationshipId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **GET** [/api/mesh/business-partner-network-workspace](https://api.dev.athyper.test/api/mesh/business-partner-network-workspace)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **GET** [/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
+
+- **POST** [/api/mesh/business-partner-profile-publications](https://api.dev.athyper.test/api/mesh/business-partner-profile-publications)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
+
+- **GET** `/api/mesh/business-partner-profile-publications/{publicationId}`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
+
+- **POST** `/api/mesh/business-partner-profile-publications/{publicationId}/withdrawals`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-profile-publication-routes.ts)
+
+- **POST** [/api/mesh/business-partner-registration-exchanges](https://api.dev.athyper.test/api/mesh/business-partner-registration-exchanges)  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+- **POST** `/api/mesh/business-partner-registration-exchanges/{exchangeId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/mesh/src/business-partner-network-exchange-routes.ts)
+
+### Source routes: /api/meta-entity-authoring
+
+- **POST** [/api/meta-entity-authoring/change-sets](https://api.dev.athyper.test/api/meta-entity-authoring/change-sets)  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/change-sets/{id}/approve`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **PUT** `/api/meta-entity-authoring/change-sets/{id}/graph`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/change-sets/{id}/publish`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/change-sets/{id}/submit`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/change-sets/{id}/test`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/change-sets/{id}/validate`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/releases/{id}/activate`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+- **POST** `/api/meta-entity-authoring/releases/{id}/rollback`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/routes.ts)
+
+### Source routes: /api/neon
+
+- **POST** [/api/neon/business-partner-bank-verifications](https://api.dev.athyper.test/api/neon/business-partner-bank-verifications)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **GET** `/api/neon/business-partner-bank-verifications/{verificationId}`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/business-partner-bank-verifications/{verificationId}/applications`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/business-partner-bank-verifications/{verificationId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **GET** [/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** [/api/neon/business-partner-cases](https://api.dev.athyper.test/api/neon/business-partner-cases)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partner-cases/{requestId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **PATCH** `/api/neon/business-partner-cases/{requestId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-cases/{requestId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-cases/{requestId}/materialize`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-cases/{requestId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-cases/{requestId}/validate`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partner-cases/{requestId}/view`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partner-invitation-templates/{journeyKind}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** [/api/neon/business-partner-invitations](https://api.dev.athyper.test/api/neon/business-partner-invitations)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **GET** `/api/neon/business-partner-invitations/{invitationId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/business-partner-invitations/{invitationId}/cancel`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/business-partner-invitations/{invitationId}/resend`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/business-partner-invitations/{invitationId}/support-recovery`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/business-partner-preferences/{preferenceId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partner-preferences/{preferenceId}/revocations`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** [/api/neon/business-partner-profile-change-previews](https://api.dev.athyper.test/api/neon/business-partner-profile-change-previews)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
+
+- **POST** [/api/neon/business-partner-profile-change-resolutions](https://api.dev.athyper.test/api/neon/business-partner-profile-change-resolutions)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
+
+- **POST** [/api/neon/business-partner-profile-events](https://api.dev.athyper.test/api/neon/business-partner-profile-events)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
+
+- **POST** `/api/neon/business-partner-profile-events/{eventId}/replays`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
+
+- **GET** [/api/neon/business-partner-profile-events/quarantine](https://api.dev.athyper.test/api/neon/business-partner-profile-events/quarantine)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
+
+- **GET** [/api/neon/business-partner-profile-events/receipts](https://api.dev.athyper.test/api/neon/business-partner-profile-events/receipts)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
+
+- **POST** [/api/neon/business-partner-profile-matches](https://api.dev.athyper.test/api/neon/business-partner-profile-matches)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
+
+- **GET** `/api/neon/business-partner-profile-matches/{matchId}`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
+
+- **POST** `/api/neon/business-partner-profile-matches/{matchId}/requests`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-match-routes.ts)
+
+- **GET** [/api/neon/business-partner-profile-projections](https://api.dev.athyper.test/api/neon/business-partner-profile-projections)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-profile-projection-routes.ts)
+
+- **POST** `/api/neon/business-partner-qualifications/{qualificationId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **GET** [/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** [/api/neon/business-partner-requests](https://api.dev.athyper.test/api/neon/business-partner-requests)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partner-requests/{requestId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **PATCH** `/api/neon/business-partner-requests/{requestId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-requests/{requestId}/apply`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-requests/{requestId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-requests/{requestId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** `/api/neon/business-partner-requests/{requestId}/validate`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partner-requests/{requestId}/view`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/360/{section}`  
+  Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/360/banking/reveal`  
+  Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/360/identifiers-tax/reveal`  
+  Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/360/summary`  
+  Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-credit-reviews`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/customer-designations`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-designations`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/customer-lifecycle`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/eligibility`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **GET** `/api/neon/business-partners/{businessPartnerId}/preferences`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/preferences`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/protected-bank-registrations`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/qualifications`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/supplier-activation`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** [/api/neon/candidate-registration-invitations](https://api.dev.athyper.test/api/neon/candidate-registration-invitations)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/customer-credit-reviews/{reviewId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** `/api/neon/customer-designations/{designationId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-eligibility-routes.ts)
+
+- **POST** [/api/neon/customer-registration-invitations](https://api.dev.athyper.test/api/neon/customer-registration-invitations)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/accept`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **PATCH** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/correction`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/complete`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/evidence/stage`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **GET** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/status`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/business-partner-invitations/{journeyKind}/requests/{requestId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **PATCH** `/api/neon/external/candidate-registrations/{requestId}/correction`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/candidate-registrations/{requestId}/evidence`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **GET** `/api/neon/external/candidate-registrations/{requestId}/status`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** [/api/neon/external/candidate-registrations/accept](https://api.dev.athyper.test/api/neon/external/candidate-registrations/accept)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **PATCH** `/api/neon/external/customer-registrations/{requestId}/correction`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/customer-registrations/{requestId}/evidence`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **GET** `/api/neon/external/customer-registrations/{requestId}/status`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** [/api/neon/external/customer-registrations/accept](https://api.dev.athyper.test/api/neon/external/customer-registrations/accept)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **PATCH** `/api/neon/external/supplier-registrations/{requestId}/correction`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/external/supplier-registrations/{requestId}/evidence`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **GET** `/api/neon/external/supplier-registrations/{requestId}/status`  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** [/api/neon/external/supplier-registrations/accept](https://api.dev.athyper.test/api/neon/external/supplier-registrations/accept)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** [/api/neon/governed-business-partner-cases](https://api.dev.athyper.test/api/neon/governed-business-partner-cases)  
+  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
+
+- **POST** `/api/neon/governed-business-partner-cases/{caseId}/decisions`  
+  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
+
+- **POST** `/api/neon/governed-business-partner-cases/{caseId}/materialize`  
+  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
+
+- **POST** `/api/neon/governed-business-partner-cases/{caseId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
+
+- **POST** [/api/neon/mesh-bank-account-events](https://api.dev.athyper.test/api/neon/mesh-bank-account-events)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** [/api/neon/mesh-business-partner-account-links](https://api.dev.athyper.test/api/neon/mesh-business-partner-account-links)  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **GET** `/api/neon/mesh-business-partner-account-links/{linkId}`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/mesh-business-partner-account-links/{linkId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/people/{personId}/restricted-evidence/read`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/protected-bank-registrations/{bankAccountLinkId}`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/protected-bank-registrations/{bankAccountLinkId}/applications`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/protected-bank-registrations/{bankAccountLinkId}/decisions`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** [/api/neon/supplier-registration-invitations](https://api.dev.athyper.test/api/neon/supplier-registration-invitations)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
+
+- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/iam-projections`  
+  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-iam-routes.ts)
+
+- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/placements`  
+  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts)
+
+- **POST** `/api/neon/supplier-workforce/engagements/{workerEngagementId}/termination`  
+  Raw route · [source](../../../server/packages/services/master-data/src/worker-engagement-lifecycle-routes.ts)
+
+- **GET** [/api/neon/supplier-workforce/policy-readiness](https://api.dev.athyper.test/api/neon/supplier-workforce/policy-readiness)  
+  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
+
+- **GET** [/api/neon/supplier-workforce/requisitions](https://api.dev.athyper.test/api/neon/supplier-workforce/requisitions)  
+  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
+
+- **POST** `/api/neon/supplier-workforce/requisitions/{requisitionId}/publications`  
+  Raw route · [source](../../../server/packages/services/master-data/src/supplier-workforce-requisition-routes.ts)
+
+- **GET** [/api/neon/workforce](https://api.dev.athyper.test/api/neon/workforce)  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** [/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests)  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** [/api/neon/workforce-requests](https://api.dev.athyper.test/api/neon/workforce-requests)  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/workforce-requests/{requestId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce-requests/{requestId}/apply`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce-requests/{requestId}/decision`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce-requests/{requestId}/submit`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce-requests/{requestId}/validate`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce-source-adapters/{source}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/workforce/{employeeId}`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce/{employeeId}/iam-projection/retry`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce/{employeeId}/offboarding`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce/{employeeId}/offboarding/{caseId}/resources/{itemCode}/complete`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/workforce/{employeeId}/onboarding-checklist`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **POST** `/api/neon/workforce/{employeeId}/onboarding-checklist/{itemCode}/complete`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+- **GET** `/api/neon/workforce/{employeeId}/readiness`  
+  Raw route · [source](../../../server/packages/services/master-data/src/workforce-routes.ts)
+
+### Source routes: /api/notifications
+
+- **POST** `/api/notifications/{id}/read`  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** `/api/notifications/deliveries/{id}/timeline`  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** [/api/notifications/inbox](https://api.dev.athyper.test/api/notifications/inbox)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** [/api/notifications/preferences](https://api.dev.athyper.test/api/notifications/preferences)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **PATCH** [/api/notifications/preferences](https://api.dev.athyper.test/api/notifications/preferences)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **POST** [/api/notifications/preferences/preview](https://api.dev.athyper.test/api/notifications/preferences/preview)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **POST** [/api/notifications/push-subscriptions](https://api.dev.athyper.test/api/notifications/push-subscriptions)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **DELETE** `/api/notifications/push-subscriptions/{id}`  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** [/api/notifications/stream](https://api.dev.athyper.test/api/notifications/stream)  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+### Source routes: /api/operations
+
+- **POST** `/api/operations/notifications/deliveries/{id}/replay`  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+- **GET** `/api/operations/notifications/deliveries/{id}/timeline`  
+  Raw route · [source](../../../server/packages/platform/notifications/src/notification-routes.ts)
+
+### Source routes: /api/platform
+
+- **GET** [/api/platform/preferences/saved-views](https://api.dev.athyper.test/api/platform/preferences/saved-views)  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** [/api/platform/preferences/saved-views](https://api.dev.athyper.test/api/platform/preferences/saved-views)  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/platform/preferences/saved-views/{id}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PUT** `/api/platform/preferences/saved-views/{id}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/platform/preferences/saved-views/{id}/actions/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** `/api/platform/preferences/saved-views/{id}/actions/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** `/api/platform/preferences/saved-views/{id}/clone`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** [/api/platform/saved-views](https://api.dev.athyper.test/api/platform/saved-views)  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **GET** `/api/platform/saved-views/{entity}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** `/api/platform/saved-views/{entity}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/platform/saved-views/{entity}/{viewId}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** `/api/platform/saved-views/{entity}/{viewId}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** `/api/platform/saved-views/{entity}/{viewId}/default`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/platform/saved-views/{entity}/default`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+### Source routes: /api/policy
+
+- **POST** [/api/policy/evaluate](https://api.dev.athyper.test/api/policy/evaluate)  
+  Raw route · [source](../../../server/packages/platform/policy/src/policy-routes.ts)
+
+- **POST** [/api/policy/simulate](https://api.dev.athyper.test/api/policy/simulate)  
+  Raw route · [source](../../../server/packages/platform/policy/src/policy-routes.ts)
+
+### Source routes: /api/record-snapshots
+
+- **GET** `/api/record-snapshots/{snapshotId}`  
+  Route contract · [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts)
+
+- **GET** `/api/record-snapshots/{fromSnapshotId}/compare/{toSnapshotId}`  
+  Route contract · [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts)
+
+- **POST** `/api/record-snapshots/{snapshotId}/restore`  
+  Route contract · [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts)
+
+### Source routes: /api/records
+
+- **POST** `/api/records/{entityCode}/{recordId}/snapshots`  
+  Route contract · [source](../../../server/packages/services/records/src/snapshots/snapshot-routes.ts)
+
+### Source routes: /api/search
+
+- **GET** [/api/search/documents](https://api.dev.athyper.test/api/search/documents)  
+  Raw route · [source](../../../server/packages/platform/search/src/document-search-routes.ts)
+
+### Source routes: /api/studio
+
+- **POST** [/api/studio/onboarding/cases](https://api.dev.athyper.test/api/studio/onboarding/cases)  
+  Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
+
+- **POST** `/api/studio/onboarding/cases/{caseId}/actions/{action}`  
+  Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
+
+- **POST** `/api/studio/onboarding/cases/{caseId}/reconcile`  
+  Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
+
+- **POST** `/api/studio/onboarding/cases/{caseId}/work-items/{workItemId}/resolve`  
+  Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
+
+### Source routes: /api/user
+
+- **GET** [/api/user/saved-views](https://api.dev.athyper.test/api/user/saved-views)  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **DELETE** `/api/user/saved-views/{viewId}/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **PATCH** `/api/user/saved-views/{viewId}/{action}`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+- **POST** `/api/user/saved-views/{viewId}/clone`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
+
+### Source routes: /api/webhooks
+
+- **POST** `/api/webhooks/{subscriptionId}`  
+  Raw route · [source](../../../server/packages/services/integration/src/integration-routes.ts)
+
+### Source routes: /api/workflow
+
+- **GET** [/api/workflow/inbox](https://api.dev.athyper.test/api/workflow/inbox)  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **POST** `/api/workflow/items/{id}/actions/{action}`  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **GET** `/api/workflow/requests/{id}/context`  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **POST** [/api/workflow/work-items](https://api.dev.athyper.test/api/workflow/work-items)  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **POST** `/api/workflow/work-items/{workItemId}/cancel`  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **POST** `/api/workflow/work-items/{workItemId}/claim`  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
+- **POST** `/api/workflow/work-items/{workItemId}/complete`  
+  Raw route · [source](../../../server/packages/platform/workflow/src/workflow-routes.ts)
+
 
 See [Business Partner field extensibility and 360 aggregation](field-extensibility-and-360-aggregation.md) for the aggregation and security model.

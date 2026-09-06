@@ -189,7 +189,9 @@ test("release instances use an image-contained fail-closed forward migration run
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
     const names = manifest.split(/\r?\n/u).filter(line => line && !line.startsWith("#"));
-    assert.deepEqual(names, plane === "mesh" ? ["20260906_mesh_exchange_readiness.sql"] : []);
+    assert.deepEqual(names, plane === "mesh"
+      ? ["20260906_mesh_exchange_readiness.sql"]
+      : plane === "studio" ? ["20260906_identity_replay_approval.sql"] : []);
     for (const name of names) assert.ok(readFileSync(join(repoRoot, "server/db/migrations", name), "utf8").includes("BEGIN;"));
   }
 });

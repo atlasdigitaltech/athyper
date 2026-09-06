@@ -57,6 +57,8 @@ test("runtime remembered-device lookup is exact-plane, exact-principal, and expi
   );
   assert.match(
     bff,
-    /!decision\.active[\s\S]*decision\.expiresAt <= effectiveAt/,
+    // The BFF no longer uses remembered-device evidence to elevate a session.
+    // Expiry is enforced by the API predicates above; elevation requires issuer MFA.
+    /validateStepUpAssurance\(identity\)[\s\S]*const elevated = elevateSession\(existing,/,
   );
 });

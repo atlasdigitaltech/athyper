@@ -1,1 +1,2 @@
 # Canonical local-development baseline. Add post-baseline Studio migrations below.
+20260906_identity_replay_approval.sql

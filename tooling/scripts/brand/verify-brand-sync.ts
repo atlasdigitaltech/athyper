@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ATLAS_MODERN_BRAND, BRAND_PLANES, getPlaneBrand } from "../../../packages/platform/foundation/brand/src/index";
 
+import { keycloakShowcaseFiles } from "./keycloak-showcase";
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const failures: string[] = [];
 
@@ -60,6 +62,11 @@ async function verifyApplications(): Promise<void> {
 
 async function verifyKeycloak(): Promise<void> {
   const root = "deploy/config/iam/themes/neon/login";
+  for (const [name, expected] of Object.entries(keycloakShowcaseFiles())) {
+    if (!(await exists(`${root}/${name}`)) || await text(`${root}/${name}`) !== expected) failures.push(`Keycloak ${name} is stale; run pnpm brand:sync:keycloak`);
+  }
+  if (await text(`${root}/resources/css/public-identity-layout.css`) !== await text("packages/platform/foundation/surface-kit/src/public-identity-layout.css")) failures.push("Keycloak shared identity layout is stale; run pnpm brand:sync:keycloak");
+  if (await text(`${root}/resources/css/public-identity-showcase.css`) !== await text("packages/platform/foundation/surface-kit/src/public-identity-showcase.css")) failures.push("Keycloak shared showcase styling is stale; run pnpm brand:sync:keycloak");
   const resolver = await text(`${root}/_theme-resolver.ftl`);
   const tokens = await text(`${root}/resources/css/iam.tokens.css`);
   const head = await text(`${root}/_iam-head.ftl`);

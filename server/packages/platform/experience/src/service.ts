@@ -96,6 +96,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       assertSnapshotBoundToContext(context);
       const repository = options.repositories.require(context.planeKey);
       const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}`;
+      const cacheGeneration = options.cache?.generation;
       const cached = await options.cache?.get(cacheKey);
       if (isBootstrap(cached)) return cached;
       const at = now();
@@ -129,7 +130,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
             auth: authorizationRevision(context),
           }),
         );
-        await cache(options.cache, cacheKey, result, tags(context));
+        await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
         return result;
       }
       const catalog = await repository.readCatalog(
@@ -151,7 +152,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
             auth: authorizationRevision(context),
           }),
         );
-        await cache(options.cache, cacheKey, result, tags(context));
+        await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
         return result;
       }
       let featureRows: readonly ExperienceFeatureRecord[] = [];
@@ -208,7 +209,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
         features,
         nextActions: [],
       };
-      await cache(options.cache, cacheKey, result, tags(context));
+      await cache(options.cache, cacheKey, result, tags(context), cacheGeneration);
       return result;
     },
     async localePolicy(
@@ -313,7 +314,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
           new Error("Locale preference writer is unavailable"),
           { code: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" },
         );
-      await repository.updatePrincipalLocale(context, canonical);
+      await repository.updatePrincipalLocale(context, canonical, policy.revision);
       await options.cache?.invalidate([
         `${context.planeKey}:profile`,
         `${context.planeKey}:principal:${context.principalId}`,
@@ -887,18 +888,22 @@ export function createExperienceInvalidationHooks(
 export function createMemoryExperienceCache(
   maxEntries = 1_000,
 ): ExperienceCache {
+  let generation = 0;
   const entries = new Map<
     string,
     { value: unknown; tags: readonly string[] }
   >();
   return {
+    get generation() { return generation; },
     get: (key) => entries.get(key)?.value,
-    set(key, value, entryTags) {
+    set(key, value, entryTags, expectedGeneration) {
+      if (expectedGeneration !== undefined && expectedGeneration !== generation) return;
       entries.set(key, { value, tags: [...entryTags] });
       if (entries.size > maxEntries)
         entries.delete(entries.keys().next().value as string);
     },
     invalidate(changed) {
+      generation++;
       const set = new Set(changed);
       for (const [key, entry] of entries)
         if (entry.tags.some((tag) => set.has(tag))) entries.delete(key);
@@ -998,8 +1003,9 @@ async function cache(
   key: string,
   value: ExperienceBootstrap,
   entryTags: readonly string[],
+  expectedGeneration?: number,
 ) {
-  await store?.set(key, value, entryTags);
+  await store?.set(key, value, entryTags, expectedGeneration);
 }
 function isBootstrap(value: unknown): value is ExperienceBootstrap {
   return Boolean(
@@ -1201,11 +1207,11 @@ function normalizeLocalePolicy(
         validCoverage(persisted?.coveragePct) ??
         (compatibilityQualified ? 100 : 0);
       const linguisticReviewPassed =
-        persisted?.linguisticReviewPassed ?? compatibilityQualified;
+        persisted ? persisted.linguisticReviewPassed === true : compatibilityQualified;
       const layoutReviewPassed =
-        persisted?.layoutReviewPassed ?? compatibilityQualified;
+        persisted ? persisted.layoutReviewPassed === true : compatibilityQualified;
       const automatedTestsPassed =
-        persisted?.automatedTestsPassed ?? compatibilityQualified;
+        persisted ? persisted.automatedTestsPassed === true : compatibilityQualified;
       const qualified =
         status === "qualified" &&
         coveragePct === 100 &&

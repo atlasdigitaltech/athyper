@@ -230,4 +230,5 @@ planes/studio/control/12_reference_seed.sql
 planes/studio/control/12_subscription_plan_reference_seed.sql
 planes/studio/control/12_subscription_plan_module_reference_seed.sql
 planes/studio/control/12_bank_format_rule_reference_seed.sql
+planes/studio/trustiam/12_identity_replay_approval.sql
 common/shared/99_security_definer_hardening.sql

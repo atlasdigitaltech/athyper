@@ -17,7 +17,7 @@ export interface CancellationRedisClient {
 }
 interface CancellationConnection {
   readonly client: Promise<unknown>;
-  close(): Promise<void>;
+  close(force?: boolean): Promise<void>;
 }
 
 /** Acknowledgements mean the owning worker has recorded cancellation, not just received it. */
@@ -59,13 +59,18 @@ export function createRedisJobCancellationTransport(redisUrl: string, options: {
   const initialize = () => {
     if (closed) return Promise.reject(new Error("Cancellation transport is closed"));
     if (!ready) {
-      publisher = createConnection();
-      subscriber = createConnection();
+      const publishingConnection = publisher = createConnection();
+      const subscribingConnection = subscriber = createConnection();
       ready = (async () => {
-        const client = await subscriber!.client as CancellationRedisClient;
+        const client = await subscribingConnection.client as CancellationRedisClient;
+        if (closed) throw new Error("Cancellation transport is closed");
         client.on("message", onMessage);
         await client.subscribe(replies);
-      })();
+      })().catch(async (error: unknown) => {
+        ready = undefined;
+        await Promise.allSettled([subscribingConnection.close(true), publishingConnection.close(true)]);
+        throw error;
+      });
     }
     return ready;
   };
@@ -76,14 +81,14 @@ export function createRedisJobCancellationTransport(redisUrl: string, options: {
       await (await subscriber!.client as CancellationRedisClient).subscribe(channel);
     },
     async request(queue, jobId, attempt) {
-      await initialize();
+      if (closed) throw new Error("Cancellation transport is closed");
       const id = randomUUID();
       const deadline = Date.now() + timeoutMs;
       return new Promise<boolean>((resolve, reject) => {
         const finish = (accepted: boolean) => { clearTimeout(timer); pending.delete(id); resolve(accepted); };
         const timer = setTimeout(() => finish(false), timeoutMs);
         pending.set(id, finish);
-        void publisher!.client.then((client) => {
+        void initialize().then(() => publisher!.client).then((client) => {
           if (!pending.has(id) || closed || Date.now() >= deadline) return;
           return (client as CancellationRedisClient).publish(channel,
             JSON.stringify({ id, queue, jobId, attempt, reply: replies, deadline }),
@@ -96,10 +101,9 @@ export function createRedisJobCancellationTransport(redisUrl: string, options: {
       closed = true;
       for (const finish of pending.values()) finish(false);
       if (subscriber) {
-        const client = await subscriber.client as CancellationRedisClient;
-        client.off("message", onMessage);
+        void subscriber.client.then((client) => (client as CancellationRedisClient).off("message", onMessage)).catch(() => undefined);
       }
-      await Promise.all([subscriber?.close(), publisher?.close()]);
+      await Promise.all([subscriber?.close(true), publisher?.close(true)]);
     },
   };
 }

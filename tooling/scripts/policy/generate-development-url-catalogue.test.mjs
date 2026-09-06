@@ -63,12 +63,17 @@ test('catalogue covers the complete Swagger snapshot, compatibility APIs, financ
   const snapshot = JSON.parse(readFileSync(new URL('../../../docs/architecture/business-partner/development-openapi-inventory.json', import.meta.url), 'utf8'));
   const markdown = await renderCatalogue(snapshot);
   const deployed = markdown.split('## Runtime APIs in deployed Swagger')[1].split('## Additional backend APIs declared in source')[0];
-  assert.equal(deployed.split('\n').filter((line) => /^\| (GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE) \|/.test(line)).length, snapshot.operations.length);
-  for (const operation of snapshot.operations) assert.ok(deployed.includes(`| ${operation.method} |`) && deployed.includes(`https://api.dev.athyper.test${operation.path}`));
+  assert.equal(deployed.split('\n').filter((line) => /^- \*\*(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS|TRACE)\*\*/.test(line)).length, snapshot.operations.length);
+  for (const operation of snapshot.operations) {
+    const path = operation.path.includes('{') ? `\`${operation.path}\`` : `[${operation.path}](https://api.dev.athyper.test${operation.path})`;
+    assert.ok(deployed.includes(`- **${operation.method}** ${path}`), `${operation.method} ${operation.path}`);
+  }
   assert.ok(!deployed.includes('Not found by source scanner'));
-  for (const path of ['/api/neon/business-partner-cases/{requestId}/materialize', '/api/neon/business-partner-requests/{requestId}/apply', '/api/neon/external/candidate-registrations/accept', '/api/content/items/{id}/publish', '/api/meta-entity-authoring/change-sets/{id}/publish', '/api/finance/budget/command']) assert.ok(markdown.includes(`https://api.dev.athyper.test${path}`), path);
+  for (const path of ['/api/neon/business-partner-cases/{requestId}/materialize', '/api/neon/business-partner-requests/{requestId}/apply', '/api/neon/external/candidate-registrations/accept', '/api/content/items/{id}/publish', '/api/meta-entity-authoring/change-sets/{id}/publish', '/api/finance/budget/command']) assert.ok(markdown.includes(path), path);
   for (const app of ['studio', 'neon', 'mesh']) {
-    for (const path of ['/api/auth/mfa/verify', '/api/relay/{path...}', '/livez', '/{workspaceSlug}']) assert.ok(markdown.includes(`https://${app}.dev.athyper.test${path}`));
+    const section = markdown.split(`## ${app === 'studio' ? 'Studio' : app.toUpperCase()} application URLs`)[1].split('\n## ')[0];
+    assert.ok(section.includes(`Base URL: [https://${app}.dev.athyper.test]`));
+    for (const path of ['/api/auth/mfa/verify', '/api/relay/{path...}', '/livez', '/{workspaceSlug}']) assert.ok(section.includes(path));
   }
   assert.match(markdown, /auth.step_up_required/);
 });

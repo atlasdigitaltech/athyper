@@ -1,5 +1,8 @@
 @import url("./iam.tokens.css");
 @import url("./iam.generated.css");
+@import url("./workspace-showcase.css");
+@import url("./public-identity-layout.css");
+@import url("./public-identity-showcase.css");
 
 /*
  * Athyper unified IAM shell.
@@ -69,12 +72,12 @@ a {
   width: 100%;
   min-height: 100dvh;
   display: grid;
-  grid-template-columns: minmax(32rem, 58%) minmax(28rem, 42%);
+  grid-template-columns: var(--a-identity-columns);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
-    "story brand"
-    "story task"
-    "story footer";
+    "brand story"
+    "task story"
+    "footer story";
   padding: 0;
   overflow: hidden;
   background: var(--athyper-color-surface-raised);
@@ -90,131 +93,9 @@ a {
   justify-content: space-between;
   overflow: hidden;
   isolation: isolate;
-  padding: clamp(2rem, 4.5vw, 5rem);
+  padding: var(--a-identity-story-padding);
   color: var(--a-story-foreground);
-  background:
-    radial-gradient(circle at 75% 32%, var(--a-story-glow), transparent 27rem),
-    linear-gradient(145deg, var(--a-story-start) 0%, var(--a-story-end) 100%);
-}
-
-.kc-story-panel::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.32;
-  background-image: radial-gradient(circle, var(--a-story-dot) 0 1px, transparent 1.5px);
-  background-size: 5rem 5rem;
-  mask-image: linear-gradient(to bottom, transparent 5%, var(--a-contrast) 48%, transparent 92%);
-  animation: iam-ambient-drift 28s linear infinite alternate;
-}
-
-.kc-story-copy {
-  position: relative;
-  top: -2.25rem;
-  z-index: 2;
-  width: min(42rem, 88%);
-  margin-block: auto;
-  padding-bottom: 5rem;
-  animation: iam-story-reveal 700ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.kc-story-eyebrow {
-  margin: 0 0 1rem;
-  color: var(--a-story-eyebrow);
-  font-size: 0.8125rem;
-  font-weight: 700;
-  letter-spacing: 0.13em;
-  text-transform: uppercase;
-  animation: iam-copy-arrive 650ms 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.kc-story-copy h1 {
-  max-width: 14ch;
-  margin: 0;
-  color: var(--a-story-foreground);
-  font-size: clamp(2.25rem, 3.25vw, 3.75rem);
-  font-weight: 620;
-  line-height: 1.06;
-  letter-spacing: -0.04em;
-  animation: iam-copy-arrive 750ms 170ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.kc-story-copy > p:last-child {
-  max-width: 38rem;
-  margin: 1.5rem 0 0;
-  color: var(--a-story-muted);
-  font-size: clamp(1rem, 1.3vw, 1.2rem);
-  line-height: 1.7;
-  animation: iam-copy-arrive 800ms 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.kc-story-art {
-  position: absolute;
-  z-index: 1;
-  right: -16%;
-  bottom: 8%;
-  width: 118%;
-  min-width: 52rem;
-  opacity: 0.78;
-  filter: drop-shadow(0 0 1.5rem color-mix(in srgb, var(--a-story-wave) 25%, transparent));
-  pointer-events: none;
-  animation: iam-wave-drift 22s ease-in-out infinite alternate;
-}
-
-.kc-story-wave-lines {
-  stroke-dasharray: 18 10;
-  animation: iam-wave-flow 16s linear infinite;
-}
-
-.kc-story-network-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.kc-story-plane {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  gap: 0.1rem;
-  margin: 0;
-  color: var(--a-story-foreground);
-  font-size: 0.875rem;
-  font-weight: 650;
-}
-
-.kc-story-plane span {
-  color: color-mix(in srgb, var(--a-story-muted) 80%, transparent);
-  font-size: 0.75rem;
-  font-weight: 450;
-}
-
-@keyframes iam-wave-drift {
-  from { transform: translate3d(-1.5%, 0, 0) scale(1); }
-  to { transform: translate3d(1.5%, -1.25%, 0) scale(1.025); }
-}
-
-@keyframes iam-wave-flow {
-  to { stroke-dashoffset: -224; }
-}
-
-@keyframes iam-ambient-drift {
-  from { transform: translate3d(-0.75rem, -0.5rem, 0); opacity: 0.24; }
-  to { transform: translate3d(0.75rem, 0.5rem, 0); opacity: 0.38; }
-}
-
-@keyframes iam-story-reveal {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes iam-copy-arrive {
-  from { opacity: 0; transform: translate3d(0, 1rem, 0); }
-  to { opacity: 1; transform: translate3d(0, 0, 0); }
+  background: var(--a-identity-story-background);
 }
 
 .kc-page-header {
@@ -224,7 +105,7 @@ a {
   align-items: center;
   justify-content: flex-start;
   gap: 1.5rem;
-  padding: clamp(1.5rem, 3vw, 3rem) clamp(2rem, 4vw, 5rem) 1rem;
+  padding: clamp(1.5rem, 3vw, 3rem) var(--a-identity-task-padding) 1rem;
 }
 
 .kc-plane-wordmark {
@@ -243,11 +124,11 @@ a {
   flex-direction: column;
   justify-content: center;
   overflow-y: auto;
-  padding: 1rem clamp(2rem, 4vw, 5rem) 2rem;
+  padding: 1rem var(--a-identity-task-padding) 2rem;
 }
 
 .kc-form-wrapper {
-  width: min(100%, 30rem);
+  width: min(100%, var(--a-identity-form-width));
   margin-inline: auto;
 }
 
@@ -616,7 +497,7 @@ a {
   justify-content: center;
   flex-wrap: wrap;
   gap: var(--a-space-2) var(--a-space-3);
-  padding: 1rem clamp(2rem, 4vw, 5rem) 1.5rem;
+  padding: 1rem var(--a-identity-task-padding) 1.5rem;
 }
 
 .kc-footer-sep {
@@ -1000,31 +881,7 @@ a {
   color: var(--athyper-color-text);
 }
 
-@media (max-width: 75rem) {
-  .iam-shell,
-  .kc-page {
-    grid-template-columns: minmax(22rem, 42%) minmax(28rem, 58%);
-  }
-
-  .kc-story-panel {
-    padding: 2.5rem;
-  }
-
-  .kc-story-copy {
-    top: -1.5rem;
-    width: 100%;
-  }
-
-  .kc-story-copy h1 {
-    font-size: clamp(2.25rem, 4vw, 3.5rem);
-  }
-
-  .kc-story-copy > p:last-child {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 48rem) {
+@media (max-width: 52rem) {
   .iam-shell,
   .kc-page {
     min-height: 100dvh;
@@ -1043,7 +900,7 @@ a {
 
   .kc-page-header {
     justify-content: center;
-    padding: 1.25rem max(1.25rem, env(safe-area-inset-left));
+    padding: 1.25rem var(--a-identity-task-padding);
     border-bottom: 1px solid var(--a-border);
   }
 
@@ -1056,7 +913,7 @@ a {
   .kc-panel-right {
     justify-content: center;
     overflow-y: auto;
-    padding: 2rem max(1.25rem, env(safe-area-inset-left)) 1rem;
+    padding: 2rem var(--a-identity-task-padding) 1rem;
   }
 
   .kc-form-wrapper {
@@ -1085,7 +942,7 @@ a {
 
   .kc-footer {
     justify-content: center;
-    padding: 1rem max(1.25rem, env(safe-area-inset-left)) 1.5rem;
+    padding: 1rem var(--a-identity-task-padding) 1.5rem;
     text-align: center;
   }
 

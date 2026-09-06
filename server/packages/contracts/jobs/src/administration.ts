@@ -1,4 +1,4 @@
-import type { JobExecutionCoordinate, JobPayload } from "./jobs.js";
+import type { JobExecutionCoordinate, JobPayload, JobSubject, JobPayloadSchema } from "./jobs.js";
 
 export type JobAdministrationCommand = "cancel" | "retry" | "replay";
 
@@ -23,6 +23,9 @@ export interface JobReplaySource {
   readonly name: string;
   readonly data: JobPayload;
   readonly maxAttempts: number;
+  readonly attempt?: number;
+  readonly subject?: JobSubject;
+  readonly payloadSchema?: JobPayloadSchema;
 }
 
 export interface JobDeadLetterSummary {

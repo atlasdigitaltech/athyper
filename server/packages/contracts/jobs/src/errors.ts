@@ -5,3 +5,11 @@ export class JobValidationError extends TypeError {
     this.name = "JobValidationError";
   }
 }
+
+export class JobScheduleNotFoundError extends Error {
+  constructor() { super("Job schedule was not found"); this.name = "JobScheduleNotFoundError"; }
+}
+
+export class JobScheduleConflictError extends Error {
+  constructor() { super("A job schedule with this code already exists"); this.name = "JobScheduleConflictError"; }
+}

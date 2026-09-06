@@ -1,4 +1,4 @@
-import { JobValidationError } from "@athyper/server-contract-jobs";
+import { JobValidationError, JobScheduleNotFoundError, JobScheduleConflictError } from "@athyper/server-contract-jobs";
 import { createServer } from "node:http";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { createHttpApplication } from "@athyper/server-runtime-http";
@@ -38,6 +38,10 @@ const schedule = { code: "daily", name: "Daily", handlerType: "run", cronExpress
 
 describe("Jobs request validation", () => {
   it.each([
+    ...[0, -1, 1.5, "2", "garbage", null, []].map((count) => ({ method: "POST", path: "/schedules/preview", body: { expression: "0 * * * *", timezone: "UTC", count } })),
+    { method: "POST", path: "/schedules/preview", body: { expression: "0 * * * *", timezone: "UTC", from: "" } },
+    { method: "GET", path: "/executions?cursor=" },
+    { method: "GET", path: "/executions?limit=1&limit=2" },
     { method: "GET", path: "/dead-letters?limit=0" },
     { method: "GET", path: "/executions?limit=201" },
     { method: "GET", path: "/executions?limit=1.5" },
@@ -83,6 +87,27 @@ describe("Jobs request validation", () => {
         expect(response.status).toBe(status);
         expect(await response.json()).toMatchObject({ status, code });
       }
+    });
+  });
+
+  it.each([
+    { error: new JobScheduleNotFoundError(), status: 404, code: "JOBS_SCHEDULE_NOT_FOUND" },
+    { error: new JobScheduleConflictError(), status: 409, code: "JOBS_SCHEDULE_CONFLICT" },
+  ])("maps schedule storage errors to $status", async ({ error, status, code }) => {
+    await withValidationServer(() => { throw error; }, async (url) => {
+      const response = await fetch(`${url}/api/jobs/admin/schedules/${executionId}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(schedule) });
+      expect(response.status).toBe(status);
+      expect(await response.json()).toMatchObject({ status, code });
+    });
+  });
+
+  it("returns 400 for malformed JSON before dispatching to the service", async () => {
+    const calls = vi.fn();
+    await withValidationServer(calls, async (url) => {
+      const response = await fetch(`${url}/api/jobs/admin/schedules`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{broken-json" });
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ code: "INVALID_JSON" });
+      expect(calls).not.toHaveBeenCalled();
     });
   });
 

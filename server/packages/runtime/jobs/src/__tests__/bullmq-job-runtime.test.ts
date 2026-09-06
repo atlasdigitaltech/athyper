@@ -136,7 +136,7 @@ describe("BullMQ job runtime", () => {
       opts: { attempts: 3, jobId: "reindex-7" },
       updateProgress: async () => undefined,
     });
-    expect(lifecycle.enqueued).toHaveBeenCalledWith(expect.objectContaining({ executionKey: "reindex-7" }));
+    expect(lifecycle.enqueued).toHaveBeenCalledWith(expect.objectContaining({ executionKey: "records:reindex-7" }));
     expect(lifecycle.started).toHaveBeenCalledOnce();
     expect(lifecycle.completed).toHaveBeenCalledOnce();
     expect(lifecycle.failed).not.toHaveBeenCalled();
@@ -183,13 +183,14 @@ describe("BullMQ job runtime", () => {
   });
 
   it("exposes governed cancellation and failed-job retry controls", async () => {
+    const getState = vi.fn().mockResolvedValueOnce("waiting").mockResolvedValue("failed");
     const remove = vi.fn(async () => undefined);
     const retry = vi.fn(async () => undefined);
     const runtime = createBullMqJobRuntime({
       redisUrl: "redis://localhost:6379/2",
       createQueue: () => ({
         add: async () => ({ id: "job-1" }),
-        getJob: async (jobId) => jobId === "job-1" ? { remove, retry, getState: async () => "waiting" } : undefined,
+        getJob: async (jobId) => jobId === "job-1" ? { remove, retry, getState } : undefined,
         close: async () => undefined,
       }),
     });
@@ -199,6 +200,20 @@ describe("BullMQ job runtime", () => {
     expect(remove).toHaveBeenCalledOnce();
     expect(retry).toHaveBeenCalledWith("failed");
     await runtime.close();
+  });
+
+  it.each(["completed", "active", "waiting", "delayed", "unknown"])("rejects retry of a %s job", async (state) => {
+    const retry = vi.fn();
+    const runtime = createBullMqJobRuntime({ redisUrl: "redis://localhost", createQueue: () => ({ add: vi.fn(), close: vi.fn(), getJob: async () => ({ retry, remove: vi.fn(), getState: async () => state }) }) });
+    try { await expect(runtime.retry("reports", "job-1")).resolves.toBe(false); expect(retry).not.toHaveBeenCalled(); }
+    finally { await runtime.close(); }
+  });
+
+  it("returns a conflict when another retry wins the state race", async () => {
+    const getState = vi.fn().mockResolvedValueOnce("failed").mockResolvedValue("waiting");
+    const runtime = createBullMqJobRuntime({ redisUrl: "redis://localhost", createQueue: () => ({ add: vi.fn(), close: vi.fn(), getJob: async () => ({ getState, remove: vi.fn(), retry: async () => { throw new Error("Job is not failed"); } }) }) });
+    try { await expect(runtime.retry("reports", "job-1")).resolves.toBe(false); }
+    finally { await runtime.close(); }
   });
 
   it("admits repeated manual retries after exhaustion without resetting attempt history", async () => {
@@ -287,7 +302,7 @@ describe("BullMQ job runtime", () => {
         keys.push(key);
         rows.set(key, status);
       };
-      const keyFor = (job: JobEnvelope) => job.idempotencyKey ?? job.id;
+      const keyFor = (job: JobEnvelope) => job.executionKey ?? job.idempotencyKey ?? job.id;
       const lifecycle: JobExecutionLifecycle = {
         enqueued: async (input) => { record(input.executionKey, "queued"); },
         started: async (job) => { record(keyFor(job), "running"); },
@@ -310,7 +325,7 @@ describe("BullMQ job runtime", () => {
         ...options, maxAttempts: 2,
         execution: { planeKey: "neon", scope: "tenant", tenantId: "tenant-1", principalId: "principal-1" },
       });
-      expect([...rows.entries()]).toEqual([[publishedId, "queued"]]);
+      expect([...rows.entries()]).toEqual([[`billing:${publishedId}`, "queued"]]);
       await publisher.close();
 
       // Consume only the persisted BullMQ data in a separate runtime, as in production.
@@ -331,13 +346,34 @@ describe("BullMQ job runtime", () => {
         expect(storedJob).toBeDefined();
         await expect(processor!(storedJob!)).rejects.toThrow("Temporary failure");
         await processor!({ ...storedJob!, attemptsMade: 1 });
-        expect(keys).toEqual(Array(5).fill(publishedId));
-        expect([...rows.entries()]).toEqual([[publishedId, "succeeded"]]);
+        expect(keys).toEqual(Array(5).fill(`billing:${publishedId}`));
+        expect([...rows.entries()]).toEqual([[`billing:${publishedId}`, "succeeded"]]);
       } finally {
         await worker.close();
       }
     },
   );
+
+  it("keeps identical BullMQ IDs in different queues as separate durable executions", async () => {
+    const enqueued: string[] = [];
+    const started: string[] = [];
+    const processors = new Map<string, (job: BullMqJobLike) => Promise<unknown>>();
+    const runtime = createBullMqJobRuntime({ redisUrl: "redis://localhost",
+      lifecycle: { enqueued: async (input) => { enqueued.push(input.executionKey); }, started: async (job) => { started.push(job.executionKey!); }, failed: vi.fn(), completed: vi.fn() },
+      createQueue: () => ({ add: async () => ({ id: "1" }), close: vi.fn() }),
+      createWorker: (queue, processor) => { processors.set(queue, processor); return { close: vi.fn() }; },
+    });
+    try {
+      for (const queue of ["reports", "notifications"]) {
+        runtime.register(queue, "run", { handle: async () => undefined });
+        await runtime.enqueue(queue, "run", {});
+      }
+      await runtime.start();
+      for (const processor of processors.values()) await processor({ id: "1", name: "run", data: {}, opts: {}, attemptsMade: 0, timestamp: Date.now(), updateProgress: vi.fn() });
+      expect(enqueued).toEqual(["reports:1", "notifications:1"]);
+      expect(started).toEqual(enqueued);
+    } finally { await runtime.close(); }
+  });
 
   it("lists failed jobs and replays them with a deterministic administration key", async () => {
     const add = vi.fn(async (_name, _data, options) => ({ id: String(options.jobId) }));

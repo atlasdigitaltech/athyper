@@ -4,7 +4,7 @@ import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contrac
 import { fingerprintCommand, parseIdempotencyKey, type OutboxWriter } from "@athyper/server-contract-events";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import { assertIamPlane } from "./iam-contracts.js";
-import { normalizeIdentityIdentifier, type ProvisioningRequest } from "./provisioning.js";
+import { normalizeIdentityIdentifier, ProvisioningValidationError, type ProvisioningRequest } from "./provisioning.js";
 
 export const CREATE_PROVISIONING_PERMISSION = "iam.provisioning.create";
 
@@ -52,14 +52,17 @@ export function createProvisioningVertical<Transaction>(options: ProvisioningVer
       }
       const idempotency = parseIdempotencyKey(command.idempotencyKey);
       if (!idempotency.ok) return { kind: "IdempotencyConflict", reason: idempotency.reason };
-      const authorization = await options.authorizer.authorize({ context: command.context, permissionCode: CREATE_PROVISIONING_PERMISSION });
+      const authorization = await options.authorizer.authorize({ context: command.context, permissionCode: CREATE_PROVISIONING_PERMISSION, resource: { tenantId: command.context.tenantId } });
       if (!authorization.allowed) return { kind: "Forbidden", permissionCode: CREATE_PROVISIONING_PERMISSION };
 
       const normalizedIdentifier = normalizeIdentityIdentifier(command.identifier);
       const realmKey = normalizeRealmKey(command.realmKey ?? command.context.realmKey);
       const planes = Object.freeze([...new Set(command.planes)].sort());
-      if (!planes.length) throw new TypeError("At least one target plane is required");
-      planes.forEach(assertIamPlane);
+      if (!planes.length) throw new ProvisioningValidationError("At least one target plane is required");
+      for (const plane of planes) {
+        try { assertIamPlane(plane); }
+        catch { throw new ProvisioningValidationError("Target plane is invalid"); }
+      }
       const subjectKey = fingerprintCommand({ tenantId: command.context.tenantId, realmKey, normalizedIdentifier });
       const requestFingerprint = fingerprintCommand({ tenantId: command.context.tenantId, realmKey, normalizedIdentifier, planes });
       const request: ProvisioningRequest = Object.freeze({
@@ -113,6 +116,6 @@ export type ProvisioningVertical = ReturnType<typeof createProvisioningVertical>
 
 function normalizeRealmKey(value: string): string {
   const normalized = value.trim().normalize("NFKC").toLocaleLowerCase("en-US");
-  if (!/^[a-z][a-z0-9_.-]{1,62}$/.test(normalized)) throw new TypeError("realmKey is invalid");
+  if (!/^[a-z][a-z0-9_.-]{1,62}$/.test(normalized)) throw new ProvisioningValidationError("realmKey is invalid");
   return normalized;
 }

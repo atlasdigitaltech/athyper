@@ -25,3 +25,7 @@ export * from "./external-worker-identity-delivery.js";
 export * from "./keycloak-identity-provider.js";
 
 export { CUSTOMER_PORTAL_QUEUE, CUSTOMER_PORTAL_JOB, CustomerPortalIntentConsumer, KyselyCustomerPortalDeliveryRepository, createCustomerPortalDeliveryHandler, planCustomerPortalProjection } from "./customer-portal-delivery.js";
+
+export * from "./identity-replay-approval.js";
+export * from "./kysely-identity-replay-approval.js";
+export * from "./identity-replay-routes.js";

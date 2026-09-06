@@ -239,3 +239,36 @@ describe("localization review regressions", () => {
     await expect(service(repository({async readLocalePolicy(){return policy;},async updatePrincipalLocale(){throw new Error("must not write");}})).updatePrincipalLocale(context,locale)).rejects.toMatchObject({status:400,code:"EXPERIENCE_LOCALE_NOT_ENABLED"});
   });
 });
+
+
+describe("localization concurrent requests", () => {
+  it("does not repopulate the cache with a bootstrap started before PATCH invalidation", async () => {
+    let selected = "en";
+    let first = true;
+    let reached!: () => void;
+    let release!: () => void;
+    const paused = new Promise<void>(resolve => { reached = resolve; });
+    const resume = new Promise<void>(resolve => { release = resolve; });
+    const base = repository();
+    const repo = repository({
+      async readLocalePolicy() { return {enabledLocales:["en","ar"],defaultLocale:"en",fallbackLocale:"en",revision:"policy:1"}; },
+      async readProfile() { return {principal:{localeCode:selected},revision:selected}; },
+      async readFeatures(ctx,at) { if(first){first=false;reached();await resume;}return base.readFeatures(ctx,at); },
+      async updatePrincipalLocale(_context,locale,revision) { expect(revision).toBe("policy:1");selected=locale; },
+    });
+    const projection = createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    const old = projection.bootstrap(context);
+    await paused;
+    try {
+      expect((await projection.updatePrincipalLocale(context,"ar")).profile.localeCode).toBe("ar");
+    } finally { release(); }
+    expect((await old).profile.localeCode).toBe("en");
+    expect((await projection.bootstrap(context)).profile.localeCode).toBe("ar");
+  });
+
+  it("fails closed for incorrectly typed review evidence loaded from JSON", async () => {
+    const result=await service(repository({async readLocalePolicy(){return {catalogs:[{localeCode:"ar",status:"qualified",coveragePct:100,linguisticReviewPassed:"false" as unknown as boolean,layoutReviewPassed:true,automatedTestsPassed:true}],enabledLocales:["en","ar"],defaultLocale:"ar",fallbackLocale:"en",revision:"1"};}})).localePolicy(context);
+    expect(result.enabledLocales).toEqual(["en"]);
+    expect(result.catalogs.find(row=>row.localeCode==="ar")).toMatchObject({qualified:false,linguisticReviewPassed:false});
+  });
+});

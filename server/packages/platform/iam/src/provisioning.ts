@@ -22,6 +22,10 @@ export interface ProvisioningRequest {
   readonly version: number;
 }
 
+export class ProvisioningValidationError extends TypeError {
+  constructor(message: string) { super(message); this.name = "ProvisioningValidationError"; }
+}
+
 export class ProvisioningIdempotencyConflictError extends Error {
   constructor() { super("Provisioning idempotency key was reused with different request parameters"); this.name = "ProvisioningIdempotencyConflictError"; }
 }
@@ -79,7 +83,7 @@ export function createProvisioningService(repository: ProvisioningRepository, cr
 
 export function normalizeIdentityIdentifier(value: string): string {
   const normalized = value.trim().normalize("NFKC").toLocaleLowerCase("en-US");
-  if (!normalized || normalized.length > 320) throw new TypeError("Identity identifier is invalid");
+  if (!normalized || normalized.length > 320) throw new ProvisioningValidationError("Identity identifier is invalid");
   return normalized;
 }
 

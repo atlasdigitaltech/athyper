@@ -14,6 +14,19 @@ Reviewed all nine requested endpoints, their authentication middleware and IAM s
 | Low | `/me` and projection health lacked explicit cache prevention despite returning principal/permission or tenant operational data. | Set `Cache-Control: private, no-store` on successful responses. |
 | Low | Provisioning's request contract admitted an empty target-plane list, relying on deeper service validation. | Reject empty lists at the HTTP boundary with `minItems: 1`. |
 
+## Follow-up review of the endpoint inventory
+
+The earlier fixes are present in the current branch. A second pass found and fixed these additional defects:
+
+| Severity | Finding | Remediation and regression evidence |
+| --- | --- | --- |
+| High | Provisioning, projection health and projection replay called the permission authorizer without a resource. Workspace-scoped role evidence could therefore pass a tenant-wide operation. | Pass the authenticated tenant (and replay attempt where applicable) to authorization. Real-authorizer tests reject workspace grants before database access; tenant-scoped provisioning remains allowed. |
+| Medium | When subject uniqueness collided under a new idempotency key, the repository returned `Replayed` without storing that new key. That supposedly successful key could subsequently create an unrelated identity request. | Require both the persisted key and fingerprint to match. Same subject under a different key now returns 409; clients must retry with the original key. Repository tests exercise both replay and conflict results using the actual repository with scripted query results. |
+| Medium | The provisioning route converted every `TypeError`, including repository/audit/outbox programming failures, into a 400 with the internal error message. | Introduce `ProvisioningValidationError` for known input failures. HTTP tests verify ordinary internal TypeErrors remain sanitized 500s and known validation errors remain 400s. |
+| Low | An explicitly empty `realmKey` was silently dropped by the route, allowing provisioning in the default realm instead of rejecting invalid input. | Preserve the provided field so realm validation rejects it. HTTP regression checks the exact forwarded value. |
+
+The trusted-device source assertion still expected the removed BFF local-elevation path. Updated it to check issuer MFA before elevation while retaining the API's tenant/principal/epoch/revocation/expiry assertions. Existing behavioral tests cover valid, expired, revoked and absent remembered-device evidence across all three planes.
+
 ## Endpoint coverage
 
 | Endpoint | Review and verification |
@@ -28,16 +41,19 @@ Reviewed all nine requested endpoints, their authentication middleware and IAM s
 | POST trusted-devices | Reviewed issuer authentication-method requirement, digest/TTL validation, exact-plane storage, epoch binding, unique digest collision handling and transactional audit. Regression covers missing MFA and unavailable exact-plane adapters. |
 | POST trusted-devices/verify | Reviewed tenant/principal/epoch/digest/revocation/expiry predicates and no-store decisions. Regression confirms unavailable Neon/Mesh storage never falls back to Studio. |
 
-## Approval integration still required
+## Durable approval follow-up
 
-Identity saga replay is deliberately unavailable by default after this fix. Host composition exposes `verifyIdentityReplayApproval`; no durable approval adapter exists in the reviewed implementation, so the normal host returns `IAM_REPLAY_APPROVAL_REQUIRED` (403). Connect this dependency to a durable review workflow before enabling replay. Its contract requires approval of the exact tenant, attempt, requester and approver; a principal-existence check or unconditional true is insufficient. Existing direct `IdentityReplayService` consumers also need this evidence provider.
+The missing integration has now been implemented. Identity replay uses a persisted Studio request, a separate authenticated reviewer, and atomic approval consumption/replay/audit. The old boolean verifier and caller-asserted approver body have been removed.
 
-This mitigates the authorization defect but does **not** implement a maker-checker approval UI or persistence workflow. No second user's bearer token is requested or exchanged.
+See [the rollout and API guide](identity-replay-approval.md) and [live verification evidence](identity-replay-live-evidence.json). The API keeps `IAM_IDENTITY_REPLAY_ENABLED=false` by default for rollout; enable it after the Studio migration and release verification. Isolated PostgreSQL/Keycloak testing now covers the focused replay workflow, including real OTP, concurrency, rollback and provider provisioning. The earlier no-live-testing limitation no longer applies to this workflow.
 
 ## Validation
 
-- IAM package: 93 tests passed; source and test typechecks passed.
-- Host IAM HTTP suites: 10 tests passed, including the existing audit/provisioning vertical and the new API regressions.
-- Related trusted-device/projection/saga contract and database-source tests: 20 passed, one failed. The failure is the existing source-pattern assertion in `server/db/scripts/__tests__/platform/trusted-device-expiry.test.ts`, which expects `!decision.active ... decision.expiresAt <= effectiveAt` in the already-modified BFF source. This review did not edit that BFF file or test.
-- Host typecheck is blocked by unresolved `@athyper/server-runtime-http` imports in `server/packages/services/master-data/src/business-partner-360-route-contracts.ts` and `business-partner-360-routes.ts`.
-- No live PostgreSQL, Keycloak, or concurrent replay integration run was performed. HTTP tests use an in-process host and a dummy database driver; database boundary conclusions also rely on source inspection and existing tests.
+Results from the preceding API review (durable-approval verification is recorded separately above):
+
+- IAM package: **100 tests passed**; source and test typechecks passed.
+- Host IAM HTTP suites: **11 tests passed**; host typecheck passed. The dependency-resolution blocker from the first pass is no longer present in the current workspace.
+- Related trusted-device/projection/saga contract and database-source tests: **21 passed**.
+- `git diff --check` passed.
+- No live PostgreSQL, Keycloak, or concurrent replay integration run was performed. HTTP/repository tests use an in-process host and dummy/scripted database results; database boundary conclusions also rely on source inspection and existing tests.
+- Changes were limited to the IAM review scope. Unrelated workspace edits were preserved.

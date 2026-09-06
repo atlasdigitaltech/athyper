@@ -2,6 +2,7 @@ import type { Application, Request, RequestHandler, Response } from "express";
 import type { Authenticator, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { normalizePlaneKey, runWithRequestContext, type PlaneKey, type PlaneKeyInput } from "@athyper/server-foundation/context";
 import { HttpError, defineRouteContract, registerContractRoute, sendProblem } from "@athyper/server-runtime-http";
+import { ProvisioningValidationError } from "./provisioning.js";
 import type { ProvisioningVertical } from "./provisioning-vertical.js";
 
 const CONTEXT_LOCAL = "verifiedRequestContext";
@@ -56,13 +57,13 @@ function registerProvisioningRoute(application: Application, authenticate: Reque
       const realmKey = typeof value.realmKey === "string" ? value.realmKey : undefined;
       const planes = Array.isArray(value.planes) ? value.planes.filter((item): item is PlaneKey => item === "studio" || item === "neon" || item === "mesh") : [];
       if (!identifier.trim() || planes.length !== (Array.isArray(value.planes) ? value.planes.length : -1)) throw new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", "identifier and valid target planes are required");
-      const result = await provisioning.request({ context: readVerifiedRequestContext(response), idempotencyKey: header(request, "idempotency-key"), identifier, planes, ...(realmKey ? { realmKey } : {}) });
+      const result = await provisioning.request({ context: readVerifiedRequestContext(response), idempotencyKey: header(request, "idempotency-key"), identifier, planes, ...(realmKey !== undefined ? { realmKey } : {}) });
       if (result.kind === "Created") { response.status(201).json(result); return; }
       if (result.kind === "Replayed") { response.status(200).json(result); return; }
       if (result.kind === "Forbidden") throw new HttpError(403, "IAM_PROVISIONING_FORBIDDEN", "The verified principal cannot create provisioning requests");
       const status = result.reason === "required" ? 428 : result.reason === "invalid" ? 400 : 409;
       throw new HttpError(status, "IAM_PROVISIONING_IDEMPOTENCY_CONFLICT", `Idempotency key is ${result.reason}`);
-    } catch (error) { next(error instanceof TypeError ? new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", error.message) : error); }
+    } catch (error) { next(error instanceof ProvisioningValidationError ? new HttpError(400, "IAM_PROVISIONING_REQUEST_INVALID", error.message) : error); }
   });
 }
 

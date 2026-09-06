@@ -138,7 +138,8 @@
     "db:provision:neon:business-partner-r5-fixtures": "tsx scripts/provisioning/provision-business-partner-r5-fixtures.ts",
     "test:integration:business-partner-r6-delivery": "tsx scripts/tests/integration/business-partner-r6-delivery.ts",
     "db:evidence:business-partner-r5-downstream": "tsx scripts/business-partner-360/collect-customer-downstream-evidence.ts",
-    "test:integration:business-partner-r6-amendment": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r6-amendment.sql"
+    "test:integration:business-partner-r6-amendment": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r6-amendment.sql",
+    "test:integration:identity-replay": "tsx scripts/tests/integration/identity-replay-live.mjs"
   },
   "dependencies": {
     "@athyper/platform-temporal": "workspace:*",

@@ -95,7 +95,7 @@ describe("jobs service", () => {
 
   it("governs retry and replay through durable command evidence", async () => {
     const recordCommand = vi.fn(async () => undefined);
-    const enqueue = vi.fn(async () => "replacement-job");
+    const enqueue = vi.fn<import("@athyper/server-contract-jobs").JobPublisher["enqueue"]>(async () => "replacement-job");
     const retry = vi.fn(async () => true);
     const service = createJobAdministrationService({
       store: {
@@ -107,6 +107,9 @@ describe("jobs service", () => {
           name: "notifications.dispatch",
           data: { tenantId: "22222222-2222-4222-8222-222222222222" },
           maxAttempts: 5,
+          attempt: 5,
+          subject: { entityCode: "notification", recordId: "record-1" },
+          payloadSchema: { name: "notification.dispatch", version: 2 },
         }),
         recordCommand,
         listDeadLetters: async () => [],
@@ -133,6 +136,13 @@ describe("jobs service", () => {
       expect.any(Object),
       expect.objectContaining({ execution: request.execution, maxAttempts: 5 }),
     );
-    expect(recordCommand).toHaveBeenCalledTimes(2);
+    expect(recordCommand).toHaveBeenCalledWith(expect.objectContaining({ command: "retry", expectedAttempt: 5 }));
+    const replayOptions = enqueue.mock.calls[0]?.[3];
+    await service.replay(request);
+    expect(enqueue).toHaveBeenLastCalledWith(expect.any(String), expect.any(String), expect.any(Object), expect.objectContaining({
+      subject: { entityCode: "notification", recordId: "record-1" }, payloadSchema: { name: "notification.dispatch", version: 2 },
+    }));
+    expect(enqueue.mock.calls[1]?.[3]).not.toEqual(replayOptions);
+    expect(recordCommand).toHaveBeenCalledTimes(3);
   });
 });

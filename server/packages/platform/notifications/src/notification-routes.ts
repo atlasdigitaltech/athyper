@@ -250,7 +250,7 @@ export function registerNotificationRoutes(
           response.status(404).json({ error: "NOTIFICATION_NOT_FOUND" });
           return;
         }
-        await publishInboxEvent(options.events, {
+        void publishInboxEvent(options.events, {
           type: "notification.read",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -277,7 +277,7 @@ export function registerNotificationRoutes(
           planeKey: context.planeKey,
           readAt: occurredAt,
         });
-        await publishInboxEvent(options.events, {
+        void publishInboxEvent(options.events, {
           type: "notification.refresh",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -309,7 +309,7 @@ export function registerNotificationRoutes(
           response.status(404).json({ error: "NOTIFICATION_NOT_FOUND" });
           return;
         }
-        await publishInboxEvent(options.events, {
+        void publishInboxEvent(options.events, {
           type: "notification.refresh",
           tenantId: context.tenantId,
           principalId: context.principalId,
@@ -404,7 +404,9 @@ const uuidExpression =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/;
 
 // The inbox transaction has committed before fan-out. An optional SSE/Redis
-// failure must not report the persisted mutation as a failed request.
+// failure must not report the persisted mutation as a failed request. Callers
+// intentionally do not await this best-effort broadcast: a stalled publisher
+// must not hold the committed HTTP response open. Rejections are handled here.
 async function publishInboxEvent(
   publisher: NotificationEventPublisher,
   event: Parameters<NotificationEventPublisher["publish"]>[0],

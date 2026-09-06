@@ -38,7 +38,7 @@ export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
         FROM trustiam.identity_projection projection
         WHERE projection.reconciliation_status IN('pending','drifted','failed')
           AND NOT EXISTS(SELECT 1 FROM trustiam.identity_saga_attempt open_attempt WHERE open_attempt.authority_tenant_id=projection.authority_tenant_id AND open_attempt.identity_projection_id=projection.id AND open_attempt.status IN('claimed','running'))
-          AND COALESCE((SELECT CASE WHEN latest.status='dead_letter' THEN latest.replay_requested_at IS NOT NULL WHEN latest.status='failed' THEN latest.next_attempt_at<=${input.claimedAt}::timestamptz ELSE true END FROM trustiam.identity_saga_attempt latest WHERE latest.authority_tenant_id=projection.authority_tenant_id AND latest.identity_projection_id=projection.id ORDER BY latest.attempt_no DESC LIMIT 1),true)
+          AND COALESCE((SELECT CASE WHEN latest.desired_version<>projection.desired_version OR latest.desired_hash<>projection.desired_hash THEN true WHEN latest.status='dead_letter' THEN latest.replay_requested_at IS NOT NULL WHEN latest.status='failed' THEN latest.next_attempt_at<=${input.claimedAt}::timestamptz ELSE true END FROM trustiam.identity_saga_attempt latest WHERE latest.authority_tenant_id=projection.authority_tenant_id AND latest.identity_projection_id=projection.id ORDER BY latest.attempt_no DESC LIMIT 1),true)
         ORDER BY projection.updated_at NULLS FIRST,projection.created_at
         FOR UPDATE OF projection SKIP LOCKED LIMIT 1`.execute(tx)
       ).rows[0];
@@ -57,7 +57,7 @@ export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
       ).rows[0]!;
       const attempt = (
         await sql<Row>`INSERT INTO trustiam.identity_saga_attempt(authority_tenant_id,identity_projection_id,desired_version,desired_hash,attempt_no,worker_id,claim_token_hash,fencing_token,status,lease_expires_at,manual_replay_of,created_at,created_by)
-        VALUES(${tenantId}::uuid,${identityId}::uuid,${desiredVersion},${desiredHash},${sequence.attempt_no},${input.workerId},${input.claimTokenHash},${Number(sequence.fencing_token)},'claimed',${input.leaseExpiresAt}::timestamptz,(SELECT id FROM trustiam.identity_saga_attempt WHERE authority_tenant_id=${tenantId}::uuid AND identity_projection_id=${identityId}::uuid AND status='dead_letter' AND replay_requested_at IS NOT NULL ORDER BY attempt_no DESC LIMIT 1),${input.claimedAt}::timestamptz,${text(source, "created_by")}::uuid) RETURNING id`.execute(
+        VALUES(${tenantId}::uuid,${identityId}::uuid,${desiredVersion},${desiredHash},${sequence.attempt_no},${input.workerId},${input.claimTokenHash},${Number(sequence.fencing_token)},'claimed',${input.leaseExpiresAt}::timestamptz,(SELECT id FROM trustiam.identity_saga_attempt WHERE authority_tenant_id=${tenantId}::uuid AND identity_projection_id=${identityId}::uuid AND status='dead_letter' AND desired_version=${desiredVersion} AND desired_hash=${desiredHash} AND attempt_no=${sequence.attempt_no}-1 AND replay_requested_at IS NOT NULL ORDER BY attempt_no DESC LIMIT 1),${input.claimedAt}::timestamptz,${text(source, "created_by")}::uuid) RETURNING id`.execute(
           tx,
         )
       ).rows[0]!;
@@ -171,21 +171,6 @@ export class KyselyIdentitySagaRepository implements IdentitySagaRepository {
       );
       return true;
     });
-  }
-
-  async replay(input: {
-    authorityTenantId: string;
-    deadLetterAttemptId: string;
-    requestedBy: string;
-    approvedBy: string;
-    requestedAt: string;
-  }): Promise<boolean> {
-    const result = await this.run(async (tx) =>
-      sql`UPDATE trustiam.identity_saga_attempt SET replay_requested_at=${input.requestedAt}::timestamptz,replay_requested_by=${input.requestedBy}::uuid,replay_approved_by=${input.approvedBy}::uuid,updated_by=${input.requestedBy}::uuid WHERE authority_tenant_id=${input.authorityTenantId}::uuid AND id=${input.deadLetterAttemptId}::uuid AND status='dead_letter' AND replay_requested_at IS NULL AND ${input.requestedBy}::uuid<>${input.approvedBy}::uuid`.execute(
-        tx,
-      ),
-    );
-    return Number(result.numAffectedRows ?? 0) === 1;
   }
 
   private async transition(

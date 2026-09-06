@@ -19,6 +19,14 @@ describe("governed cron preview", () => {
     expect(() => previewCron(input)).toThrow(JobValidationError);
   });
 
+  it.each([NaN, Infinity, 0, -1, 1.5])("rejects invalid preview count %s", (count) => {
+    expect(() => previewCron({ expression: "0 * * * *", timezone: "UTC", count })).toThrow(JobValidationError);
+  });
+
+  it("rejects unknown timezones", () => {
+    expect(() => previewCron({ expression: "0 * * * *", timezone: "Mars/Olympus" })).toThrow(JobValidationError);
+  });
+
   it("rejects invalid expressions and bounds the response", () => {
     expect(() => previewCron({ expression: "not cron", timezone: "UTC" })).toThrow("Invalid cron schedule");
     expect(previewCron({ expression: "0 * * * *", timezone: "UTC", from: "2026-08-10T00:00:00Z", count: 100 }).nextRuns).toHaveLength(20);

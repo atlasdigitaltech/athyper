@@ -120,10 +120,23 @@ async function harness(status?: 401 | 503, principal = context) {
   return { call, run };
 }
 const requests = [
+  [
+    `identity-saga-attempts/${attemptId}/replay-approvals`,
+    { reason: "Reviewed failure" },
+  ],
+  [`identity-replay-approvals/${attemptId}`, undefined],
+  [
+    `identity-replay-approvals/${attemptId}/approve`,
+    { reason: "Independent review" },
+  ],
+  [
+    `identity-replay-approvals/${attemptId}/revoke`,
+    { reason: "Withdrawn review" },
+  ],
   ["me", undefined],
   ["projection-health", undefined],
   [`identity-saga-attempts/${attemptId}/evidence`, undefined],
-  [`identity-saga-attempts/${attemptId}/replay`, { approvedBy: attemptId }],
+  [`identity-saga-attempts/${attemptId}/replay`, { approvalId: attemptId }],
   [`projection-reconciliation-attempts/${attemptId}/replay`, {}],
   [
     "provisioning-requests",
@@ -142,6 +155,31 @@ describe("IAM API review regressions", () => {
       expect(run).not.toHaveBeenCalled();
     },
   );
+  it("rejects workspace-scoped grants for tenant-wide projection operations", async () => {
+    const scoped = {
+      ...context,
+      permissions: {
+        ...context.permissions,
+        evidence: context.permissions.allowed.map((permissionCode) => ({
+          permissionCode,
+          effect: "allow" as const,
+          proof: "role" as const,
+          scopeKind: "workspace" as const,
+          scopeTargetId: "scope-1",
+          targetId: "workspace-1",
+          propagationMode: "exact" as const,
+        })),
+      },
+    };
+    const { call, run } = await harness(undefined, scoped);
+    expect((await call("projection-health")).status).toBe(403);
+    expect(
+      (await call(`projection-reconciliation-attempts/${attemptId}/replay`, {}))
+        .status,
+    ).toBe(403);
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed attempt IDs and empty provisioning planes before database access", async () => {
     const { call, run } = await harness();
     expect(
@@ -161,16 +199,23 @@ describe("IAM API review regressions", () => {
     ).toBe(400);
     expect(run).not.toHaveBeenCalled();
   });
-  it("rejects a caller-supplied approver without verified review evidence", async () => {
+  it("keeps replay disabled until integration verification is enabled", async () => {
     const { call, run } = await harness();
     const response = await call(`identity-saga-attempts/${attemptId}/replay`, {
-      approvedBy: attemptId,
+      approvalId: attemptId,
     });
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({
-      code: "IAM_REPLAY_APPROVAL_REQUIRED",
+      code: "IAM_REPLAY_DISABLED",
     });
     expect(run).not.toHaveBeenCalled();
+    expect(
+      (
+        await call(`identity-saga-attempts/${attemptId}/replay`, {
+          approvedBy: attemptId,
+        })
+      ).status,
+    ).toBe(400);
   });
   it("does not cache principal responses and rejects unauthenticated discovery", async () => {
     const { call } = await harness();

@@ -14,7 +14,8 @@ const sort = (a, b) => a < b ? -1 : a > b ? 1 : 0;
 const identity = (route) => `${route.method} ${normalizeRoutePath(route.path)}`;
 const cell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
 const link = (path) => `[source](../../../${path})`;
-const url = (origin, path) => path.includes('{') ? `\`${origin}${path}\`` : `[${origin}${path}](${origin}${path})`;
+const url = (origin, path) => path.includes('{') ? `\`${path}\`` : `[${path}](${origin}${path})`;
+const baseUrl = (origin) => `Base URL: [${origin}](${origin}). Paths below are relative to this origin.`;
 
 export function openApiInventory(document) {
   if (!document.openapi || !document.paths || !Object.keys(document.paths).length) throw new Error('Expected a nonempty OpenAPI document');
@@ -121,6 +122,11 @@ export async function renderCatalogue(snapshot) {
     `| Backend method/path identities extracted from source | ${sourceRoutes.length} |`,
     `| Source identities absent from Swagger | ${missing.length} |`,
     ...Object.entries(apps).map(([app, routes]) => `| ${app} URL entries (including patterns) | ${routes.length} |`), '',
+    '## Jump to', '',
+    '- [Studio](#studio-application-urls) · [NEON](#neon-application-urls) · [MESH](#mesh-application-urls)',
+    '- [Runtime discovery](#runtime-discovery) · [Deployed Swagger APIs](#runtime-apis-in-deployed-swagger)',
+    '- [Additional source APIs](#additional-backend-apis-declared-in-source) · [Refresh instructions](#how-to-use-and-refresh)', '',
+    'Each entry shows its method and path, followed by its details and source. Fixed paths link to the full development URL; parameterized paths are templates to combine with the section’s base URL. All entries stay expanded for browser Find.', '',
     '## How to use and refresh', '',
     '- [Runtime Swagger UI](https://api.dev.athyper.test/docs) reads `/openapi.json`. Browser APIs on the application origins are separate and do not appear in Runtime Swagger.',
     '- Replace `{parameter}` with a real value. `{path...}` requires one or more segments; `{segments...?}` permits zero or more. Parameter names in Swagger are preserved exactly. Additional source paths retain their declared parameter names.',
@@ -144,31 +150,41 @@ export async function renderCatalogue(snapshot) {
     '```', '',
     'The offline check cannot detect an independently changed deployment. Run the live check after deployments. The source scanners resolve literal routes, route contracts, local helper factories, finite string/tuple/object loops and path arrays. Unresolved recognized route declarations fail generation instead of being silently omitted. New registration conventions require extending the scanners. Raw Express routes are not automatically included by the Runtime OpenAPI generator; see [the tracked OpenAPI migration debt](../../../tooling/tools/scripts/openapi-undocumented-baseline.json).', '',
     '## Runtime discovery', '',
-    '| Method | URL |', '| --- | --- |',
-    ...['/docs', '/openapi.json'].map((path) => `| GET | ${url(API, path)} |`), '',
+    baseUrl(API), '',
+    ...['/docs', '/openapi.json'].map((path) => `- **GET** ${url(API, path)}`), '',
   ];
   for (const [app, routes] of Object.entries(apps)) {
-    lines.push(`## ${app === 'studio' ? 'Studio' : app.toUpperCase()} application URLs`, '', '| Methods | URL or pattern | Kind / name | Source |', '| --- | --- | --- | --- |');
-    for (const route of routes) lines.push(`| ${route.methods} | ${url(`https://${app}.dev.athyper.test`, route.path)} | ${cell(route.kind + (route.name ? ` — ${route.name}` : ''))} | ${link(route.source)} |`);
+    lines.push(`## ${app === 'studio' ? 'Studio' : app.toUpperCase()} application URLs`, '', baseUrl(`https://${app}.dev.athyper.test`), '');
+    for (const route of routes) lines.push(`- **${route.methods}** ${url(`https://${app}.dev.athyper.test`, route.path)}  `,
+      `  ${cell(route.kind + (route.name ? ` — ${route.name}` : ''))} · ${link(route.source)}`, '');
     lines.push('');
   }
-  lines.push('## Runtime APIs in deployed Swagger', '', 'Every operation below comes directly from the captured OpenAPI document. Group names, operation IDs, summaries, methods and parameter names match Swagger. Use Swagger for request bodies, responses and permissions.', '');
+  lines.push('## Runtime APIs in deployed Swagger', '', 'Every operation below comes directly from the captured OpenAPI document. Group names, operation IDs, summaries, methods and parameter names match Swagger. Use Swagger for request bodies, responses and permissions.', '', baseUrl(API), '');
   const tags = [...new Set(snapshot.operations.map((route) => route.tags[0] ?? 'Untagged'))].sort(sort);
   for (const tag of tags) {
-    lines.push(`### ${tag}`, '', '| Method | API URL | Operation ID / summary | Source match |', '| --- | --- | --- | --- |');
+    lines.push(`### ${tag}`, '');
     for (const route of snapshot.operations.filter((r) => (r.tags[0] ?? 'Untagged') === tag)) {
       const match = source.get(identity(route));
-      lines.push(`| ${route.method} | ${url(API, route.path)} | ${cell(route.operationId)} — ${cell(route.summary)} | ${match ? match.current.map((r) => link(r.source)).join(', ') : 'Not found by source scanner'} |`);
+      lines.push(`- **${route.method}** ${url(API, route.path)}  `,
+        `  ${cell(route.operationId)}${route.summary ? ` — ${cell(route.summary)}` : ''}  `,
+        `  Source match: ${match ? match.current.map((r) => link(r.source)).join(', ') : 'Not found by source scanner'}`, '');
     }
     lines.push('');
   }
   lines.push('## Additional backend APIs declared in source', '',
     '**These operations are absent from the captured deployed Swagger.** They may be raw Express routes without OpenAPI contracts, newer source contracts, or conditionally composed capabilities. They are included here so the catalogue does not silently omit them; this section does not claim they are deployed or Swagger-documented.', '',
-    '| Method | API URL | Declaration | Source |', '| --- | --- | --- | --- |');
+    baseUrl(API), '');
+  let previousGroup;
   for (const route of missing.sort((a, b) => sort(`${a.path} ${a.method}`, `${b.path} ${b.method}`))) {
+    const group = '/' + route.path.split('/').filter(Boolean).slice(0, route.path.startsWith('/api/') ? 2 : 1).join('/');
+    if (group !== previousGroup) {
+      lines.push(`### Source routes: ${group}`, '');
+      previousGroup = group;
+    }
     for (const occurrence of route.current) {
       const path = occurrence.declaredPath.replace(/:([A-Za-z_$][\w$]*)/g, '{$1}');
-      lines.push(`| ${route.method} | ${url(API, path)} | ${occurrence.kind === 'contract' ? 'Route contract; absent from deployed Swagger' : 'Raw route; absent from deployed Swagger'} | ${link(occurrence.source)} |`);
+      lines.push(`- **${route.method}** ${url(API, path)}  `,
+        `  ${occurrence.kind === 'contract' ? 'Route contract' : 'Raw route'} · ${link(occurrence.source)}`, '');
     }
   }
   lines.push('', 'See [Business Partner field extensibility and 360 aggregation](field-extensibility-and-360-aggregation.md) for the aggregation and security model.', '');

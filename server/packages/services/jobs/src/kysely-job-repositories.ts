@@ -1,3 +1,4 @@
+import { JobScheduleNotFoundError, JobScheduleConflictError } from "@athyper/server-contract-jobs";
 import type { JobEnvelope, JobExecutionCoordinate, JobExecutionFailure, JobExecutionIdentity, JobExecutionResult, JobPayload, JobPayloadSchema, JobSubject } from "@athyper/server-contract-jobs";
 import type { TransactionActor } from "@athyper/server-foundation/transaction";
 import { sql, type Kysely, type Transaction } from "kysely";
@@ -91,29 +92,31 @@ export function createKyselyJobExecutionStore(
         ...(input.tenantId ? { tenantId: input.tenantId } : {}),
         principalId: input.principalId,
       }, async (transaction) => {
+        const persistedKey = await resolvePersistedExecutionKey(transaction, input.tenantId, input.queue, input.jobId, input.executionKey);
         const metadata = executionMetadata(input.jobId, input.queue, input.name, input.subject, input.payloadSchema);
         const result = await sql<{ id: string }>`
           INSERT INTO ops.job_execution
             (tenant_id,execution_key,job_code,job_type,status,attempt_no,max_attempts,
              input_payload,scheduled_at,metadata,created_by)
-          VALUES (${input.tenantId ?? null}::uuid,${input.executionKey},${jobCode(input.queue,input.name,input.payloadSchema)},
+          VALUES (${input.tenantId ?? null}::uuid,${persistedKey},${jobCode(input.queue,input.name,input.payloadSchema)},
              ${input.name},'queued',1,${input.maxAttempts},${JSON.stringify(input.data)}::jsonb,
              ${input.enqueuedAt}::timestamptz,${JSON.stringify(metadata)}::jsonb,${input.principalId}::uuid)
           ON CONFLICT (tenant_id,execution_key) DO UPDATE SET
              max_attempts=GREATEST(ops.job_execution.max_attempts,EXCLUDED.max_attempts),
              updated_at=now(),updated_by=EXCLUDED.created_by
           RETURNING id`.execute(transaction);
-        return { executionId: requiredRow(result.rows[0]).id, executionKey: input.executionKey };
+        return { executionId: requiredRow(result.rows[0]).id, executionKey: persistedKey };
       });
     },
     async recordStarted(job) {
       const coordinate = requiredCoordinate(job);
       await withCoordinate(transactions, coordinate, async (transaction) => {
+        const persistedKey = await resolvePersistedExecutionKey(transaction, coordinate.tenantId, job.queue, job.idempotencyKey ?? job.id, executionKey(job));
         await sql`
           INSERT INTO ops.job_execution
             (tenant_id,execution_key,job_code,job_type,status,attempt_no,max_attempts,
              input_payload,started_at,metadata,created_by)
-          VALUES (${coordinate.tenantId ?? null}::uuid,${executionKey(job)},${jobCode(job.queue,job.name,job.payloadSchema)},
+          VALUES (${coordinate.tenantId ?? null}::uuid,${persistedKey},${jobCode(job.queue,job.name,job.payloadSchema)},
              ${job.name},'running',${job.attempt},${job.maxAttempts},${JSON.stringify(job.data)}::jsonb,
              now(),${JSON.stringify(executionMetadata(job.id,job.queue,job.name,job.subject,job.payloadSchema))}::jsonb,
              ${coordinate.principalId}::uuid)
@@ -147,7 +150,7 @@ export function createKyselyJobAdministrationStore(
     async load(request) {
       return withCoordinate(transactions, request.execution, async (transaction) => {
         const result = await sql<Record<string, unknown>>`
-          SELECT id,execution_key,job_type,max_attempts,input_payload,metadata
+          SELECT id,execution_key,job_type,attempt_no,max_attempts,input_payload,metadata
           FROM ops.job_execution
           WHERE id=${request.executionId}::uuid
             AND tenant_id IS NOT DISTINCT FROM ${request.execution.tenantId ?? null}::uuid
@@ -163,6 +166,9 @@ export function createKyselyJobAdministrationStore(
           name: stringValue(row["job_type"], "job_type"),
           data: objectValue(row["input_payload"]),
           maxAttempts: Math.max(1, numberValue(row["max_attempts"], 1)),
+          attempt: numberValue(row["attempt_no"], 1),
+          ...(metadata["subject"] ? { subject: objectValue(metadata["subject"]) as unknown as JobSubject } : {}),
+          ...(metadata["payloadSchema"] ? { payloadSchema: objectValue(metadata["payloadSchema"]) as unknown as JobPayloadSchema } : {}),
         };
       });
     },
@@ -195,6 +201,7 @@ export function createKyselyJobAdministrationStore(
               updated_at=now(),updated_by=${input.request.execution.principalId}::uuid
             WHERE id=${input.request.executionId}::uuid
               AND tenant_id IS NOT DISTINCT FROM ${input.request.execution.tenantId ?? null}::uuid
+              AND attempt_no=${input.expectedAttempt ?? -1}
               AND status IN ('failed','dead_letter','timed_out','cancelled')
           `.execute(transaction);
         }
@@ -261,7 +268,7 @@ export function createKyselyJobGovernanceStore(transactions: JobTransactionCoord
         const schedule = scheduleRow(requiredRow(result.rows[0]));
         await recordScheduleChange(transaction, input.execution, schedule.id, "created", input.reason);
         return schedule;
-      });
+      }).catch(scheduleWriteError);
     },
     async updateSchedule(input) {
       return withCoordinate(transactions, input.execution, async (transaction) => {
@@ -272,16 +279,22 @@ export function createKyselyJobGovernanceStore(transactions: JobTransactionCoord
             payload_template=${JSON.stringify(value.payloadTemplate)}::jsonb,updated_at=now(),updated_by=${input.execution.principalId}::uuid
           WHERE id=${input.scheduleId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.execution.tenantId ?? null}::uuid
           RETURNING id,code,name,handler_type,cron_expression,timezone,target_queue,payload_template,is_enabled,next_run_at`.execute(transaction);
-        const schedule = scheduleRow(requiredRow(result.rows[0]));
+        const schedule = scheduleRow(requiredScheduleRow(result.rows[0]));
         await recordScheduleChange(transaction, input.execution, schedule.id, "updated", input.reason);
         return schedule;
-      });
+      }).catch(scheduleWriteError);
     },
     async deactivateSchedule(input) {
       await withCoordinate(transactions, input.execution, async (transaction) => {
         const result = await sql<{ id: string }>`UPDATE control.cron_schedule SET is_enabled=false,updated_at=now(),updated_by=${input.execution.principalId}::uuid
           WHERE id=${input.scheduleId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.execution.tenantId ?? null}::uuid AND is_enabled RETURNING id`.execute(transaction);
-        const row = requiredRow(result.rows[0]);
+        const row = result.rows[0];
+        if (!row) {
+          const existing = await sql<{ id: string }>`SELECT id FROM control.cron_schedule
+            WHERE id=${input.scheduleId}::uuid AND tenant_id IS NOT DISTINCT FROM ${input.execution.tenantId ?? null}::uuid`.execute(transaction);
+          requiredScheduleRow(existing.rows[0]);
+          return; // Already inactive: idempotent success without duplicate audit evidence.
+        }
         await recordScheduleChange(transaction, input.execution, row.id, "deactivated", input.reason);
       });
     },
@@ -310,6 +323,7 @@ async function recordTerminal(
   result: Readonly<Record<string, unknown>> | undefined,
   failure: JobExecutionFailure | undefined,
 ): Promise<void> {
+  const persistedKey = await resolvePersistedExecutionKey(transaction, coordinate.tenantId, job.queue, job.idempotencyKey ?? job.id, executionKey(job));
   const updated = await sql<{ id: string; started_at: Date; duration_ms: number }>`
     UPDATE ops.job_execution SET
       status=${status},attempt_no=${job.attempt},max_attempts=${job.maxAttempts},
@@ -320,7 +334,7 @@ async function recordTerminal(
       duration_ms=GREATEST(0,(extract(epoch FROM (now()-COALESCE(started_at,created_at)))*1000)::bigint),
       updated_at=now(),updated_by=${coordinate.principalId}::uuid
     WHERE tenant_id IS NOT DISTINCT FROM ${coordinate.tenantId ?? null}::uuid
-      AND execution_key=${executionKey(job)}
+      AND execution_key=${persistedKey}
     RETURNING id,COALESCE(started_at,created_at) AS started_at,duration_ms`.execute(transaction);
   const row = requiredRow(updated.rows[0]);
   await sql`
@@ -363,7 +377,7 @@ function requiredCoordinate(job: JobEnvelope): JobExecutionCoordinate {
 }
 
 function executionKey(job: JobEnvelope): string {
-  return job.idempotencyKey ?? job.id;
+  return job.executionKey ?? job.idempotencyKey ?? job.id;
 }
 
 function jobCode(queue: string, name: string, schema?: JobPayloadSchema): string {
@@ -419,4 +433,28 @@ function dateTime(value: unknown): string {
 function requiredRow<T>(row: T | undefined): T {
   if (!row) throw new Error("Job execution row was not returned");
   return row;
+}
+
+function requiredScheduleRow<T>(row: T | undefined): T {
+  if (!row) throw new JobScheduleNotFoundError();
+  return row;
+}
+
+function scheduleWriteError(error: unknown): never {
+  if (error && typeof error === "object" && "code" in error && error.code === "23505"
+    && "constraint" in error && error.constraint === "cron_schedule_code_uq") {
+    throw new JobScheduleConflictError();
+  }
+  throw error;
+}
+
+/** Keep pre-upgrade executions on their existing row while new jobs use queue-qualified keys. */
+async function resolvePersistedExecutionKey(transaction: JobTransaction, tenantId: string | undefined, queue: string, jobId: string, desiredKey: string): Promise<string> {
+  if (desiredKey === jobId) return desiredKey;
+  const result = await sql<{ execution_key: string }>`SELECT execution_key FROM ops.job_execution
+    WHERE tenant_id IS NOT DISTINCT FROM ${tenantId ?? null}::uuid
+      AND execution_key IN (${desiredKey}, ${jobId})
+      AND metadata->>'queue'=${queue} AND metadata->>'jobId'=${jobId}
+    ORDER BY (execution_key=${desiredKey}) DESC LIMIT 1`.execute(transaction);
+  return result.rows[0]?.execution_key ?? desiredKey;
 }

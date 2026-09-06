@@ -127,7 +127,7 @@ export interface ExperiencePlaneRepository {
   readNetworkAccounts(context: VerifiedRequestContext): Promise<readonly ExperienceNetworkAccountRecord[]>;
   readLocalePolicy?(context: VerifiedRequestContext): Promise<ExperienceLocalePolicyRecord>;
   updateLocalePolicy?(context: VerifiedRequestContext, policy: Omit<ExperienceLocalePolicyRecord,"revision">): Promise<ExperienceLocalePolicyRecord>;
-  updatePrincipalLocale?(context: VerifiedRequestContext, localeCode: string): Promise<void>;
+  updatePrincipalLocale?(context: VerifiedRequestContext, localeCode: string, expectedPolicyRevision: string): Promise<void>;
   saveSurfaceDraft?(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string; layer: "shared" | "tenant"; definition: Readonly<Record<string, unknown>>; contentHash: string; source: "human" | "atlas"; expectedContentHash?: string }>): Promise<ExperienceSurfaceReleaseRecord>;
   listSurfaceReleases?(context: VerifiedRequestContext, input: Readonly<{ targetPlane: "studio" | "neon" | "mesh"; surfaceKey: string }>): Promise<readonly ExperienceSurfaceReleaseRecord[]>;
   rollbackSurfaceRelease?(context: VerifiedRequestContext, releaseId: string): Promise<ExperienceSurfaceReleaseRecord | undefined>;
@@ -145,8 +145,10 @@ export type ExperienceRepositoryProvider = ExactPlaneRepositoryProvider<Experien
 
 export type ExperienceInvalidationKind = "profile" | "catalog" | "plan" | "flag" | "membership" | "authorization";
 export interface ExperienceCache {
+  /** Invalidation generation used to reject stale in-flight cache writes. */
+  readonly generation?: number;
   get(key: string): Promise<unknown> | unknown;
-  set(key: string, value: unknown, tags: readonly string[]): Promise<void> | void;
+  set(key: string, value: unknown, tags: readonly string[], expectedGeneration?: number): Promise<void> | void;
   invalidate(tags: readonly string[]): Promise<void> | void;
 }
 
