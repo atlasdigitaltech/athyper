@@ -5658,3 +5658,38 @@ COMMENT ON TABLE document.external_service_entry IS 'DEPRECATED compatibility ag
 COMMENT ON TABLE document.external_service_entry_line IS 'DEPRECATED compatibility lines. New external-workforce acceptance uses document.service_sheet_line and document.service_sheet_source_allocation.';
 COMMENT ON TABLE document.external_workforce_invoice_allocation IS 'DEPRECATED compatibility allocation. New invoice matching binds purchase-invoice lines to document.service_sheet_line.';
 COMMENT ON TABLE document.service_sheet_source_allocation IS 'Append-only acceptance/reversal evidence connecting an approved external claim or SOW item to the canonical P2P service-sheet line.';
+
+-- Immutable explicit choices over a server-derived three-way comparison.
+CREATE TABLE document.mesh_profile_change_resolution (
+    id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    projection_id uuid NOT NULL,
+    baseline_snapshot_id uuid NOT NULL,
+    incoming_snapshot_id uuid NOT NULL,
+    business_partner_id uuid NOT NULL,
+    operating_organization_id uuid NOT NULL,
+    expected_target_version bigint NOT NULL CHECK (expected_target_version > 0),
+    preview_fingerprint text NOT NULL CHECK (preview_fingerprint ~ '^[a-f0-9]{64}$'),
+    preview jsonb NOT NULL CHECK (jsonb_typeof(preview) = 'object'),
+    decisions jsonb NOT NULL CHECK (jsonb_typeof(decisions) = 'object'),
+    proposed_values jsonb NOT NULL CHECK (jsonb_typeof(proposed_values) = 'object'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 8 AND 180),
+    created_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    UNIQUE (tenant_id, id),
+    UNIQUE (tenant_id, idempotency_key),
+    CHECK (
+        pg_column_size(preview) <= 65536
+        AND pg_column_size(decisions) <= 4096
+        AND pg_column_size(proposed_values) <= 32768
+    )
+);
+
+CREATE TABLE document.mesh_profile_change_case (
+    tenant_id uuid NOT NULL,
+    resolution_id uuid NOT NULL,
+    entity_case_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    PRIMARY KEY (tenant_id, resolution_id),
+    UNIQUE (tenant_id, entity_case_id)
+);

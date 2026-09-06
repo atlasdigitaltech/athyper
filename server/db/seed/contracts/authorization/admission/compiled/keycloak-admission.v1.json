@@ -1,7 +1,7 @@
 {
   "contractVersion": "athyper.authorization.keycloak-admission.v1",
   "realm": "athyper",
-  "source": "../../../../stack/config/iam/realm-athyper-demosetup.json",
+  "source": "../../../../deploy/config/iam/realm-athyper-demosetup.json",
   "sourceSha256": "005b25bc20239f73b0e814a1ddb63263fe93c78db2c7f2ed09070b3d9ee4402a",
   "enabledSubjectCount": 161,
   "mappedSubjectCount": 161,

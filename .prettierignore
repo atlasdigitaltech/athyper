@@ -32,15 +32,12 @@ governance/policy/reports/**
 
 # IAM config — Keycloak realm exports, login theme resources, FTL templates:
 # externally-managed artifacts, not app source. Substring-validated, not byte.
-stack/config/iam/**
+deploy/config/iam/**
 
 # Prisma
 **/prisma/migrations
 **/prisma/generated
 **/.prisma/**
-
-# Traefik dynamic configuration — non-standard YAML dialect Prettier cannot parse
-stack/config/gateway/**
 
 # Design-system stylesheets are authored in a deliberate compact form (they read
 # as token systems, not verbose CSS) and enforced by policy:style-tokens. Prettier

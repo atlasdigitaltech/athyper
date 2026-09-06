@@ -1,5 +1,6 @@
 "use client";
 
+import { parseInstant } from "@athyper/platform-temporal";
 export * from "./boundaries";
 export * from "./error-taxonomy";
 export { FeatureGate, PermissionGate, RouteGuard, classifyServerDenial, runGuardedMutation, useAccessSnapshot, useHasAnyPermission, useHasPermission, useIsFeatureEnabled } from "@athyper/platform-shell-runtime";
@@ -24,6 +25,9 @@ const ExperienceRevisionContext = createContext<Readonly<{ state: ExperienceBoot
 const ApiClientContext = createContext<HttpClient | undefined>(undefined);
 const PermissionContext = createContext<ReadonlySet<string> | undefined>(undefined);
 const FeatureContext = createContext<Readonly<Record<string, ExperienceFeature>> | undefined>(undefined);
+export interface ApplicationNavigation { push(href: string): void; replace(href: string): void; refresh(): void; }
+const ApplicationNavigationContext = createContext<ApplicationNavigation | undefined>(undefined);
+export function ApplicationNavigationProvider({ navigation, children }: { readonly navigation?: ApplicationNavigation; readonly children: ReactNode }) { return <ApplicationNavigationContext.Provider value={navigation}>{children}</ApplicationNavigationContext.Provider>; }
 
 interface ToastMessage { readonly id: string; readonly title: string; readonly detail?: string; readonly tone: "info" | "success" | "warning" | "danger"; }
 const ToastContext = createContext<Readonly<{ messages: readonly ToastMessage[]; push(message: Omit<ToastMessage, "id">): string; dismiss(id: string): void }> | undefined>(undefined);
@@ -39,6 +43,7 @@ export interface AppFoundationProvidersProps {
   readonly onAuthenticationFailure?: (error: ApiTransportError) => void;
   readonly onBootstrapRevalidation?: (reason: BootstrapRevalidationReason) => void;
   readonly onAccessDiagnostic?: (event: AccessDiagnostic) => void;
+  readonly navigation?: ApplicationNavigation;
   readonly children: ReactNode;
 }
 
@@ -59,13 +64,14 @@ export function AppFoundationProviders(props: AppFoundationProvidersProps) {
           <PlatformQueryProvider client={props.queryClient} dehydratedState={props.dehydratedState}>
             <AccessProvider snapshot={access}><PermissionProvider permissions={bootstrap.permissions}>
               <FeatureProvider features={bootstrap.features}>
-                <ToastProvider><SurfaceStackProvider><ShellStateProvider>
+                <ApplicationNavigationProvider navigation={props.navigation}><ToastProvider><SurfaceStackProvider><ShellStateProvider>
                   <AuthenticationFailureBridge client={props.queryClient} lifecycle={lifecycle} onInvalidated={markInvalidated} onFailure={props.onAuthenticationFailure} />
                   <BootstrapFreshnessBridge session={props.session} onRevalidate={props.onBootstrapRevalidation} />
                   <SessionActivityBridge sessionState={props.session.state} onRevalidate={props.onBootstrapRevalidation} />
+                  <SessionTerminationBridge plane={props.session.plane} />
                   <SessionExpiryWarning />
                   {props.children}
-                </ShellStateProvider></SurfaceStackProvider></ToastProvider>
+                </ShellStateProvider></SurfaceStackProvider></ToastProvider></ApplicationNavigationProvider>
               </FeatureProvider>
             </PermissionProvider></AccessProvider>
           </PlatformQueryProvider>
@@ -154,7 +160,7 @@ function BootstrapFreshnessBridge({ session, onRevalidate }: { readonly session:
   const expiry = useSessionExpiry();
   useEffect(() => {
     if (!onRevalidate) return;
-    const expiresAt = expiry.expiresAt ? Date.parse(expiry.expiresAt) : Number.NaN, delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now() - 60_000) : undefined;
+    const expiresAt = expiry.expiresAt ? parseInstant(expiry.expiresAt) : Number.NaN, delay = Number.isFinite(expiresAt) ? Math.max(0, expiresAt - Date.now() - 60_000) : undefined;
     const timer = delay === undefined ? undefined : window.setTimeout(() => onRevalidate("expiry"), delay);
     const listener = (event: Event) => { const reason = (event as CustomEvent<BootstrapRevalidationReason>).detail; if (["auth_epoch", "context", "experience_revision"].includes(reason)) onRevalidate(reason); };
     window.addEventListener(BOOTSTRAP_REVALIDATE_EVENT, listener);
@@ -166,9 +172,9 @@ function BootstrapFreshnessBridge({ session, onRevalidate }: { readonly session:
 const SESSION_EXPIRY_WARNING_MS = 5 * 60_000;
 const SESSION_TOUCH_INTERVAL_MS = 60_000;
 export interface SessionExpiryWarningTarget { readonly kind: "idle" | "absolute"; readonly expiresAt: string; readonly delayMs: number; }
-export function sessionExpiryWarningDelay(expiresAt: string | undefined, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): number | undefined { const expiry = expiresAt ? Date.parse(expiresAt) : Number.NaN; if (!Number.isFinite(expiry) || expiry <= currentTime) return undefined; return Math.max(0, expiry - currentTime - leadTimeMs); }
+export function sessionExpiryWarningDelay(expiresAt: string | undefined, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): number | undefined { const expiry = expiresAt ? parseInstant(expiresAt) : Number.NaN; if (!Number.isFinite(expiry) || expiry <= currentTime) return undefined; return Math.max(0, expiry - currentTime - leadTimeMs); }
 export function sessionExpiryWarningTarget(expiry: Pick<SessionExpiry, "idleExpiresAt" | "absoluteExpiresAt">, currentTime = Date.now(), leadTimeMs = SESSION_EXPIRY_WARNING_MS): SessionExpiryWarningTarget | undefined {
-  const idle = expiry.idleExpiresAt ? Date.parse(expiry.idleExpiresAt) : Number.NaN, absolute = expiry.absoluteExpiresAt ? Date.parse(expiry.absoluteExpiresAt) : Number.NaN;
+  const idle = expiry.idleExpiresAt ? parseInstant(expiry.idleExpiresAt) : Number.NaN, absolute = expiry.absoluteExpiresAt ? parseInstant(expiry.absoluteExpiresAt) : Number.NaN;
   const candidates = [
     ...(Number.isFinite(idle) && idle > currentTime ? [{ kind: "idle" as const, expiresAt: expiry.idleExpiresAt!, value: idle }] : []),
     ...(Number.isFinite(absolute) && absolute > currentTime ? [{ kind: "absolute" as const, expiresAt: expiry.absoluteExpiresAt!, value: absolute }] : []),
@@ -210,6 +216,22 @@ function SessionActivityBridge({ sessionState, onRevalidate }: { readonly sessio
   return null;
 }
 
+export function sessionActivityChannelName(plane: SanitizedSession["plane"]): string { return `athyper:${plane}:session-activity`; }
+function SessionTerminationBridge({ plane }: { readonly plane: SanitizedSession["plane"] }) {
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+    const channel = new BroadcastChannel(sessionActivityChannelName(plane));
+    channel.addEventListener("message", (event: MessageEvent<unknown>) => {
+      const message = event.data;
+      if (!message || typeof message !== "object" || !("type" in message)) return;
+      if (message.type === "session_probe") channel.postMessage({ type: "session_listener_ready" });
+      if (message.type === "session_terminated") window.location.assign("/logout?reason=signed-out");
+    });
+    return () => channel.close();
+  }, [plane]);
+  return null;
+}
+
 function sessionExpiry(value: Pick<SanitizedSession, "expiresAt" | "idleExpiresAt" | "absoluteExpiresAt">): SessionExpiry { return Object.freeze({ ...(value.expiresAt ? { expiresAt: value.expiresAt } : {}), ...(value.idleExpiresAt ? { idleExpiresAt: value.idleExpiresAt } : {}), ...(value.absoluteExpiresAt ? { absoluteExpiresAt: value.absoluteExpiresAt } : {}) }); }
 function readBrowserCookie(name: string): string | undefined { const prefix = `${name}=`; const value = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(prefix))?.slice(prefix.length); if (!value) return undefined; try { return decodeURIComponent(value); } catch { return undefined; } }
 export function readBrowserCsrfToken(): string | undefined { return typeof document === "undefined" ? undefined : readBrowserCookie("__Host-athyper-csrf") ?? readBrowserCookie("athyper-csrf"); }
@@ -227,6 +249,7 @@ export const usePermissions = () => required(useContext(PermissionContext), "use
 export const usePermission = (code: string) => usePermissions().has(code);
 export const useFeatures = () => required(useContext(FeatureContext), "useFeatures");
 export const useFeature = (code: string) => useFeatures()[code]?.enabled === true;
+export const useApplicationNavigation = () => required(useContext(ApplicationNavigationContext), "useApplicationNavigation");
 export const useToasts = () => required(useContext(ToastContext), "useToasts");
 export const useSurfaceStack = () => required(useContext(SurfaceContext), "useSurfaceStack");
 export const useShellState = () => required(useContext(ShellContext), "useShellState");

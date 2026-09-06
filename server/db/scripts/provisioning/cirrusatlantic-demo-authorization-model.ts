@@ -2,9 +2,72 @@ export const CIRRUSATLANTIC_DEMO_AUTH_CONFIRMATION = "LOCAL-CIRRUSATLANTIC-DEMO-
 export const CIRRUSATLANTIC_TENANT_ID = "44444444-4444-4444-8444-444444444444";
 export const CIRRUSATLANTIC_TENANT_CODE = "cirrusatlantic";
 export const CIRRUSATLANTIC_CONTEXT_PERMISSION = "neon.context.catalog.read";
+export const CIRRUSATLANTIC_OWNER_REVIEWER = Object.freeze({
+  username: "catl.owner" as const,
+  roleCode: "catl.demo.business_partner_case_approver",
+  roleName: "CirrusAtlantic Business Partner Case Approver",
+  permissions: Object.freeze([
+    "neon.relationship.business_partner.read",
+    "neon.relationship.entity_case.read",
+    "neon.relationship.entity_case.decide",
+    "workflow.work_item.read",
+  ]),
+  scope: Object.freeze({
+    kind: "operating_organization" as const,
+    key: "operating_organization:catl.operations",
+    propagation: "subtree" as const,
+  }),
+});
+
+export const CIRRUSATLANTIC_BANK_CHECKER = Object.freeze({
+  username: "catl.owner" as const,
+  roleCode: "catl.demo.business_partner_bank_checker",
+  roleName: "CirrusAtlantic Business Partner Bank Checker",
+  permissions: Object.freeze(["neon.business_partner_bank.verify"]),
+  scope: Object.freeze({
+    kind: "company_code" as const,
+    key: "company_code:catl",
+    propagation: "exact" as const,
+  }),
+});
+
+export const CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK = Object.freeze({
+  relationshipId: "01a07108-f042-78ac-a61f-ac7979663a69",
+  scope: Object.freeze({
+    kind: "network_relationship" as const,
+    key: "network_relationship:01a07108-f042-78ac-a61f-ac7979663a69",
+    propagation: "exact" as const,
+  }),
+  requester: Object.freeze({
+    username: "catl.admin" as const,
+    roleCode: "catl.demo.mesh_account_link_requester",
+    roleName: "CirrusAtlantic MESH Account Link Requester",
+    permissions: Object.freeze([
+      "neon.mesh_account_link.read",
+      "neon.mesh_account_link.request",
+    ]),
+  }),
+  reviewer: Object.freeze({
+    username: "catl.owner" as const,
+    roleCode: "catl.demo.mesh_account_link_reviewer",
+    roleName: "CirrusAtlantic MESH Account Link Reviewer",
+    permissions: Object.freeze([
+      "neon.mesh_account_link.read",
+      "neon.mesh_account_link.decide",
+    ]),
+  }),
+  projectionReader: Object.freeze({
+    username: "catl.owner" as const,
+    roleCode: "catl.demo.business_partner_profile_projection_reader",
+    roleName: "CirrusAtlantic Business Partner Profile Projection Reader",
+    permissions: Object.freeze([
+      "neon.business_partner_profile_projection.read",
+    ]),
+  }),
+});
 
 export type DemoScopeCoordinate = Readonly<{
-  kind: "tenant" | "legal_entity" | "company_code" | "operating_organization";
+  kind: "tenant" | "legal_entity" | "company_code" | "operating_organization" | "network_relationship";
   key: string;
   propagation: "exact" | "subtree";
 }>;
@@ -72,5 +135,13 @@ export function validateCirrusAtlanticDemoAuthorizationModel(): void {
     if (persona.scopes.some((scope) => scope.propagation === ("member_companies" as string))) {
       throw new Error("member_companies propagation is forbidden in the local demo overlay");
     }
+  }
+  if (CIRRUSATLANTIC_OWNER_REVIEWER.permissions.length !== 3 ||
+      !CIRRUSATLANTIC_OWNER_REVIEWER.permissions.includes("neon.relationship.entity_case.decide")) {
+    throw new Error("CirrusAtlantic owner reviewer permissions are incomplete");
+  }
+  if (CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.requester.username === CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.reviewer.username ||
+      CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.scope.propagation !== "exact") {
+    throw new Error("Northwind account-link maker/checker separation is invalid");
   }
 }

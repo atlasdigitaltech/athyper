@@ -153,7 +153,10 @@ export function qualifyDev(repoRoot, dependencies = {}) {
   const qualifiedAt = (dependencies.now ?? (() => new Date().toISOString()))();
   const model = loadModel(repoRoot, "dev");
   const receiptPath = join(runtimeRoot(), "instances", "dev", "receipts", "active.json");
-  const receipt = existsSync(receiptPath) ? JSON.parse(readFileSync(receiptPath, "utf8")) : null;
+  let receipt = null;
+  if (existsSync(receiptPath)) {
+    try { receipt = JSON.parse(readFileSync(receiptPath, "utf8")); } catch { receipt = null; }
+  }
   const revisionResult = run("git", ["rev-parse", "HEAD"], { cwd: repoRoot });
   if (!revisionResult.ok) throw new Error(`Cannot determine source revision: ${revisionResult.stderr || revisionResult.error}`);
   const containers = inspectContainers(run, model.instance.spec.composeProject);

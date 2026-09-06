@@ -22,6 +22,10 @@ BEGIN
 END;
 $$;
 
+CREATE POLICY outbox_jobs_access ON event.outbox
+    FOR ALL TO athyper_jobs_service
+    USING (true) WITH CHECK (true);
+
 ALTER TABLE event.notification_email_suppression ENABLE ROW LEVEL SECURITY;
 ALTER TABLE event.notification_email_suppression FORCE ROW LEVEL SECURITY;
 CREATE POLICY notification_email_suppression_tenant_read ON event.notification_email_suppression FOR SELECT TO athyperapp

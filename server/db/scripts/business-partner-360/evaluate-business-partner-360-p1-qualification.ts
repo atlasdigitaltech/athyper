@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { parseInstant } from "@athyper/platform-temporal";
 
 import { access, readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
@@ -134,7 +135,7 @@ function status(packet: BusinessPartner360P1QualificationPacket, code: EvidenceC
 function groupBy<T>(values: readonly T[], key: (value: T) => string) { const result = new Map<string,T[]>(); for (const value of values) result.set(key(value), [...(result.get(key(value)) ?? []), value]); return result; }
 function sameSet(left: readonly string[], right: readonly string[]) { return left.length === right.length && new Set(left).size === left.length && left.every(value => right.includes(value as never)); }
 function isActor(value: string | null): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._@-]{2,127}$/.test(value); }
-function isTimestamp(value: string | null): value is string { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value)); }
+function isTimestamp(value: string | null): value is string { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(parseInstant(value)); }
 function isEvidenceReference(value: string) { return /^docs\/architecture\/[A-Za-z0-9][A-Za-z0-9._/-]{5,255}$/.test(value); }
 function isDurableReference(value: string | null | undefined): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,255}$/.test(value); }
 function camelToReason(value: string) { return value.replace(/([a-z0-9])([A-Z])/g,"$1_$2").toUpperCase(); }

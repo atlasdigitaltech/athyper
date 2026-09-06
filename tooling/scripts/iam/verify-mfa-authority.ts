@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
+const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 async function source(path: string): Promise<string> {
   return readFile(resolve(root, path), "utf8");
@@ -24,15 +25,15 @@ function forbidText(label: string, contents: string, text: string): void {
 async function main(): Promise<void> {
   const [mfaRoute, realmText, sessionPlane, authBff, authEnvironment, trustedDeviceContract, authFoundationContract, runtimeIam, otpFactory, stepUpCondition] = await Promise.all([
     source("apps/neon/app/api/auth/mfa/verify/route.ts"),
-    source("stack/config/iam/realm-athyper.json"),
+    source("deploy/config/iam/realm-athyper.json"),
     source("packages/platform/iam/session/src/index.ts"),
     source("packages/platform/iam/auth-bff/src/index.ts"),
     source("packages/platform/iam/auth-bff/src/environment.ts"),
     source("tests/contracts/trusted-device-authentication.test.ts"),
     source("tests/contracts/auth-session-foundation.test.ts"),
     source("server/apps/platform-host/src/composition/register-platform.ts"),
-    source("stack/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamPresentationOtpFormFactory.java"),
-    source("stack/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamMfaStepUpCondition.java"),
+    source("deploy/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamPresentationOtpFormFactory.java"),
+    source("deploy/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation/IamMfaStepUpCondition.java"),
   ]);
 
   const routeCode = executable(mfaRoute);
@@ -118,7 +119,7 @@ async function main(): Promise<void> {
     throw new Error("Admin browser flow does not require its second-factor subflow.");
   }
   const adminSecondFactor = realm.authenticationFlows?.find((flow) => flow.alias === "admin-mfa-required second factor");
-  if (!adminSecondFactor?.authenticationExecutions?.some((execution) => execution.authenticator === "athyper-iam-otp-form" && execution.requirement === "ALTERNATIVE" && execution.userSetupAllowed === true)) {
+  if (!adminSecondFactor?.authenticationExecutions?.some((execution) => execution.authenticator === "athyper-iam-otp-form" && execution.requirement === "REQUIRED" && execution.userSetupAllowed === true)) {
     throw new Error("Admin second-factor flow lacks enrollment-aware OTP.");
   }
   if (!realm.requiredActions?.some((action) => action.alias === "CONFIGURE_TOTP" && action.enabled === true)) {

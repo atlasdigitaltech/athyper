@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type {VerifiedRequestContext} from "@athyper/server-contract-auth";
 import type {BusinessPartner360MeshNetworkSummary} from "@athyper/server-contract-master-data";
 
@@ -33,7 +34,7 @@ function validate(value:BusinessPartner360MeshNetworkSummary,relationshipId:stri
   if(!value||value.authorization?.decision!=="granted"||value.authorization.networkRelationshipId!==relationshipId||value.relationship?.id!==relationshipId)throw adapterError("MESH_FORBIDDEN");
   if(!value.authorization.permissionCode.startsWith("mesh."))throw adapterError("MESH_FORBIDDEN");
   if(!Array.isArray(value.provenance)||value.provenance.length<1||value.provenance.some(item=>item.authority!=="mesh"||item.schemaCode!=="mesh.network_summary"||item.schemaVersion!==1||item.fieldSetCode!=="relationship_publication_summary_v1"))throw adapterError("MESH_SCHEMA_INCOMPATIBLE");
-  if(value.provenance.some(item=>!/^[a-f0-9]{64}$/.test(item.hash)||Number.isNaN(Date.parse(item.observedAt))))throw adapterError("MESH_RESPONSE_INVALID");
+  if(value.provenance.some(item=>!/^[a-f0-9]{64}$/.test(item.hash)||Number.isNaN(parseInstant(item.observedAt))))throw adapterError("MESH_RESPONSE_INVALID");
   if(/"(?:person|workforce|employee|employment|bankAccount|accountLast4|payload|evidence)"\s*:/i.test(JSON.stringify(value)))throw adapterError("MESH_RESPONSE_INVALID");
 }
 function code(error:unknown){return error&&typeof error==="object"&&"code" in error?String((error as {code:unknown}).code):undefined;}function adapterError(value:string){return Object.assign(new Error(value),{code:value});}

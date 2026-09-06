@@ -17,6 +17,7 @@
         "properties": {
           "allowedModes": { "type": "array", "items": { "enum": ["internal", "external", "mock", "disabled", "file"] }, "uniqueItems": true },
           "applicationVariable": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" },
+          "companionVariables": { "type": "array", "items": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]+$" }, "uniqueItems": true },
           "healthPath": { "type": "string", "pattern": "^/" },
           "timeoutMs": { "type": "integer", "minimum": 100, "maximum": 120000 },
           "dataOwner": { "type": "string", "minLength": 2 },

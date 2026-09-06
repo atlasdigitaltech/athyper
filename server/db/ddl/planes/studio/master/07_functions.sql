@@ -12,9 +12,12 @@ $function$;
 CREATE OR REPLACE FUNCTION master.trg_guard_canonical_party_graph() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
 DECLARE v_cursor uuid; v_origin uuid; v_seen uuid[]:=ARRAY[]::uuid[];
 BEGIN
-  IF TG_TABLE_NAME='canonical_party' AND NEW.merged_into_party_id IS NOT NULL THEN v_origin:=NEW.id; v_cursor:=NEW.merged_into_party_id;
+  IF TG_TABLE_NAME='canonical_party' THEN
+    IF NEW.merged_into_party_id IS NULL THEN RETURN NEW; END IF;
+    v_origin:=NEW.id; v_cursor:=NEW.merged_into_party_id;
   ELSIF TG_TABLE_NAME='canonical_party_merge' THEN v_origin:=NEW.losing_party_id; v_cursor:=NEW.surviving_party_id;
-  ELSIF TG_TABLE_NAME='canonical_party_relationship' AND NEW.relationship_kind IN ('group_member','subsidiary') AND NEW.status IN ('pending','active') THEN
+  ELSIF TG_TABLE_NAME='canonical_party_relationship' THEN
+    IF NEW.relationship_kind NOT IN ('group_member','subsidiary') OR NEW.status NOT IN ('pending','active') THEN RETURN NEW; END IF;
     IF EXISTS (
       WITH RECURSIVE edge(from_id,to_id) AS (
         SELECT from_party_id,to_party_id FROM master.canonical_party_relationship

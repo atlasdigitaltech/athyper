@@ -124,7 +124,6 @@ function loadEnvDefaults(filePath: string): void {
 
 export function loadProvisionEnvDefaults(): void {
   loadEnvDefaults(join(repoRoot, "server", ".env"));
-  loadEnvDefaults(join(repoRoot, "stack", "env", ".env"));
 
   const secretsRoot = process.env.ATHYPER_SECRETS_ROOT;
   if (secretsRoot) {

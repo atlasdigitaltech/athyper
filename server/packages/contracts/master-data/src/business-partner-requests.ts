@@ -25,6 +25,7 @@ export type BusinessPartnerRequestKind =
   | "assign_organization"
   | "configure_company"
   | "change_bank"
+  | "activate_supplier"
   | "deactivate"
   | "reactivate"
   | "archive";
@@ -52,6 +53,7 @@ export type BusinessPartnerApplicationResultKind =
   | "organization_assigned"
   | "company_configured"
   | "bank_verification_started"
+  | "supplier_activated"
   | "partner_deactivated"
   | "partner_reactivated"
   | "partner_archived";
@@ -284,6 +286,10 @@ export interface CreateBusinessPartnerRequestCommand {
   readonly requestedRole?: BusinessPartnerRequestedRole;
   readonly operatingOrganizationId?: string;
   readonly companyCodeId?: string;
+  /** Release coordinates rendered by the client. Creation fails if the active form changed. */
+  readonly expectedForm?: BusinessPartnerRequestSchemaReference & {
+    readonly releaseId: string;
+  };
   readonly proposedPayload: Readonly<Record<string, unknown>>;
   readonly extensions?: BusinessPartnerRequestExtensions;
 }
@@ -328,14 +334,121 @@ export interface BusinessPartnerRequestValidationResult {
 export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
+  readonly materializationProof?: BusinessPartnerRequestMaterializationProof;
+  readonly onboardingCycle?: BusinessPartnerOnboardingCycleView;
   readonly workflow?: Readonly<{
     requestId: string;
     stageId: string;
     workItemId: string;
     workItemVersion: number;
     workItemStatus: string;
+    ownerPrincipalId: string;
     definition: BusinessPartnerRequestSchemaReference;
+    stages?: readonly BusinessPartnerWorkflowStageView[];
+    activeWorkItems?: readonly BusinessPartnerWorkflowWorkItemView[];
   }>;
+}
+
+export interface BusinessPartnerOnboardingCycleTaskView {
+  readonly id: string;
+  readonly code: "INVITATION" | "REGISTRATION" | "DUPLICATE_REVIEW" | "QUALIFICATION" | string;
+  readonly name: string;
+  readonly status: string;
+  readonly completionMode: "manual" | "system" | "hybrid";
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+  readonly completionEvidence: Readonly<Record<string, unknown>>;
+}
+
+export interface BusinessPartnerOnboardingCycleView {
+  readonly runId: string;
+  readonly code: string;
+  readonly name: string;
+  readonly status: string;
+  readonly template: BusinessPartnerRequestSchemaReference;
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+  readonly tasks: readonly BusinessPartnerOnboardingCycleTaskView[];
+  readonly subjects: readonly Readonly<{
+    role: string;
+    primary: boolean;
+    entityCaseId?: string;
+    externalReference?: string;
+  }>[];
+}
+
+export interface BusinessPartnerWorkflowWorkItemView {
+  readonly id: string;
+  readonly status: string;
+  readonly rowVersion: number;
+  readonly ownerPrincipalId?: string;
+  readonly dueAt?: string;
+  readonly priority: string;
+  readonly decision?: string;
+  readonly decidedAt?: string;
+  readonly decidedBy?: string;
+}
+
+export interface BusinessPartnerWorkflowStageView {
+  readonly id: string;
+  readonly code: string;
+  readonly name: string;
+  readonly stageNo: number;
+  readonly mode: "serial" | "parallel";
+  readonly status: string;
+  readonly outcome?: string;
+  readonly quorum: Readonly<{ kind: "all" | "any" | "count" | "percentage"; value?: number; required: number; eligibleCount: number }>;
+  readonly startedAt?: string;
+  readonly completedAt?: string;
+  readonly dueAt?: string;
+  readonly remindersAt: readonly string[];
+  readonly escalateAt?: string;
+  readonly workItems: readonly BusinessPartnerWorkflowWorkItemView[];
+}
+
+export interface BusinessPartnerRequestMaterializationProof {
+  readonly schema: "athyper.business-partner-materialization-proof/1";
+  readonly materializationId: string;
+  readonly attemptNo: number;
+  readonly status: "succeeded";
+  readonly resultCode: string;
+  readonly sourceSnapshot: BusinessPartnerRequestSnapshotCoordinate;
+  readonly resultSnapshot: BusinessPartnerRequestSnapshotCoordinate;
+  readonly materializer: Readonly<{ code: string; version: string }>;
+  readonly applicationFingerprint: string;
+  readonly completedAt: string;
+  readonly completedBy: string;
+  readonly result: Readonly<{
+    businessPartnerId: string;
+    partnerRole?: "supplier" | "customer";
+    roleId?: string;
+    operatingOrganizationAssignmentId?: string;
+    bankVerificationId?: string;
+  }>;
+  /** Bounded to the 25 newest edges and intentionally excludes snapshot payloads. */
+  readonly lineage: readonly BusinessPartnerRequestLineageCoordinate[];
+}
+
+export interface BusinessPartnerRequestSnapshotCoordinate {
+  readonly snapshotId: string;
+  readonly entityType: string;
+  readonly entityId: string;
+  readonly version: number;
+  readonly payloadHash: string;
+  readonly capturedAt: string;
+}
+
+export interface BusinessPartnerRequestLineageCoordinate {
+  readonly lineageId: string;
+  readonly sourceSnapshotId: string;
+  readonly targetSnapshotId: string;
+  readonly role: string;
+  readonly targetAuthorityType?: string;
+  readonly targetAuthorityId?: string;
+  readonly transformationCode: string;
+  readonly transformationVersion: string;
+  readonly evidenceHash: string;
+  readonly createdAt: string;
 }
 
 export interface ValidateBusinessPartnerRequestCommand {
@@ -357,6 +470,22 @@ export interface BusinessPartnerRequestWorkflowDefinition {
   readonly stageCode: string;
   readonly stageName: string;
   readonly approverPrincipalIds: readonly string[];
+  /** Release 3 pins every configured stage. Legacy fields mirror the first routed stage. */
+  readonly stages?: readonly BusinessPartnerRequestWorkflowStageDefinition[];
+}
+
+export interface BusinessPartnerRequestWorkflowStageDefinition {
+  readonly code: string;
+  readonly name: string;
+  readonly mode: "serial" | "parallel";
+  readonly quorum: Readonly<{ kind: "all" | "any" | "count" | "percentage"; value?: number }>;
+  readonly approverPrincipalIds: readonly string[];
+  readonly routed: boolean;
+  readonly routeEvidence?: Readonly<Record<string, unknown>>;
+  readonly slaMinutes?: number;
+  readonly remindersAtMinutes?: readonly number[];
+  readonly escalateAtMinutes?: number;
+  readonly escalationPrincipalIds?: readonly string[];
 }
 
 export interface BusinessPartnerRequestWorkflow {
@@ -367,6 +496,9 @@ export interface BusinessPartnerRequestWorkflow {
   readonly cycleTaskId?: string;
   readonly definition: BusinessPartnerRequestSchemaReference;
   readonly decisionFingerprint: string;
+  readonly workItemVersion?: number;
+  readonly workItemStatus?: string;
+  readonly ownerPrincipalId?: string;
 }
 
 export interface SubmitBusinessPartnerRequestCommand {
@@ -421,6 +553,7 @@ export interface BusinessPartnerRequestMaterialization {
   readonly supplierId?: string;
   readonly customerId?: string;
   readonly bankVerificationId?: string;
+  readonly activationEvidenceId?: string;
   readonly reasonCode?: string;
   readonly companyProfileId?: string;
   readonly operatingOrganizationAssignmentId?: string;

@@ -2,6 +2,7 @@ import { chromium, firefox } from "@playwright/test";
 import ExcelJS from "exceljs";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 
 const adminPassword = required("KEYCLOAK_ADMIN_PASSWORD");
 const runId = process.env.ACCEPTANCE_RUN_ID?.trim() || new Date().toISOString().replace(/\D/g, "").slice(0, 14);
@@ -56,6 +57,7 @@ try {
     }
     process.stdout.write(`[acceptance] exercising ${plane}\n`);
     const input = planeInput(plane);
+    const chunkedImport = await executeImport(page,input.entityCode,input.scopeCoordinate,variantRow(input.validRow,"chunked"),true,"chunked-json");
     const successful = [];
     for (const format of input.formats) successful.push(await executeStructuredFileImport(page,input.entityCode,input.scopeCoordinate,variantRow(input.validRow,format),format,true));
     const rejected = await executeStructuredFileImport(page,input.entityCode,input.scopeCoordinate,input.invalidRow,input.rejectedFormat,false);
@@ -70,6 +72,7 @@ try {
     evidence.planes[plane] = {
       entityCode: input.entityCode,
       publishedFormats: input.formats,
+      chunkedImport,
       successful,
       rejected,
       exports,
@@ -171,7 +174,7 @@ async function temporarilyUseStudioSsoFlow() {
     const verificationResponse = await context.request.get(`${identityOrigin}/admin/realms/athyper/clients/${encodeURIComponent(client.id)}`, { headers });
     assert(verificationResponse.ok(), `Studio browser flow restoration verification failed: ${verificationResponse.status()}`);
     const restoredClient = await verificationResponse.json();
-    assert(JSON.stringify(restoredClient.authenticationFlowBindingOverrides || {}) === JSON.stringify(originalOverrides), "Studio browser flow restoration did not preserve the mandatory MFA binding");
+    assert(isDeepStrictEqual(restoredClient.authenticationFlowBindingOverrides || {}, originalOverrides), "Studio browser flow restoration did not preserve the mandatory MFA binding");
     process.stdout.write("[acceptance] restored Studio mandatory MFA browser flow\n");
   };
 }

@@ -2,7 +2,7 @@
 /**
  * Temporal discipline (policy gate)
  *
- * Bans direct date-parsing primitives outside @athyper/temporal. The whole
+ * Bans direct date-parsing primitives outside @athyper/platform-temporal. The whole
  * point of the temporal package is that ONE place owns the choice of "how do
  * we interpret this string as a moment in time" â€” every other call site
  * delegates so a silent fix in temporal heals the whole repo.
@@ -14,7 +14,7 @@
  *   - Date.parse(â€¦)
  *
  * Allowlist:
- *   - packages/shared/business-domain/temporal/**           (the owner)
+ *   - packages/platform/foundation/temporal/**              (the owner)
  *   - **\/__tests__/**                      (test fixtures)
  *   - **\/*.test.ts(x)?                     (test files)
  *   - **\/*.spec.ts(x)?
@@ -34,27 +34,23 @@
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = process.cwd();
+const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const QUIET = process.argv.includes("--quiet");
 
 const SCAN_ROOTS = [
-  "apps/neon",
-  "apps/mesh",
-  "apps/studio",
-  "packages/planes/studio",
-  "packages/planes/mesh",
-  "packages/shared",
-  "packages/domain/finance",
-  "server/packages",
+  "apps",
+  "packages",
+  "server",
 ] as const;
 
 const FILE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
 const IGNORE_DIRS = new Set([".git", ".next", ".turbo", "coverage", "dist", "node_modules"]);
 
 const ALLOWLIST = [
-  /^packages\/shared\/temporal\//,
+  /^packages\/platform\/foundation\/temporal\//,
   /\/__tests__\//,
   /\.(test|spec)\.(ts|tsx|mts|cts)$/,
   /^packages\/product-deprecated\//, // legacy code, frozen for reference per project policy
@@ -70,12 +66,12 @@ const RULES: Rule[] = [
   {
     name: "new-date-string-literal",
     pattern: /\bnew\s+Date\s*\(\s*(["'`])/g,
-    description: "new Date('string') parsing is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/temporal.",
+    description: "new Date('string') parsing is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
   },
   {
     name: "date-parse",
     pattern: /\bDate\s*\.\s*parse\s*\(/g,
-    description: "Date.parse() is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/temporal.",
+    description: "Date.parse() is timezone-ambiguous. Use parseInstant / parseBusinessDate from @athyper/platform-temporal.",
   },
 ];
 
@@ -160,7 +156,7 @@ function main(): void {
   for (const v of violations) {
     console.error(`  ${v.file}:${v.line}:${v.column}  ${v.rule.name}  ${v.match.trim()}`);
   }
-  console.error("\nFix by importing from @athyper/temporal (parseInstant / parseBusinessDate / parseZonedDateTime).");
+  console.error("\nFix by importing from @athyper/platform-temporal (parseInstant / parseBusinessDate).");
   console.error("If genuinely unavoidable, suppress with: // eslint-disable-next-line no-direct-date-parse -- reason: <why>");
   process.exit(1);
 }

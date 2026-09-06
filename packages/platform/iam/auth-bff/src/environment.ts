@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 import { createRedisClient, createRedisSessionStore, hashOpaqueSessionId, type SessionBinding, type SessionStore } from "@athyper/platform-iam-session-store";
@@ -162,7 +163,7 @@ async function verifyTrustedDevice(input: { plane: SessionPlane; realmKey: strin
   if (response.status === 403) return { active: false };
   if (!response.ok) throw new AuthFlowError("auth.trusted_device_unavailable", 503, "Trusted-device verification is unavailable");
   const value = await response.json() as { active?: unknown; expiresAt?: unknown; tenantId?: unknown; principalId?: unknown };
-  const expiresAt = typeof value.expiresAt === "string" ? Date.parse(value.expiresAt) : Number.NaN;
+  const expiresAt = typeof value.expiresAt === "string" ? parseInstant(value.expiresAt) : Number.NaN;
   return value.active === true && value.tenantId === input.tenantId && value.principalId === input.principalId && Number.isFinite(expiresAt) && expiresAt > input.effectiveAt ? { active: true, expiresAt } : { active: false };
 }
 async function registerTrustedDevice(input: { plane: SessionPlane; realmKey: string; tenantId: string; principalId: string; authEpoch: number; deviceTokenHash: string; sealedTokens: string; ttlMs: number; userAgent?: string }, keyRing: EncryptionKeyRing): Promise<{ expiresAt: number }> {
@@ -173,7 +174,7 @@ async function registerTrustedDevice(input: { plane: SessionPlane; realmKey: str
   if (response.status === 403) throw new AuthFlowError("auth.access_denied", 403, "Trusted-device enrollment context was rejected");
   if (!response.ok) throw new AuthFlowError("auth.trusted_device_unavailable", 503, "Trusted-device enrollment is unavailable");
   const value = await response.json() as { expiresAt?: unknown; tenantId?: unknown; principalId?: unknown };
-  const expiresAt = typeof value.expiresAt === "string" ? Date.parse(value.expiresAt) : Number.NaN;
+  const expiresAt = typeof value.expiresAt === "string" ? parseInstant(value.expiresAt) : Number.NaN;
   if (value.tenantId !== input.tenantId || value.principalId !== input.principalId || !Number.isFinite(expiresAt)) throw new AuthFlowError("auth.trusted_device_contract_invalid", 503, "Trusted-device enrollment returned an invalid contract");
   return { expiresAt };
 }

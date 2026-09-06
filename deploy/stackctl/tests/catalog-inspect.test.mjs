@@ -15,3 +15,9 @@ test("every Stack v2 native service has exactly one workload disposition", () =>
     "Workload set shared-observability is partial.", "Workload set shared-monitoring is design-required.",
   ]);
 });
+
+test("invalid workload YAML becomes a reconciliation blocker", () => {
+  const report = inspectCatalog(defaultRepoRoot, { readYaml: () => { throw new Error("truncated YAML"); } });
+  assert.equal(report.status, "implementation-in-progress");
+  assert.match(report.blockers[0], /Workload-set catalog is invalid: truncated YAML/u);
+});

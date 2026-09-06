@@ -40,13 +40,49 @@ END $$;
 
 CREATE OR REPLACE FUNCTION document.fn_validate_entity_case_payload(p_contract jsonb,p_payload jsonb)
 RETURNS text[] LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $$
-DECLARE s jsonb:=COALESCE(p_contract->'jsonSchema',p_contract->'schema',p_contract);k text;definition jsonb;errors text[]:='{}';actual text;expected text;
+DECLARE
+ s jsonb:=COALESCE(p_contract->'jsonSchema',p_contract->'schema',p_contract);
+ k text; definition jsonb; errors text[]:='{}'; actual text; expected text; value jsonb;
 BEGIN
  IF p_payload IS NULL OR jsonb_typeof(p_payload)<>'object' OR pg_column_size(p_payload)>262144 THEN RETURN ARRAY['PAYLOAD_OBJECT_OR_SIZE_INVALID']; END IF;
- IF jsonb_typeof(s)<>'object' THEN RETURN ARRAY['CONTRACT_SCHEMA_INVALID']; END IF;
- IF jsonb_typeof(s->'required')='array' THEN FOR k IN SELECT jsonb_array_elements_text(s->'required') LOOP IF NOT p_payload?k THEN errors:=errors||('MISSING_REQUIRED:'||k); END IF; END LOOP; END IF;
- IF s->>'additionalProperties'='false' AND jsonb_typeof(s->'properties')='object' THEN FOR k IN SELECT jsonb_object_keys(p_payload) LOOP IF NOT (s->'properties')?k THEN errors:=errors||'UNKNOWN_PROPERTY:'||k; END IF; END LOOP; END IF;
- IF jsonb_typeof(s->'properties')='object' THEN FOR k,definition IN SELECT key,value FROM jsonb_each(s->'properties') LOOP IF p_payload?k AND definition?'type' THEN actual:=jsonb_typeof(p_payload->k);expected:=definition->>'type';IF NOT(actual=expected OR expected='number' AND actual='number' OR expected='integer' AND actual='number' AND (p_payload->>k)::numeric=trunc((p_payload->>k)::numeric)) THEN errors:=errors||'TYPE_MISMATCH:'||k;END IF;END IF;END LOOP;END IF;
+ IF s IS NULL OR jsonb_typeof(s)<>'object' THEN RETURN ARRAY['CONTRACT_SCHEMA_INVALID']; END IF;
+ IF jsonb_typeof(s->'required')='array' THEN
+  FOR k IN SELECT jsonb_array_elements_text(s->'required') LOOP
+   IF NOT p_payload?k THEN errors:=array_append(errors,'MISSING_REQUIRED:'||k); END IF;
+  END LOOP;
+ END IF;
+ IF s->>'additionalProperties'='false' AND jsonb_typeof(s->'properties')='object' THEN
+  FOR k IN SELECT jsonb_object_keys(p_payload) LOOP
+   IF NOT (s->'properties')?k THEN errors:=array_append(errors,'UNKNOWN_PROPERTY:'||k); END IF;
+  END LOOP;
+ END IF;
+ IF jsonb_typeof(s->'properties')='object' THEN
+  FOR k,definition IN SELECT entry.key,entry.value FROM jsonb_each(s->'properties') entry LOOP
+   IF NOT p_payload?k THEN CONTINUE; END IF;
+   value:=p_payload->k;actual:=jsonb_typeof(value);expected:=definition->>'type';
+   IF definition?'type' THEN
+    IF NOT(actual=expected OR expected='integer' AND actual='number') THEN
+     errors:=array_append(errors,'TYPE_MISMATCH:'||k); CONTINUE;
+    END IF;
+    IF expected='integer' AND (value::text)::numeric<>trunc((value::text)::numeric) THEN
+     errors:=array_append(errors,'TYPE_MISMATCH:'||k); CONTINUE;
+    END IF;
+   END IF;
+   IF definition?'enum' THEN
+    IF jsonb_typeof(definition->'enum')<>'array' THEN RETURN ARRAY['CONTRACT_SCHEMA_INVALID']; END IF;
+    IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(definition->'enum') AS options(enum_value) WHERE options.enum_value=value) THEN
+     errors:=array_append(errors,'ENUM_MISMATCH:'||k);
+    END IF;
+   END IF;
+   IF actual='string' THEN
+    IF definition?'minLength' AND char_length(p_payload->>k)<(definition->>'minLength')::integer THEN errors:=array_append(errors,'MIN_LENGTH:'||k); END IF;
+    IF definition?'maxLength' AND char_length(p_payload->>k)>(definition->>'maxLength')::integer THEN errors:=array_append(errors,'MAX_LENGTH:'||k); END IF;
+   ELSIF actual='number' THEN
+    IF definition?'minimum' AND (value::text)::numeric<(definition->>'minimum')::numeric THEN errors:=array_append(errors,'MINIMUM:'||k); END IF;
+    IF definition?'maximum' AND (value::text)::numeric>(definition->>'maximum')::numeric THEN errors:=array_append(errors,'MAXIMUM:'||k); END IF;
+   END IF;
+  END LOOP;
+ END IF;
  RETURN errors;
 EXCEPTION WHEN others THEN RETURN ARRAY['CONTRACT_SCHEMA_INVALID'];
 END $$;
@@ -54,7 +90,7 @@ END $$;
 CREATE OR REPLACE FUNCTION document.trg_guard_entity_case_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
 DECLARE execution uuid:=NULLIF(current_setting('app.entity_case_command_execution_id',true),'')::uuid;tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);
 BEGIN
- IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.backfill.business_partner_request') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
+ IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.backfill.business_partner_request') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
 END $$;
 
 CREATE OR REPLACE FUNCTION document.command_entity_case_lifecycle(
@@ -79,7 +115,7 @@ BEGIN
  next_version:=current.row_version+1;
  IF p_action='submit' THEN
   IF current.status<>'draft' OR task.status NOT IN('pending','ready','in_progress') THEN RAISE EXCEPTION 'Entity case or cycle task is not submittable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
-  IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status='published'),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
+  IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
   next_status:='submitted';lineage_role:='submitted_from';
  ELSE
   IF current.status NOT IN('submitted','in_review') OR p_actor_id=current.created_by OR task.status NOT IN('in_progress','ready') OR (task.owner_principal_id IS NOT NULL AND task.owner_principal_id<>p_actor_id) OR NOT EXISTS(SELECT 1 FROM governance.cycle_subject s WHERE s.tenant_id=p_tenant_id AND s.cycle_run_id=p_cycle_run_id AND s.cycle_task_id=p_cycle_task_id AND s.entity_case_id=p_case_id AND s.is_primary) THEN RAISE EXCEPTION 'Entity case decision violates workflow or maker-checker authority' USING ERRCODE='insufficient_privilege';END IF;

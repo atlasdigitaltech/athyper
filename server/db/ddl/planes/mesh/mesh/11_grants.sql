@@ -106,7 +106,7 @@ BEGIN
             mesh.bank_account_disclosure_event
         TO athyperapp;
         GRANT SELECT, INSERT ON mesh.network_account_profile_publication,mesh.network_account_profile_publication_event TO athyperapp;
-        GRANT EXECUTE ON FUNCTION mesh.profile_publication_payload_is_safe(jsonb),mesh.profile_publication_is_visible(uuid) TO athyperapp;
+        GRANT EXECUTE ON FUNCTION mesh.profile_publication_payload_is_safe(jsonb),mesh.profile_publication_is_visible(uuid),mesh.lock_profile_publication_relationship(uuid,uuid,uuid) TO athyperapp;
         GRANT INSERT, UPDATE ON mesh.bank_account TO athyperapp;
         GRANT SELECT (
             id, tenant_id, network_account_id, code, name, bank_party_id,
@@ -2135,3 +2135,12 @@ GRANT EXECUTE ON FUNCTION mesh.command_retrieve_bank_protected_token(uuid,intege
 
 COMMENT ON TABLE mesh.bank_account_retrieval_evidence IS 'Immutable purpose-bound retrieval audit. Contains token hashes and authorization coordinates only, never a token or bank identifier.';
 COMMENT ON TABLE mesh.canonical_party_correlation_case IS 'Stewarded conflicting correlation claim. Opening a case grants no access and never overwrites the current canonical-party coordinate.';
+
+REVOKE ALL ON mesh.business_partner_delivery_acknowledgement FROM PUBLIC;
+REVOKE ALL ON FUNCTION mesh.trg_delivery_acknowledgement_immutable() FROM PUBLIC;
+GRANT SELECT ON mesh.business_partner_delivery_acknowledgement TO athyperapp;
+GRANT USAGE ON SCHEMA mesh TO athyper_jobs_service;
+GRANT SELECT, INSERT ON mesh.business_partner_delivery_acknowledgement TO athyper_jobs_service;
+
+REVOKE ALL ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) TO athyperapp, athyperadmin;

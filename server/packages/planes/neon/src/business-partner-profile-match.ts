@@ -1,3 +1,4 @@
+import { compareProfileChange, resolveProfileChange, type ProfileChangePreview } from "./business-partner-profile-change.js";
 import { createHash } from "node:crypto";
 import { sql, type Transaction } from "kysely";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
@@ -15,6 +16,10 @@ export interface ProfileMatchCandidate { readonly businessPartnerId: string; rea
 export interface ProfileMatch { readonly id: string; readonly snapshotId: string; readonly projectionId: string; readonly sourcePayloadHash: string; readonly sourcePublicationVersion: number; readonly operatingOrganizationId: string; readonly companyCodeId?: string; readonly candidateBusinessPartnerId?: string; readonly algorithm: { readonly code: string; readonly version: number; readonly hash: string }; readonly rankedCandidates: readonly ProfileMatchCandidate[]; readonly fieldDiff: readonly Readonly<Record<string, unknown>>[]; readonly diffHash: string; readonly createdAt: string; readonly replayed: boolean; }
 
 export interface BusinessPartnerProfileMatchRepository {
+  resolutionByKey(tenantId: string, key: string, tx: Tx): Promise<Row | null>;
+  saveResolution(input: {tenantId:string;projectionId:string;orgId:string;preview:ProfileChangePreview;decisions:Readonly<Record<string,"source"|"local">>;proposed:Row;key:string;principalId:string}, tx:Tx): Promise<Row>;
+  changeBaseline(tenantId: string, projectionId: string, businessPartnerId: string, tx: Tx): Promise<{snapshotId: string; payload: Row; paths: readonly string[]} | null>;
+  currentPartner(tenantId: string, businessPartnerId: string, operatingOrganizationId: string, tx: Tx): Promise<{version: number; fields: Row} | null>;
   source(tenantId: string, snapshotId: string, tx: Tx): Promise<{ projectionId: string; publicationId: string; publicationVersion: number; payloadHash: string; payload: Readonly<Record<string, unknown>> } | null>;
   candidates(tenantId: string, operatingOrganizationId: string, tx: Tx): Promise<readonly CandidateRow[]>;
   matchByKey(tenantId: string, key: string, tx: Tx): Promise<Row | null>;
@@ -30,7 +35,42 @@ interface MatchInsert { tenantId: string; projectionId: string; snapshotId: stri
 interface AcceptanceInsert { tenantId: string; matchId: string; snapshotId: string; paths: readonly string[]; payload: Readonly<Record<string, unknown>>; hash: string; key: string; principalId: string; }
 
 export class KyselyBusinessPartnerProfileMatchRepository implements BusinessPartnerProfileMatchRepository {
-  async source(tenantId: string, snapshotId: string, tx: Tx) { const row=(await sql<Row>`SELECT p.id projection_id,s.publication_id,s.publication_version,s.payload_hash,s.payload_json FROM snapshot.mesh_business_partner_profile_received s JOIN control.mesh_business_partner_profile_projection p ON p.tenant_id=s.tenant_id AND p.current_snapshot_id=s.id WHERE s.tenant_id=${tenantId}::uuid AND s.id=${snapshotId}::uuid AND p.projection_status='active'`.execute(tx)).rows[0]; return row?{projectionId:String(row["projection_id"]),publicationId:String(row["publication_id"]),publicationVersion:Number(row["publication_version"]),payloadHash:String(row["payload_hash"]),payload:object(row["payload_json"])}:null; }
+  async resolutionByKey(tenantId:string,key:string,tx:Tx) {
+    return (await sql<Row>`SELECT r.*,c.entity_case_id FROM document.mesh_profile_change_resolution r LEFT JOIN document.mesh_profile_change_case c ON c.tenant_id=r.tenant_id AND c.resolution_id=r.id WHERE r.tenant_id=${tenantId}::uuid AND r.idempotency_key=${key}`.execute(tx)).rows[0]??null;
+  }
+  async saveResolution(i:{tenantId:string;projectionId:string;orgId:string;preview:ProfileChangePreview;decisions:Readonly<Record<string,"source"|"local">>;proposed:Row;key:string;principalId:string},tx:Tx) {
+    const p=i.preview;
+    const row=(await sql<Row>`INSERT INTO document.mesh_profile_change_resolution(tenant_id,projection_id,baseline_snapshot_id,incoming_snapshot_id,business_partner_id,operating_organization_id,expected_target_version,preview_fingerprint,preview,decisions,proposed_values,idempotency_key,created_by)
+      VALUES(${i.tenantId}::uuid,${i.projectionId}::uuid,${p.baselineSnapshotId}::uuid,${p.incomingSnapshotId}::uuid,${p.businessPartnerId}::uuid,${i.orgId}::uuid,${p.targetVersion},${p.fingerprint},${JSON.stringify(p)}::jsonb,${JSON.stringify(i.decisions)}::jsonb,${JSON.stringify(i.proposed)}::jsonb,${i.key},${i.principalId}::uuid)
+      ON CONFLICT(tenant_id,idempotency_key) DO NOTHING RETURNING *`.execute(tx)).rows[0];
+    return row??(await this.resolutionByKey(i.tenantId,i.key,tx))!;
+  }
+  async changeBaseline(tenantId: string, projectionId: string, businessPartnerId: string, tx: Tx) {
+    const resolved=(await sql<Row>`SELECT r.incoming_snapshot_id,s.payload_json,r.decisions FROM document.mesh_profile_change_resolution r
+      JOIN document.mesh_profile_change_case link ON link.tenant_id=r.tenant_id AND link.resolution_id=r.id
+      JOIN document.entity_case c ON c.tenant_id=link.tenant_id AND c.id=link.entity_case_id AND c.status='materialized'
+      JOIN snapshot.mesh_business_partner_profile_received s ON s.tenant_id=r.tenant_id AND s.id=r.incoming_snapshot_id
+      WHERE r.tenant_id=${tenantId}::uuid AND r.projection_id=${projectionId}::uuid AND r.business_partner_id=${businessPartnerId}::uuid
+      ORDER BY s.publication_version DESC,r.created_at DESC,r.id DESC LIMIT 1`.execute(tx)).rows[0];
+    if(resolved) return {snapshotId:String(resolved["incoming_snapshot_id"]),payload:object(resolved["payload_json"]),paths:Object.entries(object(resolved["decisions"])).filter(([,choice])=>choice==="source").map(([path])=>path)};
+    const row = (await sql<Row>`SELECT a.snapshot_id,a.accepted_field_paths,s.payload_json
+      FROM document.mesh_business_partner_acceptance a
+      JOIN document.mesh_business_partner_match m ON m.tenant_id=a.tenant_id AND m.id=a.match_id
+      JOIN document.mesh_business_partner_acceptance_event e ON e.tenant_id=a.tenant_id AND e.acceptance_id=a.id AND e.event_kind='case_created'
+      JOIN document.entity_case c ON c.tenant_id=e.tenant_id AND c.id=e.entity_case_id
+      JOIN snapshot.mesh_business_partner_profile_received s ON s.tenant_id=a.tenant_id AND s.id=a.snapshot_id
+      WHERE a.tenant_id=${tenantId}::uuid AND m.projection_id=${projectionId}::uuid
+        AND c.target_entity_id=${businessPartnerId}::uuid AND c.status='materialized'
+      ORDER BY s.publication_version DESC,a.created_at DESC,a.id DESC LIMIT 1`.execute(tx)).rows[0];
+    return row ? {snapshotId: String(row["snapshot_id"]), payload: object(row["payload_json"]), paths: array(row["accepted_field_paths"]) as readonly string[]} : null;
+  }
+  async currentPartner(tenantId: string, businessPartnerId: string, operatingOrganizationId: string, tx: Tx) {
+    const row = (await sql<Row>`SELECT bp.record_version,bp.display_name,bp.legal_name,bp.legal_form,bp.registration_country_code,bp.incorporation_date::text,bp.website_url,bp.description
+      FROM master.business_partner bp WHERE bp.tenant_id=${tenantId}::uuid AND bp.id=${businessPartnerId}::uuid AND bp.is_active
+      AND EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment a WHERE a.tenant_id=bp.tenant_id AND a.business_partner_id=bp.id AND a.operating_organization_id=${operatingOrganizationId}::uuid AND a.is_active) FOR SHARE OF bp`.execute(tx)).rows[0];
+    return row ? {version: Number(row["record_version"]), fields: {displayName: row["display_name"], legalName: row["legal_name"], legalForm: row["legal_form"], countryCode: row["registration_country_code"], incorporationDate: row["incorporation_date"], websiteUrl: row["website_url"], description: row["description"]}} : null;
+  }
+  async source(tenantId: string, snapshotId: string, tx: Tx) { const row=(await sql<Row>`SELECT p.id projection_id,s.publication_id,s.publication_version,s.payload_hash,s.payload_json FROM snapshot.mesh_business_partner_profile_received s JOIN control.mesh_business_partner_profile_projection p ON p.tenant_id=s.tenant_id AND p.current_snapshot_id=s.id WHERE s.tenant_id=${tenantId}::uuid AND s.id=${snapshotId}::uuid AND p.projection_status='active' FOR SHARE OF p`.execute(tx)).rows[0]; return row?{projectionId:String(row["projection_id"]),publicationId:String(row["publication_id"]),publicationVersion:Number(row["publication_version"]),payloadHash:String(row["payload_hash"]),payload:object(row["payload_json"])}:null; }
   async candidates(tenantId: string, operatingOrganizationId: string, tx: Tx) { const rows=(await sql<Row>`SELECT DISTINCT bp.id,bp.code,bp.name,bp.display_name,bp.legal_name,bp.legal_form,bp.registration_country_code,bp.incorporation_date,bp.website_url,bp.description FROM master.business_partner bp JOIN master.business_partner_operating_organization_assignment a ON a.tenant_id=bp.tenant_id AND a.business_partner_id=bp.id WHERE bp.tenant_id=${tenantId}::uuid AND a.operating_organization_id=${operatingOrganizationId}::uuid AND bp.is_active AND a.is_active ORDER BY bp.code,bp.id LIMIT 500`.execute(tx)).rows; return rows.map(row=>({id:String(row["id"]),code:String(row["code"]),name:String(row["name"]),...optional(row,"display_name","displayName"),...optional(row,"legal_name","legalName"),...optional(row,"legal_form","legalForm"),...optional(row,"registration_country_code","countryCode"),...optional(row,"incorporation_date","incorporationDate"),...optional(row,"website_url","websiteUrl"),...optional(row,"description","description")})); }
   async matchByKey(tenantId:string,key:string,tx:Tx){return (await sql<Row>`SELECT * FROM document.mesh_business_partner_match WHERE tenant_id=${tenantId}::uuid AND idempotency_key=${key}`.execute(tx)).rows[0]??null;}
   async match(tenantId:string,id:string,tx:Tx){return (await sql<Row>`SELECT * FROM document.mesh_business_partner_match WHERE tenant_id=${tenantId}::uuid AND id=${id}::uuid`.execute(tx)).rows[0]??null;}
@@ -43,6 +83,61 @@ export class KyselyBusinessPartnerProfileMatchRepository implements BusinessPart
 
 export function createBusinessPartnerProfileMatchService(options:{authorizer:Authorizer;repository:BusinessPartnerProfileMatchRepository;transactions:ProfileMatchTransactions;businessPartnerRequests:BusinessPartnerRequestService}) {
   return Object.freeze({
+    async previewChange(input: {context: VerifiedRequestContext; snapshotId: string; businessPartnerId: string; operatingOrganizationId: string}) {
+      validateContext(input.context);
+      const snapshotId=uuid(input.snapshotId,"snapshotId"), businessPartnerId=uuid(input.businessPartnerId,"businessPartnerId"), orgId=uuid(input.operatingOrganizationId,"operatingOrganizationId");
+      await authorize(options.authorizer,input.context,businessPartnerProfileMatchPermissions.read,orgId);
+      return options.transactions.run("neon",actor(input.context),async tx=>{
+        const source=await options.repository.source(input.context.tenantId,snapshotId,tx);
+        if(!source) throw failure(409,"MESH_PROFILE_SNAPSHOT_NOT_ACTIVE","Select the current active received profile");
+        const current=await options.repository.currentPartner(input.context.tenantId,businessPartnerId,orgId,tx);
+        if(!current) throw failure(409,"MESH_PROFILE_CANDIDATE_OUT_OF_SCOPE","Partner is not active in the selected operating organization");
+        const baseline=await options.repository.changeBaseline(input.context.tenantId,source.projectionId,businessPartnerId,tx);
+        if(!baseline) throw failure(409,"MESH_PROFILE_CHANGE_BASELINE_REQUIRED","A materialized acceptance for this partner and relationship is required");
+        if(baseline.snapshotId===snapshotId) throw failure(409,"MESH_PROFILE_CHANGE_NOT_NEW","This source snapshot is already accepted");
+        return compareProfileChange({baselineSnapshotId:baseline.snapshotId,incomingSnapshotId:snapshotId,businessPartnerId,targetVersion:current.version,
+          baseline:object(baseline.payload["partner"]),incoming:object(source.payload["partner"]),current:current.fields,acceptedBaselinePaths:baseline.paths});
+      });
+    },
+    async resolveChange(input:{context:VerifiedRequestContext;snapshotId:string;businessPartnerId:string;operatingOrganizationId:string;fingerprint:string;decisions:Readonly<Record<string,"source"|"local">>;idempotencyKey:string}) {
+      validateContext(input.context);
+      const snapshotId=uuid(input.snapshotId,"snapshotId"), targetId=uuid(input.businessPartnerId,"businessPartnerId"), orgId=uuid(input.operatingOrganizationId,"operatingOrganizationId"), key=idempotency(input.idempotencyKey);
+      if(key.length>180)throw failure(400,"MESH_PROFILE_IDEMPOTENCY_INVALID","Resolution keys must contain at most 180 characters");
+      await authorize(options.authorizer,input.context,businessPartnerProfileMatchPermissions.request,orgId);
+      const prepared=await options.transactions.run("neon",actor(input.context),async tx=>{
+        let row=await options.repository.resolutionByKey(input.context.tenantId,key,tx);
+        if(!row){
+          const source=await options.repository.source(input.context.tenantId,snapshotId,tx);
+          if(!source)throw failure(409,"MESH_PROFILE_SNAPSHOT_NOT_ACTIVE","Received profile is no longer active");
+          const current=await options.repository.currentPartner(input.context.tenantId,targetId,orgId,tx);
+          const baseline=await options.repository.changeBaseline(input.context.tenantId,source.projectionId,targetId,tx);
+          if(!current||!baseline||baseline.snapshotId===snapshotId)throw failure(409,"MESH_PROFILE_CHANGE_BASELINE_REQUIRED","A new source and scoped materialized baseline are required");
+          const preview=compareProfileChange({baselineSnapshotId:baseline.snapshotId,incomingSnapshotId:snapshotId,businessPartnerId:targetId,targetVersion:current.version,baseline:object(baseline.payload["partner"]),incoming:object(source.payload["partner"]),current:current.fields,acceptedBaselinePaths:baseline.paths});
+          let resolved;
+          try{resolved=resolveProfileChange(preview,input.fingerprint,input.decisions);}catch(cause){throw failure(cause instanceof Error&&cause.message.endsWith("STALE")?409:400,"MESH_PROFILE_CHANGE_INVALID",cause instanceof Error?cause.message:"Invalid profile choices");}
+          row=await options.repository.saveResolution({tenantId:input.context.tenantId,projectionId:source.projectionId,orgId,preview,decisions:input.decisions,proposed:resolved.proposed,key,principalId:input.context.principalId},tx);
+        }
+        if(String(row["incoming_snapshot_id"])!==snapshotId||String(row["business_partner_id"])!==targetId||String(row["operating_organization_id"])!==orgId||String(row["created_by"])!==input.context.principalId||String(row["preview_fingerprint"])!==input.fingerprint||stable(row["decisions"])!==stable(input.decisions))throw failure(409,"MESH_PROFILE_CHANGE_KEY_COLLISION","Resolution key was reused for different decisions");
+        return row;
+      });
+      if(prepared["entity_case_id"])return{resolutionId:String(prepared["id"]),requestId:String(prepared["entity_case_id"]),replayed:true};
+      // The case repository loads the retained resolution, captures choices in the
+      // approved snapshot and links the case in its own atomic draft transaction.
+      const source=await options.transactions.run("neon",actor(input.context),tx=>options.repository.source(input.context.tenantId,snapshotId,tx));
+      if(!source)throw failure(409,"MESH_PROFILE_SNAPSHOT_NOT_ACTIVE","Received profile is no longer active");
+      try {
+      const result=await options.businessPartnerRequests.create({context:input.context,idempotencyKey:`mesh-change:${prepared["id"]}`,kind:"amend_partner",targetBusinessPartnerId:targetId,operatingOrganizationId:orgId,
+        source:{kind:"mesh",systemCode:"athyper_mesh",entityCode:"business_partner_profile_change",entityId:source.publicationId,projectionId:snapshotId,version:source.publicationVersion,payloadHash:source.payloadHash},
+        proposedPayload:{meshChangeResolutionId:String(prepared["id"]),reasonCode:"MESH_PROFILE_CHANGE"}});
+      return{resolutionId:String(prepared["id"]),requestId:result.request.id,replayed:result.replayed};
+      } catch(cause) {
+        // A concurrent request may have committed the same immutable resolution's
+        // case while this request was preparing its draft. Recover only that link.
+        const linked=await options.transactions.run("neon",actor(input.context),tx=>options.repository.resolutionByKey(input.context.tenantId,key,tx));
+        if(linked&&linked["id"]===prepared["id"]&&linked["entity_case_id"])return{resolutionId:String(linked["id"]),requestId:String(linked["entity_case_id"]),replayed:true};
+        throw cause;
+      }
+    },
     async create(input:{context:VerifiedRequestContext;snapshotId:string;operatingOrganizationId:string;companyCodeId?:string;candidateBusinessPartnerId?:string;idempotencyKey:string}) {
       validateContext(input.context); const snapshotId=uuid(input.snapshotId,"snapshotId"), orgId=uuid(input.operatingOrganizationId,"operatingOrganizationId"), companyId=input.companyCodeId?uuid(input.companyCodeId,"companyCodeId"):undefined, candidateId=input.candidateBusinessPartnerId?uuid(input.candidateBusinessPartnerId,"candidateBusinessPartnerId"):undefined, key=idempotency(input.idempotencyKey);
       await authorize(options.authorizer,input.context,businessPartnerProfileMatchPermissions.create,orgId,companyId);

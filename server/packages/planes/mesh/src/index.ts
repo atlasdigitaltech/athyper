@@ -14,3 +14,6 @@ export * from "./business-partner-profile-publication-routes.js";
 export * from "./business-partner-bank-disclosure.js";
 export * from "./business-partner-bank-disclosure-routes.js";
 export * from "./business-partner-delivery.js";
+export * from "./business-partner-network-exchange.js";
+export * from "./business-partner-network-exchange-routes.js";
+export * from "./business-partner-self-registration-policy.js";

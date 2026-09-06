@@ -28,6 +28,11 @@ BEGIN
         GRANT SELECT, INSERT ON snapshot.mesh_business_partner_profile_received TO athyperapp;
         GRANT EXECUTE ON FUNCTION snapshot.mesh_business_partner_profile_payload_is_safe(jsonb) TO athyperapp;
     END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        GRANT USAGE ON SCHEMA snapshot TO athyper_jobs_service;
+        GRANT SELECT, INSERT ON snapshot.mesh_business_partner_profile_received TO athyper_jobs_service;
+        GRANT EXECUTE ON FUNCTION snapshot.mesh_business_partner_profile_payload_is_safe(jsonb) TO athyper_jobs_service;
+    END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON snapshot.mesh_business_partner_profile_received TO athyperadmin;
     END IF;
@@ -53,4 +58,4 @@ BEGIN
     END IF;
 END;
 $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON snapshot.mesh_bank_account_disclosure_received TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON snapshot.mesh_bank_account_disclosure_received TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT ON snapshot.mesh_bank_account_disclosure_received TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_jobs_service') THEN GRANT USAGE ON SCHEMA snapshot TO athyper_jobs_service; GRANT SELECT,INSERT ON snapshot.mesh_bank_account_disclosure_received TO athyper_jobs_service; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON snapshot.mesh_bank_account_disclosure_received TO athyperadmin; END IF; END $$;

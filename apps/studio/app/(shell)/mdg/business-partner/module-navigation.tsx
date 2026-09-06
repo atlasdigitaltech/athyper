@@ -10,6 +10,7 @@ const items: readonly SectionNavigationItem[] = [
   { href: "/mdg/business-partner/matching", label: "Matching" },
   { href: "/mdg/business-partner/workflows", label: "Workflows" },
   { href: "/mdg/business-partner/publication", label: "Publication" },
+  { href: "/mdg/business-partner/operations", label: "Operations & Proof" },
   { href: "/mdg/business-partner/ai-experience", label: "Atlas Experience" },
 ];
 

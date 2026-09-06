@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { ApiTransportError } from "@athyper/platform-api-client";
 
 export type AppErrorKind =
@@ -90,6 +91,6 @@ function safeDigest(value: unknown): string | undefined { return typeof value ==
 function cleanActions(values: readonly string[] | undefined): readonly string[] { return Object.freeze([...new Set((values ?? []).filter((value) => /^[A-Za-z0-9._:-]{1,80}$/.test(value)))]); }
 function parseRetryAfter(value: string | undefined, now = Date.now()): number | undefined {
   if (!value) return undefined;
-  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((Date.parse(value) - now) / 1_000);
+  const seconds = /^\d+$/.test(value.trim()) ? Number(value) : Math.ceil((parseInstant(value) - now) / 1_000);
   return Number.isFinite(seconds) && seconds > 0 ? Math.min(300, seconds) : undefined;
 }

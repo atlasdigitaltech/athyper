@@ -33,6 +33,9 @@ test("deployment qualification rejects provisional host and Defender states", ()
     status.defenderWslCompatibility = "complete-delayed-channel-cold-start-qualified";
     writeFileSync(path, YAML.stringify({ status }));
     assert.deepEqual(qualificationGateFailures().failures, []);
+
+    writeFileSync(path, "status: [");
+    assert.match(qualificationGateFailures().failures[0], /^qualification-evidence=invalid/u);
   } finally {
     if (previousPath === undefined) delete process.env.ATHYPER_QUALIFICATION_FILE;
     else process.env.ATHYPER_QUALIFICATION_FILE = previousPath;

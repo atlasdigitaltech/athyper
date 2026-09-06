@@ -55,3 +55,22 @@ test("requires every security and durability parity check", () => {
   assert.ok(qualifyMetaEntity({ inventory, budgets, baseline, current: broken, exceptions: { exceptions: [] } })
     .failures.includes("release check 'permissionRevocation' did not pass"));
 });
+
+test("rejects invalid baselines and budgets instead of skipping comparisons", () => {
+  const brokenBaseline = structuredClone(baseline);
+  brokenBaseline.minimumSamples = "many";
+  brokenBaseline.routes.patch.p95Ms = null;
+  const brokenBudgets = structuredClone(budgets);
+  brokenBudgets.operations.patch.p95Ms = Number.NaN;
+  const result = qualifyMetaEntity({
+    inventory,
+    budgets: brokenBudgets,
+    baseline: brokenBaseline,
+    current,
+    exceptions: { exceptions: [] },
+  });
+  assert.equal(result.passed, false);
+  assert.ok(result.failures.some((failure) => failure.includes("minimumSamples")));
+  assert.ok(result.failures.some((failure) => failure.includes("budget is missing or invalid")));
+  assert.ok(result.failures.some((failure) => failure.includes("stored baseline is missing or invalid")));
+});

@@ -9,7 +9,7 @@ for (const id of expected) if (!ids.includes(id)) failures.push(`DoD criterion i
 if (new Set(ids).size !== ids.length) failures.push("DoD criteria must be unique");
 for (const criterion of manifest.criteria ?? []) for (const path of criterion.evidence ?? []) if (!existsSync(resolve(root, path))) failures.push(`${criterion.id} evidence is missing: ${path}`);
 
-const dashboard = JSON.parse(read("stack/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"));
+const dashboard = JSON.parse(read("deploy/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"));
 if (dashboard.uid !== "athyper-frontend-spine" || !Array.isArray(dashboard.panels) || dashboard.panels.length < 6) failures.push("production frontend dashboard is incomplete");
 const dashboardText = JSON.stringify(dashboard);
 for (const signal of ["/livez", "/readyz", "athyper_http_request_duration_seconds", "athyper_http_errors_total", "AUTH_", "RELAY_", "app_boundary_error", "frontend-request-error"]) if (!dashboardText.includes(signal)) failures.push(`production dashboard is missing ${signal}`);

@@ -5,9 +5,12 @@ import { Client } from "pg";
 
 import { deterministicUuid } from "./three-plane-model.js";
 import {
+  CIRRUSATLANTIC_BANK_CHECKER,
   CIRRUSATLANTIC_CONTEXT_PERMISSION,
   CIRRUSATLANTIC_DEMO_AUTH_CONFIRMATION,
   CIRRUSATLANTIC_DEMO_PERSONAS,
+  CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK,
+  CIRRUSATLANTIC_OWNER_REVIEWER,
   CIRRUSATLANTIC_TENANT_CODE,
   CIRRUSATLANTIC_TENANT_ID,
   validateCirrusAtlanticDemoAuthorizationModel,
@@ -64,9 +67,12 @@ export async function provisionCirrusAtlanticDemoAuthorization(options: {
         await ensureGroupRole(client, persona, groupId, roleId, targetId, scope, actorId);
       }
     }
+    await ensureOwnerReviewer(client, scopes, actorId);
+    await ensureOwnerBankChecker(client, scopes, actorId);
+    await ensureNorthwindAccountLink(client, scopes, actorId);
     await verifyEffectiveGrants(client);
     await client.query("COMMIT");
-    return { ...plan, mode: "applied", groups: 3, roles: 3, users: 3, effectiveScopeAssignments: 10 };
+    return { ...plan, mode: "applied", groups: 3, roles: 8, users: 3, effectiveScopeAssignments: 15 };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -75,9 +81,163 @@ export async function provisionCirrusAtlanticDemoAuthorization(options: {
   }
 }
 
+async function ensureNorthwindAccountLink(
+  client: QueryClient,
+  scopes: ReadonlyMap<string, string>,
+  actorId: string,
+): Promise<void> {
+  const contract = CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK;
+  const parentId = scopes.get("operating_organization/operating_organization:catl.operations");
+  if (!parentId) throw new Error("CirrusAtlantic operating-organization scope is unresolved");
+  const scopeId = deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-scope", contract.scope.kind, contract.relationshipId);
+  await client.query(`
+    INSERT INTO authz.scope_target(id,tenant_id,scope_kind,scope_key,target_id,parent_scope_target_id,display_name,metadata,status,created_by)
+    VALUES($1::uuid,$2::uuid,$3,$4,$5::uuid,$6::uuid,'Northwind / CirrusAtlantic account link',$7::jsonb,'active',$8::uuid)
+    ON CONFLICT(tenant_id,scope_kind,target_id) DO UPDATE SET
+      scope_key=EXCLUDED.scope_key,parent_scope_target_id=EXCLUDED.parent_scope_target_id,
+      display_name=EXCLUDED.display_name,metadata=authz.scope_target.metadata||EXCLUDED.metadata,
+      status='active',updated_by=EXCLUDED.created_by
+  `, [scopeId, CIRRUSATLANTIC_TENANT_ID, contract.scope.kind, contract.scope.key, contract.relationshipId, parentId, metadata(), actorId]);
+  const actualScope = await requireScope(client, contract.scope.kind, contract.scope.key);
+  for (const grant of [contract.requester, contract.reviewer]) {
+    const persona = CIRRUSATLANTIC_DEMO_PERSONAS.find((item) => item.username === grant.username);
+    if (!persona) throw new Error(`CirrusAtlantic account-link persona is missing: ${grant.username}`);
+    const group = await one<{ id: string }>(client,
+      "SELECT id::text AS id FROM authz.principal_group WHERE tenant_id=$1::uuid AND code=$2 AND status='active'",
+      [CIRRUSATLANTIC_TENANT_ID, persona.groupCode]);
+    const roleId = deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role", grant.roleCode);
+    await client.query(`
+      INSERT INTO authz.role(id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
+      VALUES($1::uuid,$2::uuid,$3,$4,'Relationship-scoped Northwind MESH account-link authority','system','seed',$5,$6::jsonb,'draft',$7::uuid)
+      ON CONFLICT(tenant_id,code) DO NOTHING
+    `, [roleId, CIRRUSATLANTIC_TENANT_ID, grant.roleCode, grant.roleName, SOURCE_REF, metadata(), actorId]);
+    const permissions = await client.query<{ id: string; canonical_code: string }>(`
+      SELECT id::text,canonical_code FROM authz.permission
+      WHERE canonical_code=ANY($1::text[]) AND status='published'
+    `, [grant.permissions]);
+    if (permissions.rows.length !== grant.permissions.length) throw new Error(`${grant.roleCode} permission catalog is incomplete`);
+    await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+    for (const permission of permissions.rows) await client.query(`
+      INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by)
+      VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid)
+      ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING
+    `, [deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role-permission", grant.roleCode, permission.canonical_code), CIRRUSATLANTIC_TENANT_ID, roleId, permission.id, actorId]);
+    await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+    await ensureGroupRole(client, { ...persona, roleCode: grant.roleCode, roleName: grant.roleName }, group.id, roleId, actualScope, contract.scope, actorId);
+  }
+  const projection = contract.projectionReader;
+  const owner = CIRRUSATLANTIC_DEMO_PERSONAS.find((item) => item.username === projection.username);
+  const tenantScope = scopes.get(`tenant/${CIRRUSATLANTIC_TENANT_CODE}`);
+  if (!owner || !tenantScope) throw new Error("CirrusAtlantic projection-reader scope is unresolved");
+  const ownerGroup = await one<{ id: string }>(client,
+    "SELECT id::text AS id FROM authz.principal_group WHERE tenant_id=$1::uuid AND code=$2 AND status='active'",
+    [CIRRUSATLANTIC_TENANT_ID, owner.groupCode]);
+  const projectionRoleId = deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role", projection.roleCode);
+  const projectionPermission = await one<{ id: string }>(client,
+    "SELECT id::text AS id FROM authz.permission WHERE canonical_code=$1 AND status='published'",
+    [projection.permissions[0]]);
+  await client.query(`
+    INSERT INTO authz.role(id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
+    VALUES($1::uuid,$2::uuid,$3,$4,'Read-only access to received Business Partner profile evidence','system','seed',$5,$6::jsonb,'draft',$7::uuid)
+    ON CONFLICT(tenant_id,code) DO NOTHING
+  `, [projectionRoleId, CIRRUSATLANTIC_TENANT_ID, projection.roleCode, projection.roleName, SOURCE_REF, metadata(), actorId]);
+  await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active'", [CIRRUSATLANTIC_TENANT_ID, projectionRoleId, actorId]);
+  await client.query(`
+    INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by)
+    VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid)
+    ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING
+  `, [deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role-permission", projection.roleCode, projection.permissions[0]), CIRRUSATLANTIC_TENANT_ID, projectionRoleId, projectionPermission.id, actorId]);
+  await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [CIRRUSATLANTIC_TENANT_ID, projectionRoleId, actorId]);
+  await ensureGroupRole(client, { ...owner, roleCode: projection.roleCode, roleName: projection.roleName }, ownerGroup.id, projectionRoleId, tenantScope,
+    { kind: "tenant", key: CIRRUSATLANTIC_TENANT_CODE, propagation: "exact" }, actorId);
+}
+
+async function ensureOwnerReviewer(
+  client: QueryClient,
+  scopes: ReadonlyMap<string, string>,
+  actorId: string,
+): Promise<void> {
+  const reviewer = CIRRUSATLANTIC_OWNER_REVIEWER;
+  const owner = CIRRUSATLANTIC_DEMO_PERSONAS.find((item) => item.username === reviewer.username);
+  if (!owner) throw new Error("CirrusAtlantic owner persona is missing");
+  const group = await one<{ id: string }>(client,
+    "SELECT id::text AS id FROM authz.principal_group WHERE tenant_id=$1::uuid AND code=$2 AND status='active'",
+    [CIRRUSATLANTIC_TENANT_ID, owner.groupCode]);
+  const roleId = deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role", reviewer.roleCode);
+  await client.query(`
+    INSERT INTO authz.role (id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
+    VALUES ($1::uuid,$2::uuid,$3,$4,'Independent Business Partner case review only','system','seed',$5,$6::jsonb,'draft',$7::uuid)
+    ON CONFLICT (tenant_id,code) DO NOTHING
+  `, [roleId, CIRRUSATLANTIC_TENANT_ID, reviewer.roleCode, reviewer.roleName, SOURCE_REF, metadata(), actorId]);
+  const permissions = await client.query<{ id: string; canonical_code: string }>(`
+    SELECT id::text,canonical_code FROM authz.permission
+    WHERE canonical_code=ANY($1::text[]) AND status='published'
+  `, [reviewer.permissions]);
+  if (permissions.rows.length !== reviewer.permissions.length) throw new Error("CirrusAtlantic owner reviewer permission catalog is incomplete");
+  await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+  for (const permission of permissions.rows) {
+    await client.query(`
+      INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by)
+      VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid)
+      ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING
+    `, [deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role-permission", reviewer.roleCode, permission.canonical_code), CIRRUSATLANTIC_TENANT_ID, roleId, permission.id, actorId]);
+  }
+  await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+  const targetId = scopes.get(`${reviewer.scope.kind}/${reviewer.scope.key}`);
+  if (!targetId) throw new Error("CirrusAtlantic reviewer scope is unresolved");
+  await ensureGroupRole(
+    client,
+    { ...owner, roleCode: reviewer.roleCode, roleName: reviewer.roleName },
+    group.id,
+    roleId,
+    targetId,
+    reviewer.scope,
+    actorId,
+  );
+}
+
+async function ensureOwnerBankChecker(
+  client: QueryClient,
+  scopes: ReadonlyMap<string, string>,
+  actorId: string,
+): Promise<void> {
+  const checker = CIRRUSATLANTIC_BANK_CHECKER;
+  const owner = CIRRUSATLANTIC_DEMO_PERSONAS.find((item) => item.username === checker.username);
+  if (!owner) throw new Error("CirrusAtlantic bank-checker persona is missing");
+  const group = await one<{ id: string }>(client,
+    "SELECT id::text AS id FROM authz.principal_group WHERE tenant_id=$1::uuid AND code=$2 AND status='active'",
+    [CIRRUSATLANTIC_TENANT_ID, owner.groupCode]);
+  const roleId = deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role", checker.roleCode);
+  await client.query(`
+    INSERT INTO authz.role (id,tenant_id,code,name,description,role_kind,source_type,source_ref,metadata,status,created_by)
+    VALUES ($1::uuid,$2::uuid,$3,$4,'Independent company-scoped beneficiary bank verification only','system','seed',$5,$6::jsonb,'draft',$7::uuid)
+    ON CONFLICT (tenant_id,code) DO NOTHING
+  `, [roleId, CIRRUSATLANTIC_TENANT_ID, checker.roleCode, checker.roleName, SOURCE_REF, metadata(), actorId]);
+  const permissions = await client.query<{ id: string; canonical_code: string }>(`
+    SELECT id::text,canonical_code FROM authz.permission
+    WHERE canonical_code=ANY($1::text[]) AND status='published'
+  `, [checker.permissions]);
+  if (permissions.rows.length !== checker.permissions.length) throw new Error("CirrusAtlantic bank-checker permission catalog is incomplete");
+  await client.query("UPDATE authz.role SET status='suspended',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status='active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+  for (const permission of permissions.rows) {
+    await client.query(`
+      INSERT INTO authz.role_permission(id,tenant_id,role_id,permission_id,created_by)
+      VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid)
+      ON CONFLICT(tenant_id,role_id,permission_id) DO NOTHING
+    `, [deterministicUuid("neon", CIRRUSATLANTIC_TENANT_ID, "local-demo-role-permission", checker.roleCode, permission.canonical_code), CIRRUSATLANTIC_TENANT_ID, roleId, permission.id, actorId]);
+  }
+  await client.query("UPDATE authz.role SET status='active',updated_by=$3::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND status<>'active'", [CIRRUSATLANTIC_TENANT_ID, roleId, actorId]);
+  const targetId = scopes.get(`${checker.scope.kind}/${checker.scope.key}`);
+  if (!targetId) throw new Error("CirrusAtlantic bank-checker scope is unresolved");
+  await ensureGroupRole(client, { ...owner, roleCode: checker.roleCode, roleName: checker.roleName }, group.id, roleId, targetId, checker.scope, actorId);
+}
+
 function assertLocalDatabaseUrl(value: string): void {
   const url = new URL(value);
-  if (!['localhost', '127.0.0.1', '::1'].includes(url.hostname) || url.pathname !== `/${EXPECTED_DATABASE}`) {
+  const octets = url.hostname.split(".").map(Number);
+  const privateNetwork = octets.length === 4 && octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255) &&
+    (octets[0] === 10 || (octets[0] === 172 && octets[1]! >= 16 && octets[1]! <= 31) || (octets[0] === 192 && octets[1] === 168));
+  if (!(['localhost', '127.0.0.1', '::1'].includes(url.hostname) || privateNetwork) || url.pathname !== `/${EXPECTED_DATABASE}`) {
     throw new Error(`CirrusAtlantic demo authorization may run only against local ${EXPECTED_DATABASE}`);
   }
 }
@@ -154,8 +314,8 @@ async function requirePrincipal(client: QueryClient, persona: DemoPersona): Prom
     JOIN authz.plane_membership membership ON membership.tenant_id=principal.tenant_id AND membership.principal_id=principal.id
       AND membership.status='active' AND membership.effective_from<=clock_timestamp()
       AND (membership.effective_until IS NULL OR membership.effective_until>clock_timestamp())
-    WHERE binding.tenant_id=$1::uuid AND binding.provider_code='keycloak' AND binding.subject_id=$2 AND binding.status='active'
-  `, [CIRRUSATLANTIC_TENANT_ID, persona.subjectId]);
+    WHERE binding.tenant_id=$1::uuid AND binding.provider_code='keycloak' AND binding.username=$2 AND binding.status='active'
+  `, [CIRRUSATLANTIC_TENANT_ID, persona.username]);
   if (row.username !== persona.username) throw new Error(`identity binding mismatch for ${persona.username}`);
   return row.principalId;
 }
@@ -233,6 +393,83 @@ async function verifyEffectiveGrants(client: QueryClient): Promise<void> {
     `, [CIRRUSATLANTIC_TENANT_ID, persona.username, CIRRUSATLANTIC_CONTEXT_PERMISSION]);
     if (row.count !== "3") throw new Error(`effective scope verification failed for ${persona.username}`);
   }
+  const reviewer = await one<{ count: string }>(client, `
+    SELECT count(DISTINCT permission.canonical_code)::text AS count
+    FROM authz.group_member member
+    JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id
+    JOIN authz.group_role assignment ON assignment.tenant_id=member.tenant_id AND assignment.group_id=member.group_id
+    JOIN authz.role role ON role.tenant_id=assignment.tenant_id AND role.id=assignment.role_id
+    JOIN authz.role_permission role_permission ON role_permission.tenant_id=role.tenant_id AND role_permission.role_id=role.id
+    JOIN authz.permission permission ON permission.id=role_permission.permission_id
+    JOIN authz.scope_target target ON target.tenant_id=assignment.tenant_id AND target.id=assignment.scope_target_id
+    WHERE member.tenant_id=$1::uuid AND principal.code=$2 AND member.status='active' AND assignment.status='active'
+      AND role.status='active' AND role.code=$3 AND permission.status='published'
+      AND permission.canonical_code=ANY($4::text[])
+      AND target.scope_kind=$5 AND target.scope_key=$6 AND assignment.propagation_mode=$7
+  `, [
+    CIRRUSATLANTIC_TENANT_ID,
+    CIRRUSATLANTIC_OWNER_REVIEWER.username,
+    CIRRUSATLANTIC_OWNER_REVIEWER.roleCode,
+    CIRRUSATLANTIC_OWNER_REVIEWER.permissions,
+    CIRRUSATLANTIC_OWNER_REVIEWER.scope.kind,
+    CIRRUSATLANTIC_OWNER_REVIEWER.scope.key,
+    CIRRUSATLANTIC_OWNER_REVIEWER.scope.propagation,
+  ]);
+  if (reviewer.count !== String(CIRRUSATLANTIC_OWNER_REVIEWER.permissions.length)) {
+    throw new Error("effective reviewer scope verification failed for catl.owner");
+  }
+  const checker = CIRRUSATLANTIC_BANK_CHECKER;
+  const bankChecker = await one<{ count: string }>(client, `
+    SELECT count(DISTINCT permission.canonical_code)::text AS count
+    FROM authz.group_member member
+    JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id
+    JOIN authz.group_role assignment ON assignment.tenant_id=member.tenant_id AND assignment.group_id=member.group_id
+    JOIN authz.role role ON role.tenant_id=assignment.tenant_id AND role.id=assignment.role_id
+    JOIN authz.role_permission role_permission ON role_permission.tenant_id=role.tenant_id AND role_permission.role_id=role.id
+    JOIN authz.permission permission ON permission.id=role_permission.permission_id
+    JOIN authz.scope_target target ON target.tenant_id=assignment.tenant_id AND target.id=assignment.scope_target_id
+    WHERE member.tenant_id=$1::uuid AND principal.code=$2 AND member.status='active' AND assignment.status='active'
+      AND role.status='active' AND role.code=$3 AND permission.status='published'
+      AND permission.canonical_code=ANY($4::text[])
+      AND target.scope_kind=$5 AND target.scope_key=$6 AND assignment.propagation_mode=$7
+  `, [CIRRUSATLANTIC_TENANT_ID, checker.username, checker.roleCode, checker.permissions,
+    checker.scope.kind, checker.scope.key, checker.scope.propagation]);
+  if (bankChecker.count !== String(checker.permissions.length)) {
+    throw new Error("effective bank-checker scope verification failed for catl.owner");
+  }
+  for (const grant of [CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.requester, CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.reviewer]) {
+    const effective = await one<{ count: string }>(client, `
+      SELECT count(DISTINCT permission.canonical_code)::text AS count
+      FROM authz.group_member member
+      JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id
+      JOIN authz.group_role assignment ON assignment.tenant_id=member.tenant_id AND assignment.group_id=member.group_id
+      JOIN authz.role role ON role.tenant_id=assignment.tenant_id AND role.id=assignment.role_id
+      JOIN authz.role_permission role_permission ON role_permission.tenant_id=role.tenant_id AND role_permission.role_id=role.id
+      JOIN authz.permission permission ON permission.id=role_permission.permission_id
+      JOIN authz.scope_target target ON target.tenant_id=assignment.tenant_id AND target.id=assignment.scope_target_id
+      WHERE member.tenant_id=$1::uuid AND principal.code=$2 AND member.status='active' AND assignment.status='active'
+        AND role.status='active' AND role.code=$3 AND permission.status='published'
+        AND permission.canonical_code=ANY($4::text[])
+        AND target.scope_kind='network_relationship' AND target.target_id=$5::uuid
+        AND assignment.propagation_mode='exact'
+    `, [CIRRUSATLANTIC_TENANT_ID, grant.username, grant.roleCode, grant.permissions, CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.relationshipId]);
+    if (effective.count !== String(grant.permissions.length)) throw new Error(`effective account-link scope verification failed for ${grant.username}`);
+  }
+  const projection = CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.projectionReader;
+  const projectionRead = await one<{ count: string }>(client, `
+    SELECT count(*)::text AS count
+    FROM authz.group_member member
+    JOIN master.principal principal ON principal.tenant_id=member.tenant_id AND principal.id=member.principal_id
+    JOIN authz.group_role assignment ON assignment.tenant_id=member.tenant_id AND assignment.group_id=member.group_id
+    JOIN authz.role role ON role.tenant_id=assignment.tenant_id AND role.id=assignment.role_id
+    JOIN authz.role_permission role_permission ON role_permission.tenant_id=role.tenant_id AND role_permission.role_id=role.id
+    JOIN authz.permission permission ON permission.id=role_permission.permission_id
+    JOIN authz.scope_target target ON target.tenant_id=assignment.tenant_id AND target.id=assignment.scope_target_id
+    WHERE member.tenant_id=$1::uuid AND principal.code=$2 AND member.status='active' AND assignment.status='active'
+      AND role.status='active' AND role.code=$3 AND permission.status='published' AND permission.canonical_code=$4
+      AND target.scope_kind='tenant' AND target.target_id=$1::uuid AND assignment.propagation_mode='exact'
+  `, [CIRRUSATLANTIC_TENANT_ID, projection.username, projection.roleCode, projection.permissions[0]]);
+  if (projectionRead.count !== "1") throw new Error("effective profile-projection read verification failed for catl.owner");
 }
 
 async function requireScope(client: QueryClient, kind: DemoScopeCoordinate["kind"], key: string): Promise<string> {

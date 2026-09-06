@@ -174,6 +174,11 @@ BEGIN
             uuid, uuid, uuid
         ) TO athyperapp;
     END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_publication_service') THEN
+        GRANT USAGE ON SCHEMA master TO athyper_publication_service;
+        GRANT SELECT ON master.principal TO athyper_publication_service;
+        GRANT EXECUTE ON FUNCTION master.current_principal_id_soft() TO athyper_publication_service;
+    END IF;
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA master TO athyperadmin;
@@ -435,11 +440,14 @@ END $$;
 -- S5 removes direct runtime ownership of Business Partner lifecycle fields.
 REVOKE ALL ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
 REVOKE ALL ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
 DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_internal_business_partner_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_role_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_company_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;END IF;
 END $$;
 
 DO $$
@@ -468,3 +476,14 @@ BEGIN
     END IF;
 END;
 $$;
+
+REVOKE ALL ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp; END IF;
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION master.command_materialize_business_partner_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin; END IF;
+END $$;
+
+REVOKE ALL ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp,athyperadmin;
+
+REVOKE ALL ON FUNCTION master.fn_materialize_business_partner_case_relationships() FROM PUBLIC;

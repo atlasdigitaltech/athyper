@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, type TestInfo } from "@playwright/test";
-import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
+import { storageStateHasAuthenticatedSession } from "../auth-state";
 
 export type Plane = "studio" | "neon" | "mesh";
 export type RequiredComponentState =
@@ -51,17 +51,12 @@ export function productionContext(testInfo: TestInfo): {
     formFactor?: "desktop" | "mobile";
   };
   const plane = metadata.plane ?? "neon";
-  const suffix = plane.toUpperCase();
-  const hasCredentials = Boolean(
-    (process.env[`PLAYWRIGHT_${suffix}_USER`] ?? process.env.PLAYWRIGHT_USER)
-    && (process.env[`PLAYWRIGHT_${suffix}_PASSWORD`] ?? process.env.PLAYWRIGHT_PASSWORD),
-  );
   const storedSession = resolve(`tests/e2e/.auth/${plane}.json`);
-  const hasStoredSession = existsSync(storedSession) && statSync(storedSession).size > 0;
+  const hasStoredSession = storageStateHasAuthenticatedSession(storedSession, String(testInfo.project.use.baseURL ?? ""));
   return {
     plane,
     formFactor: metadata.formFactor ?? "desktop",
-    enabled: process.env.PLAYWRIGHT_PRODUCTION_MATRIX === "1" && (hasCredentials || hasStoredSession),
+    enabled: process.env.PLAYWRIGHT_PRODUCTION_MATRIX === "1" && hasStoredSession,
   };
 }
 

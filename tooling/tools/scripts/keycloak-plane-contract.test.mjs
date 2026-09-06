@@ -17,7 +17,7 @@ test("rejects a Studio browser flow that mixes alternative and required executio
   const directory = mkdtempSync(join(tmpdir(), "athyper-keycloak-contract-"));
   const realmPath = join(directory, "realm.json");
   try {
-    const realm = JSON.parse(readFileSync("stack/config/iam/realm-athyper.json", "utf8"));
+    const realm = JSON.parse(readFileSync("deploy/config/iam/realm-athyper.json", "utf8"));
     const flow = realm.authenticationFlows.find((candidate) => candidate.alias === "admin-mfa-required");
     flow.authenticationExecutions.find((execution) => execution.authenticator === "auth-cookie").requirement = "ALTERNATIVE";
     writeFileSync(realmPath, JSON.stringify(realm));
@@ -36,7 +36,7 @@ test("rejects a Studio browser flow that mixes alternative and required executio
 });
 
 test("requires enrollable OTP in the Studio second-factor flow", () => {
-  const realm = JSON.parse(readFileSync("stack/config/iam/realm-athyper.json", "utf8"));
+  const realm = JSON.parse(readFileSync("deploy/config/iam/realm-athyper.json", "utf8"));
   const secondFactor = realm.authenticationFlows.find(
     (candidate) => candidate.alias === "admin-mfa-required second factor",
   );

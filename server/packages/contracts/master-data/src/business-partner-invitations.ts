@@ -93,17 +93,18 @@ export interface BusinessPartnerInvitationIssueResponse {
   readonly replayed: boolean;
 }
 export interface BusinessPartnerInvitationAcceptResponse {
-  readonly invitation: BusinessPartnerInvitation;
-  readonly request: BusinessPartnerRequest;
-  readonly case?: BusinessPartnerRequest;
+  readonly invitation: Readonly<{id:string;invitationNo:string;status:BusinessPartnerInvitationStatus}>;
+  readonly request: BusinessPartnerExternalApplication;
+  readonly case?: BusinessPartnerExternalApplication;
   readonly replayed: boolean;
 }
+export interface BusinessPartnerExternalApplication {readonly id:string;readonly requestId:string;readonly requestNo:string;readonly status:string;readonly rowVersion:number;readonly validationSummary:Readonly<Record<string,unknown>>;readonly editablePayload:Readonly<Record<string,unknown>>;readonly updatedAt?:string;}
 export interface BusinessPartnerInvitationTemplate {
   readonly journeyKind: BusinessPartnerInvitationJourney;
   readonly requestedRole: BusinessPartnerInvitationRole;
   readonly approvedFields: readonly string[];
   readonly approvedActions: readonly (
-    "accept" | "status" | "correct" | "evidence"
+    "accept" | "status" | "correct" | "evidence" | "submit"
   )[];
 }
 
@@ -153,6 +154,7 @@ export interface BusinessPartnerInvitationService {
       status: string;
       rowVersion: number;
       validationSummary: Readonly<Record<string, unknown>>;
+      editablePayload: Readonly<Record<string, unknown>>;
       updatedAt?: string;
     }>
   >;
@@ -172,6 +174,25 @@ export interface BusinessPartnerInvitationService {
     readonly contentHash: string;
     readonly classificationCode: "internal" | "confidential" | "restricted";
   }): Promise<Readonly<{ evidenceId: string }>>;
+  stageEvidence(input:{readonly context:VerifiedRequestContext;readonly journeyKind:BusinessPartnerInvitationJourney;readonly requestId:string;readonly attachmentId:string;readonly fileName:string;readonly contentType:string;readonly sizeBytes:number}):Promise<Readonly<{attachmentId:string;uploadUrl:string;expiresAt:string}>>;
+  completeEvidence(input:{readonly context:VerifiedRequestContext;readonly journeyKind:BusinessPartnerInvitationJourney;readonly requestId:string;readonly attachmentId:string;readonly evidenceKind:string;readonly contentType:string;readonly classificationCode:"internal"|"confidential"|"restricted"}):Promise<Readonly<{evidenceId:string;attachmentId:string;status:string}>>;
+  submitOwned(input: {
+    readonly context: VerifiedRequestContext;
+    readonly journeyKind: BusinessPartnerInvitationJourney;
+    readonly requestId: string;
+    readonly expectedVersion: number;
+    readonly idempotencyKey: string;
+  }): Promise<
+    Readonly<{
+      requestId: string;
+      requestNo: string;
+      status: string;
+      rowVersion: number;
+      validationSummary: Readonly<Record<string, unknown>>;
+      editablePayload: Readonly<Record<string, unknown>>;
+      updatedAt?: string;
+    }>
+  >;
   template(
     journeyKind: BusinessPartnerInvitationJourney,
   ): BusinessPartnerInvitationTemplate;

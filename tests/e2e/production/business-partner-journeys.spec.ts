@@ -11,6 +11,9 @@ test("supplier onboarding is accessible and definition-driven", async ({ page })
   await expect(page.getByRole("heading", { name: "New supplier onboarding request" })).toBeVisible();
   await expect(page.getByLabel("Registered name")).toBeVisible();
   await expect(page.getByLabel("Supplier type")).toBeVisible();
+  await expect(page.getByLabel("Qualification type")).toBeVisible();
+  await expect(page.getByRole("group", { name: "Supplier addresses" })).toBeVisible();
+  await expect(page.getByRole("group", { name: "Supplier contacts" })).toBeVisible();
   await assertSurfaceContract(page, "supplier-onboarding");
 });
 

@@ -19,7 +19,7 @@ const KC_BASE  = process.env.KEYCLOAK_BASE_URL || 'https://iam.athyper.local';
 const KC_REALM = process.env.NEON_KEYCLOAK_REALM || 'neon';
 const KC_ADMIN = 'athyperadmin';
 const KC_PASS  = 'athyperadmin';
-const REALM_FILE = path.join(__dirname, '../../../stack/config/iam/realm-neon.json');
+const REALM_FILE = path.join(__dirname, '../../../deploy/config/iam/realm-neon.json');
 
 function requiredEnv(name) {
   const value = process.env[name];
@@ -263,7 +263,7 @@ async function main() {
   console.log('\n── Org memberships for new users ──');
   const orgsResp = await api('GET', `/admin/realms/${KC_REALM}/organizations?first=0&max=100`, null, token);
   const orgsByAlias = {};
-  for (const o of (orgsResp.data||[])) orgsByAlias[o.alias] = o;
+  for (const o of (orgsResp.data||[])) orgsByAlias[o.alias.toLowerCase()] = o;
 
   // Refresh user IDs
   const freshUsers = await api('GET', `/admin/realms/${KC_REALM}/users?first=0&max=300`, null, token);
@@ -274,14 +274,14 @@ async function main() {
     const userId = freshUserMap[username];
     if (!userId) { console.log(`  ✗ User not found: ${username}`); continue; }
     for (const alias of orgAliases) {
-      const org = orgsByAlias[alias];
+      const org = orgsByAlias[alias.toLowerCase()];
       if (!org) { console.log(`  ✗ Org not found: ${alias}`); continue; }
       const add = await api('POST',
         `/admin/realms/${KC_REALM}/organizations/${org.id}/members`,
-        [userId], token
+        userId, token
       );
       const ok = add.status === 201 || add.status === 204 || add.status === 200;
-      if (!ok) console.log(`  ✗ ${username} → ${alias} (${add.status}: ${JSON.stringify(add.data)?.slice(0,100)})`);
+      if (!ok) throw new Error(`${username} → ${alias} failed (${add.status}: ${JSON.stringify(add.data)?.slice(0,100)})`);
     }
     console.log(`  ✓ ${username} → ${orgAliases.join(', ')}`);
   }

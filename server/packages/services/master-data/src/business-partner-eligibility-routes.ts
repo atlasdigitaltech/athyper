@@ -97,32 +97,7 @@ export function registerBusinessPartnerEligibilityRoutes(
   app.post(
     "/api/neon/business-partners/:businessPartnerId/supplier-activation",
     options.authenticate,
-    route("activate-supplier", async (request, context, response) => {
-      const body = object(request.body),
-        result = await options.service.activateSupplier({
-          context,
-          businessPartnerId: uuid(
-            request.params["businessPartnerId"],
-            "businessPartnerId",
-          ),
-          operatingOrganizationId: uuid(
-            body["operatingOrganizationId"],
-            "operatingOrganizationId",
-          ),
-          companyCodeId: uuidOptional(body["companyCodeId"], "companyCodeId"),
-          commodityCategoryId: uuidOptional(
-            body["commodityCategoryId"],
-            "commodityCategoryId",
-          ),
-          businessDate: required(body["businessDate"], "businessDate"),
-          requirePaymentReadiness: booleanOptional(
-            body["requirePaymentReadiness"],
-          ),
-          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
-        });
-      response.status(result.replayed ? 200 : 201);
-      return result;
-    }),
+    route("activate-supplier", async () => {throw new MasterDataError(409,"SUPPLIER_ACTIVATION_CASE_REQUIRED","Create, approve, and materialize an activate_supplier Business Partner case");}),
   );
   app.post(
     "/api/neon/business-partners/:businessPartnerId/qualifications",
@@ -277,6 +252,86 @@ export function registerBusinessPartnerEligibilityRoutes(
     }),
   );
   app.get(
+    "/api/neon/business-partners/:businessPartnerId/customer-designations",
+    options.authenticate,
+    route("list-customer-designations", (request, context) => {
+      const companyCodeId = uuidOptional(
+        request.query["companyCodeId"],
+        "companyCodeId",
+      );
+      return options.service.listCustomerDesignations({
+        context,
+        businessPartnerId: uuid(
+          request.params["businessPartnerId"],
+          "businessPartnerId",
+        ),
+        operatingOrganizationId: uuid(
+          request.query["operatingOrganizationId"],
+          "operatingOrganizationId",
+        ),
+        ...(companyCodeId ? { companyCodeId } : {}),
+      });
+    }),
+  );
+  app.post(
+    "/api/neon/business-partners/:businessPartnerId/customer-designations",
+    options.authenticate,
+    route("create-customer-designation", async (request, context, response) => {
+      const body = object(request.body),
+        priorityTier = numberOptional(body["priorityTier"], "priorityTier"),
+        companyCodeId = uuidOptional(body["companyCodeId"], "companyCodeId"),
+        countryCode = textOptional(body["countryCode"]),
+        channelCode = textOptional(body["channelCode"]),
+        effectiveUntil = textOptional(body["effectiveUntil"]),
+        result = await options.service.createCustomerDesignation({
+          context,
+          idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+          businessPartnerId: uuid(
+            request.params["businessPartnerId"],
+            "businessPartnerId",
+          ),
+          customerId: uuid(body["customerId"], "customerId"),
+          operatingOrganizationId: uuid(
+            body["operatingOrganizationId"],
+            "operatingOrganizationId",
+          ),
+          ...(companyCodeId ? { companyCodeId } : {}),
+          ...(countryCode ? { countryCode } : {}),
+          ...(channelCode ? { channelCode } : {}),
+          designationType: enumeration(body["designationType"], [
+            "key_account",
+            "strategic",
+            "priority_service",
+          ] as const),
+          ...(priorityTier === undefined ? {} : { priorityTier }),
+          effectiveFrom: required(body["effectiveFrom"], "effectiveFrom"),
+          ...(effectiveUntil ? { effectiveUntil } : {}),
+          rationale: required(body["rationale"], "rationale"),
+        });
+      response.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.post(
+    "/api/neon/customer-designations/:designationId/decisions",
+    options.authenticate,
+    route("decide-customer-designation", (request, context) => {
+      const body = object(request.body);
+      return options.service.decideCustomerDesignation({
+        context,
+        designationId: uuid(request.params["designationId"], "designationId"),
+        expectedVersion: positive(body["expectedVersion"], "expectedVersion"),
+        decision: enumeration(body["decision"], [
+          "approved",
+          "rejected",
+          "revoked",
+        ] as const),
+        reason: required(body["reason"], "reason"),
+        idempotencyKey: required(body["idempotencyKey"], "idempotencyKey"),
+      });
+    }),
+  );
+  app.get(
     "/api/neon/business-partners/:businessPartnerId/customer-credit-reviews",
     options.authenticate,
     route("list-customer-credit", (request, context) =>
@@ -357,7 +412,6 @@ export function registerBusinessPartnerEligibilityRoutes(
           "approved",
           "conditional",
           "rejected",
-          "suspended",
         ] as const),
         reason: required(body["reason"], "reason"),
         ...(approvedLimit === undefined

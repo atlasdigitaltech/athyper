@@ -1,9 +1,11 @@
+import { sanitizeReturnTo as safeReturnTo } from "@athyper/platform-iam-session";
 import * as React from "react";
 import { getPlaneBrand, type BrandPlane } from "@athyper/platform-brand";
 import { LockIcon, UserIcon, WarningIcon } from "@athyper/platform-icons";
 import { PublicIdentitySurface } from "@athyper/platform-surface-kit/public-identity-surface";
 import { ActionButton, ActionLink, Eyebrow, Heading, MetaText, Notice, ScreenReaderText, Spinner, SupportingText } from "@athyper/platform-ui/presentation";
 import { IdentityContextPicker, type IdentityContextOption } from "./context-picker";
+import { WorkspaceShowcase } from "./workspace-showcase";
 export type { IdentityContextOption } from "./context-picker";
 export { getPlaneWebMetadata } from "@athyper/platform-brand";
 
@@ -78,24 +80,11 @@ export function AuthLoadingPage({ plane, label = "Preparing secure sign-in" }: {
 
 function AuthShell({ plane, children }: { readonly plane: BrandPlane; readonly children: React.ReactNode }) {
   const brand = getPlaneBrand(plane);
-  const story = IDENTITY_STORIES[plane];
-  return <PublicIdentitySurface plane={plane} labelledBy="identity-title" story={<>
-      <div className="a-identity-story-copy"><p className="a-identity-story-eyebrow">{brand.description}</p><h2>{story.heading}</h2><p>{story.copy}</p></div>
-      <IdentityWave />
-      <p className="a-identity-story-plane">{brand.shortName}<span>{brand.description}</span></p>
-    </>} brand={<img src={brand.identityLockup.src} width={brand.identityLockup.width} height={brand.identityLockup.height} alt={brand.identityLockup.alt} decoding="sync" fetchPriority="high" />}
+  return <PublicIdentitySurface plane={plane} labelledBy="identity-title" story={<WorkspaceShowcase plane={plane} />}
+    brand={<img src={brand.identityLockup.src} width={brand.identityLockup.width} height={brand.identityLockup.height} alt={brand.identityLockup.alt} decoding="sync" fetchPriority="high" />}
     footer={<><span>© {new Date().getFullYear()} Atlas Digital Technology Solutions</span><span aria-hidden="true">·</span><span className="a-identity-assurance"><img src={brand.favicon} alt="" aria-hidden="true" />Secured by Athyper Identity</span></>}>{children}</PublicIdentitySurface>;
 }
 
-const IDENTITY_STORIES = Object.freeze({
-  neon: { heading: "Govern Business Partner data.", copy: "Create, validate, approve, and maintain trusted partner records." },
-  mesh: { heading: "Connect your Business Partner network.", copy: "Manage governed partner relationships and shared profiles." },
-  studio: { heading: "Define Business Partner governance.", copy: "Author and publish the definitions used by Neon and Mesh." },
-} satisfies Record<BrandPlane, { readonly heading: string; readonly copy: string }>);
-
-function IdentityWave() { return <svg className="a-identity-story-art" viewBox="0 0 1200 520" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><linearGradient id="athyper-app-wave" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="var(--a-story-wave)" stopOpacity="0"/><stop offset=".28" stopColor="var(--a-story-wave)" stopOpacity=".75"/><stop offset=".72" stopColor="var(--a-story-wave-bright)" stopOpacity=".95"/><stop offset="1" stopColor="var(--a-story-wave)" stopOpacity=".12"/></linearGradient></defs><g className="a-identity-story-wave-lines" fill="none" stroke="url(#athyper-app-wave)" strokeWidth="2"><path d="M-40 285 C180 285 235 120 430 270 S720 430 910 220 S1110 170 1240 280"/><path d="M-40 300 C190 300 245 145 440 282 S725 415 920 232 S1115 190 1240 292"/><path d="M-40 315 C200 315 255 170 450 294 S730 400 930 244 S1120 210 1240 304"/><path d="M-40 330 C210 330 265 195 460 306 S735 385 940 256 S1125 230 1240 316"/><path d="M-40 345 C220 345 275 220 470 318 S740 370 950 268 S1130 250 1240 328"/><path d="M-40 360 C230 360 285 245 480 330 S745 355 960 280 S1135 270 1240 340"/></g></svg>; }
-
 function getGreeting(): string { const h = new Date().getHours(); return h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"; }
 function normalizeReason(value: string): AuthRecoveryReason { const normalized = value.trim().replace(/;+$/, ""); return (["access", "service", "retry", "expired", "signed-out", "signed-out-everywhere", "logout-incomplete"] as const).includes(normalized as AuthRecoveryReason) ? normalized as AuthRecoveryReason : "retry"; }
-function safeReturnTo(value: string): string { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && !/^\/(?:api|sign-in|logout)(?:\/|\?|$)/.test(value) ? value : "/"; }
 function loginHref(returnTo: string, mode: "retry" | "switch"): string { return `/api/auth/login?returnTo=${encodeURIComponent(safeReturnTo(returnTo))}&mode=${mode}`; }

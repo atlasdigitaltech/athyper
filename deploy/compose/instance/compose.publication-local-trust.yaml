@@ -1,0 +1,9 @@
+# Only needed for the local self-signed development TLS certificate.
+services:
+  worker:
+    environment:
+      NODE_EXTRA_CA_CERTS: /run/secrets/publication-tls-certificate
+    secrets: [publication-tls-certificate]
+secrets:
+  publication-tls-certificate:
+    file: ${ATHYPER_RUNTIME_ROOT:?set ATHYPER_RUNTIME_ROOT}/platform/secrets/tls.crt

@@ -94,7 +94,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
       const release = await options.authority.getRelease(releaseId);
       if (!release) { response.status(404).json({ error: "PUBLICATION_RELEASE_NOT_FOUND" }); return; }
       const jobId = await options.jobs.enqueue(PUBLICATION_AUTHORITY_QUEUE, COMPILE_PUBLICATION_ARTIFACT_JOB, { releaseId }, {
-        jobId: `publication:${releaseId}:compile:1`, maxAttempts: 5, payloadSchema: { name: COMPILE_PUBLICATION_ARTIFACT_JOB, version: 1 },
+        enqueueKey: `publication:${releaseId}:compile:1`, maxAttempts: 5, payloadSchema: { name: COMPILE_PUBLICATION_ARTIFACT_JOB, version: 1 },
         execution: coordinate(context),
       });
       await audit(options, context, "publication.release.publish", releaseId, "success", { jobId });
@@ -111,7 +111,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
       const deployment = await options.authority.getDeployment(deploymentId);
       if (!deployment) { response.status(404).json({ error: "PUBLICATION_DEPLOYMENT_NOT_FOUND" }); return; }
       const jobId = await options.jobs.enqueue("publication.apply", "publication.apply-release", { deploymentId, targetPlane: deployment.targetPlane }, {
-        jobId: `publication:${deploymentId}:apply:${deployment.targetPlane}:retry:${context.requestId}`, maxAttempts: 5, execution: coordinate(context),
+        enqueueKey: `publication:${deploymentId}:apply:${deployment.targetPlane}:retry:${context.requestId}`, maxAttempts: 5, execution: coordinate(context),
       });
       await audit(options, context, "publication.deployment.retry", deploymentId, "success", { jobId });
       response.status(202).json({ deploymentId, jobId });
@@ -126,7 +126,7 @@ export function registerPublicationRoutes(application: Application, options: Pub
       const targetAppliedReleaseId = requiredString(request.body, "targetAppliedReleaseId");
       if (!options.apiEnabled) { response.status(503).json({ error: "PUBLICATION_API_DISABLED" }); return; }
       const publicationKey=String(request.params["key"]),reason=requiredString(request.body,"reason");
-      const jobId=await options.jobs.enqueue(PUBLICATION_APPLY_QUEUE,ROLLBACK_PUBLICATION_RELEASE_JOB,{publicationKey,targetAppliedReleaseId,targetPlane:plane,reason,actorId:context.principalId},{jobId:`publication:${plane}:${publicationKey}:rollback:${targetAppliedReleaseId}`,maxAttempts:3,execution:coordinate(context),payloadSchema:{name:ROLLBACK_PUBLICATION_RELEASE_JOB,version:1}});
+      const jobId=await options.jobs.enqueue(PUBLICATION_APPLY_QUEUE,ROLLBACK_PUBLICATION_RELEASE_JOB,{publicationKey,targetAppliedReleaseId,targetPlane:plane,reason,actorId:context.principalId},{enqueueKey:`publication:${plane}:${publicationKey}:rollback:${targetAppliedReleaseId}`,maxAttempts:3,execution:coordinate(context),payloadSchema:{name:ROLLBACK_PUBLICATION_RELEASE_JOB,version:1}});
       await audit(options, context, "publication.release.rollback", targetAppliedReleaseId, "success", { plane,publicationKey,jobId });
       response.status(202).json({publicationKey,plane,targetAppliedReleaseId,jobId});
     } catch (error) { next(error); }

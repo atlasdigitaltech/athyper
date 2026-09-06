@@ -450,3 +450,24 @@ CREATE TABLE snapshot.entity_release_artifact (
 
 COMMENT ON TABLE snapshot.entity_release_artifact IS
   'Immutable Studio/Neon/Mesh artifact compiled from one normalized Meta Entity release. Supports both global package releases and tenant-owned releases without overloading business-record snapshots.';
+
+-- Immutable case schemas approved by the separated Business Partner publication roles.
+CREATE TABLE snapshot.business_partner_case_contract_revision (
+    id uuid PRIMARY KEY,
+    tenant_id uuid NOT NULL,
+    entity_id uuid NOT NULL,
+    publication_key text NOT NULL,
+    previous_contract_id uuid NOT NULL,
+    previous_contract_hash text NOT NULL CHECK (previous_contract_hash ~ '^[a-f0-9]{64}$'),
+    previous_release_no bigint NOT NULL CHECK (previous_release_no > 0),
+    contract_json jsonb NOT NULL CHECK (
+        jsonb_typeof(contract_json) = 'object'
+        AND pg_column_size(contract_json) <= 262144
+    ),
+    contract_hash text NOT NULL CHECK (contract_hash ~ '^[a-f0-9]{64}$'),
+    idempotency_key text NOT NULL CHECK (length(idempotency_key) BETWEEN 8 AND 180),
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    created_by uuid NOT NULL,
+    UNIQUE (tenant_id, id),
+    UNIQUE (tenant_id, idempotency_key)
+);

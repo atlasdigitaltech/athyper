@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { buildDevelopmentBusinessPartnerProjection } from "../../provisioning/provision-development-business-partner-runtime.js";
+import {
+  buildDevelopmentBusinessPartnerCaseProjection,
+  buildDevelopmentBusinessPartnerProjection,
+} from "../../provisioning/provision-development-business-partner-runtime.js";
 
 test("development business-partner publication is deterministic and browser-safe", () => {
   const permissionId = "04a1f105-978d-5906-b6df-0e7eb5c938bd";
@@ -31,7 +34,9 @@ test("development business-partner publication is deterministic and browser-safe
       .importAdapterKey,
     "neon.business_partner.operating_organization.v1",
   );
-  assert.equal(first.releaseNo, 9);
+  assert.equal(first.releaseNo, 10);
+  assert.equal(first.projection.descriptor.compiled_json.storage.versionField, "record_version");
+  assert.ok(first.projection.descriptor.compiled_json.fields.some(field => field.key === "record_version"));
   assert.equal(
     first.projection.descriptor.compiled_json.detailRouteTemplate,
     "/mdg/business-partner/:recordId",
@@ -81,6 +86,28 @@ test("development business-partner publication is deterministic and browser-safe
   );
   assert.match(first.artifactHash, /^[a-f0-9]{64}$/);
   assert.match(first.projection.descriptor.compiled_hash, /^[a-f0-9]{64}$/);
+});
+
+test("development case contract accepts the V1 create fields alongside later additive controls", () => {
+  const contract = buildDevelopmentBusinessPartnerCaseProjection(
+    "44444444-4444-4444-8444-444444444444",
+  ).projection.contract.contract_json;
+  for (const field of [
+    "partnerCategory",
+    "supplierType",
+    "customerType",
+    "expectedBusinessPartnerVersion",
+    "currencyCode",
+    "defaultAccountingProfileId",
+    "tenantFields",
+    "relationshipProposals",
+  ]) {
+    assert.ok(field in contract.properties, `missing additive field ${field}`);
+  }
+  assert.deepEqual(contract.properties.partnerCategory, {
+    type: "string",
+    enum: ["organization", "person"],
+  });
 });
 
 test("development business-partner access separates reader and primary-admin request creation", async () => {

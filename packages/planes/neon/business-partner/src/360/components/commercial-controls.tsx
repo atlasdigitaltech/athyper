@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import {
   useApiClient,
   useSessionIdentity,
@@ -148,7 +149,7 @@ function BankCard({
       setValue(result.value);
       window.setTimeout(
         () => setValue(undefined),
-        Math.max(0, Date.parse(result.expiresAt) - Date.now()),
+        Math.max(0, parseInstant(result.expiresAt) - Date.now()),
       );
     } catch {
       setFailed(true);

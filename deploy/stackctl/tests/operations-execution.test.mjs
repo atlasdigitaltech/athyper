@@ -28,6 +28,7 @@ test("operations up is confirmed, receipt-owned, and starts Compose before forwa
   assert.throws(() => executeOperationsOperation(defaultRepoRoot, "up", "lite", { confirm: "wrong" }, context.dependencies), /--confirm lite/u);
   const receipt = executeOperationsOperation(defaultRepoRoot, "up", "lite", { confirm: "lite" }, context.dependencies);
   assert.equal(receipt.spec.status, "succeeded");
+  assert.equal(receipt.spec.artifacts.mode, "lite");
   assert.equal(receipt.spec.artifacts.forwarderPid, 4242);
   assert.ok(context.calls[0].includes("config"));
   assert.ok(context.calls[1].includes("up"));
@@ -44,9 +45,11 @@ test("operations down requires ownership and retains volumes", () => {
   executeOperationsOperation(defaultRepoRoot, "up", "lite", { confirm: "lite" }, context.dependencies);
   const receipt = executeOperationsOperation(defaultRepoRoot, "down", undefined, { confirm: "operations" }, context.dependencies);
   assert.equal(receipt.spec.status, "succeeded");
+  assert.equal(receipt.spec.artifacts.mode, "lite");
   const command = context.calls.at(-1);
   assert.ok(command.includes("down"));
   assert.ok(!command.includes("--volumes"));
   const active = JSON.parse(readFileSync(join(context.root, "operations/receipts/active.json"), "utf8"));
   assert.equal(active.spec.state, "stopped");
+  assert.equal(active.spec.mode, "lite");
 });

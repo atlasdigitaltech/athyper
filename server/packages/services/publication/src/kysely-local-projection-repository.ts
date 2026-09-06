@@ -20,6 +20,16 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
   async stage(input: { readonly deployment: PublicationDeploymentBundle; readonly artifact: PublicationArtifactDocumentV1 }): Promise<AppliedReleaseProjection> {
     assertArtifactCoordinates(input.deployment,input.artifact);
     const envelope=input.artifact.envelope;
+    if(envelope.artifactKind==="entity_runtime" && envelope.payload.entityDescriptor.descriptorKind==="entity_case_runtime") {
+      const contract=envelope.payload.entityContract, base=envelope.payload.entityDescriptor.descriptor["caseContractBase"] as Record<string,unknown> | undefined;
+      if(!base || !contract.tenantId || envelope.targetPlane!=="neon") throw new Error("CASE_CONTRACT_COORDINATES_INVALID");
+      // Serialize against activation; an exact replay is allowed after this deployment activated.
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${envelope.publicationKey},0))`.execute(this.database);
+      const prior=(await sql<Row>`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${contract.tenantId}::uuid AND entity_id=${contract.entityId}::uuid AND publication_key=${envelope.publicationKey} AND status='published'`.execute(this.database)).rows[0];
+      const replay=(await this.findByDeployment(input.deployment.deploymentId))?.status==="active" && prior?.["release_id"]===envelope.releaseId;
+      if(!replay && (!prior || prior["id"]!==base["id"] || prior["entity_contract_hash"]!==base["hash"] || Number(prior["release_no"])!==Number(base["releaseNo"]) || contract.releaseNo!==Number(base["releaseNo"])+1)) throw new Error("CASE_CONTRACT_SOURCE_CONFLICT");
+    }
+
     const result=await sql<Row>`SELECT * FROM runtime_meta.fn_stage_release_projection(
       ${envelope.publicationKey},${envelope.releaseId}::uuid,${envelope.releaseNo},${input.deployment.deploymentId}::uuid,
       ${input.deployment.artifactHash},${JSON.stringify(input.artifact.manifest)}::jsonb,${JSON.stringify(projectionJson(input.artifact))}::jsonb
@@ -52,8 +62,11 @@ export class KyselyLocalProjectionRepository implements LocalProjectionRepositor
   }
 
   async findActiveBusinessPartnerDefinition(publicationKey:string):Promise<BusinessPartnerDefinitionProjection|null>{
-    const result=await sql<Row>`SELECT active.*,payload.coordinates->>'source_bundle_hash' source_bundle_hash,payload.coordinates->'compile_report' compile_report FROM runtime_meta.fn_active_business_partner_definition(${publicationKey}) active JOIN runtime_meta.applied_release_payload payload ON payload.id=active.id`.execute(this.database);const row=result.rows[0];if(!row)return null;
-    return{id:string(row,"id"),tenantId:string(row,"tenant_id"),revisionId:string(row,"revision_id"),releaseId:string(row,"release_id"),releaseNo:number(row,"release_no"),publicationKey:string(row,"publication_key"),plane:string(row,"plane_code") as BusinessPartnerDefinitionProjection["plane"],bundleCode:string(row,"bundle_code"),semanticVersion:string(row,"semantic_version"),bundleSchemaVersion:string(row,"bundle_schema_version"),bundleHash:string(row,"bundle_hash"),sourceBundleHash:string(row,"source_bundle_hash"),bundle:object(row,"bundle_json") as unknown as BusinessPartnerDefinitionProjection["bundle"],compileReport:object(row,"compile_report"),generatedAt:date(row,"generated_at")};
+    // The active projection function is the consumer-safe boundary. Do not join its
+    // result back to the tenant-owned payload table: a release authored by Studio's
+    // tenant must remain readable after it is verified and activated in this plane.
+    const result=await sql<Row>`SELECT * FROM runtime_meta.fn_active_business_partner_definition(${publicationKey})`.execute(this.database);const row=result.rows[0];if(!row)return null;
+    return{id:string(row,"id"),tenantId:string(row,"tenant_id"),revisionId:string(row,"revision_id"),releaseId:string(row,"release_id"),releaseNo:number(row,"release_no"),publicationKey:string(row,"publication_key"),plane:string(row,"plane_code") as BusinessPartnerDefinitionProjection["plane"],bundleCode:string(row,"bundle_code"),semanticVersion:string(row,"semantic_version"),bundleSchemaVersion:string(row,"bundle_schema_version"),bundleHash:string(row,"bundle_hash"),bundle:object(row,"bundle_json") as unknown as BusinessPartnerDefinitionProjection["bundle"],generatedAt:date(row,"generated_at")};
   }
 
   async rollback(input:{readonly publicationKey:string;readonly targetAppliedReleaseId:string;readonly evidence?:Readonly<Record<string,unknown>>}):Promise<ActiveReleaseProjection>{

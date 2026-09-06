@@ -106,6 +106,7 @@ common/authz/07_functions.sql
 common/ops/07_functions.sql
 planes/neon/snapshot/07_functions.sql
 planes/neon/document/07_functions.sql
+planes/neon/governance/07_functions.sql
 common/event/07_functions.sql
 common/governance/07_functions.sql
 common/document/07_functions.sql
@@ -173,6 +174,7 @@ common/runtime_meta/11_grants.sql
 common/authz/11_grants.sql
 planes/neon/snapshot/11_grants.sql
 planes/neon/document/11_grants.sql
+planes/neon/governance/11_grants.sql
 common/event/11_grants.sql
 common/governance/11_grants.sql
 common/document/11_grants.sql

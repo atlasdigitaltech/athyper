@@ -23,6 +23,7 @@
     "kysely": "^0.28.17"
   },
   "devDependencies": {
+    "@athyper/server-platform-audit": "workspace:*",
     "@types/node": "^25.6.0",
     "@types/pg": "^8.11.10",
     "pg": "^8.13.0",

@@ -101,8 +101,16 @@
     "/mdg/business-partner/business-partners"
   ],
   "catalogEntries": [
-    { "kind": "workspace", "code": "mdg", "routeSlug": "mdg" },
-    { "kind": "module", "code": "bp", "routeSlug": "business-partner" },
+    {
+      "kind": "workspace",
+      "code": "mdg",
+      "routeSlug": "mdg"
+    },
+    {
+      "kind": "module",
+      "code": "bp",
+      "routeSlug": "business-partner"
+    },
     {
       "kind": "entity",
       "code": "business_partner",
@@ -118,56 +126,56 @@
     {
       "declaration": "createRequest",
       "method": "POST",
-      "path": "/api/neon/business-partner-requests",
+      "path": "/api/neon/business-partner-cases",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "listRequests",
       "method": "GET",
-      "path": "/api/neon/business-partner-requests",
+      "path": "/api/neon/business-partner-cases",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "readView",
       "method": "GET",
-      "path": "/api/neon/business-partner-requests/:requestId/view",
+      "path": "/api/neon/business-partner-cases/:caseId/view",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "patchRequest",
       "method": "PATCH",
-      "path": "/api/neon/business-partner-requests/:requestId",
+      "path": "/api/neon/business-partner-cases/:caseId",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "validateRequest",
       "method": "POST",
-      "path": "/api/neon/business-partner-requests/:requestId/validate",
+      "path": "/api/neon/business-partner-cases/:caseId/validate",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "submitRequest",
       "method": "POST",
-      "path": "/api/neon/business-partner-requests/:requestId/submit",
+      "path": "/api/neon/business-partner-cases/:caseId/submit",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "decideRequest",
       "method": "POST",
-      "path": "/api/neon/business-partner-requests/:requestId/decisions",
+      "path": "/api/neon/business-partner-cases/:caseId/decisions",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
     {
       "declaration": "applyRequest",
       "method": "POST",
-      "path": "/api/neon/business-partner-requests/:requestId/apply",
+      "path": "/api/neon/business-partner-cases/:caseId/materialize",
       "source": "packages/planes/neon/business-partner/src/client.ts",
       "relayStatus": "allowlisted"
     },
@@ -274,6 +282,118 @@
       "method": "GET",
       "path": "/api/neon/business-partners/:businessPartnerId/360/:section",
       "source": "packages/planes/neon/business-partner/src/360/business-partner-360-explainability-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "listCustomerDesignations",
+      "method": "GET",
+      "path": "/api/neon/business-partners/:businessPartnerId/customer-designations",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "createCustomerDesignation",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:businessPartnerId/customer-designations",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "decideCustomerDesignation",
+      "method": "POST",
+      "path": "/api/neon/customer-designations/:designationId/decisions",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "createQualification",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:businessPartnerId/qualifications",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "decideQualification",
+      "method": "POST",
+      "path": "/api/neon/business-partner-qualifications/:qualificationId/decisions",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "listPreferences",
+      "method": "GET",
+      "path": "/api/neon/business-partners/:businessPartnerId/preferences",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "createPreference",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:businessPartnerId/preferences",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "decidePreference",
+      "method": "POST",
+      "path": "/api/neon/business-partner-preferences/:preferenceId/decisions",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "revokePreference",
+      "method": "POST",
+      "path": "/api/neon/business-partner-preferences/:preferenceId/revocations",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "activateSupplier",
+      "method": "POST",
+      "path": "/api/neon/business-partners/:businessPartnerId/supplier-activation",
+      "source": "packages/planes/neon/business-partner/src/client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "accept",
+      "method": "POST",
+      "path": "/api/neon/external/business-partner-invitations/supplier/accept",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "status",
+      "method": "GET",
+      "path": "/api/neon/external/business-partner-invitations/supplier/requests/:requestId/status",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "correction",
+      "method": "PATCH",
+      "path": "/api/neon/external/business-partner-invitations/supplier/requests/:requestId/correction",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "stage",
+      "method": "POST",
+      "path": "/api/neon/external/business-partner-invitations/supplier/requests/:requestId/evidence/stage",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "complete",
+      "method": "POST",
+      "path": "/api/neon/external/business-partner-invitations/supplier/requests/:requestId/evidence/complete",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
+      "relayStatus": "allowlisted"
+    },
+    {
+      "declaration": "submit",
+      "method": "POST",
+      "path": "/api/neon/external/business-partner-invitations/supplier/requests/:requestId/submit",
+      "source": "packages/planes/neon/business-partner/src/applicant-client.ts",
       "relayStatus": "allowlisted"
     }
   ],

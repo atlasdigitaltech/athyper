@@ -1,1 +1,1 @@
-# Canonical baseline reset 2026-09-04. Add Neon migrations created after this baseline below.
+# Canonical local-development baseline. Add post-baseline Neon migrations below.

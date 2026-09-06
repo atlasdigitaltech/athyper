@@ -15,7 +15,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const INPUT  = path.join(__dirname, '../../../stack/config/iam/realm-neon.json');
+const INPUT  = path.join(__dirname, '../../../deploy/config/iam/realm-neon.json');
 const OUTPUT = INPUT; // overwrite in place
 
 // ── 1. Load ────────────────────────────────────────────────────────────────

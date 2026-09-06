@@ -4,6 +4,24 @@ export type ExperiencePlane = "neon" | "mesh" | "studio";
 export type ExperienceRoleLens = "base" | "supplier" | "customer";
 export type CaseSectionState =
   "not_started" | "in_progress" | "complete" | "blocked" | "not_applicable";
+export type GovernedCaseStatusV1 =
+  | "draft"
+  | "validating"
+  | "validation_failed"
+  | "submitted"
+  | "pending_approval"
+  | "in_review"
+  | "returned"
+  | "approved"
+  | "rejected"
+  | "applying"
+  | "materializing"
+  | "applied"
+  | "materialized"
+  | "failed"
+  | "cancelled"
+  | "superseded"
+  | "conflicted";
 export type EvidenceLifecycleStatus =
   | "staged"
   | "uploading"
@@ -52,7 +70,7 @@ export interface GovernedCaseViewV1 {
   readonly schema: "athyper.governed-case-view/1";
   readonly id: string;
   readonly kind: string;
-  readonly status: string;
+  readonly status: GovernedCaseStatusV1;
   readonly rowVersion: number;
   readonly definition: DefinitionCoordinateV1;
   readonly subject: Readonly<{
@@ -195,7 +213,29 @@ export function parseGovernedCaseView(value: unknown): GovernedCaseViewV1 {
     schema: "athyper.governed-case-view/1",
     id: identifier(root.id, "id"),
     kind: code(root.kind, "kind"),
-    status: code(root.status, "status"),
+    status: oneOf(
+      root.status,
+      [
+        "draft",
+        "validating",
+        "validation_failed",
+        "submitted",
+        "pending_approval",
+        "in_review",
+        "returned",
+        "approved",
+        "rejected",
+        "applying",
+        "materializing",
+        "applied",
+        "materialized",
+        "failed",
+        "cancelled",
+        "superseded",
+        "conflicted",
+      ] as const,
+      "status",
+    ),
     rowVersion: positiveInteger(root.rowVersion, "rowVersion"),
     definition: definition(root.definition),
     subject: {
@@ -473,7 +513,13 @@ function mediaType(value: unknown): string {
 
 function timestamp(value: unknown, name: string): string {
   const result = text(value, name, 40);
-  if (!Number.isFinite(Date.parse(result))) fail(name);
+  // Validate the wire coordinate without importing runtime date utilities.
+  const match = /^(\d{4})-(\d{2})-(\d{2})T([01]\d|2[0-3]):([0-5]\d):([0-5]\d)(?:\.\d{1,9})?(?:Z|[+-](?:[01]\d|2[0-3]):[0-5]\d)$/.exec(result);
+  if (!match) fail(name);
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (month < 1 || month > 12 || day < 1 || day > days[month - 1]!) fail(name);
   return result;
 }
 

@@ -38,11 +38,17 @@ export function assessOrchestrator(repoRoot, evidence = {}) {
   if (!evidenceIo.exists(qualificationPath)) {
     blockers.push(`Machine phase evidence is absent: ${qualificationPath}.`);
   } else {
-    const phaseStatus = evidenceIo.readYaml(qualificationPath).status ?? {};
-    for (const [id, label] of Object.entries(RUNTIME_GATES)) {
-      if (!String(phaseStatus[id] ?? "absent").startsWith("complete-runtime")) {
-        blockers.push(`${label} has not passed (${id}=${String(phaseStatus[id] ?? "absent")}).`);
+    try {
+      const phaseDocument = evidenceIo.readYaml(qualificationPath);
+      if (!phaseDocument || typeof phaseDocument !== "object") throw new Error("expected a YAML mapping");
+      const phaseStatus = phaseDocument.status ?? {};
+      for (const [id, label] of Object.entries(RUNTIME_GATES)) {
+        if (!String(phaseStatus[id] ?? "absent").startsWith("complete-runtime")) {
+          blockers.push(`${label} has not passed (${id}=${String(phaseStatus[id] ?? "absent")}).`);
+        }
       }
+    } catch (error) {
+      blockers.push(`Machine phase evidence is invalid: ${error.message}.`);
     }
   }
 

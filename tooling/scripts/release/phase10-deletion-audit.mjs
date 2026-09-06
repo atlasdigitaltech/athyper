@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { isAbsolute, join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "../../..");
 const ignored = new Set(["node_modules", ".git", "dist", ".next", "build", ".turbo", "coverage"]);
@@ -48,7 +48,9 @@ for (const manifestPath of manifests) {
   const references = [];
   const pathTokens = [path, `${path}/`];
   for (const file of files) {
-    if (file.startsWith(`${directory}${"\\"}`) || file === manifestPath) continue;
+    const fromCandidate = relative(directory, file);
+    const normalizedFromCandidate = fromCandidate.replaceAll("\\", "/");
+    if ((normalizedFromCandidate !== "" && normalizedFromCandidate !== ".." && !normalizedFromCandidate.startsWith("../") && !isAbsolute(fromCandidate)) || file === manifestPath) continue;
     const content = readFileSync(file, "utf8");
     if (content.includes(name) || pathTokens.some((token) => content.includes(token))) references.push(rel(file));
   }

@@ -1017,6 +1017,8 @@ CREATE TRIGGER trg_external_candidate_submission_10_scope BEFORE INSERT OR UPDAT
 CREATE TRIGGER trg_contingent_work_order_10_scope BEFORE INSERT OR UPDATE OF candidate_submission_id,supplier_id ON document.contingent_work_order FOR EACH ROW EXECUTE FUNCTION document.trg_guard_contingent_work_order();
 CREATE TRIGGER trg_worker_engagement_10_scope BEFORE INSERT OR UPDATE OF external_worker_id,supplier_id,company_code_id,legal_entity_id,contingent_work_order_id,statement_of_work_id ON document.worker_engagement FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_engagement();
 CREATE TRIGGER trg_worker_engagement_15_iam_command BEFORE UPDATE OF access_status ON document.worker_engagement FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_engagement_iam_mutation();
+CREATE TRIGGER trg_worker_engagement_16_lifecycle_command BEFORE UPDATE OF status ON document.worker_engagement FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_engagement_lifecycle_mutation();
+CREATE TRIGGER trg_worker_operational_placement_10_command BEFORE INSERT OR UPDATE OR DELETE ON document.worker_operational_placement FOR EACH ROW EXECUTE FUNCTION document.trg_guard_worker_operational_placement_mutation();
 CREATE TRIGGER trg_external_time_sheet_10_guard BEFORE INSERT OR UPDATE ON document.external_time_sheet FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_header();
 CREATE TRIGGER trg_external_expense_sheet_10_guard BEFORE INSERT OR UPDATE ON document.external_expense_sheet FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_header();
 CREATE TRIGGER trg_external_time_entry_10_guard BEFORE INSERT OR UPDATE OR DELETE ON document.external_time_entry FOR EACH ROW EXECUTE FUNCTION document.trg_guard_external_claim_line();
@@ -1053,3 +1055,17 @@ BEGIN
     END LOOP;
 END;
 $$;
+
+CREATE TRIGGER mesh_profile_resolution_immutable
+    BEFORE UPDATE OR DELETE ON document.mesh_profile_change_resolution
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_mesh_profile_resolution_immutable();
+
+CREATE TRIGGER mesh_profile_change_case_immutable
+    BEFORE UPDATE OR DELETE ON document.mesh_profile_change_case
+    FOR EACH ROW
+    EXECUTE FUNCTION document.trg_mesh_profile_resolution_immutable();
+
+CREATE TRIGGER trg_entity_case_materialize_business_partner_relationships
+AFTER UPDATE OF status,target_entity_id,result_snapshot_id ON document.entity_case
+FOR EACH ROW EXECUTE FUNCTION master.fn_materialize_business_partner_case_relationships();

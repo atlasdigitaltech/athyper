@@ -4,7 +4,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const realmArgument = process.argv.find((argument) => argument.startsWith("--realm="));
-const realmPath = resolve(process.cwd(), realmArgument?.slice("--realm=".length) || "stack/config/iam/realm-athyper.json");
+const realmPath = resolve(process.cwd(), realmArgument?.slice("--realm=".length) || "deploy/config/iam/realm-athyper.json");
 const write = process.argv.includes("--write");
 const planes = Object.freeze({
   neon: Object.freeze({ scope: "athyper-neon-plane", role: "NEON_USER" }),

@@ -1,3 +1,4 @@
+import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import { createHash } from "node:crypto";
 import {
   PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,
@@ -33,8 +34,48 @@ export interface KyselyPublicationAuthorityWorkOptions {
 export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork {
   constructor(private readonly options: KyselyPublicationAuthorityWorkOptions) {}
 
-  async compile(releaseId: string): Promise<{ readonly compilationIds: readonly string[] }> {
-    let result = await sql<Row>`SELECT pr.id publication_release_id,pr.release_key,pr.release_no,pr.release_kind,
+  private scoped<T>(work:(worker:KyselyPublicationAuthorityWork)=>Promise<T>):Promise<T>{
+    const context=tryGetRequestContext();
+    if(!context?.tenantId)return work(this);
+    return this.options.database.transaction().execute(async database=>{
+      await sql`SELECT set_config('app.current_tenant_id',${context.tenantId!},true),set_config('app.current_principal_id',${context.principalId??""},true)`.execute(database);
+      return work(new KyselyPublicationAuthorityWork({...this.options,database,authority:new KyselyPublicationAuthorityRepository(database)}));
+    });
+  }
+  compile(id:string){return this.scoped(worker=>worker.compileScoped(id));}
+  sign(id:string){return this.scoped(worker=>worker.signScoped(id));}
+  dispatch(id:string){return this.scoped(worker=>worker.dispatchScoped(id));}
+
+  private async compileScoped(releaseId: string): Promise<{ readonly compilationIds: readonly string[] }> {
+    let result = await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
+        pr.compatibility_level,pr.minimum_runtime_version,r.id revision_id,r.bundle_code,r.semantic_version,
+        r.bundle_schema_version,r.bundle_json,r.bundle_hash,r.created_at,r.created_by,
+        unnest(r.target_planes) plane_key
+        FROM publication.release pr
+        JOIN publication.business_partner_definition_release_link l ON l.publication_release_id=pr.id
+        JOIN snapshot.business_partner_definition_revision r ON r.id=l.definition_revision_id
+        WHERE pr.id=${releaseId}::uuid AND pr.status IN ('approved','published') ORDER BY plane_key`.execute(this.options.database);
+    let artifactKind: import("@athyper/server-contract-publication").PublicationArtifactKind = "business_partner_definition_bundle";
+    let caseContract = false;
+    if (!result.rows.length) {
+      const cases = await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
+        pr.compatibility_level,pr.minimum_runtime_version,pr.created_by published_by,r.id revision_id,r.entity_id,
+        r.contract_json,r.contract_hash,r.previous_contract_id,r.previous_contract_hash,r.previous_release_no,r.created_at
+        FROM publication.release pr JOIN publication.business_partner_case_contract_release_link l ON l.publication_release_id=pr.id AND l.tenant_id=pr.tenant_id
+        JOIN snapshot.business_partner_case_contract_revision r ON r.id=l.revision_id AND r.tenant_id=l.tenant_id
+        WHERE pr.id=${releaseId}::uuid AND pr.status IN('approved','published')`.execute(this.options.database);
+      if (cases.rows.length) {
+        caseContract = true; artifactKind = "entity_runtime";
+        const row = cases.rows[0]!;
+        const contractBytes=this.options.canonicalizer.canonicalBytes(row["contract_json"]);
+        if (this.options.canonicalizer.sha256(contractBytes)!==row["contract_hash"]) throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
+        const signature=await this.options.signer.sign({keyId:this.options.signingKeyId,algorithm:"Ed25519",bytes:contractBytes});
+        const descriptor={schema:"athyper.entity-case-runtime-descriptor/1.0",entityCode:"master.business_partner",planeKey:"neon",lifecycleStore:"document.entity_case",operation_scope_bindings:[],caseContractBase:{id:row["previous_contract_id"],hash:row["previous_contract_hash"],releaseNo:Number(row["previous_release_no"])}};
+        result={...cases,rows:[{...row,entity_code:"master.business_partner",contract_schema_code:"athyper.entity-contract",contract_schema_version:"1.0.0",published_at:row["created_at"],plane_key:"neon",descriptor_kind:"entity_case_runtime",descriptor_id:stableUuid(`case-contract-descriptor:${releaseId}:neon`),compiled_json:descriptor,compiled_hash:this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(descriptor)),contract_signature:signature.signature,signature_algorithm:"Ed25519",contract_signing_key_id:this.options.signingKeyId}]};
+      }
+    }
+    if (!result.rows.length) {
+      result = await sql<Row>`SELECT pr.id publication_release_id,pr.release_key,pr.release_no,pr.release_kind,
       pr.compatibility_level,pr.minimum_runtime_version,er.revision_id,er.contract_schema_code,
       er.contract_schema_version,er.contract_hash,er.contract_signature,er.signature_algorithm,
       er.signing_key_id contract_signing_key_id,er.published_at,er.published_by,e.id entity_id,e.entity_code,
@@ -45,24 +86,14 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       JOIN metadata.entity e ON e.id=er.entity_id
       JOIN snapshot.entity_contract_revision r ON r.id=er.revision_id
       JOIN snapshot.entity_release_artifact a ON a.source_release_id=er.id
-      WHERE pr.id=${releaseId}::uuid ORDER BY a.plane_key`.execute(this.options.database);
-    let artifactKind: import("@athyper/server-contract-publication").PublicationArtifactKind = "entity_runtime";
-    if (!result.rows.length) {
-      result = await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
-        pr.compatibility_level,pr.minimum_runtime_version,r.id revision_id,r.bundle_code,r.semantic_version,
-        r.bundle_schema_version,r.bundle_json,r.bundle_hash,r.created_at,r.created_by,
-        unnest(r.target_planes) plane_key
-        FROM publication.release pr
-        JOIN publication.business_partner_definition_release_link l ON l.publication_release_id=pr.id
-        JOIN snapshot.business_partner_definition_revision r ON r.id=l.definition_revision_id
-        WHERE pr.id=${releaseId}::uuid ORDER BY plane_key`.execute(this.options.database);
-      artifactKind = "business_partner_definition_bundle";
+      WHERE pr.id=${releaseId}::uuid AND pr.status IN ('approved','published') ORDER BY a.plane_key`.execute(this.options.database);
+      artifactKind = "entity_runtime";
     }
     if (!result.rows.length) throw permanent("PUBLICATION_COMPILATION_SOURCE_NOT_FOUND");
 
     const compilationIds: string[] = [];
     const selected=result.rows.filter(row=>this.options.targetPlanes.includes(planeValue(row["plane_key"])));
-    if(selected.length!==this.options.targetPlanes.length)throw permanent("PUBLICATION_TARGET_COMPILATION_SOURCE_MISSING");
+    if(selected.length!==(caseContract?1:this.options.targetPlanes.length))throw permanent("PUBLICATION_TARGET_COMPILATION_SOURCE_MISSING");
     for (const row of selected) {
       const plane = planeValue(row["plane_key"]);
       const unsigned = artifactKind === "entity_runtime"
@@ -84,7 +115,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     return { compilationIds };
   }
 
-  async sign(compilationId: string): Promise<{ readonly deploymentId: string }> {
+  private async signScoped(compilationId: string): Promise<{ readonly deploymentId: string }> {
     const result = await sql<Row>`SELECT c.*,r.release_key,r.release_no,r.created_by
       FROM publication.artifact_compilation c JOIN publication.release r ON r.id=c.publication_release_id
       WHERE c.id=${compilationId}::uuid`.execute(this.options.database);
@@ -111,7 +142,7 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     return { deploymentId: deployment.deploymentId };
   }
 
-  async dispatch(deploymentId: string): Promise<PublicationCoordinatePayload> {
+  private async dispatchScoped(deploymentId: string): Promise<PublicationCoordinatePayload> {
     const deployment = await this.options.authority.getDeployment(deploymentId);
     if (!deployment) throw permanent("DEPLOYMENT_NOT_FOUND");
     if (deployment.deploymentStatus === "pending") await this.options.authority.transitionDeployment({ deploymentId, status: "dispatched", evidence: { authorityWorker: "publication.v1" } });
@@ -127,10 +158,10 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
 function buildUnsigned(row: Row, plane: PublicationPlane, signingKeyId: string, canonicalizer: PublicationCanonicalizer) {
   const payload = {
     entityContract: {
-      id:string(row,"revision_id"),entityId:string(row,"entity_id"),entityCode:string(row,"entity_code"),releaseId:string(row,"publication_release_id"),revisionId:string(row,"revision_id"),releaseNo:number(row,"release_no"),contractSchemaCode:string(row,"contract_schema_code"),contractSchemaVersion:string(row,"contract_schema_version"),contractHash:string(row,"contract_hash"),contract:object(row,"contract_json"),publicationKey:string(row,"release_key"),signature:{algorithm:string(row,"signature_algorithm"),keyId:string(row,"contract_signing_key_id"),signature:string(row,"contract_signature")},publishedAt:date(row,"published_at"),
+      id:string(row,"revision_id"),...(row["tenant_id"]?{tenantId:string(row,"tenant_id")}:{}),entityId:string(row,"entity_id"),entityCode:string(row,"entity_code"),releaseId:string(row,"publication_release_id"),revisionId:string(row,"revision_id"),releaseNo:number(row,"release_no"),contractSchemaCode:string(row,"contract_schema_code"),contractSchemaVersion:string(row,"contract_schema_version"),contractHash:string(row,"contract_hash"),contract:object(row,"contract_json"),publicationKey:string(row,"release_key"),signature:{algorithm:string(row,"signature_algorithm"),keyId:string(row,"contract_signing_key_id"),signature:string(row,"contract_signature")},publishedAt:date(row,"published_at"),
     },
     entityDescriptor: {
-      id:string(row,"descriptor_id"),plane,descriptorKind:"entity_runtime" as const,descriptorSchemaVersion:"1.0.0",sourceContractHash:string(row,"contract_hash"),compiledHash:string(row,"compiled_hash"),descriptor:object(row,"compiled_json"),compilerVersion:"athyper.entity-release-artifact/1.0.0",compatibilityLevel:string(row,"compatibility_level"),generatedAt:date(row,"created_at"),
+      id:string(row,"descriptor_id"),plane,descriptorKind:(row["descriptor_kind"] === "entity_case_runtime" ? "entity_case_runtime" : "entity_runtime") as "entity_case_runtime" | "entity_runtime",descriptorSchemaVersion:"1.0.0",sourceContractHash:string(row,"contract_hash"),compiledHash:string(row,"compiled_hash"),descriptor:object(row,"compiled_json"),compilerVersion:"athyper.entity-release-artifact/1.0.0",compatibilityLevel:string(row,"compatibility_level"),generatedAt:date(row,"created_at"),
     },
   };
   const envelope = { schema:PUBLICATION_ARTIFACT_SCHEMA_V1,publicationKey:string(row,"release_key"),releaseId:string(row,"publication_release_id"),releaseNo:number(row,"release_no"),releaseKind:string(row,"release_kind"),targetPlane:plane,artifactKind:"entity_runtime" as const,generatedAt:date(row,"created_at"),...(row["minimum_runtime_version"]?{minimumRuntimeVersion:string(row,"minimum_runtime_version")} : {}),compatibilityLevel:string(row,"compatibility_level"),payload };

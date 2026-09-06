@@ -23,3 +23,6 @@ export * from "./business-partner-foundation-definition.js";
 export * from "./business-partner-definition-compiler.js";
 export * from "./business-partner-definition-consumer.js";
 export * from "./business-partner-definition-consumer-routes.js";
+
+export * from "./business-partner-case-contract-service.js";
+export * from "./business-partner-case-contract-routes.js";

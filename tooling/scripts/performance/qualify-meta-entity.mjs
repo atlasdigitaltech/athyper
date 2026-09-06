@@ -6,6 +6,9 @@ export function qualifyMetaEntity({ inventory, budgets, baseline, current, excep
   const failures = [];
   const warnings = [];
   const minimumSamples = baseline.minimumSamples ?? 100;
+  if (!Number.isSafeInteger(minimumSamples) || minimumSamples <= 0) {
+    failures.push("baseline minimumSamples must be a positive integer");
+  }
   const approvals = new Map((exceptions.exceptions ?? []).map((entry) => [`${entry.routeId}:${entry.metric}`, entry]));
   for (const check of ["tenantIsolation", "permissionRevocation", "descriptorInvalidation", "durableMutation", "securityParity", "cacheParity"]) {
     if (current.checks?.[check] !== true) failures.push(`release check '${check}' did not pass`);
@@ -98,11 +101,16 @@ export function qualifyCompanyCodeSlices(current) {
 
 function budget(route, metric, value, maximum, label, failures) {
   if (!Number.isFinite(value)) failures.push(`${route}: ${metric} is missing`);
+  else if (!Number.isFinite(maximum) || maximum < 0) failures.push(`${route}: ${metric} budget is missing or invalid`);
   else if (value > maximum) failures.push(`${route}: ${label} ${value} exceeds budget ${maximum}`);
 }
 
 function regression(route, metric, value, reference, approvals, now, failures, warnings) {
-  if (!Number.isFinite(value) || !Number.isFinite(reference) || reference <= 0) return;
+  if (!Number.isFinite(value)) return;
+  if (!Number.isFinite(reference) || reference <= 0) {
+    failures.push(`${route}: ${metric} stored baseline is missing or invalid`);
+    return;
+  }
   const percentage = ((value - reference) / reference) * 100;
   if (percentage <= 15) return;
   const exception = approvals.get(`${route}:${metric}`);

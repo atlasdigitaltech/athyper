@@ -32,8 +32,8 @@ const BUSINESS_PARTNER_360_PERMISSION_CODES = [
 ] as const;
 const PRIMARY_TENANT_ADMINS = ["athyper.admin", "tksa.admin", "catl.admin"] as const;
 const PUBLISHED_AT = "2026-08-26T00:00:00.000Z";
-const SOURCE_VERSION = "development-v9";
-const CASE_CONTRACT_SOURCE_VERSION = "development-v1";
+const SOURCE_VERSION = "development-v10";
+const CASE_CONTRACT_SOURCE_VERSION = "development-v4";
 const UUID_NAMESPACE = Buffer.from("7bbaa1b7700b5b54a7eecf62699013ca", "hex");
 
 type QueryClient = Pick<Client, "query">;
@@ -61,8 +61,9 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     entityCode: "business_partner",
     detailRouteTemplate: "/mdg/business-partner/:recordId",
     planeKey: "neon",
-    storage: { schema: "master", object: "business_partner", idField: "id", tenantField: "tenant_id", statusField: "status" },
+    storage: { schema: "master", object: "business_partner", idField: "id", tenantField: "tenant_id", statusField: "status", versionField: "record_version" },
     fields: [
+      field("record_version", "integer", true, false, false, { label: "Record Version", defaultVisible: false, defaultOrder: 91, defaultWidth: 120 }),
       field("id", "uuid", true, true, true, { label: "Record ID", defaultVisible: false, defaultOrder: 90, defaultWidth: 300 }),
       field("code", "string", true, true, true, { label: "Business Partner Code", semanticRole: "identity", defaultVisible: true, defaultOrder: 0, defaultWidth: 190 }),
       field("display_name", "string", false, true, true, { label: "Display Name", semanticRole: "title", defaultVisible: true, defaultOrder: 1, defaultWidth: 280 }),
@@ -116,7 +117,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
     sourceVersion: SOURCE_VERSION,
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 9,
+    releaseNo: 10,
     targetPlane: "neon",
     contractHash,
     compiledHash,
@@ -125,7 +126,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   return {
     publicationKey: PUBLICATION_KEY,
     releaseId,
-    releaseNo: 9,
+    releaseNo: 10,
     deploymentId,
     artifactHash,
     manifest,
@@ -137,7 +138,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
         entity_code: "business_partner",
         release_id: releaseId,
         revision_id: revisionId,
-        release_no: 9,
+        release_no: 10,
         contract_schema_code: "athyper.meta-entity-contract",
         contract_schema_version: "2.1",
         contract_hash: contractHash,
@@ -176,17 +177,18 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
   } as const;
 }
 
-export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) {
+export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string,releaseNo=2,caseContractBase?:Readonly<{id:string;hash:string;releaseNo:number}>) {
   const publicationKey = `${CASE_CONTRACT_PUBLICATION_KEY}.${tenantId.replaceAll("-", "")}`;
   const entityId = deterministicUuid(`${tenantId}:entity:master.business_partner`);
-  const releaseId = deterministicUuid(`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:release`);
-  const revisionId = deterministicUuid(`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:revision`);
-  const contractId = deterministicUuid(`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:contract`);
-  const descriptorId = deterministicUuid(`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:descriptor:neon`);
-  const deploymentId = deterministicUuid(`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:deployment:neon`);
+  const coordinate=`${publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:r${releaseNo}`;
+  const releaseId = deterministicUuid(`${coordinate}:release`);
+  const revisionId = deterministicUuid(`${coordinate}:revision`);
+  const contractId = deterministicUuid(`${coordinate}:contract`);
+  const descriptorId = deterministicUuid(`${coordinate}:descriptor:neon`);
+  const deploymentId = deterministicUuid(`${coordinate}:deployment:neon`);
   const contract = {
     type: "object",
-    required: ["businessPartnerCode", "name", "ownershipClass", "requestedRole"],
+    required: ["businessPartnerCode", "name", "ownershipClass"],
     additionalProperties: false,
     properties: {
       businessPartnerCode: { type: "string", minLength: 1 },
@@ -199,6 +201,8 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
       websiteUrl: { type: "string" },
       description: { type: "string" },
       ownershipClass: { type: "string", enum: ["internal", "external"] },
+      partnerCategory: { type: "string", enum: ["organization", "person"] },
+      legalClassification: { type: "string" },
       requestedRole: { type: "string", enum: ["supplier", "customer"] },
       roleCode: { type: "string" },
       registrationChannel: { type: "string" },
@@ -212,6 +216,31 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
       companyCodeId: { type: "string" },
       commodityCategoryId: { type: "string" },
       preflight: { type: "object" },
+      supplierType: { type: "string" },
+      customerType: { type: "string" },
+      meshChangeResolutionId: { type: "string" },
+      meshChangeFingerprint: { type: "string" },
+      meshChangeDecisions: { type: "object" },
+      meshChangePreview: { type: "object" },
+      expectedBusinessPartnerVersion: { type: "integer", minimum: 1 },
+      priorStatus: { type: "string" },
+      reasonCode: { type: "string" },
+      dependencies: { type: "array" },
+      bankProjectionId: { type: "string" },
+      supplierCompanyProfileId: { type: "string" },
+      expectedBankSnapshotId: { type: "string" },
+      priorBankLinkId: { type: "string" },
+      effectiveFrom: { type: "string" },
+      effectiveUntil: { type: "string" },
+      currencyCode: { type: "string" },
+      paymentTermId: { type: "string" },
+      defaultAccountingProfileId: { type: "string" },
+      defaultDimensionSetId: { type: "string" },
+      preferredRemittanceBankLinkId: { type: "string" },
+      statementCycleCode: { type: "string" },
+      tenantFields: { type: "object" },
+      relationshipProposals: { type: "object" },
+      activation: { type: "object" },
     },
   } as const;
   const descriptor = {
@@ -220,6 +249,7 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
     planeKey: "neon",
     lifecycleStore: "document.entity_case",
     operation_scope_bindings: [],
+    ...(caseContractBase?{caseContractBase}:{}),
   } as const;
   const contractHash = sha256(contract);
   const compiledHash = sha256(descriptor);
@@ -229,7 +259,7 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
     sourceVersion: CASE_CONTRACT_SOURCE_VERSION,
     publicationKey,
     releaseId,
-    releaseNo: 1,
+    releaseNo,
     tenantId,
     targetPlane: "neon",
     contractHash,
@@ -239,7 +269,7 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
   return {
     publicationKey,
     releaseId,
-    releaseNo: 1,
+    releaseNo,
     deploymentId,
     artifactHash,
     manifest,
@@ -251,7 +281,7 @@ export function buildDevelopmentBusinessPartnerCaseProjection(tenantId: string) 
         entity_code: "master.business_partner",
         release_id: releaseId,
         revision_id: revisionId,
-        release_no: 1,
+        release_no: releaseNo,
         contract_schema_code: "athyper.entity-contract",
         contract_schema_version: "1.0.0",
         contract_hash: contractHash,
@@ -340,7 +370,8 @@ export async function provisionDevelopmentBusinessPartnerRuntime(options: { data
 async function publishDevelopmentBusinessPartnerCaseContracts(client: QueryClient): Promise<number> {
   const tenants = await client.query<{ id: string }>("SELECT id::text AS id FROM master.tenant WHERE status='active' ORDER BY id");
   for (const tenant of tenants.rows) {
-    const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.id);
+    const entityId=deterministicUuid(`${tenant.id}:entity:master.business_partner`),prior=await one<{id:string;entity_contract_hash:string;release_no:number}>(client,"SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND status='published'",[tenant.id,entityId]);
+    const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.id,prior.release_no+1,{id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no});
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [artifact.publicationKey]);
     await client.query("SELECT set_config('app.current_tenant_id',$1,true)", [tenant.id]);
     const staged = await one<{ id: string; status: string }>(client, "SELECT id::text,status FROM runtime_meta.fn_stage_release_projection($1,$2::uuid,$3,$4::uuid,$5,$6::jsonb,$7::jsonb)", [artifact.publicationKey, artifact.releaseId, artifact.releaseNo, artifact.deploymentId, artifact.artifactHash, JSON.stringify(artifact.manifest), JSON.stringify(artifact.projection)]);
@@ -360,7 +391,8 @@ async function recordDevelopmentBusinessPartnerCaseStudioPublication(neon: Query
   try {
     const tenants = await studio.query<{ tenant_id: string; actor_id: string }>(`SELECT tenant.id::text tenant_id,principal.id::text actor_id FROM master.tenant tenant JOIN LATERAL (SELECT id FROM master.principal WHERE tenant_id=tenant.id AND status='active' ORDER BY created_at,id LIMIT 1) principal ON true WHERE tenant.status='active' ORDER BY tenant.id`);
     for (const tenant of tenants.rows) {
-      const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.tenant_id);
+      const entityId=deterministicUuid(`${tenant.tenant_id}:entity:master.business_partner`),current=await one<{id:string;entity_contract_hash:string;release_no:number}>(neon,"SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND status='published'",[tenant.tenant_id,entityId]),priorResult=await neon.query<{id:string;entity_contract_hash:string;release_no:number}>("SELECT id::text,entity_contract_hash,release_no::int FROM runtime_meta.entity_contract WHERE tenant_id=$1::uuid AND entity_id=$2::uuid AND release_no=$3",[tenant.tenant_id,entityId,current.release_no-1]),prior=priorResult.rows[0];
+      const artifact = buildDevelopmentBusinessPartnerCaseProjection(tenant.tenant_id,current.release_no,prior?{id:prior.id,hash:prior.entity_contract_hash,releaseNo:prior.release_no}:undefined);
       const artifactId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:artifact:neon`);
       const compilationId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:compilation:neon`);
       const commandId = deterministicUuid(`${artifact.publicationKey}:${CASE_CONTRACT_SOURCE_VERSION}:deployment-command:neon`);

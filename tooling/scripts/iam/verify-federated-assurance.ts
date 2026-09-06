@@ -13,7 +13,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const realmPath = resolve(root, "stack", "config", "iam", "realm-athyper.json");
+const realmPath = resolve(root, "deploy", "config", "iam", "realm-athyper.json");
 
 type Mapper = {
   protocolMapper?: string;

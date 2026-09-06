@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHash } from "node:crypto";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type {
@@ -14,10 +15,13 @@ import {
   type BusinessPartnerQualification,
   type CreateBusinessPartnerQualificationCommand,
   type CreateCustomerCreditReviewCommand,
+  type CreateCustomerDesignationCommand,
   type CreateSupplierPreferenceCommand,
   type CustomerCreditReview,
+  type CustomerAccountDesignation,
   type DecideBusinessPartnerQualificationCommand,
   type DecideCustomerCreditReviewCommand,
+  type DecideCustomerDesignationCommand,
   type DecideSupplierPreferenceCommand,
   type RevokeSupplierPreferenceCommand,
   type SupplierPreferenceDesignation,
@@ -30,6 +34,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
   readonly transactions: BusinessPartnerEligibilityTransactionCoordinator<Transaction>;
   readonly audit: AuditRecorder<Transaction>;
   readonly outbox: OutboxWriter<Transaction>;
+  readonly onboardingCycles?: Pick<import("./business-partner-onboarding-cycle.js").BusinessPartnerOnboardingCycleCoordinator<Transaction>,"advanceForBusinessPartner">;
 }): BusinessPartnerEligibilityService {
   return {
     async resolve(query) {
@@ -163,6 +168,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
                 .map((reason) => reason.code)
                 .join(",")}`,
             );
+          await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:command.businessPartnerId,eventCode:"business_partner.supplier.readiness.completed",metadata:{operatingOrganizationId:command.operatingOrganizationId,...(command.companyCodeId?{companyCodeId:command.companyCodeId}:{}),readinessFingerprint:readiness.decisionFingerprint}},transaction);
           await authorize(
             options.authorizer,
             command.context,
@@ -205,6 +211,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
             transaction,
             activation,
           );
+          await options.onboardingCycles?.advanceForBusinessPartner({tenantId:command.context.tenantId,principalId:command.context.principalId,businessPartnerId:command.businessPartnerId,eventCode:"business_partner.supplier.activated",metadata:{activationEvidenceId:activation.id,readinessFingerprint:activation.readinessFingerprint}},transaction);
           return { activation, replayed: false };
         },
       );
@@ -739,6 +746,180 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
         },
       );
     },
+    async createCustomerDesignation(command) {
+      assertContext(command.context);
+      validateDesignationCreate(command);
+      await authorize(
+        options.authorizer,
+        command.context,
+        customerOnboardingPermissions.designationCreate,
+        {
+          ...scope(command.operatingOrganizationId, command.companyCodeId),
+          designationControl: true,
+          makerCheckerEnforced: true,
+        },
+      );
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const existing =
+            await options.repository.findCustomerDesignationByIdempotencyKey(
+              command.context.tenantId,
+              command.idempotencyKey,
+              transaction,
+            );
+          if (existing) {
+            if (
+              designationFingerprint(existing) !==
+              designationCreateFingerprint(command)
+            )
+              throw new MasterDataError(
+                409,
+                "CUSTOMER_DESIGNATION_IDEMPOTENCY_CONFLICT",
+                "Idempotency key was reused with different designation content",
+              );
+            return { designation: existing, replayed: true };
+          }
+          const designation =
+            await options.repository.createCustomerDesignation(
+              {
+                tenantId: command.context.tenantId,
+                createdBy: command.context.principalId,
+                idempotencyKey: command.idempotencyKey,
+                businessPartnerId: command.businessPartnerId,
+                customerId: command.customerId,
+                operatingOrganizationId: command.operatingOrganizationId,
+                ...(command.companyCodeId
+                  ? { companyCodeId: command.companyCodeId }
+                  : {}),
+                ...(command.countryCode
+                  ? { countryCode: command.countryCode }
+                  : {}),
+                ...(command.channelCode
+                  ? { channelCode: command.channelCode }
+                  : {}),
+                designationType: command.designationType,
+                ...(command.priorityTier === undefined
+                  ? {}
+                  : { priorityTier: command.priorityTier }),
+                effectiveFrom: command.effectiveFrom,
+                ...(command.effectiveUntil
+                  ? { effectiveUntil: command.effectiveUntil }
+                  : {}),
+                rationale: command.rationale,
+              },
+              transaction,
+            );
+          await designationEffects(
+            options,
+            command.context,
+            transaction,
+            "business_partner.customer.designation.created",
+            designation,
+          );
+          return { designation, replayed: false };
+        },
+      );
+    },
+    async decideCustomerDesignation(command) {
+      assertContext(command.context);
+      validateDesignationDecision(command);
+      return options.transactions.run(
+        "neon",
+        actor(command.context),
+        async (transaction) => {
+          const current = await options.repository.getCustomerDesignation(
+            command.context.tenantId,
+            command.designationId,
+            transaction,
+          );
+          if (!current)
+            throw new MasterDataError(
+              404,
+              "CUSTOMER_DESIGNATION_NOT_FOUND",
+              "Customer designation was not found",
+            );
+          if (current.createdBy === command.context.principalId)
+            throw new MasterDataError(
+              403,
+              "CUSTOMER_DESIGNATION_SELF_APPROVAL_FORBIDDEN",
+              "The designation creator cannot decide their own designation",
+            );
+          await authorize(
+            options.authorizer,
+            command.context,
+            customerOnboardingPermissions.designationDecide,
+            {
+              ...scope(current.operatingOrganizationId, current.companyCodeId),
+              designationControl: true,
+              makerCheckerEnforced: true,
+              createdBy: current.createdBy,
+            },
+          );
+          const decisionFingerprint = hash({
+            designation: current,
+            expectedVersion: command.expectedVersion,
+            decision: command.decision,
+            reason: command.reason,
+            decidedBy: command.context.principalId,
+          });
+          const result = await options.repository.decideCustomerDesignation(
+            {
+              tenantId: command.context.tenantId,
+              decidedBy: command.context.principalId,
+              decisionFingerprint,
+              designationId: command.designationId,
+              expectedVersion: command.expectedVersion,
+              decision: command.decision,
+              reason: command.reason,
+              idempotencyKey: command.idempotencyKey,
+            },
+            transaction,
+          );
+          if (!result)
+            throw new MasterDataError(
+              409,
+              "CUSTOMER_DESIGNATION_DECISION_CONFLICT",
+              "Designation version, state, or decision evidence changed",
+            );
+          if (!result.replayed)
+            await designationEffects(
+              options,
+              command.context,
+              transaction,
+              `business_partner.customer.designation.${command.decision}`,
+              result.designation,
+            );
+          return result;
+        },
+      );
+    },
+    async listCustomerDesignations(query) {
+      assertContext(query.context);
+      await authorize(
+        options.authorizer,
+        query.context,
+        customerOnboardingPermissions.designationRead,
+        scope(query.operatingOrganizationId, query.companyCodeId),
+      );
+      return options.transactions.run(
+        "neon",
+        actor(query.context),
+        (transaction) =>
+          options.repository.listCustomerDesignations(
+            {
+              tenantId: query.context.tenantId,
+              businessPartnerId: query.businessPartnerId,
+              operatingOrganizationId: query.operatingOrganizationId,
+              ...(query.companyCodeId
+                ? { companyCodeId: query.companyCodeId }
+                : {}),
+            },
+            transaction,
+          ),
+      );
+    },
     async createCustomerCreditReview(command) {
       assertContext(command.context);
       validateCreditCreate(command);
@@ -961,8 +1142,7 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
                 role: "customer",
                 operatingOrganizationId: command.operatingOrganizationId,
                 companyCodeId: command.companyCodeId,
-                operationCode:
-                  command.action === "activate" ? "activation" : "order",
+                operationCode: "activation",
                 businessDate: command.businessDate,
               },
               transaction,
@@ -1144,7 +1324,7 @@ function validateCode(value: string, name: string) {
 function validateDate(value: string, name: string) {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
-    Number.isNaN(Date.parse(`${value}T00:00:00Z`))
+    Number.isNaN(parseInstant(`${value}T00:00:00Z`))
   )
     throw invalid(`${name} must be YYYY-MM-DD`);
 }
@@ -1287,6 +1467,34 @@ function validateCreditCreate(command: CreateCustomerCreditReviewCommand) {
   )
     throw customerInvalid("effectiveUntil must be after effectiveFrom");
 }
+function validateDesignationCreate(command: CreateCustomerDesignationCommand) {
+  key(command.idempotencyKey);
+  boundedReason(command.rationale, "rationale");
+  validateDate(command.effectiveFrom, "effectiveFrom");
+  if (command.effectiveUntil) {
+    validateDate(command.effectiveUntil, "effectiveUntil");
+    if (command.effectiveUntil <= command.effectiveFrom)
+      throw customerInvalid("effectiveUntil must be after effectiveFrom");
+  }
+  if (
+    command.priorityTier !== undefined &&
+    (!Number.isSafeInteger(command.priorityTier) ||
+      command.priorityTier < 1 ||
+      command.priorityTier > 5)
+  )
+    throw customerInvalid("priorityTier must be from 1 to 5");
+  if (command.countryCode && !/^[A-Z]{2}$/.test(command.countryCode))
+    throw customerInvalid("countryCode must be ISO alpha-2 uppercase");
+  if (command.channelCode && !/^[a-z0-9][a-z0-9._-]{0,63}$/.test(command.channelCode))
+    throw customerInvalid("channelCode must be a normalized channel identifier");
+}
+function validateDesignationDecision(
+  command: DecideCustomerDesignationCommand,
+) {
+  version(command.expectedVersion);
+  key(command.idempotencyKey);
+  boundedReason(command.reason, "reason");
+}
 function validateCreditDecision(command: DecideCustomerCreditReviewCommand) {
   version(command.expectedVersion);
   key(command.idempotencyKey);
@@ -1327,6 +1535,29 @@ function creditCoordinates(
     effectiveFrom: value.effectiveFrom,
     effectiveUntil: value.effectiveUntil,
   };
+}
+function designationCoordinates(
+  value: CreateCustomerDesignationCommand | CustomerAccountDesignation,
+) {
+  return {
+    businessPartnerId: value.businessPartnerId,
+    customerId: value.customerId,
+    operatingOrganizationId: value.operatingOrganizationId,
+    companyCodeId: value.companyCodeId,
+    countryCode: value.countryCode,
+    channelCode: value.channelCode,
+    designationType: value.designationType,
+    priorityTier: value.priorityTier,
+    effectiveFrom: value.effectiveFrom,
+    effectiveUntil: value.effectiveUntil,
+    rationale: value.rationale,
+  };
+}
+function designationCreateFingerprint(value: CreateCustomerDesignationCommand) {
+  return hash(designationCoordinates(value));
+}
+function designationFingerprint(value: CustomerAccountDesignation) {
+  return hash(designationCoordinates(value));
 }
 function creditCreateFingerprint(value: CreateCustomerCreditReviewCommand) {
   return hash(creditCoordinates(value));
@@ -1576,6 +1807,60 @@ async function reevaluationEffects<Transaction>(
     transaction,
   );
 }
+async function designationEffects<Transaction>(
+  options: {
+    readonly audit: AuditRecorder<Transaction>;
+    readonly outbox: OutboxWriter<Transaction>;
+  },
+  context: VerifiedRequestContext,
+  transaction: Transaction,
+  eventCode: string,
+  designation: CustomerAccountDesignation,
+) {
+  const payload = {
+    designationId: designation.id,
+    businessPartnerId: designation.businessPartnerId,
+    customerId: designation.customerId,
+    operatingOrganizationId: designation.operatingOrganizationId,
+    companyCodeId: designation.companyCodeId,
+    designationType: designation.designationType,
+    status: designation.status,
+    rowVersion: designation.rowVersion,
+  };
+  await options.outbox.append(
+    {
+      tenantId: context.tenantId,
+      topic: "customer-designation",
+      eventType: eventCode,
+      entityType: "customer_account_designation",
+      entityId: designation.id,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      payload,
+    },
+    transaction,
+  );
+  await options.audit.record(
+    {
+      eventCode,
+      action: eventCode.endsWith("created")
+        ? "create"
+        : eventCode.endsWith("rejected")
+          ? "reject"
+          : eventCode.endsWith("revoked")
+            ? "revoke"
+            : "approve",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: context.tenantId,
+      entityType: "customer_account_designation",
+      entityId: designation.id,
+      requestId: context.requestId,
+      metadata: payload,
+    },
+    transaction,
+  );
+}
 async function customerEffects<Transaction>(
   options: {
     readonly audit: AuditRecorder<Transaction>;
@@ -1658,6 +1943,7 @@ async function customerLifecycleEffects<Transaction>(
       actorId: context.principalId,
       correlationId: context.correlationId,
       payload: {
+        recipient_principal_ids: [context.principalId],
         customerId: result.customerId,
         status: result.status,
         resultingVersion: result.resultingVersion,

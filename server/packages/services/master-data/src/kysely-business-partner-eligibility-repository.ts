@@ -2,6 +2,7 @@ import { sql } from "kysely";
 import type {
   BusinessPartnerEligibilityRepository,
   BusinessPartnerQualification,
+  CustomerAccountDesignation,
   CustomerCreditReview,
   PartnerEligibilityDecision,
   PartnerEligibilityReason,
@@ -116,9 +117,39 @@ type CreditRow = {
   updated_at: Date | string | null;
   updated_by: string | null;
 };
+type DesignationRow = {
+  id: string;
+  tenant_id: string;
+  business_partner_id: string;
+  customer_id: string;
+  operating_organization_id: string;
+  company_code_id: string | null;
+  country_code: string | null;
+  channel_code: string | null;
+  designation_type: CustomerAccountDesignation["designationType"];
+  priority_tier: number | null;
+  effective_from: string;
+  effective_until: string | null;
+  rationale: string;
+  status: CustomerAccountDesignation["status"];
+  decision_reason: string | null;
+  reviewed_at: Date | string | null;
+  reviewed_by: string | null;
+  approved_at: Date | string | null;
+  approved_by: string | null;
+  revoked_at: Date | string | null;
+  revoked_by: string | null;
+  revocation_reason: string | null;
+  row_version: string | number;
+  created_at: Date | string;
+  created_by: string;
+  updated_at: Date | string | null;
+  updated_by: string | null;
+};
 
 const qualificationReadColumns =
-  sql.raw(`qualification.id,qualification.tenant_id,qualification.business_partner_id,qualification.partner_role,qualification.role_id,
+  sql.raw(`qualification.id,qualification.tenant_id,qualification.business_partner_id,qualification.partner_role,
+  (SELECT role_record.id FROM (SELECT id,tenant_id,business_partner_id,'supplier'::text partner_role FROM master.supplier UNION ALL SELECT id,tenant_id,business_partner_id,'customer'::text partner_role FROM master.customer) role_record WHERE role_record.tenant_id=qualification.tenant_id AND role_record.business_partner_id=qualification.business_partner_id AND role_record.partner_role=qualification.partner_role::text LIMIT 1) role_id,
   (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) operating_organization_id,
   (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) company_code_id,
   (SELECT capability.id FROM control.business_partner_decision_scope scope JOIN master.business_partner_commodity_capability capability ON capability.tenant_id=qualification.tenant_id AND capability.business_partner_id=qualification.business_partner_id AND capability.partner_role=qualification.partner_role AND capability.commodity_category_id=scope.commodity_category_id WHERE scope.tenant_id=qualification.tenant_id AND scope.qualification_id=qualification.id AND scope.scope_kind='commodity_category' AND scope.scope_mode='include' ORDER BY capability.effective_from DESC,capability.id LIMIT 1) commodity_capability_id,
@@ -134,8 +165,95 @@ const creditReadColumns =
   (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=review.tenant_id AND scope.credit_review_id=review.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) operating_organization_id,
   (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=review.tenant_id AND scope.credit_review_id=review.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) company_code_id,
   review.review_type_code,review.requested_credit_limit,review.requested_currency_code,review.approved_credit_limit,review.approved_currency_code,review.risk_class_code,review.decision,review.decision_reason,review.conditions,review.effective_from,review.effective_until,review.idempotency_key,review.decision_idempotency_key,review.decision_fingerprint,review.reviewed_at,review.reviewed_by,review.approved_at,review.approved_by,review.row_version,review.created_at,review.created_by,review.updated_at,review.updated_by`);
+const designationReadColumns =
+  sql.raw(`designation.id,designation.tenant_id,designation.business_partner_id,designation.customer_id,
+  (SELECT scope.operating_organization_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) operating_organization_id,
+  (SELECT scope.company_code_id FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' ORDER BY scope.scope_group,scope.id LIMIT 1) company_code_id,
+  designation.country_code,designation.channel_code,designation.designation_type,designation.priority_tier,designation.effective_from,designation.effective_until,designation.rationale,designation.status,designation.decision_reason,designation.reviewed_at,designation.reviewed_by,designation.approved_at,designation.approved_by,designation.revoked_at,designation.revoked_by,designation.revocation_reason,designation.row_version,designation.created_at,designation.created_by,designation.updated_at,designation.updated_by`);
 
 export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartnerEligibilityRepository<Tx> {
+  async findCustomerDesignationByIdempotencyKey(
+    tenantId: string,
+    idempotencyKey: string,
+    transaction: Tx,
+  ) {
+    const row = (
+      await sql<DesignationRow>`SELECT ${designationReadColumns} FROM control.customer_account_designation designation WHERE designation.tenant_id=${tenantId}::uuid AND designation.idempotency_key=${idempotencyKey}`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    return row ? mapDesignation(row) : null;
+  }
+  async getCustomerDesignation(
+    tenantId: string,
+    designationId: string,
+    transaction: Tx,
+  ) {
+    const row = (
+      await sql<DesignationRow>`SELECT ${designationReadColumns} FROM control.customer_account_designation designation WHERE designation.tenant_id=${tenantId}::uuid AND designation.id=${designationId}::uuid`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    return row ? mapDesignation(row) : null;
+  }
+  async createCustomerDesignation(
+    input: Parameters<
+      BusinessPartnerEligibilityRepository<Tx>["createCustomerDesignation"]
+    >[0],
+    transaction: Tx,
+  ) {
+    const created = (
+      await sql<{
+        aggregate_id: string;
+      }>`SELECT aggregate_id FROM control.command_create_business_partner_decision(${input.tenantId}::uuid,'customer_designation',${input.businessPartnerId}::uuid,'customer',${input.customerId}::uuid,${input.operatingOrganizationId}::uuid,${input.companyCodeId ?? null}::uuid,NULL::uuid,${JSON.stringify({ countryCode: input.countryCode, channelCode: input.channelCode, designationType: input.designationType, priorityTier: input.priorityTier, effectiveFrom: input.effectiveFrom, effectiveUntil: input.effectiveUntil, rationale: input.rationale })}::jsonb,${input.idempotencyKey},${input.createdBy}::uuid)`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    if (!created) throw new Error("CUSTOMER_DESIGNATION_CREATE_FAILED");
+    const row = (
+      await sql<DesignationRow>`SELECT ${designationReadColumns} FROM control.customer_account_designation designation WHERE designation.tenant_id=${input.tenantId}::uuid AND designation.id=${created.aggregate_id}::uuid`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    if (!row) throw new Error("CUSTOMER_DESIGNATION_READBACK_FAILED");
+    return mapDesignation(row);
+  }
+  async decideCustomerDesignation(
+    input: Parameters<
+      BusinessPartnerEligibilityRepository<Tx>["decideCustomerDesignation"]
+    >[0],
+    transaction: Tx,
+  ) {
+    const command = (
+      await sql<{
+        replayed: boolean;
+      }>`SELECT replayed FROM control.command_business_partner_decision(${input.tenantId}::uuid,'customer_designation',${input.designationId}::uuid,${input.decision},${input.expectedVersion}::bigint,${input.reason},${input.idempotencyKey},${input.decisionFingerprint},'{}'::jsonb,${input.decidedBy}::uuid)`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    if (!command) return null;
+    const row = (
+      await sql<DesignationRow>`SELECT ${designationReadColumns} FROM control.customer_account_designation designation WHERE designation.tenant_id=${input.tenantId}::uuid AND designation.id=${input.designationId}::uuid`.execute(
+        transaction as never,
+      )
+    ).rows[0];
+    return row
+      ? { designation: mapDesignation(row), replayed: command.replayed }
+      : null;
+  }
+  async listCustomerDesignations(
+    input: Parameters<
+      BusinessPartnerEligibilityRepository<Tx>["listCustomerDesignations"]
+    >[0],
+    transaction: Tx,
+  ) {
+    const rows = (
+      await sql<DesignationRow>`SELECT ${designationReadColumns} FROM control.customer_account_designation designation WHERE designation.tenant_id=${input.tenantId}::uuid AND designation.business_partner_id=${input.businessPartnerId}::uuid AND EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='operating_organization' AND scope.scope_mode='include' AND scope.operating_organization_id=${input.operatingOrganizationId}::uuid) AND (${input.companyCodeId ?? null}::uuid IS NULL OR NOT EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='company_code') OR EXISTS(SELECT 1 FROM control.business_partner_decision_scope scope WHERE scope.tenant_id=designation.tenant_id AND scope.customer_designation_id=designation.id AND scope.scope_kind='company_code' AND scope.scope_mode='include' AND scope.company_code_id=${input.companyCodeId ?? null}::uuid)) ORDER BY designation.created_at DESC,designation.id DESC`.execute(
+        transaction as never,
+      )
+    ).rows;
+    return rows.map(mapDesignation);
+  }
   async findCustomerCreditReviewByIdempotencyKey(
     tenantId: string,
     idempotencyKey: string,
@@ -581,7 +699,8 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
       partner.role_status !== "active" &&
       !(
         input.operationCode === "activation" &&
-        ((input.role === "customer" && partner.role_status === "prospect") ||
+        ((input.role === "customer" &&
+          ["prospect", "suspended"].includes(partner.role_status ?? "")) ||
           (input.role === "supplier" && partner.role_status === "onboarding"))
       )
     )
@@ -715,6 +834,10 @@ function mapQualification(row: QualificationRow): BusinessPartnerQualification {
     qualificationTypeCode: row.qualification_type_code,
     decision: row.decision,
     ...(row.decision_reason ? { decisionReason: row.decision_reason } : {}),
+    ...(row.reviewed_at ? { reviewedAt: iso(row.reviewed_at) } : {}),
+    ...(row.reviewed_by ? { reviewedBy: row.reviewed_by } : {}),
+    ...(row.approved_at ? { approvedAt: iso(row.approved_at) } : {}),
+    ...(row.approved_by ? { approvedBy: row.approved_by } : {}),
     ...(row.risk_assessment_id
       ? { riskAssessmentId: row.risk_assessment_id }
       : {}),
@@ -852,6 +975,41 @@ function mapCredit(row: CreditRow): CustomerCreditReview {
     ...(row.reviewed_by ? { reviewedBy: row.reviewed_by } : {}),
     ...(row.approved_at ? { approvedAt: iso(row.approved_at) } : {}),
     ...(row.approved_by ? { approvedBy: row.approved_by } : {}),
+    rowVersion: Number(row.row_version),
+    createdAt: iso(row.created_at),
+    createdBy: row.created_by,
+    ...(row.updated_at ? { updatedAt: iso(row.updated_at) } : {}),
+    ...(row.updated_by ? { updatedBy: row.updated_by } : {}),
+  };
+}
+function mapDesignation(row: DesignationRow): CustomerAccountDesignation {
+  return {
+    id: row.id,
+    tenantId: row.tenant_id,
+    businessPartnerId: row.business_partner_id,
+    customerId: row.customer_id,
+    operatingOrganizationId: row.operating_organization_id,
+    ...(row.company_code_id ? { companyCodeId: row.company_code_id } : {}),
+    ...(row.country_code ? { countryCode: row.country_code.trim() } : {}),
+    ...(row.channel_code ? { channelCode: row.channel_code } : {}),
+    designationType: row.designation_type,
+    ...(row.priority_tier === null
+      ? {}
+      : { priorityTier: Number(row.priority_tier) }),
+    effectiveFrom: dateOnly(row.effective_from),
+    ...(row.effective_until
+      ? { effectiveUntil: dateOnly(row.effective_until) }
+      : {}),
+    rationale: row.rationale,
+    status: row.status,
+    ...(row.decision_reason ? { decisionReason: row.decision_reason } : {}),
+    ...(row.reviewed_at ? { reviewedAt: iso(row.reviewed_at) } : {}),
+    ...(row.reviewed_by ? { reviewedBy: row.reviewed_by } : {}),
+    ...(row.approved_at ? { approvedAt: iso(row.approved_at) } : {}),
+    ...(row.approved_by ? { approvedBy: row.approved_by } : {}),
+    ...(row.revoked_at ? { revokedAt: iso(row.revoked_at) } : {}),
+    ...(row.revoked_by ? { revokedBy: row.revoked_by } : {}),
+    ...(row.revocation_reason ? { revocationReason: row.revocation_reason } : {}),
     rowVersion: Number(row.row_version),
     createdAt: iso(row.created_at),
     createdBy: row.created_by,

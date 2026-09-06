@@ -3,8 +3,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 
 const paths = [
-  "stack/config/iam/realm-athyper.json",
-  "stack/config/iam/realm-athyper-demosetup.json",
+  "deploy/config/iam/realm-athyper.json",
+  "deploy/config/iam/realm-athyper-demosetup.json",
 ];
 
 for (const path of paths) {

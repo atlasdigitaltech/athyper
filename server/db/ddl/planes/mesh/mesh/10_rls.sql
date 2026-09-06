@@ -362,3 +362,14 @@ ALTER TABLE mesh.network_lifecycle_event ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_lifecycle_event FORCE ROW LEVEL SECURITY;
 CREATE POLICY network_lifecycle_participant_read ON mesh.network_lifecycle_event FOR SELECT USING(shared.current_tenant_id_soft() IN (owner_tenant_id,counterparty_tenant_id));
 CREATE POLICY network_lifecycle_seed_owner ON mesh.network_lifecycle_event FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+ALTER TABLE mesh.business_partner_delivery_acknowledgement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.business_partner_delivery_acknowledgement FORCE ROW LEVEL SECURITY;
+CREATE POLICY source_read ON mesh.business_partner_delivery_acknowledgement FOR SELECT
+  USING (source_tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY worker_write ON mesh.business_partner_delivery_acknowledgement
+  FOR INSERT TO athyper_jobs_service WITH CHECK (true);
+CREATE POLICY worker_read ON mesh.business_partner_delivery_acknowledgement
+  FOR SELECT TO athyper_jobs_service USING (true);
+CREATE POLICY owner_access ON mesh.business_partner_delivery_acknowledgement
+  TO CURRENT_USER USING (true) WITH CHECK (true);

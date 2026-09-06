@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-import { BusinessPartnerDeliveryWorker, type BusinessPartnerDeliveryItem, type BusinessPartnerDeliveryRepository } from "./business-partner-delivery.js";
+import { BusinessPartnerDeliveryWorker, BusinessPartnerDeliveryLeaseLostError, type BusinessPartnerDeliveryItem, type BusinessPartnerDeliveryRepository } from "./business-partner-delivery.js";
 
-const item: BusinessPartnerDeliveryItem = { outboxId: "11111111-1111-4111-8111-111111111111", sourceTenantId: "22222222-2222-4222-8222-222222222222", recipientTenantId: "33333333-3333-4333-8333-333333333333", eventId: "44444444-4444-4444-8444-444444444444", eventType: "business_partner.profile_publication.published", kind: "profile", attempt: 1, maxAttempts: 5, envelope: {} };
+const item: BusinessPartnerDeliveryItem = { outboxId: "11111111-1111-4111-8111-111111111111", leaseId: "worker-1:lease-1", sourceTenantId: "22222222-2222-4222-8222-222222222222", recipientTenantId: "33333333-3333-4333-8333-333333333333", eventId: "44444444-4444-4444-8444-444444444444", eventType: "business_partner.profile_publication.published", kind: "profile", attempt: 1, maxAttempts: 5, envelope: {} };
 
 function harness(deliver: () => Promise<{ disposition: "applied" | "duplicate" | "stale" | "quarantined"; reasonCode?: string }>, received = true) {
   const repository = { claim: vi.fn(async () => [item]), complete: vi.fn(async () => undefined), fail: vi.fn(async () => undefined), reconciliationCandidates: vi.fn(async () => [item]), reopen: vi.fn(async () => undefined),requestReplay:vi.fn(async()=>true) } satisfies BusinessPartnerDeliveryRepository;
@@ -10,9 +10,25 @@ function harness(deliver: () => Promise<{ disposition: "applied" | "duplicate" |
 }
 
 describe("Business Partner production delivery", () => {
-  it("completes an idempotently applied recipient event", async () => { const value = harness(async () => ({ disposition: "applied" })); expect(await value.worker.deliver()).toEqual({ applied: 1 }); expect(value.repository.complete).toHaveBeenCalledWith(item, "applied"); });
-  it("dead-letters recipient quarantine without retrying unsafe data", async () => { const value = harness(async () => ({ disposition: "quarantined", reasonCode: "MESH_PROFILE_PAYLOAD_HASH_MISMATCH" })); expect(await value.worker.deliver()).toEqual({ quarantined: 1 }); expect(value.repository.fail).toHaveBeenCalledWith(item, expect.objectContaining({ permanent: true, code: "MESH_PROFILE_PAYLOAD_HASH_MISMATCH" })); });
+  it("completes an idempotently applied recipient event", async () => { const value = harness(async () => ({ disposition: "applied" })); expect(await value.worker.deliver()).toEqual({ applied: 1 }); expect(value.repository.complete).toHaveBeenCalledWith(item, "applied", undefined); });
+  it("dead-letters recipient quarantine without retrying unsafe data", async () => { const value = harness(async () => ({ disposition: "quarantined", reasonCode: "MESH_PROFILE_PAYLOAD_HASH_MISMATCH" })); expect(await value.worker.deliver()).toEqual({ quarantined: 1 }); expect(value.repository.complete).toHaveBeenCalledWith(item, "quarantined", "MESH_PROFILE_PAYLOAD_HASH_MISMATCH"); expect(value.repository.fail).not.toHaveBeenCalled(); });
   it("retries transient target failure with deterministic backoff", async () => { const value = harness(async () => { throw Object.assign(new Error("unavailable"), { status: 503, code: "TARGET_UNAVAILABLE" }); }); expect(await value.worker.deliver()).toEqual({ retry: 1 }); expect(value.repository.fail).toHaveBeenCalledWith(item, expect.objectContaining({ permanent: false, retryAt: "2026-08-28T00:00:05.000Z" })); });
   it("reopens source delivery when reconciliation finds a missing receipt", async () => { const value = harness(async () => ({ disposition: "applied" }), false); expect(await value.worker.reconcile()).toEqual({ reopened: 1 }); expect(value.repository.reopen).toHaveBeenCalledWith(item, "RECIPIENT_RECEIPT_MISSING"); expect(value.recipient.hasReceipt).toHaveBeenCalledOnce(); });
+  it("does not acknowledge or fail a newer claim when a lease is lost", async()=>{
+    const value=harness(async()=>({disposition:"applied"}));
+    value.repository.complete.mockRejectedValueOnce(new BusinessPartnerDeliveryLeaseLostError());
+    expect(await value.worker.deliver()).toEqual({lease_lost:1});
+    expect(value.repository.fail).not.toHaveBeenCalled();
+  });
+  it("recovers a crash after recipient commit using the same event ID and a new lease",async()=>{
+    const value=harness(async()=>({disposition:"applied"}));
+    value.repository.complete.mockRejectedValueOnce(new Error("source transaction unavailable"));
+    expect(await value.worker.deliver()).toEqual({retry:1});
+    value.repository.claim.mockResolvedValueOnce([{...item,attempt:2,leaseId:"worker-2:lease-2"}]);
+    value.recipient.deliver.mockResolvedValueOnce({disposition:"duplicate"});
+    expect(await value.worker.deliver()).toEqual({duplicate:1});
+    expect(value.repository.complete.mock.calls.map(call=>(call as unknown as [BusinessPartnerDeliveryItem])[0].eventId)).toEqual([item.eventId,item.eventId]);
+    expect(value.repository.complete).toHaveBeenLastCalledWith(expect.objectContaining({attempt:2,leaseId:"worker-2:lease-2"}),"duplicate",undefined);
+  });
   it("drains the bounded production batch without exposing envelope data in telemetry", async () => { const items=Array.from({length:100},(_,index)=>({...item,outboxId:`11111111-1111-4111-8111-${String(index).padStart(12,"0")}`,eventId:`44444444-4444-4444-8444-${String(index).padStart(12,"0")}`})),record=vi.fn(),repository={claim:vi.fn(async()=>items),complete:vi.fn(async()=>undefined),fail:vi.fn(async()=>undefined),reconciliationCandidates:vi.fn(async()=>[]),reopen:vi.fn(async()=>undefined),requestReplay:vi.fn(async()=>true)} satisfies BusinessPartnerDeliveryRepository,worker=new BusinessPartnerDeliveryWorker({workerId:"load-worker",repository,recipient:{deliver:async()=>({disposition:"applied"}),hasReceipt:async()=>true},telemetry:{record,capture:vi.fn()}});expect(await worker.deliver(100)).toEqual({applied:100});expect(repository.complete).toHaveBeenCalledTimes(100);expect(JSON.stringify(record.mock.calls)).not.toMatch(/11111111|44444444|payload|envelope/i); });
 });

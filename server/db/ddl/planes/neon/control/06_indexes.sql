@@ -56,7 +56,7 @@ CREATE UNIQUE INDEX customer_account_designation_revocation_idempotency_uq
 CREATE INDEX customer_account_designation_resolution_idx
     ON control.customer_account_designation
        (tenant_id, business_partner_id, operating_organization_id,
-        company_code_id, designation_type, status, effective_from, effective_until);
+        company_code_id, country_code, channel_code, designation_type, status, effective_from, effective_until);
 CREATE INDEX customer_account_designation_customer_idx
     ON control.customer_account_designation
        (tenant_id, customer_id, operating_organization_id, status);

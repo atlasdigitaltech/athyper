@@ -28,11 +28,55 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/auth-deep-link.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/auth-session-foundation.test.ts",
       "runner": "test:plane-contracts"
     },
     {
       "path": "tests/contracts/bff-relay-security.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-phase0-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r2-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r2-r3-environment.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r3-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r4-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r5-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r6-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r7-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/business-partner-r8-contracts.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/e2e-auth-state.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -88,6 +132,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/studio-publication-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/three-plane-list-scope.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -117,6 +165,10 @@
     },
     {
       "path": "tests/foundation/brand-icons.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/business-partner-case-experience.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -265,6 +317,34 @@
     },
     {
       "path": "tooling/scripts/release/promote-image-set.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r2-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r3-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r5-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r8-intake.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-r8-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-v1-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
       "runner": "test:operations"
     },
     {

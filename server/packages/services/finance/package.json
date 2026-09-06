@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-finance": "workspace:*",
     "kysely": "^0.28.17"
   },

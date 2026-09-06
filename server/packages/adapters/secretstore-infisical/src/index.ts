@@ -35,7 +35,7 @@ export function createInfisicalSecretStore(config: InfisicalSecretStoreConfig): 
   const put = async (reference: string, value: Uint8Array): Promise<{ reference:string;version:string }> => {
     if (closed) throw new Error("SECRET_STORE_CLOSED");
     const opaqueReference=requireValue(reference,"reference");
-    if(value.byteLength<16)throw Object.assign(new Error("SECRET_MATERIAL_TOO_SHORT"),{code:"SECRET_MATERIAL_TOO_SHORT"});
+    if(value.byteLength<4)throw Object.assign(new Error("SECRET_MATERIAL_TOO_SHORT"),{code:"SECRET_MATERIAL_TOO_SHORT"});
     const url=new URL(`/api/v3/secrets/raw/${encodeURIComponent(opaqueReference)}`,endpoint);
     const response=await fetcher(url,{method:"PUT",headers:{Authorization:`Bearer ${requireValue(config.token,"token")}`,"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({workspaceId:requireValue(config.workspaceId,"workspaceId"),environment:requireValue(config.environment,"environment"),secretPath:config.secretPath?.trim()||"/",secretValue:Buffer.from(value).toString("base64"),secretEncoding:"base64"}),signal:AbortSignal.timeout(timeoutMs)});
     if(!response.ok)throw Object.assign(new Error("SECRET_STORE_WRITE_FAILED"),{code:"SECRET_STORE_WRITE_FAILED"});

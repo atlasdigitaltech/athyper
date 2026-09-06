@@ -1,0 +1,57 @@
+{
+  "$schema": "athyper.business-partner-r8-fixture/1",
+  "scenarios": [
+    {
+      "id": "BP-X-004",
+      "capability": "definition_compatibility_simulation",
+      "status": "local_verified"
+    },
+    {
+      "id": "BP-X-006",
+      "capability": "maker_checker_publication",
+      "status": "local_verified"
+    },
+    { "id": "BP-X-007", "capability": "proof_redaction", "status": "partial" },
+    {
+      "id": "BP-X-008",
+      "capability": "evidence_lifecycle",
+      "status": "environment_required"
+    },
+    {
+      "id": "BP-X-009",
+      "capability": "historical_proof",
+      "status": "local_coordinates_visible"
+    },
+    {
+      "id": "BP-X-010",
+      "capability": "notification_reliability",
+      "status": "environment_required"
+    },
+    {
+      "id": "BP-X-012",
+      "capability": "accessibility_responsive",
+      "status": "environment_required"
+    },
+    {
+      "id": "BP-X-013",
+      "capability": "operational_recovery",
+      "status": "runbook_local_rehearsal_required"
+    },
+    {
+      "id": "BP-X-014",
+      "capability": "clean_upgrade_parity",
+      "status": "environment_required"
+    }
+  ],
+  "invariants": {
+    "simulationWritesRevision": false,
+    "simulationAuthorizesPublication": false,
+    "publicationRequiresIndependentActor": true,
+    "proofViewerExecutesRecovery": false,
+    "proofViewerShowsEvidenceCoordinatesOnly": true,
+    "localEvidenceClaimsProductionQualification": false,
+    "qualificationRequiresAllFiveProductionReceipts": true,
+    "manualAccessibilityCanBeSatisfiedByAutomationOnly": false,
+    "targetEnvironmentEvidenceRetained": false
+  }
+}

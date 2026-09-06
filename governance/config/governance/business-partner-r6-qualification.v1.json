@@ -1,0 +1,146 @@
+{
+  "$schema": "athyper.business-partner-r6-qualification/1",
+  "asOf": "2026-09-05",
+  "slice": "R6 MESH complete",
+  "scenarios": [
+    "BP-SUP-005",
+    "BP-SUP-007"
+  ],
+  "implementationStatus": "partial_local_verified",
+  "productionQualification": "blocked",
+  "productionQualified": false,
+  "commands": [
+    {
+      "command": "pnpm --filter @athyper/server-plane-mesh test",
+      "result": "passed",
+      "tests": 20,
+      "files": 6
+    },
+    {
+      "command": "pnpm test:e2e:bp-r6",
+      "result": "environment_required",
+      "tests": 2,
+      "optionalSkip": false
+    },
+    {
+      "command": "pnpm --dir server/db db:foundation:plan",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-plane-neon test",
+      "result": "passed",
+      "tests": 41,
+      "files": 9
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner test",
+      "result": "passed",
+      "tests": 71,
+      "files": 16
+    },
+    {
+      "command": "pnpm test:plane-contracts",
+      "result": "passed",
+      "tests": 192
+    },
+    {
+      "command": "pnpm --filter @athyper/server-plane-neon typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-plane-mesh typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-neon-business-partner typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm test:e2e:bp-r6 --list",
+      "result": "discovered_only",
+      "tests": 2
+    },
+    {
+      "command": "pnpm preflight:e2e:bp-r6",
+      "result": "environment_required",
+      "missingCoordinates": 6
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-host typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/product-mesh-business-partner typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "node --test deploy/compose/tests/structure.test.mjs",
+      "result": "passed",
+      "tests": 18
+    },
+    {
+      "command": "pnpm --dir server/db test:integration:business-partner-r6-delivery",
+      "result": "passed_disposable_local",
+      "checks": 8
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 131,
+      "files": 21
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "node --test tooling/scripts/verification/preflight-business-partner-environment.test.mjs",
+      "result": "passed",
+      "tests": 7
+    },
+    {
+      "command": "pnpm test:e2e:bp-r6-amendment --list",
+      "result": "discovered_only",
+      "tests": 1
+    },
+    {
+      "command": "pnpm preflight:e2e:bp-r6-amendment",
+      "result": "environment_required",
+      "missingCoordinates": 10
+    },
+    {
+      "command": "psql -v ON_ERROR_STOP=1 < server/db/scripts/tests/integration/business-partner-r6-amendment.sql",
+      "result": "passed_disposable_local"
+    }
+  ],
+  "evidence": [
+    "packages/contracts/platform/fixtures/business-partner-r6-mesh-complete.v1.json",
+    "server/packages/planes/mesh/src/business-partner-self-registration-policy.ts",
+    "server/packages/planes/mesh/src/business-partner-network-exchange.test.ts",
+    "tests/e2e/business-partner/bp-r6.spec.ts",
+    "server/db/ddl/planes/neon/document/07_functions.sql",
+    "server/packages/planes/neon/src/business-partner-profile-projection.ts",
+    "server/packages/planes/neon/src/business-partner-profile-projection.test.ts",
+    "docs/architecture/business-partner/README.md",
+    "server/packages/planes/neon/src/business-partner-profile-change.ts",
+    "server/packages/planes/neon/src/business-partner-profile-change.test.ts",
+    "server/packages/planes/mesh/src/business-partner-delivery.ts",
+    "server/db/scripts/tests/integration/business-partner-r6-delivery.ts",
+    "server/db/ddl/planes/mesh/mesh/03_tables.sql",
+    "governance/evidence/business-partner/r6/local-delivery-2026-09-05.json",
+    "server/db/ddl/planes/neon/document/03_tables.sql",
+    "server/db/scripts/tests/integration/business-partner-r6-amendment.sql",
+    "governance/evidence/business-partner/r6/local-amendment-2026-09-05.json",
+    "tests/e2e/business-partner/bp-r6-amendment.spec.ts"
+  ],
+  "environmentBlockers": [
+    "R6 preflight fails: target URL, supplier/buyer credentials and buyer account ID are unset.",
+    "A resettable two-tenant commercial relationship account pair, external policy deployment, NEON maker/checker actors, running delivery workers and retained target output are required.",
+    "Amendment preflight fails: seven shared V1 actor/organization coordinates, NEON URL and two resettable amendment fixture UUIDs are unset. Publish a new BP runtime contract admitting the four retained meshChange evidence properties before target execution."
+  ],
+  "implementationGaps": [
+    "BP-R6-006: persisted explicit decisions, governed immutable amendment case, native materializer, approval/materialization freshness checks and baseline advancement are locally implemented and verified. Target execution remains required.",
+    "BP-R6-007: existing worker routing, lease fencing and source acknowledgement persistence/view are locally verified; target deployment, restart/recovery and end-to-end retained proof remain required.",
+    "BP-R6-008: two MESH target journeys plus the mandatory amendment journey are prepared; broader lifecycle, worker restart/recovery, target mutation and release-owner evidence remain outstanding."
+  ]
+}

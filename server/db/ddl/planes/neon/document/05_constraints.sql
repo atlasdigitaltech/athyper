@@ -2127,3 +2127,28 @@ ALTER TABLE document.service_sheet_source_allocation
     ADD CONSTRAINT service_sheet_source_allocation_currency_fk FOREIGN KEY (currency_code) REFERENCES shared.currency(code) ON DELETE RESTRICT,
     ADD CONSTRAINT service_sheet_source_allocation_allocated_by_fk FOREIGN KEY (tenant_id, allocated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT service_sheet_source_allocation_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE document.mesh_profile_change_resolution
+    ADD CONSTRAINT mesh_profile_change_resolution_business_partner_fk
+    FOREIGN KEY (tenant_id, business_partner_id)
+    REFERENCES master.business_partner (tenant_id, id),
+    ADD CONSTRAINT mesh_profile_change_resolution_projection_fk
+    FOREIGN KEY (tenant_id, projection_id)
+    REFERENCES control.mesh_business_partner_profile_projection (tenant_id, id),
+    ADD CONSTRAINT mesh_profile_change_resolution_baseline_snapshot_fk
+    FOREIGN KEY (tenant_id, baseline_snapshot_id)
+    REFERENCES snapshot.mesh_business_partner_profile_received (tenant_id, id),
+    ADD CONSTRAINT mesh_profile_change_resolution_incoming_snapshot_fk
+    FOREIGN KEY (tenant_id, incoming_snapshot_id)
+    REFERENCES snapshot.mesh_business_partner_profile_received (tenant_id, id),
+    ADD CONSTRAINT mesh_profile_change_resolution_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id);
+
+ALTER TABLE document.mesh_profile_change_case
+    ADD CONSTRAINT mesh_profile_change_case_resolution_fk
+    FOREIGN KEY (tenant_id, resolution_id)
+    REFERENCES document.mesh_profile_change_resolution (tenant_id, id),
+    ADD CONSTRAINT mesh_profile_change_case_entity_case_fk
+    FOREIGN KEY (tenant_id, entity_case_id)
+    REFERENCES document.entity_case (tenant_id, id);

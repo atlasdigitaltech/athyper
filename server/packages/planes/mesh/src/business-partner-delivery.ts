@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { JobHandler } from "@athyper/server-contract-jobs";
 import { sql, type Transaction } from "kysely";
 
@@ -13,6 +14,7 @@ export type DeliveryDisposition =
 
 export interface BusinessPartnerDeliveryItem {
   readonly outboxId: string;
+  readonly leaseId: string;
   readonly sourceTenantId: string;
   readonly recipientTenantId: string;
   readonly eventId: string;
@@ -31,7 +33,8 @@ export interface BusinessPartnerDeliveryRepository {
   }): Promise<readonly BusinessPartnerDeliveryItem[]>;
   complete(
     item: BusinessPartnerDeliveryItem,
-    disposition: Exclude<DeliveryDisposition, "quarantined">,
+    disposition: DeliveryDisposition,
+    reasonCode?: string,
   ): Promise<void>;
   fail(
     item: BusinessPartnerDeliveryItem,
@@ -77,31 +80,50 @@ export class KyselyBusinessPartnerDeliveryRepository implements BusinessPartnerD
   ) {}
 
   claim(input: { workerId: string; limit: number; leaseSeconds: number }) {
-    return this.run(async (tx) =>
-      (
-        await sql<Row>`WITH candidates AS (
+    return this.run(async (tx) => {
+      const rows = (
+        await sql<Row>`WITH exhausted AS (
+      UPDATE event.outbox SET status='dead_letter',last_error='DELIVERY_LEASE_EXHAUSTED',locked_at=NULL,locked_by=NULL,locked_until=NULL
+      WHERE topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank')
+        AND status='processing' AND locked_until<=clock_timestamp() AND attempts>=max_attempts
+    ), candidates AS (
       SELECT id FROM event.outbox
-      WHERE topic='mesh-business-partner'
+      WHERE topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank')
         AND event_type IN ('business_partner.profile_publication.published','business_partner.profile_publication.withdrawn','mesh.bank_account.disclosed','mesh.bank_account.changed','mesh.bank_account.revoked')
         AND (status IN ('pending','failed') OR (status='processing' AND locked_until<=clock_timestamp()))
         AND available_at<=clock_timestamp() AND attempts<max_attempts
       ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT ${input.limit}
     ), claimed AS (
-      UPDATE event.outbox value SET status='processing',attempts=value.attempts+1,locked_at=clock_timestamp(),locked_by=${input.workerId},locked_until=clock_timestamp()+(${input.leaseSeconds}*interval '1 second'),last_error=NULL
+      UPDATE event.outbox value SET status='processing',attempts=value.attempts+1,locked_at=clock_timestamp(),locked_by=${`${input.workerId}:${randomUUID()}`},locked_until=clock_timestamp()+(${input.leaseSeconds}*interval '1 second'),last_error=NULL
       FROM candidates WHERE value.id=candidates.id RETURNING value.*
     ) SELECT * FROM claimed ORDER BY created_at,id`.execute(tx)
-      ).rows.map(mapItem),
-    );
+      ).rows;
+      const items: BusinessPartnerDeliveryItem[] = [];
+      for (const row of rows) {
+        try { items.push(mapItem(row)); }
+        catch {
+          await sql`UPDATE event.outbox SET status='dead_letter',last_error='BUSINESS_PARTNER_DELIVERY_ENVELOPE_INVALID',locked_at=NULL,locked_by=NULL,locked_until=NULL
+            WHERE id=${String(row["id"])}::uuid AND locked_by=${String(row["locked_by"])}`.execute(tx);
+        }
+      }
+      return items;
+    });
   }
 
   complete(
     item: BusinessPartnerDeliveryItem,
-    disposition: Exclude<DeliveryDisposition, "quarantined">,
+    disposition: DeliveryDisposition,
+    reasonCode?: string,
   ) {
     return this.run(async (tx) => {
-      await sql`UPDATE event.outbox SET status='completed',processed_at=clock_timestamp(),published_at=COALESCE(published_at,clock_timestamp()),locked_at=NULL,locked_by=NULL,locked_until=NULL,last_error=${`recipient:${disposition}`} WHERE id=${item.outboxId}::uuid AND status='processing'`.execute(
-        tx,
-      );
+      const updated = await sql`UPDATE event.outbox SET status=${disposition === 'quarantined' ? 'dead_letter' : 'completed'}::event.outbox_status_d,processed_at=clock_timestamp(),published_at=COALESCE(published_at,clock_timestamp()),locked_at=NULL,locked_by=NULL,locked_until=NULL,last_error=${`recipient:${disposition}`}
+        WHERE id=${item.outboxId}::uuid AND tenant_id=${item.sourceTenantId}::uuid
+          AND attempts=${item.attempt} AND locked_by=${item.leaseId}
+          AND locked_until>clock_timestamp() AND status='processing' RETURNING id`.execute(tx);
+      if (updated.rows.length !== 1) throw new BusinessPartnerDeliveryLeaseLostError();
+      await sql`INSERT INTO mesh.business_partner_delivery_acknowledgement
+        (source_tenant_id,recipient_tenant_id,source_network_account_id,outbox_id,event_id,delivery_lease_id,attempt_no,disposition,reason_code)
+        VALUES(${item.sourceTenantId}::uuid,${item.recipientTenantId}::uuid,${String(item.envelope["sourceNetworkAccountId"])}::uuid,${item.outboxId}::uuid,${item.eventId}::uuid,${item.leaseId},${item.attempt},${disposition},${reasonCode ?? null})`.execute(tx);
     });
   }
 
@@ -115,7 +137,7 @@ export class KyselyBusinessPartnerDeliveryRepository implements BusinessPartnerD
     },
   ) {
     return this.run(async (tx) => {
-      await sql`UPDATE event.outbox SET status=${input.permanent ? "dead_letter" : "failed"}::event.outbox_status_d,available_at=${input.retryAt ?? new Date().toISOString()}::timestamptz,last_error=${`${input.code}:${input.message}`.slice(0, 4000)},locked_at=NULL,locked_by=NULL,locked_until=NULL WHERE id=${item.outboxId}::uuid AND status='processing'`.execute(
+      await sql`UPDATE event.outbox SET status=${input.permanent ? "dead_letter" : "failed"}::event.outbox_status_d,available_at=${input.retryAt ?? new Date().toISOString()}::timestamptz,last_error=${`${input.code}:${input.message}`.slice(0, 4000)},locked_at=NULL,locked_by=NULL,locked_until=NULL WHERE id=${item.outboxId}::uuid AND tenant_id=${item.sourceTenantId}::uuid AND attempts=${item.attempt} AND locked_by=${item.leaseId} AND locked_until>clock_timestamp() AND status='processing'`.execute(
         tx,
       );
     });
@@ -124,7 +146,7 @@ export class KyselyBusinessPartnerDeliveryRepository implements BusinessPartnerD
   reconciliationCandidates(limit: number) {
     return this.run(async (tx) =>
       (
-        await sql<Row>`SELECT * FROM event.outbox WHERE topic='mesh-business-partner' AND event_type IN ('business_partner.profile_publication.published','business_partner.profile_publication.withdrawn','mesh.bank_account.disclosed','mesh.bank_account.changed','mesh.bank_account.revoked') AND status='completed' ORDER BY processed_at DESC NULLS LAST,id LIMIT ${limit}`.execute(
+        await sql<Row>`SELECT * FROM event.outbox WHERE topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank') AND event_type IN ('business_partner.profile_publication.published','business_partner.profile_publication.withdrawn','mesh.bank_account.disclosed','mesh.bank_account.changed','mesh.bank_account.revoked') AND status='completed' ORDER BY processed_at DESC NULLS LAST,id LIMIT ${limit}`.execute(
           tx,
         )
       ).rows.map(mapItem),
@@ -143,13 +165,17 @@ export class KyselyBusinessPartnerDeliveryRepository implements BusinessPartnerD
       async (tx) =>
         Number(
           (
-            await sql`UPDATE event.outbox SET status='failed',attempts=0,available_at=clock_timestamp(),processed_at=NULL,published_at=NULL,locked_at=NULL,locked_by=NULL,locked_until=NULL,last_error=${`REPLAY_REQUESTED:${reason}`.slice(0, 4000)} WHERE id=${outboxId}::uuid AND topic='mesh-business-partner' AND status='dead_letter'`.execute(
+            await sql`UPDATE event.outbox SET status='failed',attempts=0,available_at=clock_timestamp(),processed_at=NULL,published_at=NULL,locked_at=NULL,locked_by=NULL,locked_until=NULL,last_error=${`REPLAY_REQUESTED:${reason}`.slice(0, 4000)} WHERE id=${outboxId}::uuid AND topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank') AND status='dead_letter'`.execute(
               tx,
             )
           ).numAffectedRows ?? 0,
         ) === 1,
     );
   }
+}
+
+export class BusinessPartnerDeliveryLeaseLostError extends Error {
+  constructor() { super("BUSINESS_PARTNER_DELIVERY_LEASE_LOST"); }
 }
 
 export class BusinessPartnerDeliveryWorker {
@@ -173,15 +199,7 @@ export class BusinessPartnerDeliveryWorker {
     for (const item of items) {
       try {
         const result = await this.options.recipient.deliver(item);
-        if (result.disposition === "quarantined") {
-          await this.options.repository.fail(item, {
-            code: result.reasonCode ?? "RECIPIENT_QUARANTINED",
-            message: "Recipient quarantined the immutable envelope",
-            permanent: true,
-          });
-        } else {
-          await this.options.repository.complete(item, result.disposition);
-        }
+        await this.options.repository.complete(item, result.disposition, result.reasonCode);
         increment(summary, result.disposition);
         this.options.telemetry?.record({
           operation: "delivery",
@@ -189,6 +207,10 @@ export class BusinessPartnerDeliveryWorker {
           outcome: result.disposition,
         });
       } catch (error) {
+        if (error instanceof BusinessPartnerDeliveryLeaseLostError) {
+          increment(summary, "lease_lost");
+          continue;
+        }
         const failure = classify(error, item.attempt >= item.maxAttempts);
         await this.options.repository.fail(item, {
           ...failure,
@@ -329,10 +351,16 @@ function mapItem(row: Row): BusinessPartnerDeliveryItem {
       envelope["recipientTenantId"] ?? row["partition_key"] ?? "",
     ),
     eventId = String(envelope["eventId"] ?? "");
-  if (!uuid(recipientTenantId) || !uuid(eventId))
+  if (!uuid(recipientTenantId) || !uuid(eventId)
+    || envelope["sourceTenantId"] !== String(row["tenant_id"])
+    || envelope["eventType"] !== eventType
+    || envelope["sourcePlane"] !== "mesh"
+    || !uuid(String(envelope["sourceNetworkAccountId"] ?? ""))
+    || (row["partition_key"] != null && String(row["partition_key"]) !== recipientTenantId))
     throw new Error("BUSINESS_PARTNER_DELIVERY_ENVELOPE_COORDINATE_INVALID");
   return {
     outboxId: String(row["id"]),
+    leaseId: String(row["locked_by"] ?? ""),
     sourceTenantId: String(row["tenant_id"]),
     recipientTenantId,
     eventId,

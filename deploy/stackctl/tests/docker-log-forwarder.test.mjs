@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { lokiPayload, parseDockerLogLine, streamLabels } from "../src/docker-log-forwarder.mjs";
+import { lokiPayload, parseDockerLogLine, retainNewest, streamLabels } from "../src/docker-log-forwarder.mjs";
 
 test("Docker log lines become bounded Loki streams with mandatory labels", () => {
   const parsed = parseDockerLogLine("2026-08-22T01:02:03.123456789Z request complete");
@@ -16,4 +16,10 @@ test("Docker log lines become bounded Loki streams with mandatory labels", () =>
   const payload = lokiPayload([{ ...parsed, labels }, { ...parsed, line: "second", labels }]);
   assert.equal(payload.streams.length, 1);
   assert.equal(payload.streams[0].values.length, 2);
+});
+
+test("queue overflow preserves the newest log entries", () => {
+  const entries = ["oldest-retry", "older-retry", "new-1", "new-2"];
+  retainNewest(entries, 2);
+  assert.deepEqual(entries, ["new-1", "new-2"]);
 });

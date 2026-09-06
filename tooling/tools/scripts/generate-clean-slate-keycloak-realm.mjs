@@ -1,11 +1,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const sourcePath = resolve("stack/config/iam/realm-athyper.json");
-const outputPath = resolve("stack/config/iam/realm-athyper-clean-slate.json");
+const sourcePath = resolve("deploy/config/iam/realm-athyper.json");
+const outputPath = resolve("deploy/config/iam/realm-athyper-clean-slate.json");
 const realm = JSON.parse(readFileSync(sourcePath, "utf8"));
-const platformSourcePath = resolve("stack/config/iam/realm-platform-control.json");
-const platformOutputPath = resolve("stack/config/iam/realm-platform-control-clean-slate.json");
+const platformSourcePath = resolve("deploy/config/iam/realm-platform-control.json");
+const platformOutputPath = resolve("deploy/config/iam/realm-platform-control-clean-slate.json");
 const platformRealm = JSON.parse(readFileSync(platformSourcePath, "utf8"));
 
 const managedClients = Object.freeze({

@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { parseInstant } from "@athyper/platform-temporal";
 
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -15,7 +16,7 @@ export async function recordBusinessPartner360RolloutObservation(options:{stage:
   const expected=`RECORD-BP360-${options.stage.toUpperCase()}-OBSERVATION`;
   if(options.confirmation!==expected)throw new Error(`recording requires --confirm=${expected}`);
   assertDatabase(options.databaseUrl);
-  const started=Date.parse(options.startedAt),now=Date.now();
+  const started=parseInstant(options.startedAt),now=Date.now();
   if(!Number.isFinite(started)||started>=now)throw new Error("--started-at must be an offset-aware past timestamp");
   const observationMinutes=Math.floor((now-started)/60000),minimum=options.stage==="internal"?60:options.stage==="canary"?1440:10080;
   if(observationMinutes<minimum)throw new Error(`${options.stage} observation requires at least ${minimum} minutes`);

@@ -398,7 +398,7 @@ export function classifyArtifact(path: string): ArtifactClass {
     || normalized.endsWith(".spec.ts")
     || normalized.endsWith(".spec.tsx")
   ) return "test";
-  if (normalized.startsWith("stack/config/iam/") && normalized.endsWith(".json")) {
+  if (normalized.startsWith("deploy/config/iam/") && normalized.endsWith(".json")) {
     return "keycloak";
   }
   if (
@@ -467,7 +467,13 @@ function discoverFiles(root: string, registry: AuthorizationRegistry): SourceFil
     }
   };
 
-  for (const scanRoot of registry.contract.scanRoots) visit(resolve(root, scanRoot));
+  for (const scanRoot of registry.contract.scanRoots) {
+    const absoluteScanRoot = resolve(root, scanRoot);
+    if (!existsSync(absoluteScanRoot)) {
+      throw new Error(`Authorization inventory scan root is missing: ${scanRoot}`);
+    }
+    visit(absoluteScanRoot);
+  }
   return result.sort((left, right) => compareText(left.path, right.path));
 }
 
@@ -941,7 +947,6 @@ function scanPermissionUses(
       if (
         directAuthorizationContext
         && /^[A-Z][A-Z0-9_]+(?:\.[A-Z0-9_]+)+$/u.test(token)
-        && !token.startsWith("AUTH_")
       ) {
         unknownUses.push({
           code: token,

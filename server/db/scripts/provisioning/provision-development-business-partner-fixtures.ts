@@ -686,6 +686,9 @@ async function provisionDevelopmentBusinessPartner360Details(
     qualificationId = deterministicUuid(
       `360:qualification:${fixture.tenantCode}:${fixture.code}`,
     ),
+    riskAssessmentId = deterministicUuid(
+      `360:risk-assessment:${fixture.tenantCode}:${fixture.code}:supplier-role:v1`,
+    ),
     preferenceId = deterministicUuid(
       `360:preference:${fixture.tenantCode}:${fixture.code}`,
     ),
@@ -949,6 +952,19 @@ async function provisionDevelopmentBusinessPartner360Details(
     [coordinate.tenantId, coordinate.actorId],
   );
   await client.query(
+    `INSERT INTO master.party_risk_assessment(id,tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
+     VALUES($1::uuid,$2::uuid,'supplier',$3::uuid,$4::uuid,'supplier_role','standard_supplier','1.0',84,'low','approved','2026-08-30T00:00:00Z',$5::uuid,'2026-08-30T01:00:00Z',$6::uuid,'2027-08-30','annually',1,'Synthetic development readiness fixture; assessed and approved independently',$5::uuid)
+     ON CONFLICT(tenant_id,id) DO NOTHING`,
+    [
+      riskAssessmentId,
+      coordinate.tenantId,
+      fixture.supplierId,
+      fixture.id,
+      coordinate.actorId,
+      reviewer.id,
+    ],
+  );
+  await client.query(
     `INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,operating_organization_id,company_code_id,commodity_capability_id,qualification_type_code,idempotency_key,decision,decision_reason,effective_from,reviewed_at,reviewed_by,approved_at,approved_by,next_review_at,decision_idempotency_key,decision_fingerprint,metadata,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'supplier',$4::uuid,$5::uuid,$6::uuid,'compliance','northwind-qualification-v1','approved','Development acceptance evidence',$7::date,'2026-08-30T00:00:00Z',$8::uuid,'2026-08-30T00:00:00Z',$8::uuid,'2027-08-30','northwind-qualification-decision-v1',$9,$10::jsonb,$11::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       qualificationId,
@@ -997,6 +1013,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     supplier_profiles: number;
     bank_accounts: number;
     controls: number;
+    risk_assessments: number;
   }>(
     client,
     `SELECT
@@ -1005,7 +1022,8 @@ async function provisionDevelopmentBusinessPartner360Details(
     ((SELECT count(*)::int FROM master.business_partner_identifier WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid)+(SELECT count(*)::int FROM master.business_partner_tax_registration WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid)) identifiers,
     (SELECT count(*)::int FROM master.company_code_supplier_profile WHERE tenant_id=$1::uuid AND supplier_id=$3::uuid) supplier_profiles,
     (SELECT count(*)::int FROM master.bank_account_link WHERE tenant_id=$1::uuid AND owner_id=$2::uuid) bank_accounts,
-    ((SELECT count(*)::int FROM control.business_partner_qualification WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid)+(SELECT count(*)::int FROM master.certification WHERE tenant_id=$1::uuid AND owner_id=$2::uuid)) controls`,
+    ((SELECT count(*)::int FROM control.business_partner_qualification WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid)+(SELECT count(*)::int FROM master.certification WHERE tenant_id=$1::uuid AND owner_id=$2::uuid)) controls,
+    (SELECT count(*)::int FROM master.party_risk_assessment WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid AND subject_type='supplier' AND assessment_context='supplier_role' AND status='approved') risk_assessments`,
     [coordinate.tenantId, fixture.id, fixture.supplierId],
   );
   if (Object.values(coverage).some((value) => Number(value) < 1))

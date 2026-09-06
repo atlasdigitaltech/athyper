@@ -350,8 +350,15 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.normalize_supplier_workforce_policy_evidence(text,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_worker_engagement_lifecycle_mutation() FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_guard_worker_operational_placement_mutation() FROM PUBLIC;
 DO $$ BEGIN
     IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+        REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM athyperapp;
         GRANT USAGE ON SCHEMA document TO athyperapp;
         GRANT SELECT,INSERT,UPDATE ON
             document.shift_assignment,document.time_punch,document.attendance_day,document.attendance_adjustment_request,
@@ -534,7 +541,10 @@ DO $$ BEGIN
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_candidate_submission() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_contingent_work_order() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_engagement() TO athyperapp;
-   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) TO athyperapp;
+   GRANT EXECUTE ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_revision() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_worker_compliance_item() TO athyperapp;
    GRANT EXECUTE ON FUNCTION document.trg_guard_external_claim_header() TO athyperapp;
@@ -543,6 +553,7 @@ DO $$ BEGIN
    GRANT EXECUTE ON FUNCTION document.trg_reject_deprecated_external_acceptance_write() TO athyperapp;
  END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN
+   REVOKE ALL ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) FROM athyperadmin;
    GRANT ALL PRIVILEGES ON
      document.workforce_requisition,document.workforce_requisition_supplier,document.external_candidate_submission,
      document.external_candidate_evaluation,document.contingent_work_order,document.contingent_work_order_revision,
@@ -554,9 +565,13 @@ DO $$ BEGIN
      document.service_sheet_source_allocation
    TO athyperadmin;
    GRANT SELECT ON document.external_claim_reconciliation_v TO athyperadmin;
-   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_iam_projection(uuid,uuid,bigint,text,uuid,uuid,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_operational_placement_activate(uuid,uuid,bigint,text,uuid,uuid,date,date,uuid,uuid,uuid,uuid,uuid,uuid,uuid,uuid,numeric,boolean,jsonb,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_worker_engagement_terminate(uuid,uuid,bigint,text,uuid,uuid,text,timestamptz,jsonb) TO athyperadmin;
+   GRANT EXECUTE ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) TO athyperadmin;
  END IF;
 END $$;
+REVOKE ALL ON FUNCTION document.command_publish_workforce_requisition(uuid,uuid,bigint,jsonb,text,uuid) FROM PUBLIC;
 REVOKE ALL ON document.workforce_iam_projection FROM PUBLIC;
 DO $$
 BEGIN
@@ -600,3 +615,6 @@ DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request();
 DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_registration();
 DROP FUNCTION IF EXISTS document.trg_guard_business_partner_request_evidence();
 
+REVOKE ALL ON document.mesh_profile_change_resolution, document.mesh_profile_change_case FROM PUBLIC;
+REVOKE ALL ON FUNCTION document.trg_mesh_profile_resolution_immutable() FROM PUBLIC;
+GRANT SELECT, INSERT ON document.mesh_profile_change_resolution, document.mesh_profile_change_case TO athyperapp;

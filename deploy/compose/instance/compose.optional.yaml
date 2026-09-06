@@ -115,10 +115,13 @@ services:
   secretstore:
     profiles: [secretstore]
     image: infisical/infisical:v0.159.16
+    # Read owner-only Docker secrets, then drop to the image's non-root account.
+    user: "0:0"
     depends_on:
       secretstore-db-init: { condition: service_completed_successfully }
       memorycache: { condition: service_healthy }
     entrypoint: [/bin/sh, /athyper/bin/start-infisical.sh]
+    command: ["./standalone-entrypoint.sh"]
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

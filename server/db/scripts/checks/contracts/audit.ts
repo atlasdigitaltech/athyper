@@ -151,6 +151,11 @@ expect(
     && /-- seed-pack-version: 1\.[1-9][0-9]*\.0/.test(seed),
 );
 expect(
+  "business partner audit contract covers governed case lifecycle evidence",
+  seed.includes("business_partner_case_event")
+    && seed.includes("case\\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|materialized|failed|cancelled|superseded)"),
+);
+expect(
   "platform transaction writer uses the granted canonical append function",
   (await read("server/apps/platform-host/src/composition/register-platform.ts"))
     .includes("SELECT audit.append_event(")

@@ -39,6 +39,8 @@ random_urlsafe() { openssl rand -base64 48 | tr -d '\r\n' | tr '+/' '-_'; }
 random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
 
 for name in \
+  analytics-db-password grafana-admin-password infisical-auth-secret \
+  infisical-db-password infisical-encryption-key jobs-redis-password \
   iam-admin-password iam-db-password mesh-iam-client-secret minio-root-password \
   neon-iam-client-secret objectstorage-app-secret-key postgres-password redis-password \
   runtime-db-password runtime-iam-client-secret search-master-key \
@@ -60,7 +62,7 @@ NODE
 
 chmod 600 "$staging"/*
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
-[[ "$count" == "18" ]] || { echo "Expected 18 secrets, generated $count" >&2; exit 1; }
+[[ "$count" == "24" ]] || { echo "Expected 24 secrets, generated $count" >&2; exit 1; }
 mv "$staging" "$secret_root"
 trap - EXIT INT TERM
 
@@ -72,7 +74,7 @@ cat > "$receipt" <<EOF
   "kind": "DevSecretsReceipt",
   "generatedAt": "$generated_at",
   "instance": "dev",
-  "secretCount": 18,
+  "secretCount": 24,
   "directoryMode": "0700",
   "fileMode": "0600",
   "source": "cryptographic-random-clean-slate",
@@ -80,4 +82,4 @@ cat > "$receipt" <<EOF
 }
 EOF
 chmod 600 "$receipt"
-echo "Generated 18 owner-only DEV secrets under $secret_root; values were not printed."
+echo "Generated 24 owner-only DEV secrets under $secret_root; values were not printed."

@@ -47,7 +47,7 @@ export async function runBusinessPartner360OperationalReadiness(options) {
 }
 
 async function validateTelemetry() {
-  const rulesDirectory = resolve(root, "stack/config/telemetry/metrics");
+  const rulesDirectory = resolve(root, "deploy/config/telemetry/metrics");
   const checks = [
     run("prometheus-rules", "docker", ["run", "--rm", "--entrypoint", "/bin/promtool", "-v", `${rulesDirectory}:/work:ro`, "-w", "/work", "prom/prometheus:v3.11.2", "check", "rules", "business-partner-alerts.yml"]),
     run("instance-prometheus-rules", "docker", ["run", "--rm", "--entrypoint", "/bin/promtool", "-v", `${resolve(root,"deploy/compose/instance/config/prometheus")}:/work:ro`, "-w", "/work", "prom/prometheus:v3.11.2", "check", "rules", "business-partner-rules.yaml"]),
@@ -56,7 +56,7 @@ async function validateTelemetry() {
   ];
   const temporary = await mkdtemp(resolve(tmpdir(), "bp360-alertmanager-"));
   try {
-    const template = await readFile(resolve(root, "stack/config/telemetry/alertmanager/config.yml.tpl"), "utf8");
+    const template = await readFile(resolve(root, "deploy/config/telemetry/alertmanager/config.yml.tpl"), "utf8");
     const rendered = template
       .replaceAll("__ALERTMANAGER_SMTP_SMARTHOST__", "smtp.invalid:587")
       .replaceAll("__ALERTMANAGER_SMTP_FROM__", "alerts@example.invalid")
@@ -75,7 +75,7 @@ async function validateTelemetry() {
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
-  const requiredPanels = ["Summary and section p95", "Errors by safe reason", "Payload p95", "Completeness status", "MESH fallback", "Redaction and reveal", "Materialization failures", "Legacy aggregate calls"], dashboardPaths = ["stack/config/telemetry/provisioning/dashboards/json/business-partner-360.json", "deploy/compose/instance/config/grafana/provisioning/dashboards/json/business-partner-360.json", "deploy/compose/operations/config/grafana/dashboards/json/business-partner-360.json"];
+  const requiredPanels = ["Summary and section p95", "Errors by safe reason", "Payload p95", "Completeness status", "MESH fallback", "Redaction and reveal", "Materialization failures", "Legacy aggregate calls"], dashboardPaths = ["deploy/config/telemetry/provisioning/dashboards/json/business-partner-360.json", "deploy/compose/instance/config/grafana/provisioning/dashboards/json/business-partner-360.json", "deploy/compose/operations/config/grafana/dashboards/json/business-partner-360.json"];
   for (const path of dashboardPaths) { const dashboardText = JSON.stringify(JSON.parse(await readFile(resolve(root, path), "utf8"))); for (const panel of requiredPanels) assert(dashboardText.includes(panel), `dashboard panel is missing from ${path}: ${panel}`); assert(!/(businessPartnerId|principalId|accountNumber|nationalId|dateOfBirth|compensation|payload_json|evidence_content)/i.test(dashboardText), `dashboard contains a prohibited subject or restricted dimension: ${path}`); }
   return { passed: checks.every((check) => check.passed), checks: checks.map(({ code, passed }) => ({ code, passed })), dashboardPanels: requiredPanels.length, dashboardCopies: dashboardPaths.length, routes: { platform: ["platform-email"], reveal: ["critical-email", "security-email"] } };
 }
@@ -85,6 +85,7 @@ async function validateApprovalLedger(path) {
   const document = JSON.parse(await readFile(resolve(root, path), "utf8"));
   assert(document.schemaVersion === 1 && Array.isArray(document.approvals), "approval ledger schema is invalid");
   const byGate = new Map(document.approvals.map((approval) => [approval.gate, approval]));
+  assert(byGate.size === document.approvals.length, "approval ledger contains duplicate gates");
   const pending = [], invalid = [];
   for (const gate of APPROVAL_GATES) {
     const approval = byGate.get(gate);
@@ -107,12 +108,26 @@ function run(code, command, args) {
   if (result.status !== 0) throw new Error(`${code} failed\n${result.stdout}\n${result.stderr}`);
   return { code, passed: true, durationMs: Date.now() - started, stdout: result.stdout, stderr: result.stderr };
 }
-function lastJson(value) { const start = value.indexOf("{"); if (start < 0) throw new Error("subprocess did not return JSON evidence"); return JSON.parse(value.slice(start)); }
+function lastJson(value) {
+  for (let start = value.lastIndexOf("{"); start >= 0; start = value.lastIndexOf("{", start - 1)) {
+    try {
+      const parsed = JSON.parse(value.slice(start));
+      if (parsed && typeof parsed === "object") return parsed;
+    } catch {}
+  }
+  throw new Error("subprocess did not return trailing JSON evidence");
+}
 function assertLocalNeon(value) { const url = new URL(value); if (!["127.0.0.1", "localhost", "::1"].includes(url.hostname) || url.pathname !== "/athyper_neon") throw new Error("operational rehearsal requires local disposable athyper_neon"); }
 function assert(value, message) { if (!value) throw new Error(message); }
 function option(args, name) { return args.find((value) => value.startsWith(`${name}=`))?.slice(name.length + 1); }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  const args = process.argv.slice(2), result = await runBusinessPartner360OperationalReadiness({ confirmation: option(args, "--confirm"), neonDatabaseUrl: option(args, "--neon-database-url") ?? process.env.ATHYPER_NEON_DATABASE_ADMIN_URL, approvalLedger: option(args, "--approval-ledger"), output: option(args, "--output") });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+  try {
+    const args = process.argv.slice(2), result = await runBusinessPartner360OperationalReadiness({ confirmation: option(args, "--confirm"), neonDatabaseUrl: option(args, "--neon-database-url") ?? process.env.ATHYPER_NEON_DATABASE_ADMIN_URL, approvalLedger: option(args, "--approval-ledger"), output: option(args, "--output") });
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    if (!result.releaseReady) process.exitCode = 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  }
 }

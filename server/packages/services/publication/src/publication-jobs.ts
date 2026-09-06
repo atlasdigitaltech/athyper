@@ -1,5 +1,6 @@
 import type {
   JobEnvelope,
+  JobExecutionCoordinate,
   JobExecutionResult,
   JobHandler,
   JobPublisher,
@@ -150,6 +151,7 @@ export function createPublicationRollbackHandler(
 export function createPublicationAuthorityHandlers(
   work: PublicationAuthorityWork,
   jobs: JobPublisher,
+  resolveApplyExecution?: (execution: JobExecutionCoordinate, plane: PublicationPlane) => Promise<JobExecutionCoordinate>,
 ): Readonly<Record<string, JobHandler>> {
   return {
     [COMPILE_PUBLICATION_ARTIFACT_JOB]: delegate(async (job) => {
@@ -160,7 +162,7 @@ export function createPublicationAuthorityHandlers(
           PUBLICATION_AUTHORITY_QUEUE,
           SIGN_PUBLICATION_ARTIFACT_JOB,
           { compilationId },
-          deterministic(compilationId, "sign"),
+          { ...deterministic(compilationId, "sign"), execution: job.execution },
         );
       }
       return { releaseId, compilationCount: result.compilationIds.length };
@@ -172,14 +174,15 @@ export function createPublicationAuthorityHandlers(
         PUBLICATION_AUTHORITY_QUEUE,
         DISPATCH_PUBLICATION_JOB,
         { deploymentId },
-        deterministic(deploymentId, "dispatch"),
+        { ...deterministic(deploymentId, "dispatch"), execution: job.execution },
       );
       return { deploymentId };
     }),
     [DISPATCH_PUBLICATION_JOB]: delegate(async (job) => {
       const deploymentId = requiredId(job.data, "deploymentId");
       const payload = await work.dispatch(deploymentId);
-      await enqueueApply(jobs, payload);
+      const execution = job.execution && resolveApplyExecution ? await resolveApplyExecution(job.execution, payload.targetPlane) : job.execution;
+      await enqueueApply(jobs, payload, execution);
       return payload;
     }),
     [ACKNOWLEDGE_PUBLICATION_JOB]: delegate(async (job) => {
@@ -224,6 +227,7 @@ export function createPublicationRecoveryHandler(
 export async function enqueueApply(
   jobs: JobPublisher,
   payload: PublicationCoordinatePayload,
+  execution?: JobExecutionCoordinate,
 ): Promise<string> {
   coordinate(payload);
   return jobs.enqueue(
@@ -235,9 +239,8 @@ export async function enqueueApply(
       maxAttempts: 5,
       backoff: { kind: "exponential", delayMs: 2_000, jitter: 0.25 },
       execution: {
+        ...(execution ?? { scope: "plane" as const, principalId: "publication-worker" }),
         planeKey: payload.targetPlane,
-        scope: "plane",
-        principalId: "publication-worker",
       },
       payloadSchema: { name: APPLY_PUBLICATION_RELEASE_JOB, version: 1 },
     },
@@ -259,7 +262,7 @@ function delegate<T extends object>(
 
 function deterministic(deploymentId: string, step: string) {
   return {
-    jobId: `publication:${deploymentId}:${step}:1`,
+    enqueueKey: `publication:${deploymentId}:${step}:1`,
     maxAttempts: 5,
     removeOnComplete: 500,
     removeOnFail: false,

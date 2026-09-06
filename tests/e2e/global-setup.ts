@@ -1,5 +1,5 @@
 import { chromium, type FullConfig } from "@playwright/test";
-import { existsSync, mkdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 const LEGACY_STORAGE_STATE_PATH = "./tests/e2e/.auth/storage-state.json";
@@ -8,7 +8,8 @@ const PLANES = ["studio", "neon", "mesh"] as const;
 /**
  * Creates one authenticated storage state per plane. Credentials may be
  * plane-specific or inherit PLAYWRIGHT_USER / PLAYWRIGHT_PASSWORD.
- * Missing credentials produce an empty state so discovery and dry-runs work.
+ * Missing credentials overwrite stale state with an empty state so discovery
+ * and dry-runs cannot accidentally reuse an old authenticated run.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
   const hasAnyCredentials = PLANES.some((plane) => {
@@ -21,9 +22,9 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
   if (!hasAnyCredentials) {
     for (const plane of PLANES) {
-      await ensureEmptyState(`./tests/e2e/.auth/${plane}.json`);
+      await writeEmptyState(`./tests/e2e/.auth/${plane}.json`);
     }
-    await ensureEmptyState(LEGACY_STORAGE_STATE_PATH);
+    await writeEmptyState(LEGACY_STORAGE_STATE_PATH);
     return;
   }
 
@@ -40,10 +41,12 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       const statePath = `./tests/e2e/.auth/${plane}.json`;
 
       if (!username || !password || !baseURL) {
-        await ensureEmptyState(statePath);
+        await writeEmptyState(statePath);
         continue;
       }
 
+      await writeEmptyState(statePath);
+      if (plane === "neon") await writeEmptyState(LEGACY_STORAGE_STATE_PATH);
       mkdirSync(dirname(statePath), { recursive: true });
       const context = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
       const page = await context.newPage();
@@ -62,20 +65,30 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         await contextChoice.click();
       }
 
+      const state = await context.storageState();
+      const authenticated = state.cookies.some(({ name, value }) =>
+        (name === "athyper-session" || name === "__Host-athyper-session") && value.length > 0);
+      if (!authenticated) {
+        await context.close();
+        throw new Error(`${plane} login completed without an Athyper session cookie`);
+      }
       await context.storageState({ path: statePath });
       if (plane === "neon") {
         await context.storageState({ path: LEGACY_STORAGE_STATE_PATH });
       }
       await context.close();
     }
-    await ensureEmptyState(LEGACY_STORAGE_STATE_PATH);
+    const neonHasCredentials = Boolean(
+      (process.env.PLAYWRIGHT_NEON_USER ?? process.env.PLAYWRIGHT_USER)
+      && (process.env.PLAYWRIGHT_NEON_PASSWORD ?? process.env.PLAYWRIGHT_PASSWORD),
+    );
+    if (!neonHasCredentials) await writeEmptyState(LEGACY_STORAGE_STATE_PATH);
   } finally {
     await browser.close();
   }
 }
 
-async function ensureEmptyState(path: string): Promise<void> {
-  if (existsSync(path)) return;
+async function writeEmptyState(path: string): Promise<void> {
   mkdirSync(dirname(path), { recursive: true });
   const fs = await import("node:fs/promises");
   await fs.writeFile(path, JSON.stringify({ cookies: [], origins: [] }, null, 2));

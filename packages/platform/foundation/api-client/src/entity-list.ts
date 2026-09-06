@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { parseEntityListDescriptor, parseEntityListResult, type EntityListDescriptorV1, type EntityListResultV1, type EntityListScopeCoordinateV1, type ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
 import type { Operation, RequestOptions } from "./index";
 
@@ -78,7 +79,7 @@ function entityCode(params: EntityListParams): string {
 }
 
 function parseObject(value: unknown): Readonly<Record<string, unknown>> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("record transfer response must be an object"); return Object.freeze({ ...(value as Record<string, unknown>) }); }
-function parseBookmarks(value: unknown): readonly RecordBookmarkItemV1[] { const source = parseObject(value).items; if (!Array.isArray(source)) throw new TypeError("bookmark items are required"); return Object.freeze(source.map((candidate) => { const item = parseObject(candidate); const createdAt = requiredText(item, "createdAt"); if (Number.isNaN(Date.parse(createdAt))) throw new TypeError("bookmark createdAt is invalid"); return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), recordId: requiredText(item, "recordId"), ...(typeof item.label === "string" && item.label.trim() ? { label: item.label.trim() } : {}), createdAt }); })); }
+function parseBookmarks(value: unknown): readonly RecordBookmarkItemV1[] { const source = parseObject(value).items; if (!Array.isArray(source)) throw new TypeError("bookmark items are required"); return Object.freeze(source.map((candidate) => { const item = parseObject(candidate); const createdAt = requiredText(item, "createdAt"); if (Number.isNaN(parseInstant(createdAt))) throw new TypeError("bookmark createdAt is invalid"); return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), recordId: requiredText(item, "recordId"), ...(typeof item.label === "string" && item.label.trim() ? { label: item.label.trim() } : {}), createdAt }); })); }
 function parseBookmarkMembership(value: unknown): ReadonlySet<string> { return new Set(bookmarkIds(parseObject(value), "bookmarkedRecordIds")); }
 function parseBookmarkMutation(value: unknown): readonly string[] { return Object.freeze(bookmarkIds(parseObject(value), "recordIds")); }
 function bookmarkIds(item: Readonly<Record<string, unknown>>, key: string): readonly string[] { const source = item[key]; if (!Array.isArray(source) || source.some((id) => typeof id !== "string")) throw new TypeError(`bookmark ${key} is invalid`); return source as readonly string[]; }

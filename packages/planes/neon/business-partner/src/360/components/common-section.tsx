@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import {
   useApiClient,
   useSessionIdentity,
@@ -152,7 +153,7 @@ function ItemCard({
         controller.signal,
       );
       setValue(result.value);
-      const delay = Math.max(0, Date.parse(result.expiresAt) - Date.now());
+      const delay = Math.max(0, parseInstant(result.expiresAt) - Date.now());
       window.setTimeout(() => setValue(undefined), delay);
     } catch {
       setFailed(true);

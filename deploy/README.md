@@ -1,8 +1,8 @@
 # ATHYPER Stack v2 foundation
 
-Stack v2 is the only supported runtime architecture. The remaining
-`stack/config` and `stack/env` files are shared build, realm, and validation
-assets; they do not define or launch a legacy Compose runtime.
+Stack v2 is the only supported runtime architecture. `deploy/config` holds the
+shared IAM, telemetry, and memorycache build/realm assets consumed by this
+stack.
 
 ## Filesystem contract
 

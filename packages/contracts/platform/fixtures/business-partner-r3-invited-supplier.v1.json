@@ -1,0 +1,17 @@
+{
+  "$schema": "athyper.business-partner-r3-fixture/1",
+  "scenarios": [
+    {"id":"BP-SUP-004","source":"mesh","entryEvidence":"immutable_recipient_safe_publication","exit":"governed_neon_case"},
+    {"id":"BP-SUP-006","source":"invitation","entryEvidence":"token_email_restricted_session","exit":"independent_review"}
+  ],
+  "invariants": {
+    "proposalOnly": true,
+    "directMasterWrite": false,
+    "crossInvitationRead": false,
+    "applicantInternalCaseRead": false,
+    "ownerBoundCorrection": true,
+    "protectedEvidence": true,
+    "explicitMeshFieldAcceptance": true,
+    "independentApproval": true
+  }
+}

@@ -8,7 +8,7 @@
       "governance",
       "packages",
       "server",
-      "stack/config/iam",
+      "deploy/config/iam",
       "tests",
       "tooling"
     ],
@@ -5264,8 +5264,7 @@
       "disposition": "replace_with_versioned_keycloak_seed_contract",
       "allowedOperations": [
         "DELETE:organization_membership",
-        "POST:organization_membership",
-        "PUT:organization_membership"
+        "POST:organization_membership"
       ]
     },
     {
@@ -5400,22 +5399,22 @@
       "owner": "database-platform"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "generator": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
       "owner": "platform-iam"
     },
     {
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "generator": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
       "owner": "platform-iam"
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "generator": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
       "owner": "platform-iam"
     },
     {
-      "path": "stack/config/iam/realm-platform-control-demosetup.json",
+      "path": "deploy/config/iam/realm-platform-control-demosetup.json",
       "generator": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
       "owner": "platform-iam"
     }

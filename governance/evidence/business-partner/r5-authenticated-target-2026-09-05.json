@@ -1,0 +1,19 @@
+{
+  "schema": "athyper.business-partner-r5-authenticated-target/1",
+  "asOf": "2026-09-05",
+  "environment": "development",
+  "target": "https://neon.dev.athyper.test",
+  "scenario": "BP-CUS-001",
+  "command": "pnpm test:e2e:bp-r5 --grep=BP-CUS-001 --workers=1 --retries=0",
+  "result": "failed",
+  "authenticatedActors": 3,
+  "distinctPrincipals": true,
+  "sameTenant": true,
+  "stage": "create_customer_case",
+  "httpStatus": 503,
+  "code": "BUSINESS_PARTNER_REQUEST_SCHEMA_UNAVAILABLE",
+  "prerequisite": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+  "productionQualified": false,
+  "credentialsRetained": false,
+  "requiredNextAction": "Complete Studio author/checker publication and local activation of the prepared Business Partner definition, then rerun."
+}

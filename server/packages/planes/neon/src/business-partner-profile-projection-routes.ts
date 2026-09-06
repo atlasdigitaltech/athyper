@@ -11,6 +11,7 @@ export function registerBusinessPartnerProfileProjectionRoutes(app: Application,
   };
   app.post("/api/neon/business-partner-profile-events", options.authenticate, route("receive", async (request, context, response) => { const result = await options.service.receive({ context, envelope: requiredObject(request.body) as unknown as MeshBusinessPartnerProfileEnvelope }); response.status(result.disposition === "applied" ? 201 : 202); return result; }));
   app.get("/api/neon/business-partner-profile-projections", options.authenticate, route("list", (request, context) => options.service.list({ context, ...(typeof request.query["networkRelationshipId"] === "string" ? { networkRelationshipId: request.query["networkRelationshipId"] } : {}), limit: integer(request.query["limit"]) })));
+  app.get("/api/neon/business-partner-profile-events/receipts", options.authenticate, route("receipts", (request, context) => options.service.processingReceipts({ context, limit: integer(request.query["limit"]) })));
   app.get("/api/neon/business-partner-profile-events/quarantine", options.authenticate, route("quarantine", (request, context) => options.service.quarantine({ context, limit: integer(request.query["limit"]) })));
   app.post("/api/neon/business-partner-profile-events/:eventId/replays", options.authenticate, route("replay", (request, context) => options.service.replay({ context, eventId: uuid(request.params["eventId"]) })));
 }

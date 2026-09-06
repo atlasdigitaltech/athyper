@@ -11,6 +11,7 @@ type Difference = {
   changed: Array<{ objectKey: string; clean: string; upgrade: string }>;
 };
 
+const startedAt = new Date().toISOString();
 const args = new Map(
   process.argv.slice(2).map((value) => {
     const [key, ...rest] = value.split("=");
@@ -503,16 +504,24 @@ try {
     );
   }
   const differences: Record<string, Difference> = {};
+  const comparedObjectCounts: Record<string, { clean: number; upgrade: number }> = {};
   for (const [category, query] of Object.entries(queries)) {
     const [cleanState, upgradeState] = await Promise.all([
       capture(clean, query),
       capture(upgrade, query),
     ]);
     differences[category] = compare(cleanState, upgradeState);
+    comparedObjectCounts[category] = { clean: cleanState.size, upgrade: upgradeState.size };
   }
 
   const report = {
     schemaVersion: 1,
+    startedAt,
+    completedAt: new Date().toISOString(),
+    environment: process.env["ENVIRONMENT"] ?? "unknown",
+    targetRef: process.env["R8_TARGET_REF"] ?? null,
+    sourceRevision: process.env["R8_SOURCE_REVISION"] ?? null,
+    comparedObjectCounts,
     scope: "S0-S5 Business Partner DDL, including security and mutation ownership",
     normalization: {
       whitespace: "collapsed",
@@ -528,6 +537,12 @@ try {
   }
 
   let failureCount = 0;
+  for (const category of ["relationDispositions", "columns", "rls", "functions", "s5Functions", "s5Grants"]) {
+    if (!comparedObjectCounts[category]?.clean || !comparedObjectCounts[category]?.upgrade) {
+      process.stderr.write(`FAIL required catalog category is empty: ${category}\n`);
+      failureCount += 1;
+    }
+  }
   for (const [category, difference] of Object.entries(differences)) {
     const count = difference.missingInUpgrade.length
       + difference.extraInUpgrade.length

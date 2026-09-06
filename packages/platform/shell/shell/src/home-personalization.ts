@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { decideRouteAccess, type AccessSnapshot } from "@athyper/platform-shell-runtime";
 
 export const HOME_WIDGET_IDS = ["recommendations", "workspaces", "quick-actions", "recent"] as const;
@@ -104,7 +105,7 @@ export function parseHomePersonalization(value: unknown): HomePersonalization {
     for (const [href, candidate] of Object.entries(record.interactions as Record<string, unknown>).slice(0, 100)) {
       if (!safeLocalHref(href) || !candidate || typeof candidate !== "object" || Array.isArray(candidate)) continue;
       const item = candidate as Record<string, unknown>, visits = Number(item.visits), lastVisitedAt = item.lastVisitedAt;
-      if (Number.isSafeInteger(visits) && visits > 0 && visits <= 10_000 && typeof lastVisitedAt === "string" && !Number.isNaN(Date.parse(lastVisitedAt))) interactions[href] = Object.freeze({ visits, lastVisitedAt });
+      if (Number.isSafeInteger(visits) && visits > 0 && visits <= 10_000 && typeof lastVisitedAt === "string" && !Number.isNaN(parseInstant(lastVisitedAt))) interactions[href] = Object.freeze({ visits, lastVisitedAt });
     }
   }
   return Object.freeze({ version: 1, widgetOrder: Object.freeze(widgetOrder), hiddenWidgets: Object.freeze(hiddenWidgets), interactions: Object.freeze(interactions) });
@@ -116,5 +117,5 @@ export function homePersonalizationStorageKey(plane: string, tenantId: string, p
 
 function isWidgetId(value: unknown): value is HomeWidgetId { return typeof value === "string" && (HOME_WIDGET_IDS as readonly string[]).includes(value); }
 function safeLocalHref(value: string): boolean { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") && !/(^|\/)\.\.(\/|$)/.test(value); }
-function recencyScore(value: string, now: number): number { const elapsed = now - Date.parse(value); if (!Number.isFinite(elapsed) || elapsed < 0) return 0; if (elapsed < 86_400_000) return 24; if (elapsed < 604_800_000) return 14; if (elapsed < 2_592_000_000) return 6; return 0; }
+function recencyScore(value: string, now: number): number { const elapsed = now - parseInstant(value); if (!Number.isFinite(elapsed) || elapsed < 0) return 0; if (elapsed < 86_400_000) return 24; if (elapsed < 604_800_000) return 14; if (elapsed < 2_592_000_000) return 6; return 0; }
 function scopeHash(value: string): string { let hash = 2_166_136_261; for (let index = 0; index < value.length; index += 1) hash = Math.imul(hash ^ value.charCodeAt(index), 16_777_619); return (hash >>> 0).toString(36); }

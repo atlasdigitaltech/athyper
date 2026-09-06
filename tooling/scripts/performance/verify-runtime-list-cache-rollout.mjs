@@ -26,6 +26,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
 
 export function verifyRolloutReport(report, thresholds) {
   const failures = [];
+  for (const [name, value] of Object.entries(thresholds ?? {})) {
+    if (!Number.isFinite(value) || value <= 0) failures.push(`Threshold ${name} must be a positive finite number.`);
+  }
+  for (const name of ["coldMaxMs", "warmMaxMs"]) {
+    if (!Number.isFinite(thresholds?.[name]) || thresholds[name] <= 0) failures.push(`Threshold ${name} is required.`);
+  }
+  if (failures.length > 0) return [...new Set(failures)];
   if (report?.kind !== "athyper.runtime-list-cache-rollout" || report?.schemaVersion !== 2) {
     failures.push("Artifact must be a schemaVersion 2 athyper.runtime-list-cache-rollout report.");
     return failures;
@@ -42,12 +49,19 @@ export function verifyRolloutReport(report, thresholds) {
     "context_switch",
     "mutation_revisit",
   ];
+  let missingScenario = false;
   for (const [index, run] of report.runs.entries()) {
     for (const name of requiredScenarios) {
-      if (!scenario(run, name)) failures.push(`Run ${index + 1} is missing ${name}.`);
+      if (!scenario(run, name)) {
+        failures.push(`Run ${index + 1} is missing ${name}.`);
+        missingScenario = true;
+      }
+      else if (!finiteNonNegative(scenario(run, name).rowsVisibleMs)) {
+        failures.push(`Run ${index + 1} ${name} has a missing or invalid rowsVisibleMs.`);
+      }
     }
   }
-  if (failures.length > 0) return failures;
+  if (missingScenario) return failures;
 
   const cold = median(scenarioValues(report, "first_visit", "rowsVisibleMs"));
   const warm = median(scenarioValues(report, "immediate_revisit", "rowsVisibleMs"));
@@ -77,7 +91,9 @@ export function verifyRolloutReport(report, thresholds) {
     if (!descriptor || descriptor.cacheState !== "hit") {
       failures.push(`Run ${index + 1} warm revisit did not reuse the valid descriptor window.`);
     }
-    if (descriptor && Number(descriptor.durationMs) >= (thresholds.descriptorMaxMs ?? 100)) {
+    if (descriptor && !finiteNonNegative(descriptor.durationMs)) {
+      failures.push(`Run ${index + 1} warm descriptor resolution has a missing or invalid durationMs.`);
+    } else if (descriptor && Number(descriptor.durationMs) >= (thresholds.descriptorMaxMs ?? 100)) {
       failures.push(
         `Run ${index + 1} warm descriptor resolution ${descriptor.durationMs}ms must be under ${thresholds.descriptorMaxMs ?? 100}ms.`,
       );
@@ -143,6 +159,10 @@ function required(name) {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`${name} or an artifact path argument is required.`);
   return value;
+}
+
+function finiteNonNegative(value) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
 }
 
 function positiveNumber(value, name) {

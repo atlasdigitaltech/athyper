@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { controlAdminSchemas, type BankValidationInput, type BankValidationRule, type ConnectorDraft, type JsonValue, type LookupDesiredState, type RoundingAggregate, type TenantEntitlementOverride } from "@athyper/server-contract-control-admin";
 import { defineRouteContract, registerContractRoute, type RuntimeSchema } from "@athyper/server-runtime-http";
@@ -92,7 +93,7 @@ function body(request: Request): Record<string, unknown> { if (!request.body || 
 function required(value: unknown): string { if (typeof value !== "string" || !value.trim()) throw invalid("Required string missing"); return value.trim(); }
 function optionalString(value: unknown): string | undefined { return typeof value === "string" && value.trim() ? value.trim() : undefined; }
 function boolean(value: unknown): boolean { if (typeof value !== "boolean") throw invalid("Boolean required"); return value; }
-function timestamp(value: unknown): string { const text = required(value); if (!Number.isFinite(Date.parse(text))) throw invalid("Timestamp required"); return text; }
+function timestamp(value: unknown): string { const text = required(value); if (!Number.isFinite(parseInstant(text))) throw invalid("Timestamp required"); return text; }
 function optionalPositive(value: unknown): number | undefined { if (value === undefined) return undefined; const number = Number(value); if (!Number.isSafeInteger(number) || number < 1) throw invalid("Positive integer required"); return number; }
 function optionalVersion(value: Record<string, unknown>): number | undefined { if (value["expectedVersion"] === undefined) return undefined; const version = Number(value["expectedVersion"]); if (!Number.isSafeInteger(version) || version < 0) throw invalid("Non-negative expectedVersion required"); return version; }
 function requiredVersion(value: Record<string, unknown>): number { const version = optionalVersion(value); if (version === undefined) throw invalid("expectedVersion is required"); return version; }

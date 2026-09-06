@@ -1,5 +1,6 @@
 "use client";
 
+import { sanitizeReturnTo as safeReturnTo } from "@athyper/platform-iam-session";
 import * as React from "react";
 import { ChevronRightIcon } from "@athyper/platform-icons";
 import { Notice, SelectionCard, StatusBadge } from "@athyper/platform-ui/presentation";
@@ -42,5 +43,4 @@ function readCookie(name: string): string | undefined {
   return document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`))?.slice(name.length + 1);
 }
 
-function safeReturnTo(value: string): string { return value.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/"; }
 function initials(value: string): string { const words=value.trim().split(/\s+/).filter(Boolean); return (words.length>1?`${words[0]?.[0]??""}${words[1]?.[0]??""}`:words[0]?.slice(0,2)??"A").toUpperCase(); }

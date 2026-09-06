@@ -21,7 +21,7 @@ async function synchronize(relative, transform) {
   if (!check && current !== expected) await writeFile(path, expected);
 }
 
-await synchronize("stack/config/iam/themes/neon/login/_iam-context.ftl", (text) => {
+await synchronize("deploy/config/iam/themes/neon/login/_iam-context.ftl", (text) => {
   let result = text;
   for (const plane of planes) {
     const name = config.planes[plane].shortName;
@@ -39,11 +39,5 @@ const arrayRows = planes.map((plane) => `${plane}: ["${config.planes[plane].shor
 await synchronize("deploy/compose/platform/outage/status.html", (text) => text
   .replace(/const products = \{ [^\n]+ \};/, `const products = { ${arrayRows} };`)
   .replace(/document\.title = `[^`]+Platform unavailable`;/, `document.title = \`${statusExpression("Platform unavailable")}\`;`));
-
-const legacyRows = planes.map((plane) => `      ${plane}: { name: "${config.planes[plane].shortName}", wordmark: "/brand/${plane}-advertising.svg", icon: "/brand/${plane}-icon.png", audience: "${plane === "mesh" ? "partner" : plane === "studio" ? "platform" : "tenant"}" }`).join(",\n");
-await synchronize("stack/config/gateway/fallback/status.html", (text) => text
-  .replace(/    const products = \{\n[\s\S]*?\n    \};/, `    const products = {\n${legacyRows}\n    };`)
-  .replace(/document\.title = product\.name \+ "[^"]*Maintenance";/, `document.title = product.name + " Maintenance";`)
-  .replace(/document\.title = product\.name \+ "[^"]*Service unavailable";/, `document.title = product.name + " Service unavailable";`));
 
 console.log(`${check ? "Verified" : "Synchronized"} plane presentation from ${sourcePath.slice(root.length + 1)}.`);

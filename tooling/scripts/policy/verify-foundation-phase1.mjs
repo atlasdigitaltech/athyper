@@ -63,8 +63,8 @@ if (/\.a-identity-/.test(readFileSync(join(root, "packages", "platform", "founda
 if (!authCss.includes('@import "@athyper/platform-surface-kit/styles.css"')) violations.push("Identity gate does not compose the shared surface-kit stylesheet");
 if (!authSource.includes("PublicIdentitySurface") || !authSource.includes("@athyper/platform-ui/presentation")) violations.push("Identity gate does not compose shared surface and UI presentation primitives");
 
-const iamLoginCss = readFileSync(join(root, "stack", "config", "iam", "themes", "neon", "login", "resources", "css", "login.css"), "utf8");
-const iamTokenCss = readFileSync(join(root, "stack", "config", "iam", "themes", "neon", "login", "resources", "css", "iam.tokens.css"), "utf8");
+const iamLoginCss = readFileSync(join(root, "deploy", "config", "iam", "themes", "neon", "login", "resources", "css", "login.css"), "utf8");
+const iamTokenCss = readFileSync(join(root, "deploy", "config", "iam", "themes", "neon", "login", "resources", "css", "iam.tokens.css"), "utf8");
 if (/#[0-9a-f]{3,8}\b|\brgba?\s*\(|\bhsla?\s*\(/i.test(iamLoginCss)) violations.push("Keycloak login composition contains literal colors instead of active semantic theme tokens");
 if (!iamTokenCss.includes("GENERATED from @athyper/platform-theme/src/tokens.ts")) violations.push("Keycloak token sheet is not generated from the active theme authority");
 if (!iamTokenCss.includes("--a-theme-family:atlas-modern") || !iamTokenCss.includes("--a-primary: #234B84")) violations.push("Keycloak token sheet does not default to Atlas Modern");

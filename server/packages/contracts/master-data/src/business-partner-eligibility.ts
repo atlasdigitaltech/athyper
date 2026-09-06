@@ -7,6 +7,9 @@ export const businessPartnerQualificationPermissions = Object.freeze({
   read: "neon.relationship.business_partner.read",
 } as const);
 export const customerOnboardingPermissions = Object.freeze({
+  designationCreate: "neon.customer.designation.create",
+  designationDecide: "neon.customer.designation.decide",
+  designationRead: "neon.customer.designation.read",
   creditCreate: "neon.customer.credit.create",
   creditDecide: "neon.customer.credit.decide",
   creditRead: "neon.customer.credit.read",
@@ -16,6 +19,59 @@ export const customerOnboardingPermissions = Object.freeze({
   deactivate: "neon.customer.lifecycle.deactivate",
   archive: "neon.customer.lifecycle.archive",
 } as const);
+
+export interface CustomerAccountDesignation {
+  readonly id: string;
+  readonly tenantId: string;
+  readonly businessPartnerId: string;
+  readonly customerId: string;
+  readonly operatingOrganizationId: string;
+  readonly companyCodeId?: string;
+  readonly countryCode?: string;
+  readonly channelCode?: string;
+  readonly designationType: "key_account" | "strategic" | "priority_service";
+  readonly priorityTier?: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil?: string;
+  readonly rationale: string;
+  readonly status: "pending" | "approved" | "rejected" | "revoked";
+  readonly decisionReason?: string;
+  readonly reviewedAt?: string;
+  readonly reviewedBy?: string;
+  readonly approvedAt?: string;
+  readonly approvedBy?: string;
+  readonly revokedAt?: string;
+  readonly revokedBy?: string;
+  readonly revocationReason?: string;
+  readonly rowVersion: number;
+  readonly createdAt: string;
+  readonly createdBy: string;
+  readonly updatedAt?: string;
+  readonly updatedBy?: string;
+}
+export interface CreateCustomerDesignationCommand {
+  readonly context: VerifiedRequestContext;
+  readonly idempotencyKey: string;
+  readonly businessPartnerId: string;
+  readonly customerId: string;
+  readonly operatingOrganizationId: string;
+  readonly companyCodeId?: string;
+  readonly countryCode?: string;
+  readonly channelCode?: string;
+  readonly designationType: CustomerAccountDesignation["designationType"];
+  readonly priorityTier?: number;
+  readonly effectiveFrom: string;
+  readonly effectiveUntil?: string;
+  readonly rationale: string;
+}
+export interface DecideCustomerDesignationCommand {
+  readonly context: VerifiedRequestContext;
+  readonly designationId: string;
+  readonly expectedVersion: number;
+  readonly decision: "approved" | "rejected" | "revoked";
+  readonly reason: string;
+  readonly idempotencyKey: string;
+}
 
 export type PartnerEligibilityRole = "supplier" | "customer";
 export type PartnerQualificationDecision =
@@ -386,6 +442,24 @@ export interface BusinessPartnerEligibilityService {
     readonly operatingOrganizationId: string;
     readonly companyCodeId: string;
   }): Promise<readonly CustomerCreditReview[]>;
+  createCustomerDesignation(
+    command: CreateCustomerDesignationCommand,
+  ): Promise<{
+    readonly designation: CustomerAccountDesignation;
+    readonly replayed: boolean;
+  }>;
+  decideCustomerDesignation(
+    command: DecideCustomerDesignationCommand,
+  ): Promise<{
+    readonly designation: CustomerAccountDesignation;
+    readonly replayed: boolean;
+  }>;
+  listCustomerDesignations(query: {
+    readonly context: VerifiedRequestContext;
+    readonly businessPartnerId: string;
+    readonly operatingOrganizationId: string;
+    readonly companyCodeId?: string;
+  }): Promise<readonly CustomerAccountDesignation[]>;
   transitionCustomer(
     command: CustomerLifecycleCommand,
   ): Promise<CustomerLifecycleResult>;

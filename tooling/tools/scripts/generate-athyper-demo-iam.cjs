@@ -4,7 +4,7 @@ const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
-const fixturePath = path.join(repoRoot, "stack", "config", "iam", "realm-athyper-demosetup.json");
+const fixturePath = path.join(repoRoot, "deploy", "config", "iam", "realm-athyper-demosetup.json");
 const checkOnly = process.argv.includes("--check");
 
 const legalEntities = [

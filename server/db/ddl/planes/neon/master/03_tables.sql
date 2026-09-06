@@ -1328,9 +1328,12 @@ CREATE TABLE master.bank_account (
     CONSTRAINT bank_account_holder_chk CHECK (btrim(account_holder_name) <> ''),
     CONSTRAINT bank_account_identifier_chk
         CHECK (account_id_value ~ '^[A-Z0-9]{4,64}$'),
-    CONSTRAINT bank_account_last4_chk
-        CHECK (account_last4 ~ '^[A-Z0-9]{4}$'
-               AND account_last4 = right(account_id_value, 4)),
+    CONSTRAINT bank_account_last4_chk CHECK (
+        account_last4 ~ '^[A-Z0-9]{4}$' AND (
+          (metadata->>'protectedValueToken' IS NULL AND account_last4=right(account_id_value,4))
+          OR (metadata->>'protectedValueToken' IS NOT NULL AND account_id_value~'^[A-F0-9]{64}$')
+        )
+    ),
     CONSTRAINT bank_account_currency_chk CHECK (currency_code::text ~ '^[A-Z]{3}$'),
     CONSTRAINT bank_account_bank_identity_chk CHECK (
         (
@@ -1384,7 +1387,7 @@ CREATE TABLE master.bank_account (
 );
 
 COMMENT ON COLUMN master.bank_account.account_id_value IS
-  'Sensitive normalized account identifier. Application roles receive no direct SELECT grant; use masked views or an audited reveal command.';
+  'Sensitive normalized identifier for legacy rows; protected registrations store a SHA-256 fingerprint here and keep the raw value only in protected storage.';
 
 CREATE TABLE master.bank_account_link (
     id                    uuid                              NOT NULL DEFAULT shared.uuidv7(),

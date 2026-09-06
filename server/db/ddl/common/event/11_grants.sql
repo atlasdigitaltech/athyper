@@ -23,6 +23,10 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE ON event.integration_delivery TO athyperapp;
         GRANT SELECT, INSERT ON event.integration_inbound_receipt TO athyperapp;
     END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        GRANT USAGE ON SCHEMA event TO athyper_jobs_service;
+        GRANT SELECT, UPDATE ON event.outbox TO athyper_jobs_service;
+    END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT USAGE ON SCHEMA event TO athyperadmin;
         GRANT ALL PRIVILEGES ON event.comment_flag, event.notification_message,

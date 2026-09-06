@@ -51,7 +51,8 @@ apply_plane() {
     exit 1
   fi
 
-  transaction="/tmp/athyper-foundation-${plane}.sql"
+  transaction="$(mktemp "/tmp/athyper-foundation-${plane}.XXXXXX.sql")"
+  trap 'rm -f -- "$transaction"' EXIT HUP INT TERM
   {
     echo "BEGIN;"
     echo "SELECT pg_advisory_xact_lock(hashtextextended('athyper-foundation:${database}', 0));"
@@ -79,7 +80,8 @@ apply_plane() {
   } > "$transaction"
 
   psql --no-psqlrc --set ON_ERROR_STOP=1 --dbname "$database" --file "$transaction"
-  rm -f "$transaction"
+  rm -f -- "$transaction"
+  trap - EXIT HUP INT TERM
 }
 
 apply_plane studio
@@ -93,6 +95,8 @@ psql --no-psqlrc --set ON_ERROR_STOP=1 --dbname postgres <<'SQL'
 GRANT athyperapp TO athyper_runtime;
 GRANT athyper_trustiam_service TO athyper_runtime;
 GRANT athyper_jobs_service TO athyper_worker;
+GRANT athyper_publication_service TO athyper_runtime, athyper_worker;
+GRANT athyper_projection_applier TO athyper_worker;
 SQL
 
 # Reconcile the narrow worker contract independently from the immutable

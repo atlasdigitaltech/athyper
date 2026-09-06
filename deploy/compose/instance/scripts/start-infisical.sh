@@ -10,4 +10,8 @@ export DB_CONNECTION_URI="postgresql://athyper_infisical:${db_password}@db:5432/
 export REDIS_URL="redis://:${redis_password}@memorycache:6379"
 unset db_password redis_password
 
+if [ "$(id -u)" = "0" ]; then
+  exec setpriv --reuid="$(id -u non-root-user)" \
+    --regid="$(id -g non-root-user)" --init-groups -- "$@"
+fi
 exec "$@"

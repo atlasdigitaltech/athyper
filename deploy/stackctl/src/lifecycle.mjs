@@ -38,9 +38,11 @@ export function createLifecyclePlan(repoRoot, instanceId, operation) {
   const environment = {
     ATHYPER_INSTANCE: instanceId,
     ATHYPER_DOMAIN_SUFFIX: instance.spec.domainSuffix,
-    ATHYPER_HTTP_BIND: instance.spec.debugPorts.http,
-    ATHYPER_POSTGRES_BIND: instance.spec.debugPorts.postgres,
     ATHYPER_RUNTIME_ROOT: runtimeRoot(),
+    ...Object.fromEntries(Object.entries({
+      ATHYPER_HTTP_BIND: instance.spec.debugPorts?.http,
+      ATHYPER_POSTGRES_BIND: instance.spec.debugPorts?.postgres,
+    }).filter(([, value]) => value !== undefined)),
     ...imageEnvironment,
   };
   const down = futureCommand(project, composeFiles, ["down", "--remove-orphans", "--volumes"], environment);

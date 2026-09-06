@@ -15,8 +15,7 @@ const faviconTargets = [
   "apps/neon/public/brand/neon/athyper-favicon.svg",
   "apps/mesh/public/brand/mesh/athyper-favicon.svg",
   "apps/studio/public/brand/studio/athyper-favicon.svg",
-  "stack/config/iam/themes/neon/login/resources/img/athyper-favicon.svg",
-  "stack/config/gateway/fallback/brand/athyper-favicon.svg",
+  "deploy/config/iam/themes/neon/login/resources/img/athyper-favicon.svg",
 ];
 const embeddedPages = [
   "deploy/compose/instance/config/nginx/status.html",
@@ -50,17 +49,12 @@ for (const relative of embeddedPages) {
   if (!html.includes(dataUri)) throw new Error(`Embedded universal favicon is stale: ${relative}`);
 }
 
-const iamLogin = join(repoRoot, "stack/config/iam/themes/neon/login");
+const iamLogin = join(repoRoot, "deploy/config/iam/themes/neon/login");
 for (const name of (await readdir(iamLogin)).filter((value) => value.endsWith(".ftl"))) {
   const template = await readFile(join(iamLogin, name), "utf8");
   if (template.includes('rel="icon"') && !template.includes("img/athyper-favicon.svg")) {
     throw new Error(`Keycloak template does not use the universal favicon: ${name}`);
   }
-}
-
-const legacyGateway = await readFile(join(repoRoot, "stack/config/gateway/fallback/status.html"), "utf8");
-if (!legacyGateway.includes('href="/brand/athyper-favicon.svg"')) {
-  throw new Error("Legacy gateway does not use the universal favicon");
 }
 
 console.log(`${check ? "Verified" : "Synchronized"} active master marks across IAM, gateway, and applications.`);

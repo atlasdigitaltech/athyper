@@ -152,14 +152,20 @@ test("runtime list/detail/document fixtures use bounded requests", async ({ page
   test.skip(!entity || !record, "requires PLAYWRIGHT_RUNTIME_ENTITY and PLAYWRIGHT_RUNTIME_RECORD_ID");
   const listRequests: string[] = [];
   page.on("request", (request) => {
-    if (/\/api\/.*(?:records|entities)/.test(request.url())) listRequests.push(request.url());
+    const url = new URL(request.url());
+    if (/^\/api\/entity-runtime\/[^/]+\/list\/?$/.test(url.pathname)) {
+      listRequests.push(url.toString());
+    }
   });
   await page.goto(`/app/${encodeURIComponent(entity!)}`);
   await assertSurfaceContract(page, "runtime-list");
   await page.goto(`/app/${encodeURIComponent(entity!)}/${encodeURIComponent(record!)}`);
   await assertSurfaceContract(page, "runtime-detail-document");
-  expect(listRequests.every((url) => /(?:limit|page_size|size)=\d+/.test(url) || !url.includes("?")))
-    .toBe(true);
+  expect(listRequests.length, "runtime navigation must issue a list request").toBeGreaterThan(0);
+  expect(listRequests.every((value) => {
+    const url = new URL(value);
+    return ["limit", "page_size", "size"].some((key) => /^\d+$/.test(url.searchParams.get(key) ?? ""));
+  }), `unbounded runtime requests: ${listRequests.filter((value) => !/(?:limit|page_size|size)=\d+/.test(value)).join(", ")}`).toBe(true);
 });
 
 test("dashboard and settings bootstrap without route-level request waterfalls", async ({ page }) => {

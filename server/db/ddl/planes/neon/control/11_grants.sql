@@ -56,11 +56,17 @@ FROM PUBLIC;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
-        GRANT SELECT, INSERT ON control.mesh_business_partner_profile_inbox,
-            control.mesh_business_partner_profile_processing_attempt,
+        GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_inbox TO athyperapp;
+        GRANT SELECT, INSERT ON control.mesh_business_partner_profile_processing_attempt,
             control.mesh_workforce_claim_inbox,
             control.mesh_workforce_claim_processing_attempt TO athyperapp;
         GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_projection TO athyperapp;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyper_jobs_service') THEN
+        GRANT USAGE ON SCHEMA control TO athyper_jobs_service;
+        GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_inbox TO athyper_jobs_service;
+        GRANT SELECT, INSERT ON control.mesh_business_partner_profile_processing_attempt TO athyper_jobs_service;
+        GRANT SELECT, INSERT, UPDATE ON control.mesh_business_partner_profile_projection TO athyper_jobs_service;
     END IF;
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         GRANT ALL PRIVILEGES ON control.mesh_business_partner_profile_inbox,
@@ -491,7 +497,7 @@ BEGIN
     END IF;
 END;
 $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperadmin; END IF; END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT,INSERT,UPDATE ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_jobs_service') THEN GRANT USAGE ON SCHEMA control TO athyper_jobs_service; GRANT SELECT ON control.mesh_business_partner_account_link TO athyper_jobs_service; GRANT SELECT,INSERT ON control.mesh_bank_account_disclosure_inbox TO athyper_jobs_service; GRANT SELECT,INSERT,UPDATE ON control.mesh_bank_account_projection TO athyper_jobs_service; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT ALL PRIVILEGES ON control.mesh_business_partner_account_link,control.mesh_bank_account_disclosure_inbox,control.mesh_bank_account_projection TO athyperadmin; END IF; END $$;
 REVOKE ALL ON control.customer_credit_review,control.customer_lifecycle_event,control.business_partner_decision_scope FROM PUBLIC;
 REVOKE ALL ON control.current_customer_account_designation,control.current_customer_credit_limit FROM PUBLIC;
 DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT SELECT ON control.business_partner_decision_scope,control.customer_credit_review TO athyperapp; GRANT SELECT ON control.customer_lifecycle_event TO athyperapp; GRANT EXECUTE ON FUNCTION control.command_customer_lifecycle(uuid,uuid,uuid,uuid,uuid,text,bigint,text,date,text,jsonb,text,uuid) TO athyperapp; GRANT SELECT ON control.current_customer_account_designation,control.current_customer_credit_limit TO athyperapp; END IF; IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN REVOKE ALL ON control.business_partner_decision_scope,control.customer_credit_review FROM athyperadmin; GRANT SELECT ON control.business_partner_decision_scope,control.customer_credit_review TO athyperadmin; REVOKE ALL ON control.customer_lifecycle_event FROM athyperadmin; GRANT SELECT ON control.customer_lifecycle_event TO athyperadmin; GRANT EXECUTE ON FUNCTION control.command_customer_lifecycle(uuid,uuid,uuid,uuid,uuid,text,bigint,text,date,text,jsonb,text,uuid) TO athyperadmin; GRANT SELECT ON control.current_customer_account_designation,control.current_customer_credit_limit TO athyperadmin; END IF; END $$;

@@ -292,3 +292,6 @@ CREATE UNIQUE INDEX network_account_live_canonical_purpose_uq ON mesh.network_ac
 CREATE INDEX network_lifecycle_resource_idx ON mesh.network_lifecycle_event(resource_kind,resource_id,sequence_no DESC);
 CREATE INDEX network_lifecycle_owner_idx ON mesh.network_lifecycle_event(owner_tenant_id,effective_at DESC);
 CREATE INDEX network_lifecycle_counterparty_idx ON mesh.network_lifecycle_event(counterparty_tenant_id,effective_at DESC) WHERE counterparty_tenant_id IS NOT NULL;
+
+CREATE INDEX business_partner_delivery_acknowledgement_source_idx
+  ON mesh.business_partner_delivery_acknowledgement(source_tenant_id, source_network_account_id, acknowledged_at DESC, id);

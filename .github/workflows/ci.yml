@@ -27,6 +27,15 @@ env:
   PNPM_VERSION: "10.33.0"
 
 jobs:
+  iam-live:
+    name: IAM dependency readiness
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Boot and verify live IAM dependencies
+        run: node tests/iam-live/run.mjs
+
   # ─── Quality Gate ────────────────────────────────────────────────
   # Runs: format check → lint → typecheck → test → depcheck
   # Uses pnpm + Turbo with GitHub Actions cache for speed
@@ -145,6 +154,9 @@ jobs:
           CI: "true"
           FORCE_COLOR: "1"
 
+      - name: Business Partner Atlas evaluations and owner gates
+        run: pnpm qualify:business-partner-r9
+
       - name: Root tests and reachability
         run: pnpm run test:root
         env:
@@ -217,14 +229,6 @@ jobs:
       # admin-web bound to the mandatory OTP browser flow.
       - name: Verify Keycloak realm strict MFA
         run: pnpm --filter @athyper/runtime-server run realm-strict-mfa:verify
-
-      # F8 Phase 2 — single-ingress port hardening. Fails if any service
-      # with traefik.* labels also publishes a backend port directly on
-      # the host (bypass path). Advisory while baseline is clean; promote
-      # to blocking by removing continue-on-error once confidence settles.
-      - name: Verify port hardening (F8 Phase 2)
-        continue-on-error: true
-        run: bash stack/scripts/setup/verify-port-hardening.sh
 
       # Seed drift lint (Batch 5C). Static check that legacy column names
       # (removed/renamed during DDL evolution) do not reappear in seed

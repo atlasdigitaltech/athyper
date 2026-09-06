@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type {
   AtlasConfirmationVerifier,
@@ -51,6 +52,7 @@ export class AtlasToolService {
   async preview(input: { readonly context: VerifiedRequestContext; readonly threadId: string; readonly runId: string; readonly callId: string; readonly toolCode: string; readonly toolVersion: string; readonly arguments: Readonly<Record<string, unknown>>; readonly summary: string; readonly affectedEntityType?: string; readonly affectedEntityId?: string; readonly expectedRowVersion?: number }): Promise<AtlasToolPreview> {
     assertAtlasContext(input.context);
     const tool = this.options.registry.resolve(input.toolCode, input.toolVersion); const manifest = tool.manifest;
+    tool.validateArguments?.(input.arguments, input);
     if (manifest.access === "mutation" && (input.expectedRowVersion === undefined || !input.affectedEntityType || !uuid(input.affectedEntityId ?? ""))) throw new AtlasServiceError("TOOL_INVALID", "Mutation previews require an affected entity type, entity UUID, and expected record row version.");
     const decision = await this.options.authority.authorize({ context: input.context, manifest, phase: "preview" });
     const permissionsAllowed = manifest.requiredPermissions.every((code) => hasPermission(input.context, code));
@@ -93,16 +95,17 @@ export class AtlasToolService {
   async run(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly arguments: Readonly<Record<string, unknown>>; readonly confirmationToken?: string; readonly signal?: AbortSignal }): Promise<AtlasToolRunResult> {
     assertAtlasContext(input.context);
     let proposal = await this.options.proposals.get({ context: input.context, proposalId: input.proposalId });
-    if (!proposal) throw new AtlasServiceError("TOOL_DENIED", "Atlas tool proposal not found.");
+    if (!proposal || proposal.principalId !== input.context.principalId) throw new AtlasServiceError("TOOL_DENIED", "Atlas tool proposal not found.");
+    if (hashCanonical(input.arguments) !== proposal.argumentHash) throw new AtlasServiceError("TOOL_INVALID", "Atlas tool arguments do not match the preview.");
     if (proposal.status === "completed") return replayResult(proposal);
     if (["denied", "failed", "expired", "cancelled"].includes(proposal.status)) throw terminalError(proposal);
     const now = this.now();
-    if (proposal.expiresAt && Date.parse(proposal.expiresAt) <= now.getTime()) {
+    if (proposal.expiresAt && parseInstant(proposal.expiresAt) <= now.getTime()) {
       await this.options.proposals.expire({ context: input.context, proposalId: proposal.proposalId, expectedStatuses: ["proposed", "confirmed"], errorClass: "confirmation_expired", terminalAt: now.toISOString(), durationMs: elapsed(proposal.createdAt, now) });
       throw new AtlasServiceError("STALE_PROPOSAL", "Atlas tool proposal has expired.");
     }
-    if (hashCanonical(input.arguments) !== proposal.argumentHash) throw new AtlasServiceError("TOOL_INVALID", "Atlas tool arguments do not match the preview.");
     const tool = this.options.registry.resolve(proposal.toolCode, proposal.toolVersion); const manifest = tool.manifest;
+    tool.validateArguments?.(input.arguments, proposal);
 
     if (proposal.confirmationRequired && proposal.status === "proposed") {
       if (!input.confirmationToken) throw new AtlasServiceError("CONFIRMATION_REQUIRED", "Explicit user confirmation is required for this Atlas tool.");
@@ -119,7 +122,7 @@ export class AtlasToolService {
     const decision = await this.options.authority.authorize({ context: input.context, manifest, phase: "execute" });
     const authorizationChanged = input.context.authEpoch !== proposal.authorizationEpoch || input.context.profileHash !== proposal.authorizationProfileHash;
     const policyChanged = decision.policyRevision !== proposal.policyRevision;
-    if (!permissionsAllowed || !decision.allowed || authorizationChanged || policyChanged) {
+    if (!manifest.allowedPlanes.includes(input.context.planeKey) || !permissionsAllowed || !decision.allowed || authorizationChanged || policyChanged) {
       await this.options.proposals.deny({ context: input.context, proposalId: proposal.proposalId, expectedStatuses: ["proposed", "confirmed"], errorClass: authorizationChanged ? "authorization_epoch_changed" : policyChanged ? "policy_revision_changed" : "permission_revoked", terminalAt: now.toISOString(), durationMs: elapsed(proposal.createdAt, now) });
       throw new AtlasServiceError("TOOL_DENIED", "Atlas tool execution was denied during re-authorization.");
     }
@@ -162,8 +165,9 @@ export class AtlasToolService {
   }
 
   async cancel(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly reason?: string }): Promise<AtlasToolRunResult> {
+    assertAtlasContext(input.context);
     const proposal = await this.options.proposals.get({ context: input.context, proposalId: input.proposalId });
-    if (!proposal) throw new AtlasServiceError("TOOL_DENIED", "Atlas tool proposal not found.");
+    if (!proposal || proposal.principalId !== input.context.principalId) throw new AtlasServiceError("TOOL_DENIED", "Atlas tool proposal not found.");
     return this.cancelled(input.context, proposal, input.reason ?? "worker_cancelled");
   }
 
@@ -205,7 +209,7 @@ function enforceSize(value: unknown, max: number): void { if (Buffer.byteLength(
 function required(value: string): string { const result = value.trim(); if (!result) throw new AtlasServiceError("TOOL_INVALID", "Atlas tool identifiers are required."); return result; }
 function boundedSummary(value: string): string { const result = value.trim(); if (!result || Buffer.byteLength(result, "utf8") > 4096) throw new AtlasServiceError("TOOL_INVALID", "Atlas tool preview summary must be between 1 and 4096 bytes."); return result; }
 function boundedIdentifier(value: string, max: number): string { const result = value.trim(); if (!result || Buffer.byteLength(result, "utf8") > max || /[\u0000-\u001f\u007f]/.test(result)) throw new AtlasServiceError("TOOL_INVALID", "Atlas tool affected entity type is invalid."); return result; }
-function elapsed(createdAt: string, now: Date): number { return Math.max(0, now.getTime() - Date.parse(createdAt)); }
+function elapsed(createdAt: string, now: Date): number { return Math.max(0, now.getTime() - parseInstant(createdAt)); }
 function safeErrorClass(error: unknown): string { if (error instanceof AtlasServiceError) return error.code.toLowerCase().slice(0, 128); return "tool_execution_failed"; }
 function isCancellation(error: unknown, signal?: AbortSignal): boolean { return signal?.aborted === true || (error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")); }
 function uuid(value: string): boolean { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }

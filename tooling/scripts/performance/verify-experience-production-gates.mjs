@@ -1,9 +1,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const args = new Set(process.argv.slice(2));
 const contractsOnly = args.has("--contracts-only");
-const root = process.cwd();
+const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const budgets = readJson(resolve(root, "governance/config/production-experience-budgets.json"));
 
 assert(budgets.schemaVersion === 1, "unsupported production budget schema");
@@ -18,6 +19,12 @@ if (!contractsOnly) {
   const evidencePath = process.env.ATHYPER_EXPERIENCE_GATE_EVIDENCE;
   assert(evidencePath, "ATHYPER_EXPERIENCE_GATE_EVIDENCE is required");
   const evidence = readJson(resolve(root, evidencePath));
+  assertNonNegative(evidence.lcpP75Ms, "LCP p75 evidence");
+  assertNonNegative(evidence.inpP75Ms, "INP p75 evidence");
+  assertNonNegative(evidence.dashboardBootstrapRequests, "dashboard request evidence");
+  assertNonNegative(evidence.settingsBootstrapRequests, "settings request evidence");
+  assertNonNegative(evidence.maxObservedListPageSize, "list page-size evidence");
+  assertNonNegative(evidence.sharedShellGzipBytes, "shared shell bundle evidence");
   assert(evidence.lcpP75Ms <= budgets.webVitals.lcpP75Ms,
     `LCP p75 ${evidence.lcpP75Ms}ms exceeds ${budgets.webVitals.lcpP75Ms}ms`);
   assert(evidence.inpP75Ms <= budgets.webVitals.inpP75Ms,
@@ -44,6 +51,10 @@ function readJson(path) {
 
 function assertPositive(value, label) {
   assert(Number.isFinite(value) && value > 0, `${label} must be positive`);
+}
+
+function assertNonNegative(value, label) {
+  assert(Number.isFinite(value) && value >= 0, `${label} must be a non-negative finite number`);
 }
 
 function assert(condition, message) {

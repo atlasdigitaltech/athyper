@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-control-admin": "workspace:*",
     "@athyper/server-foundation": "workspace:*",

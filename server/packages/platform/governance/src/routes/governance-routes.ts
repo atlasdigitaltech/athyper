@@ -1,3 +1,4 @@
+import { parseBusinessDate } from "@athyper/platform-temporal";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -471,7 +472,7 @@ function isoDate(value: unknown): string {
   if (
     !result ||
     !/^\d{4}-\d{2}-\d{2}$/.test(result) ||
-    Number.isNaN(new Date(`${result}T00:00:00.000Z`).getTime())
+    Number.isNaN(parseBusinessDate(result))
   )
     throw new TypeError("ISO date required");
   return result;

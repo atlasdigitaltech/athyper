@@ -13,8 +13,7 @@ const DEFAULT_ICON_SOURCE_ROOTS = [
   "apps",
   "packages",
   "server/packages",
-  "stack/config/iam/themes",
-  "stack/config/gateway/fallback",
+  "deploy/config/iam/themes",
 ];
 const PRESENTATION_EXTENSIONS = new Set([".css", ".scss", ".tsx", ".jsx"]);
 const ICON_SOURCE_EXTENSIONS = new Set([

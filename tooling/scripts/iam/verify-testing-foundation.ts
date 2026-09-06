@@ -54,11 +54,9 @@ const REQUIRED_TESTS = [
 ] as const;
 
 const REQUIRED_OFFLINE_ASSETS = [
-  "stack/config/iam/themes/neon/login/resources/css/iam.tokens.css",
-  "stack/config/iam/themes/neon/login/resources/css/iam.generated.css",
-  "stack/config/iam/themes/neon/login/resources/css/login.css",
-  "stack/config/gateway/fallback/status.html",
-  "stack/config/gateway/fallback/default.conf",
+  "deploy/config/iam/themes/neon/login/resources/css/iam.tokens.css",
+  "deploy/config/iam/themes/neon/login/resources/css/iam.generated.css",
+  "deploy/config/iam/themes/neon/login/resources/css/login.css",
   ...PLANES.flatMap((plane) => [
     `apps/${plane}/public/brand/${plane}/athyper-favicon.svg`,
     `apps/${plane}/public/brand/brand-manifest.json`,

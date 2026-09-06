@@ -54,6 +54,12 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       const compileReportHash=this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(report));
       if(manifest.evidence?.["compiledBundleHash"]!==payload.bundleHash||manifest.evidence?.["sourceBundleHash"]!==payload.sourceBundleHash||manifest.evidence?.["compileReportHash"]!==compileReportHash)throw failure("ARTIFACT_MANIFEST_INVALID");
     }
+    if (envelope.artifactKind === "entity_runtime" && envelope.payload.entityDescriptor.descriptorKind === "entity_case_runtime") {
+      const c=envelope.payload.entityContract,d=envelope.payload.entityDescriptor;
+      const contractBytes=this.options.canonicalizer.canonicalBytes(c.contract);
+      if (c.contractHash!==this.options.canonicalizer.sha256(contractBytes) || d.sourceContractHash!==c.contractHash || d.compiledHash!==this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(d.descriptor))) throw failure("ARTIFACT_HASH_MISMATCH");
+      if (c.signature.algorithm!=="Ed25519" || c.signature.keyId!==manifest.signingKeyId || !(await this.options.verifier.verify({keyId:c.signature.keyId,algorithm:c.signature.algorithm,bytes:contractBytes,signature:c.signature.signature}))) throw failure("ARTIFACT_SIGNATURE_INVALID");
+    }
     const projectionEvidence = envelope.artifactKind === "entity_runtime"
       ? {
           contractHash: envelope.payload.entityContract.contractHash,

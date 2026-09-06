@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
     "@opentelemetry/api": "^1.9.0",

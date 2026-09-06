@@ -25,11 +25,6 @@ const outputDir = path.resolve(
 );
 
 loadEnv({ path: path.join(serverDir, ".env"), quiet: true });
-loadEnv({
-  path: path.resolve(serverDir, "../stack/env/.env"),
-  override: false,
-  quiet: true,
-});
 
 const connectionString = plane === "mesh"
   ? process.env.MESH_DATABASE_ADMIN_URL ?? process.env.MESH_DATABASE_URL

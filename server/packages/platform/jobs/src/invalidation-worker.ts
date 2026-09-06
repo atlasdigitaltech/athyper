@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 export interface InvalidationMessage {
   readonly id:string;readonly kind:"metadata"|"authorization";readonly planeKey:string;readonly tenantId:string|null;
   readonly scopeKey:string;readonly payload:Readonly<Record<string,unknown>>;readonly createdAt:string;readonly attemptCount:number;
@@ -39,14 +40,14 @@ export function createInvalidationWorker(options:InvalidationWorkerOptions){
       validateMessage(message);
       const generation=await options.generations.incrementOnce({eventId:message.id,kind:message.kind,planeKey:message.planeKey,tenantId:message.tenantId,scopeKey:message.scopeKey});
       if(!await options.repository.complete(message.id,options.workerId,generation))throw new Error("INVALIDATION_LEASE_LOST");
-      options.metrics?.processed(message.kind,Math.max(0,now()-Date.parse(message.createdAt)));
+      options.metrics?.processed(message.kind,Math.max(0,now()-parseInstant(message.createdAt)));
     }catch(error){
       const code=errorCode(error);const permanent=code.startsWith("INVALIDATION_PAYLOAD_");const deadLetter=permanent||message.attemptCount>=maxAttempts;
       await options.repository.fail({id:message.id,workerId:options.workerId,errorCode:code,retryAt:new Date(now()+retryDelay(message.attemptCount)).toISOString(),deadLetter,sanitizedPayload:sanitizePayload(message.payload)});
       options.metrics?.failed(message.kind,code,deadLetter);
     }
   };
-  const recordBacklog=async()=>{const result=await options.repository.backlog();options.metrics?.backlog(result.pending,result.oldestCreatedAt?Math.max(0,now()-Date.parse(result.oldestCreatedAt)):0);};
+  const recordBacklog=async()=>{const result=await options.repository.backlog();options.metrics?.backlog(result.pending,result.oldestCreatedAt?Math.max(0,now()-parseInstant(result.oldestCreatedAt)):0);};
   return {
     async start(){if(timer)return;closed=false;timer=setInterval(()=>void drain().catch(()=>undefined),pollIntervalMs);timer.unref();if(options.listener)await options.listener.start(()=>void drain().catch(()=>undefined),()=>options.metrics?.reconnect());await drain();},
     drain,
@@ -54,7 +55,7 @@ export function createInvalidationWorker(options:InvalidationWorkerOptions){
   };
 }
 
-function validateMessage(value:InvalidationMessage):void{if(!/^[0-9a-f-]{36}$/i.test(value.id))throw new Error("INVALIDATION_PAYLOAD_ID");if(value.kind!=="metadata"&&value.kind!=="authorization")throw new Error("INVALIDATION_PAYLOAD_KIND");if(!["studio","neon","mesh"].includes(value.planeKey))throw new Error("INVALIDATION_PAYLOAD_PLANE");if(!/^[a-zA-Z0-9_.:-]{1,256}$/.test(value.scopeKey))throw new Error("INVALIDATION_PAYLOAD_SCOPE");if(!Number.isFinite(Date.parse(value.createdAt)))throw new Error("INVALIDATION_PAYLOAD_TIME");}
+function validateMessage(value:InvalidationMessage):void{if(!/^[0-9a-f-]{36}$/i.test(value.id))throw new Error("INVALIDATION_PAYLOAD_ID");if(value.kind!=="metadata"&&value.kind!=="authorization")throw new Error("INVALIDATION_PAYLOAD_KIND");if(!["studio","neon","mesh"].includes(value.planeKey))throw new Error("INVALIDATION_PAYLOAD_PLANE");if(!/^[a-zA-Z0-9_.:-]{1,256}$/.test(value.scopeKey))throw new Error("INVALIDATION_PAYLOAD_SCOPE");if(!Number.isFinite(parseInstant(value.createdAt)))throw new Error("INVALIDATION_PAYLOAD_TIME");}
 function sanitizePayload(payload:Readonly<Record<string,unknown>>):Readonly<Record<string,unknown>>{const blocked=/token|secret|password|authorization|cookie/i;const result:Record<string,unknown>={};for(const [key,value] of Object.entries(payload).slice(0,32)){if(blocked.test(key))continue;if(typeof value==="string")result[key]=value.slice(0,256);else if(typeof value==="number"||typeof value==="boolean"||value===null)result[key]=value;}const encoded=JSON.stringify(result);return encoded.length<=4096?Object.freeze(result):Object.freeze({truncated:true});}
 function errorCode(error:unknown):string{const raw=error instanceof Error?error.message:String(error);const normalized=raw.toUpperCase().replace(/[^A-Z0-9_]+/g,"_").slice(0,96);return normalized||"INVALIDATION_PROCESSING_FAILED";}
 function retryDelay(attempt:number):number{return Math.min(300000,1000*2**Math.min(Math.max(attempt-1,0),8));}

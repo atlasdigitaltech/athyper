@@ -1,4 +1,5 @@
 "use client";
+import { parseBusinessDate } from "@athyper/platform-temporal";
 import { cancelRecordExportOperation,cancelRecordImportOperation,downloadRecordExportOperation,downloadRecordImportErrorsOperation,recordTransfersOperation,restartRecordExportOperation,restartRecordImportOperation,type HttpClient,type RecordTransferItemV1 } from "@athyper/platform-api-client";
 import { Button } from "@athyper/platform-ui";
 import { useCallback,useEffect,useMemo,useState } from "react";
@@ -14,7 +15,7 @@ export function RecordTransferWorkspace({client}:{readonly client:HttpClient}){
   useEffect(()=>setViews(readTransferViews()),[]);
   const hasActive=items.some(item=>activeStatuses.has(item.status));
   useEffect(()=>{if(!hasActive)return;const timer=window.setTimeout(()=>void load(true),2000);return()=>window.clearTimeout(timer);},[hasActive,items,load]);
-  const filtered=useMemo(()=>{const term=query.trim().toLowerCase(),from=fromDate?new Date(`${fromDate}T00:00:00`).getTime():undefined;return items.filter(item=>(kind==="all"||item.kind===kind)&&(status==="all"||item.status===status)&&(from===undefined||new Date(item.createdAt).getTime()>=from)&&(!term||[item.entityCode,item.operation,item.status,item.id,item.errorCode].some(value=>value?.toLowerCase().includes(term))));},[fromDate,items,kind,query,status]);
+  const filtered=useMemo(()=>{const term=query.trim().toLowerCase(),from=fromDate?parseBusinessDate(fromDate):undefined;return items.filter(item=>(kind==="all"||item.kind===kind)&&(status==="all"||item.status===status)&&(from===undefined||new Date(item.createdAt).getTime()>=from)&&(!term||[item.entityCode,item.operation,item.status,item.id,item.errorCode].some(value=>value?.toLowerCase().includes(term))));},[fromDate,items,kind,query,status]);
   const pageSize=20,pageCount=Math.max(1,Math.ceil(filtered.length/pageSize)),paged=filtered.slice((Math.min(page,pageCount)-1)*pageSize,Math.min(page,pageCount)*pageSize);
   useEffect(()=>setPage(1),[query,kind,status,fromDate]);
   const download=async(item:RecordTransferItemV1)=>{try{const result=item.kind==="import"?await client.request(downloadRecordImportErrorsOperation,{params:{sessionId:item.id}}):await client.request(downloadRecordExportOperation,{params:{exportRequestId:item.id}});window.location.assign(result.url);}catch(cause){setError(cause instanceof Error?cause.message:"Download is unavailable.");}};

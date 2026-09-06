@@ -9,7 +9,6 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY apps ./apps
 COPY packages ./packages
 COPY server ./server
-COPY tools ./tools
 COPY tooling ./tooling
 COPY tsconfig.json ./
 
@@ -19,6 +18,7 @@ RUN --mount=type=cache,id=athyper-app-pnpm-store,target=/pnpm/store,sharing=lock
 
 ARG APP_PACKAGE
 ARG APP_NAME
+COPY governance/config ./governance/config
 RUN pnpm --filter "${APP_PACKAGE}" build
 
 FROM node:24.19.0-alpine3.23@sha256:244cc2b53f46f9e876304391d17682b0ddae9ac33491f4857e25e35a36ba7995 AS runtime

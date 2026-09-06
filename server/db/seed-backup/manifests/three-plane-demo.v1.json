@@ -3,7 +3,7 @@
   "manifestVersion": "1.0.0",
   "realmKey": "athyper",
   "systemPrincipalId": "00000000-0000-0000-0000-000000000000",
-  "identitySource": "../../../../stack/config/iam/realm-athyper-demosetup.json",
+  "identitySource": "../../../../deploy/config/iam/realm-athyper-demosetup.json",
   "planes": {
     "studio": {
       "databaseName": "athyper_studio",

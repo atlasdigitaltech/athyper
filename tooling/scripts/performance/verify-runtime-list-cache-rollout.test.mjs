@@ -82,6 +82,19 @@ test("rejects slow warm visits, skeleton replacement, and incompatible cache reu
   assert.equal(failures.length, 4);
 });
 
+test("rejects missing and non-numeric timing evidence", () => {
+  const value = report();
+  delete value.runs[0].scenarios[0].rowsVisibleMs;
+  value.runs[0].scenarios[1].rscDiagnostics.operations[0].durationMs = "not-a-number";
+  const failures = verifyRolloutReport(value, {
+    coldMaxMs: 3000,
+    warmMaxMs: 500,
+    descriptorMaxMs: 100,
+  });
+  assert.ok(failures.some((failure) => failure.includes("first_visit") && failure.includes("rowsVisibleMs")));
+  assert.ok(failures.some((failure) => failure.includes("descriptor") && failure.includes("durationMs")));
+});
+
 test("provides one bounded shared-runtime route adapter for every plane", () => {
   // Neon keeps a dedicated list adapter; Mesh and Studio route every module
   // through the governed experience surface. All three fall through to

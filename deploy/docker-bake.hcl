@@ -61,7 +61,7 @@ target "runtime-server" {
 
 target "iam" {
   inherits = ["_local"]
-  context = "stack/config/iam"
+  context = "deploy/config/iam"
   dockerfile = "Dockerfile"
   tags = ["athyper/keycloak:${LOCAL_TAG}"]
 }

@@ -4,14 +4,14 @@
  * Retries org membership assignment using the correct KC 26.x endpoint:
  *   POST /admin/realms/{realm}/organizations/{orgId}/members
  *   Body: plain userId string (not array)
- * Also tries the path-based approach as fallback.
+ * The user ID is encoded as a JSON string, as required by Keycloak 26.x.
  */
 const https = require('https');
 
-const KC_BASE  = 'https://iam.mesh.athyper.local';
-const KC_REALM = 'athyper';
-const KC_ADMIN = 'athyperadmin';
-const KC_PASS  = 'athyperadmin';
+const KC_BASE  = process.env.KEYCLOAK_BASE_URL || 'https://iam.athyper.local';
+const KC_REALM = process.env.NEON_KEYCLOAK_REALM || 'neon';
+const KC_ADMIN = process.env.KEYCLOAK_ADMIN || 'athyperadmin';
+const KC_PASS  = process.env.KEYCLOAK_ADMIN_PASSWORD || 'athyperadmin';
 const agent = new https.Agent({ rejectUnauthorized: false });
 
 function request(method, url, body, token, contentType) {
@@ -19,11 +19,10 @@ function request(method, url, body, token, contentType) {
     const u = new URL(url);
     const bodyStr = body === null ? null
       : body instanceof URLSearchParams ? body.toString()
-      : typeof body === 'string' ? body
       : JSON.stringify(body);
     const ct = contentType || (
       body instanceof URLSearchParams ? 'application/x-www-form-urlencoded' :
-      typeof body === 'string' ? 'text/plain' : 'application/json'
+      'application/json'
     );
     const opts = {
       hostname: u.hostname, port: 443,
@@ -74,25 +73,11 @@ const USER_ORGS = {
 };
 
 async function addMember(orgId, userId, token) {
-  // Try 1: POST with userId as plain string
-  const r1 = await api('POST', `/admin/realms/${KC_REALM}/organizations/${orgId}/members`,
+  const result = await api('POST', `/admin/realms/${KC_REALM}/organizations/${orgId}/members`,
     userId, token, 'application/json'
   );
-  if (r1.status === 201 || r1.status === 204 || r1.status === 200) return { ok: true, method: 'string-body', status: r1.status };
-
-  // Try 2: PUT to /members/{userId}
-  const r2 = await api('PUT', `/admin/realms/${KC_REALM}/organizations/${orgId}/members/${userId}`,
-    null, token
-  );
-  if (r2.status === 201 || r2.status === 204 || r2.status === 200) return { ok: true, method: 'path', status: r2.status };
-
-  // Try 3: POST with [userId] array
-  const r3 = await api('POST', `/admin/realms/${KC_REALM}/organizations/${orgId}/members`,
-    [userId], token
-  );
-  if (r3.status === 201 || r3.status === 204 || r3.status === 200) return { ok: true, method: 'array', status: r3.status };
-
-  return { ok: false, r1: r1.status, r2: r2.status, r3: r3.status, err: r1.data };
+  if ([200, 201, 204].includes(result.status)) return { ok: true, method: 'json-string-body', status: result.status };
+  return { ok: false, status: result.status, err: result.data };
 }
 
 async function main() {
@@ -107,7 +92,7 @@ async function main() {
   // Get orgs
   const orgsR = await api('GET', `/admin/realms/${KC_REALM}/organizations?first=0&max=100`, null, token);
   const orgsByAlias = {};
-  for (const o of (orgsR.data||[])) orgsByAlias[o.alias] = o;
+  for (const o of (orgsR.data||[])) orgsByAlias[o.alias.toLowerCase()] = o;
   console.log(`Orgs loaded: ${Object.keys(orgsByAlias).length}`);
 
   // Get users
@@ -119,7 +104,7 @@ async function main() {
   // For each org, clear existing members first
   console.log('\nClearing existing org memberships...');
   for (const alias of [...new Set(Object.values(USER_ORGS).flat())]) {
-    const org = orgsByAlias[alias];
+    const org = orgsByAlias[alias.toLowerCase()];
     if (!org) continue;
     const membR = await api('GET', `/admin/realms/${KC_REALM}/organizations/${org.id}/members?first=0&max=200`, null, token);
     for (const m of (membR.data||[])) {
@@ -137,7 +122,7 @@ async function main() {
     if (!user) { console.log(`  ✗ User not in KC: ${username}`); failure++; continue; }
 
     for (const alias of orgAliases) {
-      const org = orgsByAlias[alias];
+      const org = orgsByAlias[alias.toLowerCase()];
       if (!org) { console.log(`  ✗ Org not in KC: ${alias}`); failure++; continue; }
 
       const result = await addMember(org.id, user.id, token);
@@ -156,12 +141,13 @@ async function main() {
   }
 
   console.log(`\nMemberships: ${success} OK, ${failure} failed`);
+  if (failure > 0) throw new Error(`${failure} organization membership assignment(s) failed`);
 
   // Verify
   console.log('\n── Verification ──');
   const verifyOrgs = ['athyper--ATHQ', 'athyper--AQTU'];
   for (const alias of verifyOrgs) {
-    const org = orgsByAlias[alias];
+    const org = orgsByAlias[alias.toLowerCase()];
     if (!org) continue;
     const membR = await api('GET', `/admin/realms/${KC_REALM}/organizations/${org.id}/members?first=0&max=200`, null, token);
     const names = (membR.data||[]).map(m => m.username).join(', ');

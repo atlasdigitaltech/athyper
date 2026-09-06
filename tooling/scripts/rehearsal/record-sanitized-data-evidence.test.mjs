@@ -31,3 +31,14 @@ test("refuses credentials and non-synthetic personal addresses without echoing v
   const personal = paths({ sourceInstance: "qa", records: [{ email: "person@customer.invalid.com" }] });
   assert.throws(() => recordSanitizedDataEvidence(defaultRepoRoot, personal.input, personal.output), /non-synthetic-email/u);
 });
+
+test("refuses credential values nested in arrays", () => {
+  const credential = paths({
+    sourceInstance: "qa",
+    records: [{ accessTokens: ["do-not-record-this"] }],
+  });
+  assert.throws(
+    () => recordSanitizedDataEvidence(defaultRepoRoot, credential.input, credential.output),
+    /credential-field:records\[0\]\.accessTokens\[0\]/u,
+  );
+});

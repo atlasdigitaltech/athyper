@@ -1,5 +1,6 @@
 "use client";
 
+import { parseInstant } from "@athyper/platform-temporal";
 import * as React from "react";
 import { ChevronRightIcon, ClockIcon, CloseIcon, ContactRoundIcon, FileTextIcon, HistoryIcon, PanelsTopLeftIcon, SearchIcon, StarIcon } from "@athyper/platform-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -355,7 +356,7 @@ function parseItems(value: unknown): readonly ShellQuickAccessItem[] {
       ...(typeof item.description === "string" && item.description.trim() ? { description: item.description.trim().slice(0, 180) } : {}),
       ...(typeof item.group === "string" && item.group.trim() ? { group: item.group.trim().slice(0, 100) } : {}),
       kind,
-      ...(typeof item.visitedAt === "string" && !Number.isNaN(Date.parse(item.visitedAt)) ? { visitedAt: item.visitedAt } : {}),
+      ...(typeof item.visitedAt === "string" && !Number.isNaN(parseInstant(item.visitedAt)) ? { visitedAt: item.visitedAt } : {}),
     }];
   });
 }

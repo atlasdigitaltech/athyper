@@ -3,15 +3,20 @@ import { loadModel } from "./model.mjs";
 import { readYaml } from "./io.mjs";
 import { createValidator } from "./schema.mjs";
 
-export function inspectCatalog(repoRoot) {
+export function inspectCatalog(repoRoot, dependencies = {}) {
   const validate = createValidator(repoRoot);
   const model = loadModel(repoRoot, "dev");
   const workloadPath = join(repoRoot, "deploy", "catalog", "workload-sets.yaml");
-  const workloadCatalog = validate(readYaml(workloadPath), workloadPath);
+  let workloadCatalog;
+  let catalogError;
+  try { workloadCatalog = validate((dependencies.readYaml ?? readYaml)(workloadPath), workloadPath); } catch (error) {
+    catalogError = `Workload-set catalog is invalid: ${error.message}.`;
+    workloadCatalog = { sets: [] };
+  }
   const resolved = model.services.filter((service) => service.ledger === "v2-native").map((service) => service.id).sort();
   const assigned = workloadCatalog.sets.flatMap((set) => set.services);
   const assignmentCounts = assigned.reduce((counts, id) => counts.set(id, (counts.get(id) ?? 0) + 1), new Map());
-  const blockers = [];
+  const blockers = catalogError ? [catalogError] : [];
   const missingDisposition = resolved.filter((id) => !assignmentCounts.has(id));
   const duplicateDisposition = [...assignmentCounts].filter(([, count]) => count > 1).map(([id]) => id).sort();
   const unknownDisposition = [...assignmentCounts.keys()].filter((id) => !resolved.includes(id)).sort();

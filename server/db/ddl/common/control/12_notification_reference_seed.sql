@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.control.collaboration-notification
--- seed-pack-version: 1.0.0
+-- seed-pack-version: 1.1.0
 -- seed-dataset: control.notification_template;control.notification_routing_rule
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"Athyper collaboration and workflow notification contract","publisher":"Athyper","source_version":"1.0.0","retrieved_at":"2026-08-28","license":"internal"}
@@ -9,7 +9,7 @@
 -- seed-natural-key: control.notification_template(tenant_id,template_key,channel,locale,version);control.notification_routing_rule(tenant_id,code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: database-generated
--- seed-expected-row-count: exact:25
+-- seed-expected-row-count: exact:29
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 -- seed-assertion: expected-count
@@ -248,18 +248,31 @@ DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,
 WHERE (control.notification_routing_rule.name,control.notification_routing_rule.description,control.notification_routing_rule.event_type,control.notification_routing_rule.entity_type,control.notification_routing_rule.template_key,control.notification_routing_rule.channels,control.notification_routing_rule.priority,control.notification_routing_rule.recipient_rules,control.notification_routing_rule.dedup_window_ms,control.notification_routing_rule.is_enabled,control.notification_routing_rule.sort_order)
   IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.description,EXCLUDED.event_type,EXCLUDED.entity_type,EXCLUDED.template_key,EXCLUDED.channels,EXCLUDED.priority,EXCLUDED.recipient_rules,EXCLUDED.dedup_window_ms,EXCLUDED.is_enabled,EXCLUDED.sort_order);
 
+INSERT INTO control.notification_template(tenant_id,template_key,channel,locale,version,subject,body_text,body_json,variables_schema,status,created_by) VALUES
+(NULL,'workflow.work_item.reminder','in_app','en',1,'Workflow reminder: {{title}}','{{title}} is awaiting your decision. Due: {{due_at}}',NULL,'{"title":"string","priority":"string","due_at":"string","reminder_at":"string","entity_type":"string","entity_id":"string"}'::jsonb,'active','00000000-0000-0000-0000-000000000000'),
+(NULL,'workflow.work_item.reminder','email','en',1,'Workflow reminder: {{title}}',E'{{title}} is awaiting your decision.\n\nDue: {{due_at}}',NULL,'{"title":"string","priority":"string","due_at":"string","reminder_at":"string","entity_type":"string","entity_id":"string"}'::jsonb,'active','00000000-0000-0000-0000-000000000000'),
+(NULL,'workflow.work_item.reminder','push','en',1,'Workflow reminder: {{title}}','{{title}} is awaiting your decision. Due: {{due_at}}','{"renderedText":"{{title}} is awaiting your decision. Due: {{due_at}}","data":{"entityType":"{{entity_type}}","entityId":"{{entity_id}}"}}'::jsonb,'{"title":"string","priority":"string","due_at":"string","reminder_at":"string","entity_type":"string","entity_id":"string"}'::jsonb,'active','00000000-0000-0000-0000-000000000000')
+ON CONFLICT(tenant_id,template_key,channel,locale,version) DO UPDATE SET subject=EXCLUDED.subject,body_text=EXCLUDED.body_text,body_json=EXCLUDED.body_json,variables_schema=EXCLUDED.variables_schema,status=EXCLUDED.status,updated_at=now(),updated_by=EXCLUDED.created_by
+WHERE (control.notification_template.subject,control.notification_template.body_text,control.notification_template.body_json,control.notification_template.variables_schema,control.notification_template.status)
+  IS DISTINCT FROM (EXCLUDED.subject,EXCLUDED.body_text,EXCLUDED.body_json,EXCLUDED.variables_schema,EXCLUDED.status);
+INSERT INTO control.notification_routing_rule(tenant_id,code,name,description,event_type,entity_type,template_key,channels,priority,recipient_rules,dedup_window_ms,is_enabled,sort_order,created_by) VALUES
+(NULL,'workflow.work_item.reminder','Workflow work reminder','Remind the current assignee through preference-enabled communication channels before SLA breach.','workflow.work_item.reminder','workflow.work_item','workflow.work_item.reminder',ARRAY['in_app','email','push'],'high','{}'::jsonb,0,true,29,'00000000-0000-0000-0000-000000000000')
+ON CONFLICT(tenant_id,code) DO UPDATE SET name=EXCLUDED.name,description=EXCLUDED.description,event_type=EXCLUDED.event_type,entity_type=EXCLUDED.entity_type,template_key=EXCLUDED.template_key,channels=EXCLUDED.channels,priority=EXCLUDED.priority,recipient_rules=EXCLUDED.recipient_rules,dedup_window_ms=EXCLUDED.dedup_window_ms,is_enabled=EXCLUDED.is_enabled,sort_order=EXCLUDED.sort_order,updated_at=now(),updated_by=EXCLUDED.created_by
+WHERE (control.notification_routing_rule.name,control.notification_routing_rule.description,control.notification_routing_rule.event_type,control.notification_routing_rule.entity_type,control.notification_routing_rule.template_key,control.notification_routing_rule.channels,control.notification_routing_rule.priority,control.notification_routing_rule.recipient_rules,control.notification_routing_rule.dedup_window_ms,control.notification_routing_rule.is_enabled,control.notification_routing_rule.sort_order)
+  IS DISTINCT FROM (EXCLUDED.name,EXCLUDED.description,EXCLUDED.event_type,EXCLUDED.entity_type,EXCLUDED.template_key,EXCLUDED.channels,EXCLUDED.priority,EXCLUDED.recipient_rules,EXCLUDED.dedup_window_ms,EXCLUDED.is_enabled,EXCLUDED.sort_order);
+
 DO $assertions$ BEGIN
-  IF (SELECT count(*) FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled')) <> 15
-     OR (SELECT count(*) FROM control.notification_routing_rule WHERE tenant_id IS NULL AND code IN ('collab.comment_mention','workflow.work_item.assigned','workflow.work_item.sla_breached','workflow.work_item.escalated','records.import.completed','records.export.completed','records.import.failed','records.export.failed','records.import.cancelled','records.export.cancelled')) <> 10 THEN
+  IF (SELECT count(*) FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.reminder','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled')) <> 18
+     OR (SELECT count(*) FROM control.notification_routing_rule WHERE tenant_id IS NULL AND code IN ('collab.comment_mention','workflow.work_item.assigned','workflow.work_item.reminder','workflow.work_item.sla_breached','workflow.work_item.escalated','records.import.completed','records.export.completed','records.import.failed','records.export.failed','records.import.cancelled','records.export.cancelled')) <> 11 THEN
     RAISE EXCEPTION 'Common notification expected-count mismatch';
   END IF;
-  IF EXISTS (SELECT 1 FROM control.notification_routing_rule rule WHERE rule.tenant_id IS NULL AND rule.code IN ('collab.comment_mention','workflow.work_item.assigned','workflow.work_item.sla_breached','workflow.work_item.escalated','records.import.completed','records.export.completed','records.import.failed','records.export.failed','records.import.cancelled','records.export.cancelled') AND NOT EXISTS (SELECT 1 FROM control.notification_template template WHERE template.tenant_id IS NULL AND template.template_key=rule.template_key AND template.status='active')) THEN
+  IF EXISTS (SELECT 1 FROM control.notification_routing_rule rule WHERE rule.tenant_id IS NULL AND rule.code IN ('collab.comment_mention','workflow.work_item.assigned','workflow.work_item.reminder','workflow.work_item.sla_breached','workflow.work_item.escalated','records.import.completed','records.export.completed','records.import.failed','records.export.failed','records.import.cancelled','records.export.cancelled') AND NOT EXISTS (SELECT 1 FROM control.notification_template template WHERE template.tenant_id IS NULL AND template.template_key=rule.template_key AND template.status='active')) THEN
     RAISE EXCEPTION 'Common notification orphan routing rule';
   END IF;
-  IF EXISTS (SELECT template_key,channel,locale,version FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled') GROUP BY template_key,channel,locale,version HAVING count(*)<>1) THEN
+  IF EXISTS (SELECT template_key,channel,locale,version FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.reminder','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled') GROUP BY template_key,channel,locale,version HAVING count(*)<>1) THEN
     RAISE EXCEPTION 'Common notification uniqueness mismatch';
   END IF;
-  IF EXISTS (SELECT 1 FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled') AND (status<>'active' OR jsonb_typeof(variables_schema)<>'object')) THEN
+  IF EXISTS (SELECT 1 FROM control.notification_template WHERE tenant_id IS NULL AND template_key IN ('comment_mention','workflow.work_item.assigned','workflow.work_item.reminder','workflow.work_item.sla_attention','records.transfer.completed','records.transfer.failed','records.transfer.cancelled') AND (status<>'active' OR jsonb_typeof(variables_schema)<>'object')) THEN
     RAISE EXCEPTION 'Common notification semantic mismatch';
   END IF;
 END $assertions$;

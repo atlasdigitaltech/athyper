@@ -39,7 +39,7 @@ function findings(records) {
   const visit = (value, path, key = "") => {
     if (value === null || value === undefined) return;
     if (typeof value === "object") {
-      if (Array.isArray(value)) value.forEach((item, index) => visit(item, `${path}[${index}]`));
+      if (Array.isArray(value)) value.forEach((item, index) => visit(item, `${path}[${index}]`, key));
       else for (const [childKey, child] of Object.entries(value)) visit(child, `${path}.${childKey}`, childKey);
       return;
     }

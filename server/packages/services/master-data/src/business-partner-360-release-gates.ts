@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 export type BusinessPartner360RolloutStage = "internal" | "canary" | "broad";
 export const BUSINESS_PARTNER_360_APPROVAL_GATES = [
   "functional",
@@ -137,7 +138,7 @@ export function evaluateBusinessPartner360Approvals(
       record.status !== "approved" ||
       !/^[A-Za-z0-9][A-Za-z0-9._@-]{2,127}$/.test(record.approverId) ||
       !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(record.approvedAt) ||
-      Number.isNaN(Date.parse(record.approvedAt)) ||
+      Number.isNaN(parseInstant(record.approvedAt)) ||
       !/^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,255}$/.test(record.evidenceRef)
     )
       reasons.push(`${gate.toUpperCase()}_APPROVAL_INVALID`);
@@ -178,11 +179,11 @@ export function evaluateBusinessPartner360Retirement(
 }
 function validZeroCallWindow(input: BusinessPartner360RetirementEvidence) {
   if (!timestamp(input.zeroCallWindowStartedAt) || !timestamp(input.zeroCallWindowEndedAt)) return false;
-  const elapsedDays = (Date.parse(input.zeroCallWindowEndedAt) - Date.parse(input.zeroCallWindowStartedAt)) / 86_400_000;
+  const elapsedDays = (parseInstant(input.zeroCallWindowEndedAt) - parseInstant(input.zeroCallWindowStartedAt)) / 86_400_000;
   return elapsedDays >= 30 && input.observationDays >= 30 && input.telemetryRetentionDays >= Math.ceil(elapsedDays);
 }
 function actor(value: string | undefined): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._@-]{2,127}$/.test(value); }
-function timestamp(value: string | undefined): value is string { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(Date.parse(value)); }
+function timestamp(value: string | undefined): value is string { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(parseInstant(value)); }
 function durableReference(value: string | undefined): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,255}$/.test(value); }
 function requiredObservation(stage: BusinessPartner360RolloutStage) {
   return stage === "internal" ? 60 : stage === "canary" ? 24 * 60 : 7 * 24 * 60;

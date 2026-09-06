@@ -1,0 +1,182 @@
+{
+  "schema": "athyper.business-partner-local-build-fix/1",
+  "recordedAt": "2026-09-05T01:34:27.374920+00:00",
+  "productionQualified": false,
+  "source": {
+    "head": "68600dfd3880821ec02196cd2316e660e85b1bce",
+    "dirty": true,
+    "workingTreeHashesAtReportTime": {
+      "apps/Dockerfile": "b1f304d9065629603c0b58c3d3228a5ea614ffd1be83ec67242538a7aaa42bb6",
+      "server/Dockerfile.prod": "c34b3880985d21535368e2847b7d0bc638bb2b9822f635c9ac93cf2660eba1e5",
+      "packages/contracts/platform/entity-runtime/package.json": "1f3dbfd78c6b5e908d1917758ae244bd739e5517577ab873b97d37db5abd0707",
+      "packages/contracts/platform/entity-runtime/tsconfig.build.json": "77be98bfa03a83fa219fa652d4812c572096373759a3433ec275218ff63c6fb7",
+      "packages/platform/foundation/temporal/package.json": "fbfb4296fdb8d861a323d52d0a43ce6622d4e4807d85dc0213fb982393f8ab9e",
+      "packages/platform/foundation/temporal/tsconfig.build.json": "a2c5ff242436628833611e0fe63ec3b54e620de06d0a59b587bef43a8dc672e8",
+      "packages/contracts/athyper/onboarding/package.json": "2ff8686642fad739db6da5ea664959d6b0135597eec3cd2854c482b81d9dcbb0",
+      "packages/contracts/athyper/onboarding/tsconfig.build.json": "77be98bfa03a83fa219fa652d4812c572096373759a3433ec275218ff63c6fb7",
+      "apps/neon/lib/relay.ts": "3649ce8fabb8d8541c8335aab2877e4ca6daeae6208b742b087ec2b029668201",
+      "packages/platform/gateway/bff-relay/src/index.ts": "2f44cb1de091c7214466e18e0d597cbc2262c1d0b4b4289367e6c2dd61c45799",
+      "server/apps/platform-host/src/composition/register-services.ts": "f2c9872a33c4781c19045ec92a0550090408c286da6345b9509448215c5ae4d0",
+      "server/packages/services/master-data/src/business-partner-invitation-service.ts": "754a3063e400a21e40757361b91cdc9ad5becb95066b09b67d2082435b9c72d5",
+      "server/packages/services/master-data/src/kysely-business-partner-360-repository.ts": "489af11ea827b7bf322df8e70b174c88d91e5d31612625275fb25cd6cbe2a2a2",
+      "server/db/ddl/common/audit/12_reference_seed.sql": "0201965c6e101c0073aa90f70631e0fd4e47a8f72f223a0a7e496aaf6d69202a",
+      "server/db/scripts/provisioning/provision-business-partner-r2-fixtures.ts": "365b0956ece1b6516587d6c74bd7d66f8c45df9e3a2adb93d223d8543dc291fe",
+      "server/db/scripts/provisioning/provision-business-partner-r3-applicant.ts": "bab8de0829962ccf80247c5ec78e90fc2f25327f41eb1e60e7298ea2c2d3c3b2",
+      "server/db/scripts/tests/integration/business-partner-r2-scope.ts": "3114863c36ae6ebb32cbd481f39647cede133233da3b2c1207c8353a1e207acd",
+      "tooling/scripts/iam/provision-business-partner-r3-local.py": "6bb00b4272c5a876754ebe26018f70c7d96e97f72f16b67f3a2dd8799700af50",
+      "tooling/scripts/verification/provision-business-partner-r3-invitation.mjs": "f02b761337be1cfc2611d311fda459d1242544e664867a3abfefa5fc15479be1",
+      "tooling/scripts/verification/run-business-partner-local-journey.mjs": "135aeb3024440c277ff2431886a9c82ed65e6c0645de23199338b789fc997f11",
+      "tests/e2e/business-partner/bp-r2.spec.ts": "e936f41928943aaf80535c602decda6ca0a623f2ffa8ed6350f338de281a5059",
+      "tests/contracts/bff-relay-security.test.ts": "3de9a0a74bfa7eeb82923cb2602b8fcdacd4a6a13cc08e8b9aa34d728e8a24a7",
+      "server/packages/services/master-data/src/__tests__/business-partner-invitation-service.test.ts": "e196da5fd4c02444c8b203c6dc0ac731ccd8c6c45617e4bdd1c0dc1f39a5d367"
+    },
+    "note": "Working-tree hashes are a local review snapshot, not immutable release provenance."
+  },
+  "deployment": {
+    "target": "https://neon.dev.athyper.test",
+    "tenant": "athyper",
+    "databaseReset": false,
+    "images": [
+      {
+        "container": "athyper-dev-neon-web-1",
+        "imageId": "sha256:04f594d9a456a49269466b68c293593625e437f57e732bc73fd6c4113b93156c",
+        "configuredReference": "athyper/neon-web:local-bp-20260905",
+        "health": "healthy"
+      },
+      {
+        "container": "athyper-dev-api-1",
+        "imageId": "sha256:6c72c249eccd107bbc491f7ee970cfffa22bc275aa47a6d9a9ea7841b8948b63",
+        "configuredReference": "athyper/runtime-server:local-bp-20260905",
+        "health": "healthy"
+      }
+    ]
+  },
+  "v1": {
+    "actors": [
+      "athyper.admin",
+      "athyper.owner",
+      "athq.admin"
+    ],
+    "distinctAuthenticatedPrincipals": true,
+    "oldPermissionGuardFixed": true,
+    "nativeRoutePresent": true,
+    "latestCreateStatus": 503,
+    "blocker": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+    "qualified": false
+  },
+  "r2": {
+    "fixtures": {
+      "schema": "athyper.business-partner-r2-environment/1",
+      "resetBoundary": "rebuild_disposable_neon_database",
+      "operatingOrganizationId": "8cb267f9-c30c-5c87-9c35-c0e4830ecb8c",
+      "environment": {
+        "PLAYWRIGHT_BP_V1_OPERATING_ORGANIZATION_ID": "8cb267f9-c30c-5c87-9c35-c0e4830ecb8c",
+        "PLAYWRIGHT_BP_R2_SUPPLIER_EXTENSION_TARGET_ID": "6b30b9ed-aabc-5da5-9313-b225711cb11c",
+        "PLAYWRIGHT_BP_R2_CUSTOMER_TO_DUAL_TARGET_ID": "69bec5b9-bc71-587c-86ee-eb4457b9e602",
+        "PLAYWRIGHT_BP_R2_CUSTOMER_EXTENSION_TARGET_ID": "40993f27-73d6-5429-8c6e-511815f2cb73",
+        "PLAYWRIGHT_BP_R2_SUPPLIER_TO_DUAL_TARGET_ID": "61964bd2-cce9-5982-9289-96b26f07e6dc"
+      }
+    },
+    "configurationReady": true,
+    "browserScenariosAttempted": 4,
+    "browserScenariosPassed": 0,
+    "allReachExtensionCreate": true,
+    "latestCreateStatus": 503,
+    "blocker": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+    "databaseScopeChecks": {
+      "positivePassed": 4,
+      "negativePassed": 8
+    }
+  },
+  "r3": {
+    "applicant": {
+      "principalId": "35e22a2b-0ac9-559c-824b-e4b3c2bf2146",
+      "username": "acceptance.bp.r3.applicant",
+      "permissions": [
+        "neon.supplier_registration.external.respond"
+      ]
+    },
+    "invitationId": "01a06f2b-7444-7090-a58d-17d9713f2a55",
+    "invitationIssued": true,
+    "applicantAuthenticated": true,
+    "internalCaseReadStatus": 403,
+    "acceptStatus": 503,
+    "acceptBlocker": "BUSINESS_PARTNER_DEFINITION_LOCAL_ACTIVE_REQUIRED",
+    "coordinatesAvailable": 4,
+    "coordinatesRequired": 6,
+    "remaining": [
+      "PLAYWRIGHT_BP_R3_OTHER_REQUEST_ID",
+      "PLAYWRIGHT_BP_R3_MESH_SNAPSHOT_ID"
+    ],
+    "browserScenariosAttempted": 2,
+    "browserScenariosPassed": 0,
+    "credentialReferencesOnly": [
+      "node_modules/.cache/bp-qualification/r3-applicant.json",
+      "node_modules/.cache/bp-qualification/r3-native.json"
+    ]
+  },
+  "checks": [
+    {
+      "name": "Master Data tests",
+      "passed": 131
+    },
+    {
+      "name": "NEON plane tests",
+      "passed": 37
+    },
+    {
+      "name": "BFF relay security tests",
+      "passed": 17
+    },
+    {
+      "name": "real PostgreSQL R2 scope assertions",
+      "passed": 12
+    },
+    {
+      "name": "Master Data, relay and NEON web typechecks",
+      "status": "passed"
+    },
+    {
+      "name": "WS0 phase0 and plane boundary gates",
+      "status": "passed"
+    },
+    {
+      "name": "web and API image builds; emitted-service import smoke check",
+      "status": "passed"
+    },
+    {
+      "name": "compiled entity-runtime Node import",
+      "status": "passed"
+    },
+    {
+      "name": "R2/applicant provisioner replay",
+      "status": "passed"
+    },
+    {
+      "name": "invitation audit event contract positive/negative match checks",
+      "passed": 4
+    },
+    {
+      "name": "R2 fixture-plan tests",
+      "passed": 3
+    }
+  ],
+  "publicationPrerequisites": {
+    "candidate": "local/2026-09-05/definition-publication-candidate.json",
+    "candidateCompileTargets": [
+      "neon",
+      "mesh"
+    ],
+    "candidateApproved": false,
+    "studioAuthentication": "available admin/owner credentials reach mandatory authenticator enrollment",
+    "workerCompileDispatchApply": "disabled by startup defaults",
+    "signingKeyReferencesConfigured": false,
+    "signatureRequirementPreserved": true
+  },
+  "workforce": {
+    "reviewer": "Workforce reviewer Group",
+    "BP-Q004": "decision pending",
+    "BP-Q006": "decision pending",
+    "processingExtended": false
+  }
+}

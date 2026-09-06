@@ -1,0 +1,72 @@
+{
+  "$schema": "athyper.business-partner-r7-fixture/1",
+  "scenarios": [
+    {
+      "id": "BP-WRK-001",
+      "boundary": "requisition_publish",
+      "status": "local_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-WRK-002",
+      "boundary": "candidate_disclose",
+      "status": "blocked_by_BP-Q006"
+    },
+    {
+      "id": "BP-WRK-003",
+      "boundary": "candidate_session",
+      "status": "blocked_by_BP-Q006"
+    },
+    {
+      "id": "BP-WRK-004",
+      "boundary": "candidate_evaluate",
+      "status": "blocked_by_BP-Q006"
+    },
+    {
+      "id": "BP-WRK-005",
+      "boundary": "commercial_approve",
+      "status": "blocked_by_BP-Q004_and_BP-Q006"
+    },
+    {
+      "id": "BP-WRK-006",
+      "boundary": "person_resolve",
+      "status": "blocked_by_BP-Q006"
+    },
+    {
+      "id": "BP-WRK-007",
+      "boundary": "placement_and_iam",
+      "status": "placement_and_iam_policy_gated_api_local_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-WRK-008",
+      "boundary": "placement_change",
+      "status": "placement_change_policy_gated_api_local_verified_target_e2e_required"
+    },
+    {
+      "id": "BP-WRK-009",
+      "boundary": "compliance_change",
+      "status": "product_command_required"
+    },
+    {
+      "id": "BP-WRK-010",
+      "boundary": "engagement_end_and_deprovision",
+      "status": "termination_and_iam_policy_gated_api_local_verified_target_e2e_required"
+    }
+  ],
+  "policyCoordinates": {
+    "BP-Q004": null,
+    "BP-Q006": null
+  },
+  "invariants": {
+    "candidateIsBusinessPartner": false,
+    "candidateDisclosureCreatesPerson": false,
+    "commercialApprovalCreatesIam": false,
+    "placementIsWorkAssignment": false,
+    "externalWorkerIsEmployee": false,
+    "personResolutionIsDedicatedBoundary": true,
+    "iamProjectionIsVersionedAndIdempotent": true,
+    "terminalReplayCanReactivateAccess": false,
+    "requisitionPublicationCreatesDownstreamAuthority": false,
+    "distributionRequiresQualificationAndActiveCapability": true,
+    "targetEnvironmentEvidenceRetained": false
+  }
+}

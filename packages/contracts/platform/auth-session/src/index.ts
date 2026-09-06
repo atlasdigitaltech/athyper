@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 export const SESSION_PLANES = Object.freeze(["studio", "neon", "mesh"] as const);
 export type SessionPlane = (typeof SESSION_PLANES)[number];
 export type SessionState = "anonymous" | "authenticated" | "required_action" | "context_required";
@@ -79,7 +80,7 @@ function object(value: unknown): Record<string, unknown> { if (!value || typeof 
 function text(value: unknown, name: string): string { if (typeof value !== "string" || !value.trim()) throw new TypeError(`${name} must be non-empty`); return value.trim(); }
 function optionalText(value: unknown, name: string): string | undefined { return value === undefined ? undefined : text(value, name); }
 function optionalInteger(value: unknown, name: string): number | undefined { if (value === undefined) return undefined; if (typeof value !== "number" || !Number.isInteger(value) || value < 0) throw new TypeError(`${name} must be a non-negative integer`); return value; }
-function optionalTimestamp(value: unknown, name: string): string | undefined { const result = optionalText(value, name); if (result && !Number.isFinite(Date.parse(result))) throw new TypeError(`${name} must be an ISO timestamp`); return result; }
+function optionalTimestamp(value: unknown, name: string): string | undefined { const result = optionalText(value, name); if (result && !Number.isFinite(parseInstant(result))) throw new TypeError(`${name} must be an ISO timestamp`); return result; }
 function strings(value: unknown, name: string): readonly string[] { if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`); return Object.freeze([...new Set(value.map((item, index) => text(item, `${name}[${index}]`)))]); }
 function oneOf<const T extends readonly string[]>(value: unknown, values: T, name: string): T[number] { if (typeof value !== "string" || !values.includes(value as T[number])) throw new TypeError(`${name} is invalid`); return value as T[number]; }
 function oneOfStrings<const T extends readonly string[]>(value: unknown, values: T, name: string): readonly T[number][] { if (!Array.isArray(value)) throw new TypeError(`${name} must be an array`); return Object.freeze([...new Set(value.map((item, index) => oneOf(item, values, `${name}[${index}]`)))]); }

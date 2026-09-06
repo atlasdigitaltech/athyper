@@ -164,3 +164,13 @@ COMMENT ON TABLE publication.entity_release_link IS 'Strict one-to-one connectio
 COMMENT ON TABLE publication.business_partner_definition_release_link IS 'Immutable link from the generic signed publication ledger to a STUDIO Business Partner definition revision.';
 COMMENT ON TABLE publication.deployment IS 'Per-target delivery head. Every state change is retained in deployment_event.';
 COMMENT ON TABLE publication.deployment_acknowledgement IS 'Plane acknowledgement of the exact locally active release; it is not required for the plane to keep serving its prior active release.';
+
+CREATE TABLE publication.business_partner_case_contract_release_link (
+    tenant_id uuid NOT NULL,
+    publication_release_id uuid PRIMARY KEY,
+    revision_id uuid NOT NULL UNIQUE,
+    publish_idempotency_key text NOT NULL,
+    created_by uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    UNIQUE (tenant_id, publish_idempotency_key)
+);

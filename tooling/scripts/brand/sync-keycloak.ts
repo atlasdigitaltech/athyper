@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const assets = path.join(repoRoot, "packages/platform/foundation/brand/assets");
-const target = path.join(repoRoot, "stack/config/iam/themes/neon/login/resources/img");
+const target = path.join(repoRoot, "deploy/config/iam/themes/neon/login/resources/img");
 const planes = ["neon", "mesh", "studio"] as const;
 const obsoleteAssets = ["admin-icon.png", "admin-wordmark-black.png", "mesh-icon.png", "mesh-wordmark-black.png", "neon-icon.png", "neon-wordmark-black.png"] as const;
 

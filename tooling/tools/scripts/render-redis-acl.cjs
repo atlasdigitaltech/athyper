@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Render stack/config/memorycache/redis-acl.conf.tpl into the live config root.
+ * Render deploy/config/memorycache/redis-acl.conf.tpl into the live config root.
  *
  * Redis ACL files use SHA-256 password hashes. Rendering before container start
  * keeps secrets out of Compose command lines and avoids startup substitution.

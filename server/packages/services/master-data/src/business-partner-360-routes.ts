@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
   BUSINESS_PARTNER_360_SECTION_CODES,
@@ -277,7 +278,7 @@ function purpose(value: unknown) {
 }
 function timestamp(value: unknown, name: string) {
   const result = text(value, name);
-  if (!Number.isFinite(Date.parse(result))) throw invalid(`${name} is invalid`);
+  if (!Number.isFinite(parseInstant(result))) throw invalid(`${name} is invalid`);
   return result;
 }
 function safeTelemetryFacts(

@@ -27,3 +27,6 @@ BEGIN
   END IF;
 END; $$;
 REVOKE ALL ON FUNCTION publication.trg_validate_business_partner_definition_release_link() FROM PUBLIC;
+
+REVOKE ALL ON publication.business_partner_case_contract_release_link FROM PUBLIC;
+GRANT SELECT, INSERT ON publication.business_partner_case_contract_release_link TO athyper_publication_service;

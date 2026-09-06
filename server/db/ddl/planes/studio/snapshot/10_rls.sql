@@ -128,3 +128,10 @@ CREATE POLICY business_partner_definition_revision_service_write ON snapshot.bus
   FOR INSERT WITH CHECK (tenant_id=shared.current_tenant_id());
 CREATE POLICY business_partner_definition_revision_seed_owner ON snapshot.business_partner_definition_revision
   FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
+
+ALTER TABLE snapshot.business_partner_case_contract_revision ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.business_partner_case_contract_revision FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_access ON snapshot.business_partner_case_contract_revision
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());

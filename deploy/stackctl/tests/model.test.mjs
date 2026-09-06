@@ -169,7 +169,7 @@ test("QA lifecycle plans are read-only and cannot target DEV", () => {
       assert.ok(stage.command.arguments.includes("athyper-qa"));
       assert.ok(!stage.command.arguments.includes("athyper-dev"));
       assert.equal(stage.command.environment.ATHYPER_INSTANCE, "qa");
-      assert.equal(stage.command.environment.ATHYPER_HTTP_BIND, undefined);
+      assert.equal(Object.hasOwn(stage.command.environment, "ATHYPER_HTTP_BIND"), false);
       assert.equal(stage.command.environment.ATHYPER_POSTGRES_BIND, "127.0.0.1:55432");
       assert.match(stage.command.environment.ATHYPER_IMAGE_RUNTIME_SERVER, /@sha256:[a-f0-9]{64}$/u);
     }
@@ -318,6 +318,14 @@ test("K3s remains deferred until runtime acceptance and approved multi-host need
   assert.ok(assessment.blockers.some((message) => message.includes("Approved multi-host topology requirement evidence is absent")));
   assert.ok(assessment.prohibitedOutputsWhileDeferred.includes("K3s installation"));
   assert.deepEqual(assessment.actions, ["No action: this command only assesses the Compose-to-K3s decision gate."]);
+
+  const malformed = assessOrchestrator(defaultRepoRoot, {
+    qualificationPath: "/qualification/fixture/phase-status.yaml",
+    qualificationRoot: "/qualification/fixture",
+    exists: (path) => path.endsWith(".yaml"),
+    readYaml: () => { throw new Error("truncated YAML"); },
+  });
+  assert.ok(malformed.blockers.some((message) => message.includes("Machine phase evidence is invalid: truncated YAML")));
 });
 
 test("v2 schemas and static policies pass", () => {
@@ -383,7 +391,7 @@ test("every external base for a published image is digest-pinned", () => {
   const targets = [
     "apps/Dockerfile",
     "server/Dockerfile.prod",
-    "stack/config/iam/Dockerfile",
+    "deploy/config/iam/Dockerfile",
   ];
   for (const target of targets) {
     const text = readFileSync(join(defaultRepoRoot, target), "utf8");
@@ -396,7 +404,7 @@ test("every external base for a published image is digest-pinned", () => {
 });
 
 test("Keycloak optimized builds retain every recorded runtime dependency", () => {
-  const dockerfile = readFileSync(join(defaultRepoRoot, "stack/config/iam/Dockerfile"), "utf8");
+  const dockerfile = readFileSync(join(defaultRepoRoot, "deploy/config/iam/Dockerfile"), "utf8");
   assert.match(dockerfile, /kc\.sh build --db=postgres/u);
   assert.doesNotMatch(dockerfile, /rm\s+-f[\s\S]*mssql-jdbc/u);
 });
@@ -406,7 +414,7 @@ test("DEV browser secrets and proxied realms use deployable formats", () => {
   assert.match(bootstrap, /openssl rand -base64 32/u);
   assert.doesNotMatch(bootstrap, /random_hex > "\$staging\/session-token-encryption-key"/u);
   for (const realm of ["realm-platform-control.json", "realm-platform-control-clean-slate.json"]) {
-    const document = JSON.parse(readFileSync(join(defaultRepoRoot, "stack/config/iam", realm), "utf8"));
+    const document = JSON.parse(readFileSync(join(defaultRepoRoot, "deploy/config/iam", realm), "utf8"));
     assert.equal(document.sslRequired, "external");
   }
 });

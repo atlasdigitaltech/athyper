@@ -5,7 +5,9 @@
   "type": "module",
   "main": "./src/index.tsx",
   "types": "./src/index.tsx",
-  "sideEffects": ["./src/styles.css"],
+  "sideEffects": [
+    "./src/styles.css"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.tsx",
@@ -14,9 +16,19 @@
     },
     "./styles.css": "./src/styles.css"
   },
-  "scripts": { "typecheck": "tsc --noEmit" },
-  "dependencies": { "@athyper/platform-brand": "workspace:*", "@athyper/platform-icons": "workspace:*", "@athyper/platform-surface-kit": "workspace:*", "@athyper/platform-ui": "workspace:*" },
-  "peerDependencies": { "react": "^19.2.5" },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@athyper/platform-brand": "workspace:*",
+    "@athyper/platform-icons": "workspace:*",
+    "@athyper/platform-surface-kit": "workspace:*",
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-iam-session": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
   "devDependencies": {
     "@athyper/tsconfig": "workspace:*",
     "@types/react": "^19.2.14",

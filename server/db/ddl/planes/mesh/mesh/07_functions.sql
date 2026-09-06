@@ -950,3 +950,149 @@ CREATE OR REPLACE FUNCTION mesh.profile_publication_is_visible(p_publication_id 
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path=pg_catalog,mesh,shared SET row_security=off AS $$
   SELECT EXISTS (SELECT 1 FROM mesh.network_account_profile_publication publication WHERE publication.id=p_publication_id AND shared.current_tenant_id_soft() IN (publication.owner_tenant_id,publication.recipient_tenant_id))
 $$;
+
+CREATE OR REPLACE FUNCTION mesh.lock_profile_publication_relationship(
+    p_owner_tenant_id uuid,
+    p_owner_account_id uuid,
+    p_relationship_id uuid
+)
+RETURNS TABLE (
+    id uuid,
+    buyer_tenant_id uuid,
+    buyer_account_id uuid,
+    supplier_tenant_id uuid,
+    supplier_account_id uuid,
+    status text,
+    effective_from date,
+    effective_until date,
+    owner_status text,
+    recipient_status text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, mesh, shared
+SET row_security = off
+AS $$
+BEGIN
+    IF p_owner_tenant_id IS DISTINCT FROM shared.current_tenant_id() THEN
+        RAISE EXCEPTION 'Profile publication tenant does not match the current tenant'
+            USING ERRCODE = 'insufficient_privilege';
+    END IF;
+
+    RETURN QUERY
+    SELECT relationship.id,
+           relationship.buyer_tenant_id,
+           relationship.buyer_account_id,
+           relationship.supplier_tenant_id,
+           relationship.supplier_account_id,
+           relationship.status::text,
+           relationship.effective_from,
+           relationship.effective_until,
+           owner.status::text,
+           recipient.status::text
+      FROM mesh.network_relationship relationship
+      JOIN mesh.network_account owner
+        ON owner.tenant_id = relationship.supplier_tenant_id
+       AND owner.id = relationship.supplier_account_id
+      JOIN mesh.network_account recipient
+        ON recipient.tenant_id = relationship.buyer_tenant_id
+       AND recipient.id = relationship.buyer_account_id
+     WHERE relationship.id = p_relationship_id
+       AND relationship.supplier_tenant_id = p_owner_tenant_id
+       AND relationship.supplier_account_id = p_owner_account_id
+     FOR UPDATE OF relationship;
+END;
+$$;
+
+CREATE FUNCTION mesh.trg_delivery_acknowledgement_immutable() RETURNS trigger
+LANGUAGE plpgsql AS $$ BEGIN
+  RAISE EXCEPTION 'Delivery acknowledgements are immutable' USING ERRCODE='integrity_constraint_violation';
+END $$;
+
+CREATE OR REPLACE FUNCTION mesh.read_eligible_bank_disclosure_source(
+  p_owner_tenant_id uuid,
+  p_owner_account_id uuid,
+  p_bank_account_id uuid,
+  p_relationship_id uuid,
+  p_purpose text
+) RETURNS TABLE(
+  buyer_tenant_id uuid,
+  buyer_account_id uuid,
+  supplier_tenant_id uuid,
+  supplier_account_id uuid,
+  owner_status text,
+  recipient_status text,
+  account_holder_name text,
+  account_id_type text,
+  account_last4 text,
+  currency_code text,
+  bank_name text,
+  bank_country_code text,
+  bic text
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = pg_catalog, mesh, shared
+AS $function$
+  SELECT relationship.buyer_tenant_id,
+         relationship.buyer_account_id,
+         relationship.supplier_tenant_id,
+         relationship.supplier_account_id,
+         owner_account.status::text,
+         recipient_account.status::text,
+         bank_account.account_holder_name,
+         bank_account.account_id_type::text,
+         bank_account.account_last4,
+         bank_account.currency_code::text,
+         COALESCE(bank_account.bank_name_override, bank_party.name),
+         COALESCE(bank_account.bank_country_override, bank_party.country_code)::text,
+         COALESCE(bank_account.bic_override, bank_party.bic)
+    FROM mesh.network_relationship AS relationship
+    JOIN mesh.network_account AS owner_account
+      ON owner_account.tenant_id = p_owner_tenant_id
+     AND owner_account.id = p_owner_account_id
+    JOIN mesh.network_account AS recipient_account
+      ON recipient_account.id = CASE
+        WHEN p_purpose = 'settlement' THEN relationship.buyer_account_id
+        ELSE relationship.supplier_account_id
+      END
+    JOIN mesh.bank_account AS bank_account
+      ON bank_account.tenant_id = p_owner_tenant_id
+     AND bank_account.id = p_bank_account_id
+     AND bank_account.network_account_id = owner_account.id
+    LEFT JOIN mesh.bank_party AS bank_party
+      ON bank_party.tenant_id = bank_account.tenant_id
+     AND bank_party.id = bank_account.bank_party_id
+    JOIN mesh.bank_account_link AS bank_link
+      ON bank_link.tenant_id = bank_account.tenant_id
+     AND bank_link.network_account_id = owner_account.id
+     AND bank_link.bank_account_id = bank_account.id
+     AND bank_link.purpose = p_purpose
+     AND bank_link.effective_from <= CURRENT_DATE
+     AND (bank_link.effective_until IS NULL OR bank_link.effective_until > CURRENT_DATE)
+   WHERE p_owner_tenant_id = shared.current_tenant_id()
+     AND p_purpose IN ('settlement', 'refund')
+     AND relationship.id = p_relationship_id
+     AND relationship.status = 'active'
+     AND owner_account.status = 'active'
+     AND recipient_account.status = 'active'
+     AND bank_account.status = 'active'
+     AND bank_account.is_verified
+     AND (
+       (p_purpose = 'settlement'
+        AND relationship.supplier_tenant_id = p_owner_tenant_id
+        AND relationship.supplier_account_id = owner_account.id
+        AND recipient_account.tenant_id = relationship.buyer_tenant_id)
+       OR
+       (p_purpose = 'refund'
+        AND relationship.buyer_tenant_id = p_owner_tenant_id
+        AND relationship.buyer_account_id = owner_account.id
+        AND recipient_account.tenant_id = relationship.supplier_tenant_id)
+     )
+     AND (relationship.effective_from IS NULL OR relationship.effective_from <= CURRENT_DATE)
+     AND (relationship.effective_until IS NULL OR relationship.effective_until > CURRENT_DATE)
+   FOR UPDATE OF relationship, bank_account;
+$function$;
+
+COMMENT ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) IS
+  'Validates and locks a relationship-scoped bank disclosure source while returning masked bank coordinates only.';

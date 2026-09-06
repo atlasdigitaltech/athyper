@@ -4,12 +4,12 @@
 > Edit the policy, not this file.
 
 - Policy: `authorization-wave0-data-disposition`
-- Policy hash: `6ab28d67bdc02c72501cd2823672029ed1c5f7797a6cc452e6d2c5a57c5f00a6`
+- Policy hash: `7cbd9ed0d91d9569404a7c5babe2dda75ed13954fc5feea957f14dfb0305b285`
 - Approval: **pending**
 - Cataloged database tables: 695
 - Exact runtime-created table registrations: 1
 - External object stores/systems: 12
-- Unclassified tables: 147
+- Unclassified tables: 0
 
 The checked-in inventory assigns one proposed disposition to every table
 discoverable in versioned DDL, every exactly registered runtime-created table,
@@ -23,96 +23,103 @@ or multiply classified runtime objects.
 
 | Data class | Objects |
 | --- | ---: |
-| audit_log | 4 |
+| ai_governance_and_runtime | 24 |
+| audit_log | 17 |
 | authentication_authority | 1 |
+| authorization_authority | 20 |
 | authorization_cache | 1 |
 | business_master_transactional | 145 |
 | business_scope_context_non_authorizing | 2 |
+| business_workflow_transactional | 10 |
 | database_backup_object | 1 |
 | ddl_catalog_reference | 112 |
 | derived_projection | 20 |
+| derived_runtime_projection | 12 |
 | document_metadata | 164 |
 | document_object | 2 |
 | event_outbox_inbox | 21 |
 | event_stream | 1 |
 | governance_audit | 11 |
+| identity_desired_state_authority | 10 |
 | identity_projection | 3 |
 | ledger_regulatory | 16 |
 | mesh_owned | 41 |
 | mesh_owned_document_object | 1 |
 | mesh_provisioning_ledger | 1 |
+| metadata_authority | 30 |
 | operational_log | 1 |
+| operational_state_and_evidence | 20 |
 | provisioning_ledger | 1 |
+| published_definition_authority | 8 |
 | secret | 1 |
 | session_token | 2 |
 | tenant_business_context_non_authorizing | 1 |
 | tenant_finance_configuration | 5 |
 | tenant_foundation | 1 |
 | trace_telemetry | 1 |
-| unknown | 147 |
 
 ## Table dispositions
 
 | Table | Data class | Disposition | Decision source |
 | --- | --- | --- | --- |
-| `ai.ai_action_policy` | unknown | unclassified | none |
-| `ai.ai_agent_call` | unknown | unclassified | none |
-| `ai.ai_agent_run` | unknown | unclassified | none |
-| `ai.ai_calibration_log` | unknown | unclassified | none |
-| `ai.ai_call_transcript` | unknown | unclassified | none |
-| `ai.ai_call_transcript_default` | unknown | unclassified | none |
-| `ai.ai_confidence_threshold` | unknown | unclassified | none |
-| `ai.ai_drift_baseline` | unknown | unclassified | none |
-| `ai.ai_feedback_log` | unknown | unclassified | none |
-| `ai.ai_inference_log` | unknown | unclassified | none |
-| `ai.ai_monitoring_log` | unknown | unclassified | none |
-| `ai.ai_tool_invocation` | unknown | unclassified | none |
-| `ai.atlas_conversation_retention_policy` | unknown | unclassified | none |
-| `ai.atlas_knowledge_chunk` | unknown | unclassified | none |
-| `ai.atlas_knowledge_revision` | unknown | unclassified | none |
-| `ai.atlas_knowledge_source` | unknown | unclassified | none |
-| `ai.atlas_message` | unknown | unclassified | none |
-| `ai.atlas_run` | unknown | unclassified | none |
+| `ai.ai_action_policy` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_agent_call` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_agent_run` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_calibration_log` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_call_transcript` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_call_transcript_default` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_confidence_threshold` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_drift_baseline` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_feedback_log` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_inference_log` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_monitoring_log` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.ai_tool_invocation` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_conversation_retention_policy` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_knowledge_chunk` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_knowledge_revision` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_knowledge_source` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_message` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_run` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
 | `ai.atlas_support_session` | session_token | revoke_and_do_not_migrate | exact_table_override |
-| `ai.atlas_tenant_provider_credential` | unknown | unclassified | none |
-| `ai.atlas_tenant_provider_credential_epoch` | unknown | unclassified | none |
-| `ai.atlas_tenant_quota_policy` | unknown | unclassified | none |
-| `ai.atlas_tenant_quota_reservation` | unknown | unclassified | none |
-| `ai.atlas_tenant_quota_window` | unknown | unclassified | none |
-| `ai.atlas_thread` | unknown | unclassified | none |
-| `audit.audit_log` | unknown | unclassified | none |
-| `audit.audit_log_default` | unknown | unclassified | none |
-| `audit.authorization_decision_evidence` | unknown | unclassified | none |
-| `audit.authorization_decision_evidence_default` | unknown | unclassified | none |
-| `audit.export_manifest` | unknown | unclassified | none |
-| `audit.export_request` | unknown | unclassified | none |
-| `audit.hash_anchor` | unknown | unclassified | none |
-| `audit.integrity_check_evidence` | unknown | unclassified | none |
-| `audit.legal_hold` | unknown | unclassified | none |
-| `audit.legal_hold_manifest` | unknown | unclassified | none |
-| `audit.retention_policy` | unknown | unclassified | none |
-| `audit.security_event` | unknown | unclassified | none |
-| `audit.security_event_default` | unknown | unclassified | none |
-| `authz.application_projection` | unknown | unclassified | none |
-| `authz.delegation` | unknown | unclassified | none |
-| `authz.delegation_grant` | unknown | unclassified | none |
-| `authz.deny_rule` | unknown | unclassified | none |
-| `authz.entity_operation_binding` | unknown | unclassified | none |
-| `authz.entity_operation_scope_binding` | unknown | unclassified | none |
-| `authz.group_member` | unknown | unclassified | none |
-| `authz.group_role` | unknown | unclassified | none |
-| `authz.override` | unknown | unclassified | none |
-| `authz.permission` | unknown | unclassified | none |
-| `authz.permission_scope_kind` | unknown | unclassified | none |
-| `authz.plane_membership` | unknown | unclassified | none |
-| `authz.principal_group` | unknown | unclassified | none |
-| `authz.projection_provider` | unknown | unclassified | none |
-| `authz.projection_scope` | unknown | unclassified | none |
-| `authz.record_acl` | unknown | unclassified | none |
-| `authz.role` | unknown | unclassified | none |
-| `authz.role_permission` | unknown | unclassified | none |
-| `authz.scope_target` | unknown | unclassified | none |
-| `authz.trusted_device` | unknown | unclassified | none |
+| `ai.atlas_tenant_provider_credential` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_tenant_provider_credential_epoch` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_tenant_quota_policy` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_tenant_quota_reservation` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_tenant_quota_window` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `ai.atlas_thread` | ai_governance_and_runtime | migrate_policy_and_audit_archive_runtime | schema_default |
+| `audit.audit_log` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.audit_log_default` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.authorization_decision_evidence` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.authorization_decision_evidence_default` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.export_manifest` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.export_request` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.hash_anchor` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.integrity_check_evidence` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.legal_hold` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.legal_hold_manifest` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.retention_policy` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.security_event` | audit_log | migrate_or_immutable_archive | schema_default |
+| `audit.security_event_default` | audit_log | migrate_or_immutable_archive | schema_default |
+| `authz.application_projection` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.delegation` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.delegation_grant` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.deny_rule` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.entity_operation_binding` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.entity_operation_scope_binding` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.group_member` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.group_role` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.override` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.permission` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.permission_scope_kind` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.plane_membership` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.principal_group` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.projection_provider` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.projection_scope` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.record_acl` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.role` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.role_permission` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.scope_target` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
+| `authz.trusted_device` | authorization_authority | migrate_in_exact_plane_boundary | schema_default |
 | `control.accounting_profile_assignment` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.accounting_profile_entry` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `control.accounting_profile_event` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -628,88 +635,88 @@ or multiply classified runtime objects.
 | `mesh.network_relationship_identity` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.network_relationship_kind` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
 | `mesh.registration_exchange` | mesh_owned | provision_and_migrate_in_mesh_db_only | schema_default |
-| `metadata.entity` | unknown | unclassified | none |
-| `metadata.entity_change_set` | unknown | unclassified | none |
-| `metadata.entity_class_profile` | unknown | unclassified | none |
-| `metadata.entity_contract_test_case` | unknown | unclassified | none |
-| `metadata.entity_field` | unknown | unclassified | none |
-| `metadata.entity_field_policy_binding` | unknown | unclassified | none |
-| `metadata.entity_flow` | unknown | unclassified | none |
-| `metadata.entity_flow_step` | unknown | unclassified | none |
-| `metadata.entity_key` | unknown | unclassified | none |
-| `metadata.entity_key_field` | unknown | unclassified | none |
-| `metadata.entity_lifecycle_binding` | unknown | unclassified | none |
-| `metadata.entity_lifecycle_operation_binding` | unknown | unclassified | none |
-| `metadata.entity_numbering_binding` | unknown | unclassified | none |
-| `metadata.entity_operation` | unknown | unclassified | none |
-| `metadata.entity_operation_permission` | unknown | unclassified | none |
-| `metadata.entity_operation_rule` | unknown | unclassified | none |
-| `metadata.entity_operation_scope_binding` | unknown | unclassified | none |
-| `metadata.entity_policy_binding` | unknown | unclassified | none |
-| `metadata.entity_relation` | unknown | unclassified | none |
-| `metadata.entity_relation_field` | unknown | unclassified | none |
-| `metadata.entity_relation_target` | unknown | unclassified | none |
-| `metadata.entity_release` | unknown | unclassified | none |
-| `metadata.entity_runtime_profile` | unknown | unclassified | none |
-| `metadata.entity_search_field` | unknown | unclassified | none |
-| `metadata.entity_search_profile` | unknown | unclassified | none |
-| `metadata.entity_surface` | unknown | unclassified | none |
-| `metadata.entity_surface_component_binding` | unknown | unclassified | none |
-| `metadata.entity_surface_field_binding` | unknown | unclassified | none |
-| `metadata.entity_surface_operation` | unknown | unclassified | none |
-| `metadata.entity_surface_section` | unknown | unclassified | none |
-| `onboarding.onboarding_case` | unknown | unclassified | none |
-| `onboarding.onboarding_case_check` | unknown | unclassified | none |
-| `onboarding.onboarding_case_guest_access` | unknown | unclassified | none |
-| `onboarding.onboarding_case_resource` | unknown | unclassified | none |
-| `onboarding.onboarding_case_revision` | unknown | unclassified | none |
-| `onboarding.onboarding_case_step` | unknown | unclassified | none |
-| `onboarding.onboarding_case_target` | unknown | unclassified | none |
-| `onboarding.onboarding_case_work_item` | unknown | unclassified | none |
-| `onboarding.onboarding_compilation_decision` | unknown | unclassified | none |
-| `onboarding.onboarding_step_dependency` | unknown | unclassified | none |
-| `ops.authorization_operation_cutover_drill` | unknown | unclassified | none |
-| `ops.authorization_operation_rollout` | unknown | unclassified | none |
-| `ops.authorization_parity_certification` | unknown | unclassified | none |
-| `ops.authorization_qualification_cohort_requirement` | unknown | unclassified | none |
-| `ops.authorization_session_shadow_comparison` | unknown | unclassified | none |
-| `ops.authorization_shadow_comparison` | unknown | unclassified | none |
-| `ops.control_runtime_command_approval_decision` | unknown | unclassified | none |
-| `ops.control_runtime_command_approval_request` | unknown | unclassified | none |
-| `ops.control_runtime_command_history` | unknown | unclassified | none |
-| `ops.control_runtime_command_submission` | unknown | unclassified | none |
-| `ops.identity_admission_shadow_comparison` | unknown | unclassified | none |
-| `ops.job_execution` | unknown | unclassified | none |
-| `ops.job_execution_attempt` | unknown | unclassified | none |
-| `ops.job_execution_command` | unknown | unclassified | none |
-| `ops.record_edit_lock` | unknown | unclassified | none |
-| `ops.record_export_request` | unknown | unclassified | none |
-| `ops.record_import_chunk` | unknown | unclassified | none |
-| `ops.record_import_session` | unknown | unclassified | none |
-| `ops.record_transfer_retention_policy` | unknown | unclassified | none |
-| `ops.reference_sync_checkpoint` | unknown | unclassified | none |
+| `metadata.entity` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_change_set` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_class_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_contract_test_case` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_field_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_flow` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_flow_step` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_key` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_key_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_lifecycle_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_lifecycle_operation_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_numbering_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_operation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_operation_permission` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_operation_rule` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_operation_scope_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_policy_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_relation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_relation_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_relation_target` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_release` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_runtime_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_search_field` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_search_profile` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_component_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_field_binding` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_operation` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `metadata.entity_surface_section` | metadata_authority | migrate_published_authority_and_rebuild_projections | schema_default |
+| `onboarding.onboarding_case` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_check` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_guest_access` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_resource` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_revision` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_step` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_target` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_case_work_item` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_compilation_decision` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `onboarding.onboarding_step_dependency` | business_workflow_transactional | migrate_in_declared_fk_order | schema_default |
+| `ops.authorization_operation_cutover_drill` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.authorization_operation_rollout` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.authorization_parity_certification` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.authorization_qualification_cohort_requirement` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.authorization_session_shadow_comparison` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.authorization_shadow_comparison` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.control_runtime_command_approval_decision` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.control_runtime_command_approval_request` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.control_runtime_command_history` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.control_runtime_command_submission` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.identity_admission_shadow_comparison` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.job_execution` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.job_execution_attempt` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.job_execution_command` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.record_edit_lock` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.record_export_request` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.record_import_chunk` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.record_import_session` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.record_transfer_retention_policy` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
+| `ops.reference_sync_checkpoint` | operational_state_and_evidence | migrate_active_state_and_archive_terminal_evidence | schema_default |
 | `public.mesh_schema_provisions` | mesh_provisioning_ledger | recreate_empty_in_mesh_then_rebuild_from_executed_manifest | exact_runtime_table_override |
 | `public.schema_provisions` | provisioning_ledger | recreate_empty_then_rebuild_from_executed_manifest | exact_table_override |
-| `publication.artifact` | unknown | unclassified | none |
-| `publication.artifact_compilation` | unknown | unclassified | none |
-| `publication.business_partner_definition_release_link` | unknown | unclassified | none |
-| `publication.deployment` | unknown | unclassified | none |
-| `publication.deployment_acknowledgement` | unknown | unclassified | none |
-| `publication.deployment_event` | unknown | unclassified | none |
-| `publication.entity_release_link` | unknown | unclassified | none |
-| `publication.release` | unknown | unclassified | none |
-| `runtime_meta.applied_release` | unknown | unclassified | none |
-| `runtime_meta.applied_release_payload` | unknown | unclassified | none |
-| `runtime_meta.authorization_epoch` | unknown | unclassified | none |
-| `runtime_meta.entity_contract` | unknown | unclassified | none |
-| `runtime_meta.entity_descriptor` | unknown | unclassified | none |
-| `runtime_meta.entity_number_allocation` | unknown | unclassified | none |
-| `runtime_meta.entity_number_counter` | unknown | unclassified | none |
-| `runtime_meta.mfa_credential_projection` | unknown | unclassified | none |
-| `runtime_meta.release_activation_event` | unknown | unclassified | none |
-| `runtime_meta.release_activation_head` | unknown | unclassified | none |
-| `runtime_meta.tenant_usage_counter` | unknown | unclassified | none |
-| `runtime_meta.usage_reservation` | unknown | unclassified | none |
+| `publication.artifact` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.artifact_compilation` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.business_partner_definition_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.deployment` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.deployment_acknowledgement` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.deployment_event` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.entity_release_link` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `publication.release` | published_definition_authority | migrate_published_artifacts_and_release_history | schema_default |
+| `runtime_meta.applied_release` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.applied_release_payload` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.authorization_epoch` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.entity_contract` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.entity_descriptor` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.entity_number_allocation` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.entity_number_counter` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.mfa_credential_projection` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.release_activation_event` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.release_activation_head` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.tenant_usage_counter` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
+| `runtime_meta.usage_reservation` | derived_runtime_projection | rebuild_from_published_authority | schema_default |
 | `shared.classification_scheme` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_code` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
 | `shared.commodity_crosswalk` | ddl_catalog_reference | recreate_from_approved_seed | schema_default |
@@ -740,16 +747,16 @@ or multiply classified runtime objects.
 | `snapshot.mesh_business_partner_profile_received` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.network_account_profile_publication` | derived_projection | rebuild_from_authoritative_data | schema_default |
 | `snapshot.template_version` | derived_projection | rebuild_from_authoritative_data | schema_default |
-| `trustiam.application_projection` | unknown | unclassified | none |
-| `trustiam.identity_projection` | unknown | unclassified | none |
-| `trustiam.identity_provisioning_attempt` | unknown | unclassified | none |
-| `trustiam.identity_provisioning_request` | unknown | unclassified | none |
-| `trustiam.identity_saga_attempt` | unknown | unclassified | none |
-| `trustiam.organization` | unknown | unclassified | none |
-| `trustiam.organization_provider` | unknown | unclassified | none |
-| `trustiam.projection_reconciliation_attempt` | unknown | unclassified | none |
-| `trustiam.projection_scope` | unknown | unclassified | none |
-| `trustiam.provider_identity_callback_inbox` | unknown | unclassified | none |
+| `trustiam.application_projection` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.identity_projection` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.identity_provisioning_attempt` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.identity_provisioning_request` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.identity_saga_attempt` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.organization` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.organization_provider` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.projection_reconciliation_attempt` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.projection_scope` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
+| `trustiam.provider_identity_callback_inbox` | identity_desired_state_authority | migrate_authority_without_provider_credentials | schema_default |
 
 ## External objects
 

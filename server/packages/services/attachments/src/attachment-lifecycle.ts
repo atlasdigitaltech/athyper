@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHash, randomUUID } from "node:crypto";
 import type {
   AttachmentIdentity,
@@ -159,7 +160,7 @@ export function createAttachmentLifecycle<T>(options: AttachmentLifecycleOptions
       const current=await options.transactions.run(identity.planeKey,identity,tx=>(options.repository.loadForDownload??options.repository.load)(identity,tx));
       if(!current)throw new Error("Attachment not found");
       if(current.status!=="active"||!current.isActive||!current.sha256)throw new AttachmentDownloadError("ATTACHMENT_DOWNLOAD_UNAVAILABLE","Only active, verified attachments may be downloaded");
-      if(current.expiresAt&&Date.parse(current.expiresAt)<=now().getTime())throw new AttachmentDownloadError("ATTACHMENT_DOWNLOAD_EXPIRED","The attachment download has expired");
+      if(current.expiresAt&&parseInstant(current.expiresAt)<=now().getTime())throw new AttachmentDownloadError("ATTACHMENT_DOWNLOAD_EXPIRED","The attachment download has expired");
       const expiresAt=new Date(now().getTime()+ttl*1000).toISOString();
       return{attachmentId:current.id,url:await options.storage.createDownloadUrl(current.storageKey,ttl),expiresAt};
     },

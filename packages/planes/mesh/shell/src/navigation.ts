@@ -1,7 +1,7 @@
 import { PLATFORM_CATALOG_ROUTES } from "../../../../contracts/platform/navigation/src/generated-catalog";
 import { definePlaneRoutes } from "@athyper/platform-shell/core";
 
-export const meshRoutes = definePlaneRoutes(PLATFORM_CATALOG_ROUTES.mesh.flatMap((workspace, workspaceIndex) =>
+const catalogRoutes = PLATFORM_CATALOG_ROUTES.mesh.flatMap((workspace, workspaceIndex) =>
   workspace.modules.map((module) => ({
     id: `mesh.${workspace.code}.${module.code}`,
     moduleCode: module.code,
@@ -20,4 +20,19 @@ export const meshRoutes = definePlaneRoutes(PLATFORM_CATALOG_ROUTES.mesh.flatMap
       moduleName: module.name,
     },
   })),
-));
+);
+
+const partnerNetworkRoute = catalogRoutes.find((route) => route.moduleCode === "npm");
+if (!partnerNetworkRoute) throw new Error("MESH partner-network catalog route is required");
+
+export const meshRoutes = definePlaneRoutes([
+  ...catalogRoutes,
+  {
+    ...partnerNetworkRoute,
+    id: "mesh.network-rel.npm.business-partner",
+    href: "/mdg/business-partner",
+    label: "Business Partner",
+    requiredPermissions: ["mesh.catalog.network_account.read"],
+    navigation: "hidden",
+  },
+]);

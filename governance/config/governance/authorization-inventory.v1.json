@@ -2,14 +2,14 @@
   "schemaVersion": 1,
   "contract": {
     "registry": "governance/config/governance/authorization-source-registry.v1.json",
-    "registrySha256": "ce0f89057da260dde40fe4cc6360f93067bcd70b36ec5ea24b12dc23ea76c00c",
+    "registrySha256": "963befb838222089a41e6422a6c767b5c357d902360c247e24ce2d9aea940bc0",
     "deterministic": true,
     "scanRoots": [
       "apps",
       "governance",
       "packages",
       "server",
-      "stack/config/iam",
+      "deploy/config/iam",
       "tests",
       "tooling"
     ],
@@ -38,13 +38,13 @@
     "captureSourceDdls": []
   },
   "summary": {
-    "filesScanned": 2743,
-    "authorizationFiles": 526,
+    "filesScanned": 2780,
+    "authorizationFiles": 532,
     "registeredObjects": 466,
-    "objectReferences": 822,
+    "objectReferences": 823,
     "writerReferences": 68,
     "securitySymbolReferences": 24,
-    "contractFieldReferences": 873,
+    "contractFieldReferences": 881,
     "permissionDefinitions": 83,
     "permissionUses": 394,
     "routes": 11,
@@ -1188,7 +1188,7 @@
         "server/packages/platform/notifications/src/outbox-planning.ts",
         "server/packages/test-utils/fixtures/rls-actors.sql",
         "server/packages/test-utils/src/postgres-service-harness.postgres.test.ts",
-        "stack/config/iam/realm-athyper-demosetup.json",
+        "deploy/config/iam/realm-athyper-demosetup.json",
         "tooling/scripts/policy/authorization-inventory.test.ts",
         "tooling/tools/scripts/generate-athyper-demo-iam.cjs"
       ]
@@ -1207,7 +1207,7 @@
       "sourceOfTruth": true,
       "disposition": "keep",
       "definitionCount": 1,
-      "readerCount": 40,
+      "readerCount": 41,
       "writerCount": 7,
       "executionCount": 0,
       "files": [
@@ -1253,7 +1253,8 @@
         "server/packages/adapters/database/mesh-postgres/src/generated/kysely-mesh/types.ts",
         "server/packages/adapters/database/neon-postgres/src/generated/kysely/types.ts",
         "server/packages/adapters/experience-postgres/src/index.ts",
-        "server/packages/platform/iam/src/kysely-identity-saga.ts"
+        "server/packages/platform/iam/src/kysely-identity-saga.ts",
+        "tooling/scripts/iam/verify-identity-first.ts"
       ]
     },
     {
@@ -1435,7 +1436,7 @@
         "server/packages/platform/iam/src/kysely-permission-resolver.ts",
         "server/packages/test-utils/fixtures/rls-actors.sql",
         "server/packages/test-utils/src/postgres-service-harness.postgres.test.ts",
-        "stack/config/iam/realm-athyper-demosetup.json",
+        "deploy/config/iam/realm-athyper-demosetup.json",
         "tooling/scripts/policy/authorization-inventory.test.ts",
         "tooling/scripts/policy/verify-no-legacy-schema-refs.mjs"
       ]
@@ -9570,12 +9571,12 @@
     {
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
-      "sha256": "a093d76f2e1be87bd7c7276dc2238a1e902050cce22a18067384d9e92d6272f9"
+      "sha256": "732e77b0d941c683b10f68131f241907a4c5585265be9647028a4e0846374a30"
     },
     {
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
-      "sha256": "30bf6d5e1b31a1b1a54e0a85a3b854efd381fdb56a01a6b955a65e3533629fe7"
+      "sha256": "9c12e8a3b02f6e745440ef69b3f87b30a667ebfde4dcc0595b4531595f3c6223"
     },
     {
       "path": "governance/config/governance/authorization-high-risk-action-catalog.v1.json",
@@ -9628,6 +9629,11 @@
       "sha256": "63868ee529af6195273341163ae936e5e89be6e05bd47447635160fdba5c168f"
     },
     {
+      "path": "packages/planes/neon/business-partner/src/case-experience.test.ts",
+      "artifactClass": "test",
+      "sha256": "9b95310ded7b88a8fee014608b9d1147c75531fd684b76a48a0e2cf5c2ba7f79"
+    },
+    {
       "path": "packages/planes/neon/business-partner/src/customer-controls.tsx",
       "artifactClass": "ui",
       "sha256": "596247c4fb1b9e1d97803ef9cb067636d99942eaa994c2193db754dde480c7ed"
@@ -9635,17 +9641,12 @@
     {
       "path": "packages/planes/neon/business-partner/src/index.tsx",
       "artifactClass": "ui",
-      "sha256": "246fa6158881426668e2711ff3b842f70646bfecc59bf94f7771967528dbcd2b"
+      "sha256": "b3ab54404cbfb7e2d6f6799d89d2145395fd222498176c748300f15561df45f6"
     },
     {
-      "path": "packages/planes/neon/business-partner/src/workflow.test.ts",
-      "artifactClass": "test",
-      "sha256": "9b54d787c6bbae53f689404b3e8b613e9b29ed3cfbdc90a06581011301e13697"
-    },
-    {
-      "path": "packages/planes/neon/business-partner/src/workflow.ts",
-      "artifactClass": "runtime",
-      "sha256": "c76747ca95df72d3a44a166958dbcb9af28f4f6a687d67f68316a0852ade0627"
+      "path": "packages/planes/neon/business-partner/src/role-extension-experience.tsx",
+      "artifactClass": "ui",
+      "sha256": "786e0df4c13188effa14c0122fc26f2e28fb8b22297a41071ad44def1e6cc686"
     },
     {
       "path": "packages/planes/neon/list-view/src/index.tsx",
@@ -9675,7 +9676,7 @@
     {
       "path": "packages/platform/iam/auth-bff/package.json",
       "artifactClass": "runtime",
-      "sha256": "1e90311c0c7c66ccb98dcc969add0f7112b56c7bcaab85adb8ab8115009ecfd3"
+      "sha256": "7e271b75fafd90e0c58576733d901be9d9c47aa49b5958b5e881b2a4f8e3bbcf"
     },
     {
       "path": "packages/platform/iam/auth-bff/src/index.ts",
@@ -9695,12 +9696,12 @@
     {
       "path": "packages/platform/shell/app-foundation/src/error-taxonomy.ts",
       "artifactClass": "runtime",
-      "sha256": "46814ecd783246fbe6c7c06c9bedba2012faa3019f24b78f0a255c2f4cb513f6"
+      "sha256": "387e87262a28ef91b6c363691575d1520fcd3158b2327866b657a28565fd19d1"
     },
     {
       "path": "packages/platform/shell/app-foundation/src/index.tsx",
       "artifactClass": "ui",
-      "sha256": "09ae135197ca3f932273b55b318133c21d7929e8227e86b816121501799e6854"
+      "sha256": "30f5baa4408395da45f7b2995d6f2be6ddbb5020f8de5f866c44b09a8c1a148f"
     },
     {
       "path": "packages/platform/shell/shell-runtime/src/core.ts",
@@ -9715,12 +9716,12 @@
     {
       "path": "packages/platform/shell/shell/src/home-personalization.ts",
       "artifactClass": "runtime",
-      "sha256": "f0b78dfa5207bb8b946456b2855d53d08130edc9f54b1d7011906519703e1623"
+      "sha256": "376c123d29be65758032c85221041dedb8dc44da1dcec28b7092de68ffaf0fc6"
     },
     {
       "path": "packages/platform/shell/shell/src/home.tsx",
       "artifactClass": "ui",
-      "sha256": "f240c2ed7de883ef3f2d05adb435574779c03c0659277b84846c79f54ebe5890"
+      "sha256": "4356c8b0abfc579957c6ba665d99ac6d432fa9daf009d5df103de2e5d97d42de"
     },
     {
       "path": "packages/platform/shell/shell/src/messages.ts",
@@ -9730,7 +9731,7 @@
     {
       "path": "packages/platform/shell/work-inbox/src/index.ts",
       "artifactClass": "runtime",
-      "sha256": "aff7c6ac43b4975866abe676e975eadb25536d373d4d4168db7debe4b2e6b29a"
+      "sha256": "abbe0467616dbe3eea08b9976c2a4499cd5fab7f81cda436710733965a4267c3"
     },
     {
       "path": "server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts",
@@ -9775,7 +9776,7 @@
     {
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "sha256": "d0aed263142191147e89b4bb026acf17ba63bd3bd2f12a615cc79e5c2ec0e0d1"
+      "sha256": "56c45b28b1085023580997588fabcf47da4d96335be052a43ce430e1f28448c9"
     },
     {
       "path": "server/db/ddl/common/ai/05_constraints.sql",
@@ -10180,7 +10181,7 @@
     {
       "path": "server/db/ddl/planes/neon/master/07_functions.sql",
       "artifactClass": "ddl",
-      "sha256": "afd1048dd7b3ea1b6a394a64769889dc0ec3958c534c3cd9dfc56913d6e7765c"
+      "sha256": "713c75cc8249d2982dc38c6254374d4989acb2f6fa2ff7d6854f4017ad48247e"
     },
     {
       "path": "server/db/ddl/planes/neon/master/08_triggers.sql",
@@ -10445,7 +10446,7 @@
     {
       "path": "server/db/scripts/business-partner-360/record-business-partner-360-rollout-observation.ts",
       "artifactClass": "tool",
-      "sha256": "cfaad4728ff1d024ac598b246134bafe40a259df1ea11b977db0d039a958dc4f"
+      "sha256": "9a15f6ecbfd939c1a09f0bcf605d3af670d0c454f37362309bc88d3871ce0e3f"
     },
     {
       "path": "server/db/scripts/business-partner-360/run-business-partner-360-materialization-evidence.ts",
@@ -10640,7 +10641,7 @@
     {
       "path": "server/db/scripts/seed/inventory-promotion-model.ts",
       "artifactClass": "tool",
-      "sha256": "bbef20abea044c07de088cb0a52b4475423ae8ae68701591b4a4be810a4f24b3"
+      "sha256": "613610cb2e94c692857f327bee883c95b7a1a411c889f4ef6c67a771a76025ac"
     },
     {
       "path": "server/db/scripts/seed/mesh-authorization-inventory-model.ts",
@@ -11235,7 +11236,7 @@
     {
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
-      "sha256": "453bb74572c0a0fc3ed8342920b8ecd75175d549bdb81500249c262325e614a6"
+      "sha256": "cd0e42c3406b139ce8091b0b83f90657439bee8eccbd8968e7c5efdf3f994466"
     },
     {
       "path": "server/packages/platform/audit/src/governance-service.ts",
@@ -11270,12 +11271,12 @@
     {
       "path": "server/packages/platform/control-admin/src/authorization-management-service.ts",
       "artifactClass": "runtime",
-      "sha256": "dac5eef311a29a5d2d7ff37b4c3652e4ec2ea208051d72f418ffc8d66266586a"
+      "sha256": "ba848cc3f4d7916161f36564f0c3acb6986a3c243bed955b16aa35004f0fddbb"
     },
     {
       "path": "server/packages/platform/control-admin/src/control-services.ts",
       "artifactClass": "runtime",
-      "sha256": "4eefaa9d611ca45261bef6aac87abc7fd056be36d5202c3015748fa57627e7e0"
+      "sha256": "97a485f1f6d7a6b490e7a33a89ab133ad1bc4335600bf4b4c205adc4499cd672"
     },
     {
       "path": "server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts",
@@ -11350,7 +11351,7 @@
     {
       "path": "server/packages/platform/governance/src/routes/governance-routes.ts",
       "artifactClass": "route",
-      "sha256": "7566612693a57d5b8d8e506dce56ab22ef29f9d89ae2bbc0d29ce3857774af88"
+      "sha256": "dd969311f21593fa54bd20a1555491f13ee84b9d9255a35db49e917db162c658"
     },
     {
       "path": "server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json",
@@ -11510,7 +11511,7 @@
     {
       "path": "server/packages/platform/notifications/src/outbox-planning.ts",
       "artifactClass": "runtime",
-      "sha256": "08114e4f5834e247f76bcf58c17029d8432edf1286fdc615d7fe597eada8fed5"
+      "sha256": "24699a551b616274aa4c0cfd7adf5051531ef534e8e3d405ca06b0ce2bfc52a6"
     },
     {
       "path": "server/packages/platform/policy/src/__tests__/policy-service.test.ts",
@@ -11545,7 +11546,7 @@
     {
       "path": "server/packages/platform/workflow/src/workflow-service.ts",
       "artifactClass": "runtime",
-      "sha256": "f837915a368ccdfd0f4649d70d40702ea8a99a555b1c1c962ad6a3e7845bfff7"
+      "sha256": "edf42e468eae28c026b1e9fc47d4d9b0f8d8385f471f6239fe022992f65a62c4"
     },
     {
       "path": "server/packages/services/attachments/src/attachment-routes.test.ts",
@@ -11600,7 +11601,7 @@
     {
       "path": "server/packages/services/finance/src/inventory/inventory-service.ts",
       "artifactClass": "runtime",
-      "sha256": "218751a1572e5fdfc2c20e5ffd9184b9f11d3a0eecb9f3ce005dcc7fd564da1f"
+      "sha256": "8509d4d21cab40c2a430eea55db6a22c351d5f1ed690c93cfcc6a345d2beaec8"
     },
     {
       "path": "server/packages/services/finance/src/ledger/commitment-service.ts",
@@ -11710,7 +11711,12 @@
     {
       "path": "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
       "artifactClass": "test",
-      "sha256": "1bd0f618a106fa6d33706e6ebc314a672726353698bedd811b9daa92586e3bfc"
+      "sha256": "1f795db0172a40f93b7cb3ac218b8e3fc6de6d1f7a0ec32c834e37426250c3cb"
+    },
+    {
+      "path": "server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts",
+      "artifactClass": "test",
+      "sha256": "90baab8982232a8cd5de73802f19e81840c3e99aa0111b3ca42b9063f94ec752"
     },
     {
       "path": "server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts",
@@ -11735,7 +11741,7 @@
     {
       "path": "server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
       "artifactClass": "runtime",
-      "sha256": "50f308bd3872b309787eb46c6bdfd6572643ae1892ce4f750f6172b05f1e38f7"
+      "sha256": "1aec21550fbdd44c83e122ac34eda0ddf1e27229d01527411b6445c80c4e6679"
     },
     {
       "path": "server/packages/services/master-data/src/business-partner-360-policy.ts",
@@ -11745,22 +11751,32 @@
     {
       "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
       "artifactClass": "runtime",
-      "sha256": "3a05a691671d8e2136203397e15b33c3785965eb39a0c397f816e1c08757ac21"
+      "sha256": "1e9e7649e195c7ec39e32f631ca05aabe321cc93e86bc75eae63b40c1215622f"
+    },
+    {
+      "path": "server/packages/services/master-data/src/business-partner-case-view.ts",
+      "artifactClass": "runtime",
+      "sha256": "ad27121e17091348ed2390065b27b34062db0ad4280a89158fe19cdc589dc34c"
     },
     {
       "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
       "artifactClass": "runtime",
-      "sha256": "6af26441b3fe370184362a7fb000bd764a002579ca5e158075094da27ab20165"
+      "sha256": "a81dfbb68347b1a22339890c392674efb619f798c373e18c387498a4fc8d0afe"
     },
     {
       "path": "server/packages/services/master-data/src/business-partner-invitation-service.ts",
       "artifactClass": "runtime",
-      "sha256": "c91cc65666cf3a4c7d2126b25544e9095b86c9ffae2fa76efcae570c0ca978a7"
+      "sha256": "e0b6d7b3955663cacf128e674c66b0c1f3a8f491c4bd20aab55320e138faac07"
+    },
+    {
+      "path": "server/packages/services/master-data/src/business-partner-request-routes.ts",
+      "artifactClass": "route",
+      "sha256": "f11ed46d9f8254f4882573129c0bb4ed4fb608536ac677213c181e9d4dcfd915"
     },
     {
       "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
       "artifactClass": "runtime",
-      "sha256": "bbd21c196b40830dd944d1967b0b8149c135f833cbb57c8ed677e62cc7d38288"
+      "sha256": "e3e40477c475bfb02045bc53ed1c9183c2af7e45b2f30ea54e7daf92aae5fa4d"
     },
     {
       "path": "server/packages/services/master-data/src/governed-internal-business-partner-service.ts",
@@ -11775,7 +11791,7 @@
     {
       "path": "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
       "artifactClass": "runtime",
-      "sha256": "709bec53ac8b58ec1bcd61296a3515764513836930738f34a95d5ef261cf2163"
+      "sha256": "9f59ba7feed71a7244fbc529698f24c68dc662ffe2f7549d0a2da0f1d9311eb4"
     },
     {
       "path": "server/packages/services/master-data/src/kysely-workforce-request-repository.ts",
@@ -11790,7 +11806,7 @@
     {
       "path": "server/packages/services/master-data/src/workforce-service.ts",
       "artifactClass": "runtime",
-      "sha256": "2e9c194b2fd1cbb31e6ead21edde31b99474d61efc7657d9ebdec7807a23076b"
+      "sha256": "4b253e374d5e8808cea3488af687068c7a60c4bbf24cc9c0d9a4528a50ab5fd5"
     },
     {
       "path": "server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts",
@@ -11928,32 +11944,32 @@
       "sha256": "fa67bc0534bb7a599b8bdcc9820a6c1160d41ddf296388bd2d0e83fe17d2a270"
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "artifactClass": "keycloak",
       "sha256": "74f2032a2cae93902ad5303f01e36f27fc4b2ff0c215dc571abaada89f8708ba"
     },
     {
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "artifactClass": "keycloak",
       "sha256": "47bdffb78e9dde8bc7bad9fe6425ebc6c2702f2fdb032f0e84d7177029605c3a"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "artifactClass": "keycloak",
       "sha256": "ffc7053259d9a78bc8513540cdae1ec2b2c9e21be787fa45b26cc3a43487d4b0"
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "artifactClass": "keycloak",
       "sha256": "f19f3fb84d6eb52300c98718c024ab1c35a9a29013a2403889e3830105946a48"
     },
     {
-      "path": "stack/config/iam/realm-platform-control-demosetup.json",
+      "path": "deploy/config/iam/realm-platform-control-demosetup.json",
       "artifactClass": "keycloak",
       "sha256": "779e6923560ac433641b36dba0188c52253b4eb2ae2c03545981e63dca239754"
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "artifactClass": "keycloak",
       "sha256": "5d509155801b6112ca5bf08c5adef06f71ba85a0f280ea7c0faeb3dabb68fad4"
     },
@@ -11976,6 +11992,11 @@
       "path": "tests/contracts/auth-session-foundation.test.ts",
       "artifactClass": "test",
       "sha256": "e9188650af70e9e67ea1b8224359bc004c6da6b2730980a00bc1a714df9e37e2"
+    },
+    {
+      "path": "tests/contracts/business-partner-phase0-contracts.test.ts",
+      "artifactClass": "test",
+      "sha256": "6ff20a9c09b46f6a0272937f65f1249d0d1cd2aa57acb4ebc0f416a04459564a"
     },
     {
       "path": "tests/contracts/entity-list-contract.test.ts",
@@ -12020,17 +12041,17 @@
     {
       "path": "tests/e2e/acceptance/governed-import-smoke.mjs",
       "artifactClass": "runtime",
-      "sha256": "64ff5290693c8424c518ab8c1a778a0bff151994923ec004485e318f5d475d8f"
+      "sha256": "a9632fca3b452a89498911d4671e45615d42a48e515d0f9686d89867c3bac6dd"
     },
     {
       "path": "tests/e2e/acceptance/public-record-transfer-smoke.mjs",
       "artifactClass": "runtime",
-      "sha256": "c9cee05a46dcf469872a72c118f18ea6ae3d75b361faca1fb02c32260916f053"
+      "sha256": "ce429cb3a5e133bc1f039bf7666df55a9aafce14887c47cfe2a973f990ae0118"
     },
     {
       "path": "tests/e2e/production/surface-matrix.spec.ts",
       "artifactClass": "test",
-      "sha256": "f5861db41163e5b366abd907f2a7374134c26d6debc47cd54dddcd7c3176fd7c"
+      "sha256": "ae7df4d3cadae72a9297d4605681a3844660243fab2458c41d059f703bb5196a"
     },
     {
       "path": "tests/foundation-browser/error-boundaries.spec.ts",
@@ -12063,6 +12084,11 @@
       "sha256": "854f0f4af235b1a8ecd3e629faa93b247fb093d3e2069799e7c98752a65691d5"
     },
     {
+      "path": "tooling/scripts/iam/verify-identity-first.ts",
+      "artifactClass": "tool",
+      "sha256": "1f0c825eebacd5b9878d677b317f6d59e37261adaf89f88eb2d2cb46f830a135"
+    },
+    {
       "path": "tooling/scripts/policy/authorization-inventory.test.ts",
       "artifactClass": "test",
       "sha256": "abf42e199f12e032524eafab866d43096c6729a5b6cd22611da9dda62b716df3"
@@ -12070,7 +12096,7 @@
     {
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
-      "sha256": "a20294b930be5d418eb686875008189aa26c3ad1a106c7e4b8b38aec1a8e4654"
+      "sha256": "00f23569eb096bda09fec815d5d4040efcb0f4306380d943276fc6a86af012a2"
     },
     {
       "path": "tooling/scripts/policy/host-capability-registry.mjs",
@@ -12096,6 +12122,11 @@
       "path": "tooling/scripts/policy/verify-auth-session-phase3.mjs",
       "artifactClass": "tool",
       "sha256": "3429d00ebb095632b395fb4520f38b3ecdbbec54955dc1bb0cbaba2cd7efbb47"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-authorization-wave0.mjs",
+      "artifactClass": "tool",
+      "sha256": "a4e3af328de40154c09ac50ffca4f8a2e8fdf995c6ba2497fc37932b0d3e350a"
     },
     {
       "path": "tooling/scripts/policy/verify-neon-mesh-boundary.mjs",
@@ -12160,12 +12191,12 @@
     {
       "path": "tooling/tools/scripts/deploy-users-groups-idps.cjs",
       "artifactClass": "tool",
-      "sha256": "aeb4b4422806ae84d50f25eeb37ee1f4e84a96d9736d4e11789fd1ea9170623a"
+      "sha256": "68925e36da30a034c8d92e73ba0bae0f3f34857e19cfc92863a08c6257aba087"
     },
     {
       "path": "tooling/tools/scripts/fix-org-memberships.cjs",
       "artifactClass": "tool",
-      "sha256": "4f825c792a7231b1a90ed6d166ea89a137df9adb1fbf035eb13e0e28eff12c67"
+      "sha256": "88cdcb7f152c9f61263ca64786e42e0ff55569b2fa84207a5ae92ede753374c8"
     },
     {
       "path": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
@@ -12195,9 +12226,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 524,
+      "line": 578,
       "lines": [
-        524
+        578
       ]
     },
     {
@@ -12246,9 +12277,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 278,
+      "line": 332,
       "lines": [
-        278
+        332
       ]
     },
     {
@@ -12359,9 +12390,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 284,
+      "line": 338,
       "lines": [
-        284
+        338
       ]
     },
     {
@@ -12446,9 +12477,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 290,
+      "line": 344,
       "lines": [
-        290
+        344
       ]
     },
     {
@@ -12640,9 +12671,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 242,
+      "line": 296,
       "lines": [
-        242
+        296
       ]
     },
     {
@@ -12681,9 +12712,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 248,
+      "line": 302,
       "lines": [
-        248
+        302
       ]
     },
     {
@@ -12776,9 +12807,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 7876,
+      "line": 7741,
       "lines": [
-        7876
+        7741
       ]
     },
     {
@@ -12958,9 +12989,9 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 2549,
+      "line": 2542,
       "lines": [
-        2549
+        2542
       ]
     },
     {
@@ -13599,9 +13630,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 8632,
+      "line": 8497,
       "lines": [
-        8632
+        8497
       ]
     },
     {
@@ -13675,9 +13706,9 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 2548,
+      "line": 2541,
       "lines": [
-        2548
+        2541
       ]
     },
     {
@@ -14028,9 +14059,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 8722,
+      "line": 8587,
       "lines": [
-        8722
+        8587
       ]
     },
     {
@@ -14494,9 +14525,9 @@
       "path": "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 142,
+      "line": 184,
       "lines": [
-        142
+        184
       ]
     },
     {
@@ -14516,9 +14547,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 206,
+      "line": 260,
       "lines": [
-        206
+        260
       ]
     },
     {
@@ -14538,9 +14569,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9640,
+      "line": 9505,
       "lines": [
-        9640
+        9505
       ]
     },
     {
@@ -14549,9 +14580,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 296,
+      "line": 350,
       "lines": [
-        296
+        350
       ]
     },
     {
@@ -14984,9 +15015,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9658,
+      "line": 9523,
       "lines": [
-        9658
+        9523
       ]
     },
     {
@@ -14995,9 +15026,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 302,
+      "line": 356,
       "lines": [
-        302
+        356
       ]
     },
     {
@@ -15365,9 +15396,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9766,
+      "line": 9631,
       "lines": [
-        9766
+        9631
       ]
     },
     {
@@ -15376,9 +15407,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 212,
+      "line": 266,
       "lines": [
-        212
+        266
       ]
     },
     {
@@ -15734,9 +15765,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 218,
+      "line": 272,
       "lines": [
-        218
+        272
       ]
     },
     {
@@ -15756,9 +15787,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9154,
+      "line": 9019,
       "lines": [
-        9154
+        9019
       ]
     },
     {
@@ -15767,9 +15798,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 176,
+      "line": 230,
       "lines": [
-        176
+        230
       ]
     },
     {
@@ -18396,9 +18427,9 @@
       "path": "server/packages/platform/notifications/src/outbox-planning.ts",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 13,
+      "line": 59,
       "lines": [
-        13
+        59
       ]
     },
     {
@@ -18426,7 +18457,7 @@
     {
       "objectId": "identity.principal",
       "qualifiedName": "master.principal",
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "artifactClass": "keycloak",
       "access": "read",
       "line": 12,
@@ -18462,9 +18493,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9172,
+      "line": 9037,
       "lines": [
-        9172
+        9037
       ]
     },
     {
@@ -18473,9 +18504,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 188,
+      "line": 242,
       "lines": [
-        188
+        242
       ]
     },
     {
@@ -19112,14 +19143,25 @@
       ]
     },
     {
+      "objectId": "identity.principal_binding",
+      "qualifiedName": "master.principal_identity_binding",
+      "path": "tooling/scripts/iam/verify-identity-first.ts",
+      "artifactClass": "tool",
+      "access": "read",
+      "line": 47,
+      "lines": [
+        47
+      ]
+    },
+    {
       "objectId": "identity.principal_profile",
       "qualifiedName": "master.principal_profile",
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9208,
+      "line": 9073,
       "lines": [
-        9208
+        9073
       ]
     },
     {
@@ -19128,9 +19170,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 182,
+      "line": 236,
       "lines": [
-        182
+        236
       ]
     },
     {
@@ -19512,9 +19554,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 9712,
+      "line": 9577,
       "lines": [
-        9712
+        9577
       ]
     },
     {
@@ -19523,9 +19565,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 170,
+      "line": 224,
       "lines": [
-        170
+        224
       ]
     },
     {
@@ -20980,9 +21022,9 @@
       "path": "server/db/scripts/business-partner-360/record-business-partner-360-rollout-observation.ts",
       "artifactClass": "tool",
       "access": "read",
-      "line": 32,
+      "line": 33,
       "lines": [
-        32
+        33
       ]
     },
     {
@@ -21551,7 +21593,7 @@
     {
       "objectId": "identity.tenant",
       "qualifiedName": "master.tenant",
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "artifactClass": "keycloak",
       "access": "read",
       "line": 15,
@@ -21592,9 +21634,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 194,
+      "line": 248,
       "lines": [
-        194
+        248
       ]
     },
     {
@@ -21614,9 +21656,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 200,
+      "line": 254,
       "lines": [
-        200
+        254
       ]
     },
     {
@@ -21641,9 +21683,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 350,
+      "line": 404,
       "lines": [
-        350
+        404
       ]
     },
     {
@@ -21671,9 +21713,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 374,
+      "line": 428,
       "lines": [
-        374
+        428
       ]
     },
     {
@@ -21695,9 +21737,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 404,
+      "line": 458,
       "lines": [
-        404
+        458
       ]
     },
     {
@@ -21735,9 +21777,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 392,
+      "line": 446,
       "lines": [
-        392
+        446
       ]
     },
     {
@@ -21764,9 +21806,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 398,
+      "line": 452,
       "lines": [
-        398
+        452
       ]
     },
     {
@@ -21788,9 +21830,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 344,
+      "line": 398,
       "lines": [
-        344
+        398
       ]
     },
     {
@@ -21842,9 +21884,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 380,
+      "line": 434,
       "lines": [
-        380
+        434
       ]
     },
     {
@@ -21894,9 +21936,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 368,
+      "line": 422,
       "lines": [
-        368
+        422
       ]
     },
     {
@@ -21953,9 +21995,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 356,
+      "line": 410,
       "lines": [
-        356
+        410
       ]
     },
     {
@@ -21964,9 +22006,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 230,
+      "line": 284,
       "lines": [
-        230
+        284
       ]
     },
     {
@@ -22045,9 +22087,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 224,
+      "line": 278,
       "lines": [
-        224
+        278
       ]
     },
     {
@@ -22079,9 +22121,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 236,
+      "line": 290,
       "lines": [
-        236
+        290
       ]
     },
     {
@@ -22102,9 +22144,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 308,
+      "line": 362,
       "lines": [
-        308
+        362
       ]
     },
     {
@@ -22141,9 +22183,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 314,
+      "line": 368,
       "lines": [
-        314
+        368
       ]
     },
     {
@@ -22169,9 +22211,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 260,
+      "line": 314,
       "lines": [
-        260
+        314
       ]
     },
     {
@@ -22196,9 +22238,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 254,
+      "line": 308,
       "lines": [
-        254
+        308
       ]
     },
     {
@@ -22235,9 +22277,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 326,
+      "line": 380,
       "lines": [
-        326
+        380
       ]
     },
     {
@@ -22261,9 +22303,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 362,
+      "line": 416,
       "lines": [
-        362
+        416
       ]
     },
     {
@@ -22272,9 +22314,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 332,
+      "line": 386,
       "lines": [
-        332
+        386
       ]
     },
     {
@@ -22315,9 +22357,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 320,
+      "line": 374,
       "lines": [
-        320
+        374
       ]
     },
     {
@@ -22358,9 +22400,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 338,
+      "line": 392,
       "lines": [
-        338
+        392
       ]
     },
     {
@@ -22387,9 +22429,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 272,
+      "line": 326,
       "lines": [
-        272
+        326
       ]
     },
     {
@@ -22433,9 +22475,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 266,
+      "line": 320,
       "lines": [
-        266
+        320
       ]
     },
     {
@@ -22494,9 +22536,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 386,
+      "line": 440,
       "lines": [
-        386
+        440
       ]
     },
     {
@@ -22521,9 +22563,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 10306,
+      "line": 10171,
       "lines": [
-        10306
+        10171
       ]
     },
     {
@@ -23313,9 +23355,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 10522,
+      "line": 10387,
       "lines": [
-        10522
+        10387
       ]
     },
     {
@@ -24765,9 +24807,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 434,
+      "line": 488,
       "lines": [
-        434
+        488
       ]
     },
     {
@@ -24792,9 +24834,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 452,
+      "line": 506,
       "lines": [
-        452
+        506
       ]
     },
     {
@@ -24815,9 +24857,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 542,
+      "line": 596,
       "lines": [
-        542
+        596
       ]
     },
     {
@@ -24838,9 +24880,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 440,
+      "line": 494,
       "lines": [
-        440
+        494
       ]
     },
     {
@@ -24874,9 +24916,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 554,
+      "line": 608,
       "lines": [
-        554
+        608
       ]
     },
     {
@@ -24885,9 +24927,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 548,
+      "line": 602,
       "lines": [
-        548
+        602
       ]
     },
     {
@@ -24896,9 +24938,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 560,
+      "line": 614,
       "lines": [
-        560
+        614
       ]
     },
     {
@@ -24907,9 +24949,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 458,
+      "line": 512,
       "lines": [
-        458
+        512
       ]
     },
     {
@@ -24918,9 +24960,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 566,
+      "line": 620,
       "lines": [
-        566
+        620
       ]
     },
     {
@@ -24929,9 +24971,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 446,
+      "line": 500,
       "lines": [
-        446
+        500
       ]
     },
     {
@@ -24951,9 +24993,9 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 566,
+      "line": 431,
       "lines": [
-        566
+        431
       ]
     },
     {
@@ -24962,9 +25004,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 536,
+      "line": 590,
       "lines": [
-        536
+        590
       ]
     },
     {
@@ -25020,9 +25062,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 518,
+      "line": 572,
       "lines": [
-        518
+        572
       ]
     },
     {
@@ -25031,9 +25073,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 512,
+      "line": 566,
       "lines": [
-        512
+        566
       ]
     },
     {
@@ -25042,9 +25084,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 494,
+      "line": 548,
       "lines": [
-        494
+        548
       ]
     },
     {
@@ -25053,9 +25095,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 500,
+      "line": 554,
       "lines": [
-        500
+        554
       ]
     },
     {
@@ -25064,9 +25106,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 506,
+      "line": 560,
       "lines": [
-        506
+        560
       ]
     },
     {
@@ -25109,9 +25151,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 488,
+      "line": 542,
       "lines": [
-        488
+        542
       ]
     },
     {
@@ -25120,9 +25162,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 482,
+      "line": 536,
       "lines": [
-        482
+        536
       ]
     },
     {
@@ -25131,9 +25173,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 464,
+      "line": 518,
       "lines": [
-        464
+        518
       ]
     },
     {
@@ -25142,9 +25184,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 470,
+      "line": 524,
       "lines": [
-        470
+        524
       ]
     },
     {
@@ -25153,9 +25195,9 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "access": "read",
-      "line": 476,
+      "line": 530,
       "lines": [
-        476
+        530
       ]
     },
     {
@@ -25255,7 +25297,7 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        4090
+        4133
       ]
     },
     {
@@ -25355,7 +25397,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        936
+        942
       ]
     },
     {
@@ -25364,8 +25406,8 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        919,
-        936
+        925,
+        942
       ]
     },
     {
@@ -25374,7 +25416,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        684
+        690
       ]
     },
     {
@@ -25383,7 +25425,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        936
+        942
       ]
     },
     {
@@ -25420,8 +25462,8 @@
       "artifactClass": "runtime",
       "classification": "reviewed",
       "lines": [
-        8,
-        85
+        9,
+        86
       ]
     },
     {
@@ -25502,7 +25544,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        684
+        690
       ]
     },
     {
@@ -25511,7 +25553,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        684
+        690
       ]
     },
     {
@@ -25520,7 +25562,7 @@
       "artifactClass": "tool",
       "classification": "reviewed",
       "lines": [
-        684
+        690
       ]
     }
   ],
@@ -25530,7 +25572,7 @@
       "path": "governance/config/governance/authorization-data-disposition-inventory.v1.json",
       "artifactClass": "runtime",
       "lines": [
-        1930
+        1795
       ]
     },
     {
@@ -25538,7 +25580,7 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "lines": [
-        150
+        204
       ]
     },
     {
@@ -25581,7 +25623,7 @@
       "path": "packages/platform/shell/shell/src/home-personalization.ts",
       "artifactClass": "runtime",
       "lines": [
-        50
+        51
       ]
     },
     {
@@ -25589,7 +25631,7 @@
       "path": "packages/platform/shell/shell/src/home.tsx",
       "artifactClass": "ui",
       "lines": [
-        339
+        340
       ]
     },
     {
@@ -25626,23 +25668,23 @@
         857,
         1443,
         1451,
-        2215,
-        2228,
-        2239,
-        2252,
+        2212,
+        2222,
+        2232,
+        2245,
+        2258,
         2265,
-        2272,
-        2302,
-        2355,
-        2366,
-        2370,
-        4091,
-        4094,
-        4095,
-        4244,
-        4245,
-        4455,
-        4783
+        2295,
+        2348,
+        2359,
+        2363,
+        4134,
+        4137,
+        4138,
+        4287,
+        4288,
+        4498,
+        4826
       ]
     },
     {
@@ -26005,12 +26047,12 @@
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        57,
-        59,
-        79,
-        86,
-        122,
-        196
+        58,
+        60,
+        80,
+        87,
+        123,
+        197
       ]
     },
     {
@@ -26057,13 +26099,13 @@
       "path": "server/packages/platform/control-admin/src/authorization-management-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        55,
         56,
         57,
         58,
-        84,
+        59,
         85,
-        101
+        86,
+        102
       ]
     },
     {
@@ -26071,7 +26113,7 @@
       "path": "server/packages/platform/control-admin/src/control-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        144
+        145
       ]
     },
     {
@@ -26158,7 +26200,7 @@
       "path": "server/packages/platform/governance/src/routes/governance-routes.ts",
       "artifactClass": "route",
       "lines": [
-        47
+        48
       ]
     },
     {
@@ -26470,9 +26512,9 @@
       "path": "server/packages/platform/workflow/src/workflow-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        69,
-        76,
-        127
+        70,
+        77,
+        128
       ]
     },
     {
@@ -26583,8 +26625,8 @@
       "artifactClass": "test",
       "lines": [
         8,
-        39,
-        43
+        41,
+        45
       ]
     },
     {
@@ -26628,7 +26670,7 @@
       "path": "server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
       "artifactClass": "runtime",
       "lines": [
-        10
+        11
       ]
     },
     {
@@ -26646,8 +26688,8 @@
       "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        77,
-        93
+        78,
+        94
       ]
     },
     {
@@ -26655,7 +26697,7 @@
       "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1103
+        1104
       ]
     },
     {
@@ -26663,7 +26705,15 @@
       "path": "server/packages/services/master-data/src/business-partner-invitation-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        148
+        149
+      ]
+    },
+    {
+      "field": "allowed",
+      "path": "server/packages/services/master-data/src/business-partner-request-routes.ts",
+      "artifactClass": "route",
+      "lines": [
+        44
       ]
     },
     {
@@ -26671,7 +26721,7 @@
       "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        298
+        309
       ]
     },
     {
@@ -26695,7 +26745,7 @@
       "path": "server/packages/services/master-data/src/workforce-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        42
+        43
       ]
     },
     {
@@ -26872,7 +26922,7 @@
     },
     {
       "field": "allowed",
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "artifactClass": "keycloak",
       "lines": [
         2248,
@@ -26888,7 +26938,7 @@
     },
     {
       "field": "allowed",
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "artifactClass": "keycloak",
       "lines": [
         2259,
@@ -26904,7 +26954,7 @@
     },
     {
       "field": "allowed",
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "artifactClass": "keycloak",
       "lines": [
         209,
@@ -26914,7 +26964,7 @@
     },
     {
       "field": "allowed",
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "artifactClass": "keycloak",
       "lines": [
         213,
@@ -26963,9 +27013,9 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        733,
-        919,
-        936
+        739,
+        925,
+        942
       ]
     },
     {
@@ -26982,7 +27032,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4788
+        4831
       ]
     },
     {
@@ -27322,6 +27372,14 @@
     },
     {
       "field": "denied",
+      "path": "packages/planes/neon/business-partner/src/case-experience.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        105
+      ]
+    },
+    {
+      "field": "denied",
       "path": "packages/platform/ai/agent-runtime/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
@@ -27374,8 +27432,8 @@
       "path": "packages/platform/shell/app-foundation/src/error-taxonomy.ts",
       "artifactClass": "runtime",
       "lines": [
-        6,
-        50
+        7,
+        51
       ]
     },
     {
@@ -27392,7 +27450,7 @@
       "artifactClass": "runtime",
       "lines": [
         1249,
-        4784
+        4827
       ]
     },
     {
@@ -27644,9 +27702,9 @@
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        88,
-        124,
-        196
+        89,
+        125,
+        197
       ]
     },
     {
@@ -27842,7 +27900,7 @@
       "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1107
+        1108
       ]
     },
     {
@@ -27850,7 +27908,7 @@
       "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        298
+        309
       ]
     },
     {
@@ -27874,7 +27932,7 @@
       "path": "server/packages/services/master-data/src/workforce-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        42
+        43
       ]
     },
     {
@@ -27941,7 +27999,7 @@
       "path": "tests/e2e/production/surface-matrix.spec.ts",
       "artifactClass": "test",
       "lines": [
-        197
+        203
       ]
     },
     {
@@ -27965,7 +28023,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        734
+        740
       ]
     },
     {
@@ -28019,8 +28077,8 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        735,
-        755
+        741,
+        761
       ]
     },
     {
@@ -28028,7 +28086,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        755
+        761
       ]
     },
     {
@@ -28036,7 +28094,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        755
+        761
       ]
     },
     {
@@ -28044,7 +28102,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        755
+        761
       ]
     },
     {
@@ -28080,8 +28138,8 @@
       "path": "packages/platform/shell/work-inbox/src/index.ts",
       "artifactClass": "runtime",
       "lines": [
-        7,
-        14
+        8,
+        15
       ]
     },
     {
@@ -28137,19 +28195,19 @@
       "lines": [
         1442,
         1448,
-        2211,
-        2220,
-        2234,
-        2244,
-        2257,
-        2270,
-        2278,
-        2297,
-        2299,
-        2310,
-        2352,
-        2363,
-        4453
+        2210,
+        2216,
+        2228,
+        2237,
+        2250,
+        2263,
+        2271,
+        2290,
+        2292,
+        2303,
+        2345,
+        2356,
+        4496
       ]
     },
     {
@@ -28426,22 +28484,22 @@
       "path": "server/db/scripts/seed/inventory-promotion-model.ts",
       "artifactClass": "tool",
       "lines": [
-        10,
-        28,
-        35,
-        57,
+        11,
+        29,
+        36,
         58,
-        60,
+        59,
         61,
-        65,
-        85,
+        62,
+        66,
         86,
-        89,
-        92,
-        98,
+        87,
+        90,
+        93,
         99,
         100,
-        102
+        101,
+        103
       ]
     },
     {
@@ -29463,8 +29521,8 @@
       "path": "server/packages/platform/control-admin/src/authorization-management-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        84,
-        85
+        85,
+        86
       ]
     },
     {
@@ -29472,7 +29530,7 @@
       "path": "server/packages/platform/control-admin/src/control-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        144
+        145
       ]
     },
     {
@@ -29549,7 +29607,7 @@
       "path": "server/packages/platform/governance/src/routes/governance-routes.ts",
       "artifactClass": "route",
       "lines": [
-        45
+        46
       ]
     },
     {
@@ -29794,8 +29852,8 @@
       "path": "server/packages/platform/workflow/src/workflow-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        127,
-        128
+        128,
+        129
       ]
     },
     {
@@ -29928,7 +29986,7 @@
       "path": "server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts",
       "artifactClass": "test",
       "lines": [
-        43
+        45
       ]
     },
     {
@@ -29969,9 +30027,9 @@
       "path": "server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts",
       "artifactClass": "runtime",
       "lines": [
-        7,
-        10,
-        34
+        8,
+        11,
+        35
       ]
     },
     {
@@ -29989,12 +30047,12 @@
       "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        29,
-        68,
+        30,
         69,
-        72,
-        76,
-        93
+        70,
+        73,
+        77,
+        94
       ]
     },
     {
@@ -30002,9 +30060,9 @@
       "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        1095,
-        1100,
-        1107
+        1096,
+        1101,
+        1108
       ]
     },
     {
@@ -30012,7 +30070,7 @@
       "path": "server/packages/services/master-data/src/business-partner-invitation-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        148
+        149
       ]
     },
     {
@@ -30020,7 +30078,7 @@
       "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        298
+        309
       ]
     },
     {
@@ -30031,6 +30089,14 @@
         88,
         93,
         105
+      ]
+    },
+    {
+      "field": "permissionCode",
+      "path": "server/packages/services/master-data/src/kysely-business-partner-case-repository.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        345
       ]
     },
     {
@@ -30054,7 +30120,7 @@
       "path": "server/packages/services/master-data/src/workforce-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        42
+        43
       ]
     },
     {
@@ -30260,7 +30326,7 @@
       "path": "tests/e2e/acceptance/governed-import-smoke.mjs",
       "artifactClass": "runtime",
       "lines": [
-        296
+        299
       ]
     },
     {
@@ -30268,7 +30334,7 @@
       "path": "tests/e2e/acceptance/public-record-transfer-smoke.mjs",
       "artifactClass": "runtime",
       "lines": [
-        301
+        304
       ]
     },
     {
@@ -30276,8 +30342,8 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        919,
-        937
+        925,
+        943
       ]
     },
     {
@@ -30341,7 +30407,7 @@
       "path": "server/db/scripts/seed/inventory-promotion-model.ts",
       "artifactClass": "tool",
       "lines": [
-        93
+        94
       ]
     },
     {
@@ -30407,14 +30473,53 @@
     },
     {
       "field": "permissionCodes",
+      "path": "server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        62,
+        90,
+        120,
+        124,
+        150,
+        163,
+        169
+      ]
+    },
+    {
+      "field": "permissionCodes",
+      "path": "server/packages/services/master-data/src/business-partner-case-view.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        17,
+        182
+      ]
+    },
+    {
+      "field": "permissionCodes",
+      "path": "server/packages/services/master-data/src/business-partner-request-routes.ts",
+      "artifactClass": "route",
+      "lines": [
+        44
+      ]
+    },
+    {
+      "field": "permissionCodes",
+      "path": "tests/contracts/business-partner-phase0-contracts.test.ts",
+      "artifactClass": "test",
+      "lines": [
+        106
+      ]
+    },
+    {
+      "field": "permissionCodes",
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
         180,
-        996,
-        998,
-        1028,
-        2107
+        1001,
+        1003,
+        1033,
+        2112
       ]
     },
     {
@@ -30432,30 +30537,17 @@
       "path": "packages/planes/neon/business-partner/src/index.tsx",
       "artifactClass": "ui",
       "lines": [
-        44,
-        54,
-        58,
-        85
+        39,
+        81
       ]
     },
     {
       "field": "permissions",
-      "path": "packages/planes/neon/business-partner/src/workflow.test.ts",
-      "artifactClass": "test",
+      "path": "packages/planes/neon/business-partner/src/role-extension-experience.tsx",
+      "artifactClass": "ui",
       "lines": [
-        5,
-        8,
-        9,
-        10,
-        11
-      ]
-    },
-    {
-      "field": "permissions",
-      "path": "packages/planes/neon/business-partner/src/workflow.ts",
-      "artifactClass": "runtime",
-      "lines": [
-        3
+        90,
+        91
       ]
     },
     {
@@ -30491,10 +30583,10 @@
       "path": "packages/platform/shell/app-foundation/src/index.tsx",
       "artifactClass": "ui",
       "lines": [
-        52,
-        53,
-        60,
-        119
+        57,
+        58,
+        65,
+        125
       ]
     },
     {
@@ -30525,7 +30617,7 @@
       "path": "packages/platform/shell/shell/src/home-personalization.ts",
       "artifactClass": "runtime",
       "lines": [
-        64
+        65
       ]
     },
     {
@@ -30533,9 +30625,9 @@
       "path": "packages/platform/shell/shell/src/home.tsx",
       "artifactClass": "ui",
       "lines": [
-        134,
-        296,
-        339
+        135,
+        297,
+        340
       ]
     },
     {
@@ -30618,12 +30710,12 @@
         791,
         803,
         857,
-        4091,
-        4094,
-        4095,
-        4244,
-        4245,
-        4775
+        4134,
+        4137,
+        4138,
+        4287,
+        4288,
+        4818
       ]
     },
     {
@@ -30913,13 +31005,13 @@
       "path": "server/db/scripts/seed/inventory-promotion-model.ts",
       "artifactClass": "tool",
       "lines": [
-        88,
         89,
         90,
         91,
-        93,
+        92,
         94,
-        101
+        95,
+        102
       ]
     },
     {
@@ -31302,8 +31394,8 @@
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        80,
-        196
+        81,
+        197
       ]
     },
     {
@@ -31658,11 +31750,11 @@
       "path": "server/packages/services/finance/src/inventory/inventory-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        52,
-        65,
-        75,
-        80,
-        136
+        53,
+        66,
+        76,
+        81,
+        137
       ]
     },
     {
@@ -31816,19 +31908,19 @@
       "artifactClass": "test",
       "lines": [
         8,
-        40,
-        43,
-        52,
-        72,
-        78,
-        98,
-        121,
-        126,
+        42,
+        45,
+        54,
+        74,
+        80,
+        100,
+        123,
         128,
-        140,
-        162,
-        164,
-        168
+        130,
+        142,
+        172,
+        174,
+        183
       ]
     },
     {
@@ -31881,9 +31973,31 @@
       "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        22,
-        40,
-        42
+        23,
+        41,
+        43
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/services/master-data/src/business-partner-case-view.ts",
+      "artifactClass": "runtime",
+      "lines": [
+        182,
+        186,
+        187,
+        192,
+        200,
+        208,
+        211
+      ]
+    },
+    {
+      "field": "permissions",
+      "path": "server/packages/services/master-data/src/business-partner-request-routes.ts",
+      "artifactClass": "route",
+      "lines": [
+        44
       ]
     },
     {
@@ -32059,14 +32173,14 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        736,
-        796,
-        798,
-        919,
-        938,
-        939,
-        978,
-        982
+        742,
+        802,
+        804,
+        925,
+        944,
+        945,
+        983,
+        987
       ]
     },
     {
@@ -32107,7 +32221,7 @@
       "path": "governance/config/governance/authorization-data-disposition-policy.v1.json",
       "artifactClass": "runtime",
       "lines": [
-        308
+        362
       ]
     },
     {
@@ -32239,7 +32353,7 @@
     },
     {
       "field": "persona",
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "artifactClass": "keycloak",
       "lines": [
         1703,
@@ -32382,9 +32496,9 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        558,
-        737,
-        742
+        564,
+        743,
+        748
       ]
     },
     {
@@ -32423,7 +32537,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        755
+        761
       ]
     },
     {
@@ -32431,7 +32545,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4786
+        4829
       ]
     },
     {
@@ -32767,7 +32881,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4785
+        4828
       ]
     },
     {
@@ -33105,7 +33219,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        755
+        761
       ]
     },
     {
@@ -33113,7 +33227,7 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4779
+        4822
       ]
     },
     {
@@ -33475,11 +33589,11 @@
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
       "lines": [
-        4763,
-        4772,
-        4779,
-        4780,
-        4781
+        4806,
+        4815,
+        4822,
+        4823,
+        4824
       ]
     },
     {
@@ -33654,11 +33768,11 @@
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        76,
         77,
-        80,
-        120,
-        129
+        78,
+        81,
+        121,
+        130
       ]
     },
     {
@@ -33926,8 +34040,8 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        919,
-        937
+        925,
+        943
       ]
     },
     {
@@ -33969,7 +34083,7 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        937
+        943
       ]
     },
     {
@@ -34033,10 +34147,10 @@
       "path": "packages/platform/shell/shell/src/home-personalization.ts",
       "artifactClass": "runtime",
       "lines": [
-        8,
-        47,
-        59,
-        64
+        9,
+        48,
+        60,
+        65
       ]
     },
     {
@@ -34078,10 +34192,10 @@
       "path": "server/packages/platform/ai/src/tool-service.ts",
       "artifactClass": "runtime",
       "lines": [
-        56,
-        78,
-        118,
-        196
+        57,
+        79,
+        119,
+        197
       ]
     },
     {
@@ -34500,8 +34614,8 @@
       "path": "tooling/scripts/policy/authorization-inventory.ts",
       "artifactClass": "tool",
       "lines": [
-        738,
-        755
+        744,
+        761
       ]
     },
     {
@@ -38113,10 +38227,10 @@
       "riskLevel": "critical",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 2244,
+      "line": 2237,
       "lines": [
-        2244,
-        3118
+        2237,
+        3121
       ]
     },
     {
@@ -39093,9 +39207,9 @@
       "riskLevel": "low",
       "path": "tests/e2e/acceptance/governed-import-smoke.mjs",
       "artifactClass": "runtime",
-      "line": 296,
+      "line": 299,
       "lines": [
-        296
+        299
       ]
     },
     {
@@ -39103,9 +39217,9 @@
       "riskLevel": "low",
       "path": "tests/e2e/acceptance/public-record-transfer-smoke.mjs",
       "artifactClass": "runtime",
-      "line": 301,
+      "line": 304,
       "lines": [
-        301
+        304
       ]
     },
     {
@@ -39144,9 +39258,9 @@
       "riskLevel": "high",
       "path": "server/apps/platform-host/src/composition/register-services.ts",
       "artifactClass": "runtime",
-      "line": 4092,
+      "line": 4135,
       "lines": [
-        4092
+        4135
       ]
     },
     {
@@ -39687,7 +39801,7 @@
   ],
   "keycloakMappings": [
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.1.protocolMappers.0",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -39696,7 +39810,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.10.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39705,7 +39819,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.11.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39714,7 +39828,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.12.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39723,7 +39837,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.13.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39732,7 +39846,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.3.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39741,7 +39855,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.5.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39750,7 +39864,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.6.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -39759,7 +39873,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clients.8.protocolMappers.0",
       "name": "locale",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39768,7 +39882,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.0.protocolMappers.0",
       "name": "role list",
       "mapperType": "saml-role-list-mapper",
@@ -39777,7 +39891,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.0",
       "name": "Client ID",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -39786,7 +39900,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.1",
       "name": "Client Host",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -39795,7 +39909,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.2",
       "name": "Client IP Address",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -39804,7 +39918,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.10.protocolMappers.0",
       "name": "allowed web origins",
       "mapperType": "oidc-allowed-origins-mapper",
@@ -39813,7 +39927,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.11.protocolMappers.0",
       "name": "client roles",
       "mapperType": "oidc-usermodel-client-role-mapper",
@@ -39822,7 +39936,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.11.protocolMappers.1",
       "name": "realm roles",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -39831,7 +39945,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.11.protocolMappers.2",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -39840,7 +39954,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.12.protocolMappers.0",
       "name": "auth_time",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -39849,7 +39963,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.12.protocolMappers.1",
       "name": "sub",
       "mapperType": "oidc-sub-mapper",
@@ -39858,7 +39972,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.14.protocolMappers.0",
       "name": "organization",
       "mapperType": "saml-organization-membership-mapper",
@@ -39867,7 +39981,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.15.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39876,7 +39990,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.15.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39885,7 +39999,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.15.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39894,7 +40008,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.16.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39903,7 +40017,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.16.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39912,7 +40026,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.16.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39921,7 +40035,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.17.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39930,7 +40044,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.17.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -39939,7 +40053,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.17.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39948,7 +40062,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.2.protocolMappers.0",
       "name": "email verified",
       "mapperType": "oidc-usermodel-property-mapper",
@@ -39957,7 +40071,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.2.protocolMappers.1",
       "name": "email",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39966,7 +40080,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.3.protocolMappers.0",
       "name": "phone number",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39975,7 +40089,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.3.protocolMappers.1",
       "name": "phone number verified",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -39984,7 +40098,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.4.protocolMappers.0",
       "name": "groups",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -39993,7 +40107,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.4.protocolMappers.1",
       "name": "upn",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40002,7 +40116,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.5.protocolMappers.0",
       "name": "acr loa level",
       "mapperType": "oidc-acr-mapper",
@@ -40011,7 +40125,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.5.protocolMappers.1",
       "name": "amr",
       "mapperType": "oidc-amr-mapper",
@@ -40020,7 +40134,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.6.protocolMappers.0",
       "name": "Athyper identity provider",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40029,7 +40143,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.6.protocolMappers.1",
       "name": "Athyper external acr",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40038,7 +40152,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.6.protocolMappers.2",
       "name": "Athyper external amr",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40047,7 +40161,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.6.protocolMappers.3",
       "name": "Athyper SAML authentication context",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40056,7 +40170,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.6.protocolMappers.4",
       "name": "Athyper MFA source",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40065,7 +40179,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.7.protocolMappers.0",
       "name": "address",
       "mapperType": "oidc-address-mapper",
@@ -40074,7 +40188,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.8.protocolMappers.0",
       "name": "organization",
       "mapperType": "oidc-organization-membership-mapper",
@@ -40083,7 +40197,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.0",
       "name": "given name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40092,7 +40206,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.1",
       "name": "nickname",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40101,7 +40215,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.10",
       "name": "locale",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40110,7 +40224,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.11",
       "name": "family name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40119,7 +40233,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.12",
       "name": "website",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40128,7 +40242,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.13",
       "name": "picture",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40137,7 +40251,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.2",
       "name": "birthdate",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40146,7 +40260,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.3",
       "name": "full name",
       "mapperType": "oidc-full-name-mapper",
@@ -40155,7 +40269,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.4",
       "name": "zoneinfo",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40164,7 +40278,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.5",
       "name": "username",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40173,7 +40287,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.6",
       "name": "gender",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40182,7 +40296,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.7",
       "name": "middle name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40191,7 +40305,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.8",
       "name": "profile",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40200,7 +40314,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper-clean-slate.json",
+      "path": "deploy/config/iam/realm-athyper-clean-slate.json",
       "jsonPath": "clientScopes.9.protocolMappers.9",
       "name": "updated at",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40209,7 +40323,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.1.protocolMappers.0",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -40218,7 +40332,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.10.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40227,7 +40341,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.11.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40236,7 +40350,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.12.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40245,7 +40359,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.13.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40254,7 +40368,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.3.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40263,7 +40377,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.5.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40272,7 +40386,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.6.protocolMappers.0",
       "name": "athyper-api-runtime audience",
       "mapperType": "oidc-audience-mapper",
@@ -40281,7 +40395,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clients.8.protocolMappers.0",
       "name": "locale",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40290,7 +40404,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.0.protocolMappers.0",
       "name": "role list",
       "mapperType": "saml-role-list-mapper",
@@ -40299,7 +40413,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.1.protocolMappers.0",
       "name": "Client ID",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40308,7 +40422,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.1.protocolMappers.1",
       "name": "Client Host",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40317,7 +40431,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.1.protocolMappers.2",
       "name": "Client IP Address",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40326,7 +40440,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.10.protocolMappers.0",
       "name": "allowed web origins",
       "mapperType": "oidc-allowed-origins-mapper",
@@ -40335,7 +40449,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.11.protocolMappers.0",
       "name": "client roles",
       "mapperType": "oidc-usermodel-client-role-mapper",
@@ -40344,7 +40458,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.11.protocolMappers.1",
       "name": "realm roles",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -40353,7 +40467,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.11.protocolMappers.2",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -40362,7 +40476,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.12.protocolMappers.0",
       "name": "auth_time",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40371,7 +40485,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.12.protocolMappers.1",
       "name": "sub",
       "mapperType": "oidc-sub-mapper",
@@ -40380,7 +40494,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.14.protocolMappers.0",
       "name": "organization",
       "mapperType": "saml-organization-membership-mapper",
@@ -40389,7 +40503,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.15.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40398,7 +40512,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.15.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40407,7 +40521,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.15.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40416,7 +40530,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.16.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40425,7 +40539,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.16.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40434,7 +40548,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.16.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40443,7 +40557,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.17.protocolMappers.0",
       "name": "plane",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40452,7 +40566,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.17.protocolMappers.1",
       "name": "realm_key",
       "mapperType": "oidc-hardcoded-claim-mapper",
@@ -40461,7 +40575,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.17.protocolMappers.2",
       "name": "tenant_code",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40470,7 +40584,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.2.protocolMappers.0",
       "name": "email verified",
       "mapperType": "oidc-usermodel-property-mapper",
@@ -40479,7 +40593,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.2.protocolMappers.1",
       "name": "email",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40488,7 +40602,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.3.protocolMappers.0",
       "name": "phone number",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40497,7 +40611,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.3.protocolMappers.1",
       "name": "phone number verified",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40506,7 +40620,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.4.protocolMappers.0",
       "name": "groups",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -40515,7 +40629,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.4.protocolMappers.1",
       "name": "upn",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40524,7 +40638,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.5.protocolMappers.0",
       "name": "acr loa level",
       "mapperType": "oidc-acr-mapper",
@@ -40533,7 +40647,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.5.protocolMappers.1",
       "name": "amr",
       "mapperType": "oidc-amr-mapper",
@@ -40542,7 +40656,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.6.protocolMappers.0",
       "name": "Athyper identity provider",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40551,7 +40665,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.6.protocolMappers.1",
       "name": "Athyper external acr",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40560,7 +40674,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.6.protocolMappers.2",
       "name": "Athyper external amr",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40569,7 +40683,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.6.protocolMappers.3",
       "name": "Athyper SAML authentication context",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40578,7 +40692,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.6.protocolMappers.4",
       "name": "Athyper MFA source",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40587,7 +40701,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.7.protocolMappers.0",
       "name": "address",
       "mapperType": "oidc-address-mapper",
@@ -40596,7 +40710,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.8.protocolMappers.0",
       "name": "organization",
       "mapperType": "oidc-organization-membership-mapper",
@@ -40605,7 +40719,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.0",
       "name": "given name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40614,7 +40728,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.1",
       "name": "nickname",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40623,7 +40737,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.10",
       "name": "locale",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40632,7 +40746,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.11",
       "name": "family name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40641,7 +40755,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.12",
       "name": "website",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40650,7 +40764,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.13",
       "name": "picture",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40659,7 +40773,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.2",
       "name": "birthdate",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40668,7 +40782,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.3",
       "name": "full name",
       "mapperType": "oidc-full-name-mapper",
@@ -40677,7 +40791,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.4",
       "name": "zoneinfo",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40686,7 +40800,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.5",
       "name": "username",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40695,7 +40809,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.6",
       "name": "gender",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40704,7 +40818,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.7",
       "name": "middle name",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40713,7 +40827,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.8",
       "name": "profile",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40722,7 +40836,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "clientScopes.9.protocolMappers.9",
       "name": "updated at",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40731,7 +40845,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.0",
       "name": "NEON_USER",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40740,7 +40854,7 @@
       "hardcodedRole": "NEON_USER"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.1",
       "name": "AUTHORIZED",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40749,7 +40863,7 @@
       "hardcodedRole": "neon-web.AUTHORIZED"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.2",
       "name": "NEON_USER",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40758,7 +40872,7 @@
       "hardcodedRole": "NEON_USER"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.3",
       "name": "AUTHORIZED",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40767,7 +40881,7 @@
       "hardcodedRole": "neon-web.AUTHORIZED"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.4",
       "name": "NEON_USER",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40776,7 +40890,7 @@
       "hardcodedRole": "NEON_USER"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.5",
       "name": "AUTHORIZED",
       "mapperType": "oidc-hardcoded-role-idp-mapper",
@@ -40785,7 +40899,7 @@
       "hardcodedRole": "neon-web.AUTHORIZED"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "jsonPath": "identityProviderMappers.6",
       "name": "github-avatar",
       "mapperType": "hardcoded-attribute-idp-mapper",
@@ -40794,7 +40908,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.0.protocolMappers.0",
       "name": "allowed web origins",
       "mapperType": "oidc-allowed-origins-mapper",
@@ -40803,7 +40917,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.0",
       "name": "realm roles",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -40812,7 +40926,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.1",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -40821,7 +40935,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.1.protocolMappers.2",
       "name": "client roles",
       "mapperType": "oidc-usermodel-client-role-mapper",
@@ -40830,7 +40944,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.2.protocolMappers.0",
       "name": "email verified",
       "mapperType": "oidc-usermodel-property-mapper",
@@ -40839,7 +40953,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.2.protocolMappers.1",
       "name": "email",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40848,7 +40962,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.3.protocolMappers.0",
       "name": "full name",
       "mapperType": "oidc-full-name-mapper",
@@ -40857,7 +40971,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.3.protocolMappers.1",
       "name": "username",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40866,7 +40980,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.4.protocolMappers.0",
       "name": "acr loa level",
       "mapperType": "oidc-acr-mapper",
@@ -40875,7 +40989,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.5.protocolMappers.0",
       "name": "sub",
       "mapperType": "oidc-sub-mapper",
@@ -40884,7 +40998,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control-clean-slate.json",
+      "path": "deploy/config/iam/realm-platform-control-clean-slate.json",
       "jsonPath": "clientScopes.5.protocolMappers.1",
       "name": "auth_time",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -40893,7 +41007,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.0.protocolMappers.0",
       "name": "allowed web origins",
       "mapperType": "oidc-allowed-origins-mapper",
@@ -40902,7 +41016,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.1.protocolMappers.0",
       "name": "realm roles",
       "mapperType": "oidc-usermodel-realm-role-mapper",
@@ -40911,7 +41025,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.1.protocolMappers.1",
       "name": "audience resolve",
       "mapperType": "oidc-audience-resolve-mapper",
@@ -40920,7 +41034,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.1.protocolMappers.2",
       "name": "client roles",
       "mapperType": "oidc-usermodel-client-role-mapper",
@@ -40929,7 +41043,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.2.protocolMappers.0",
       "name": "email verified",
       "mapperType": "oidc-usermodel-property-mapper",
@@ -40938,7 +41052,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.2.protocolMappers.1",
       "name": "email",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40947,7 +41061,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.3.protocolMappers.0",
       "name": "full name",
       "mapperType": "oidc-full-name-mapper",
@@ -40956,7 +41070,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.3.protocolMappers.1",
       "name": "username",
       "mapperType": "oidc-usermodel-attribute-mapper",
@@ -40965,7 +41079,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.4.protocolMappers.0",
       "name": "acr loa level",
       "mapperType": "oidc-acr-mapper",
@@ -40974,7 +41088,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.5.protocolMappers.0",
       "name": "sub",
       "mapperType": "oidc-sub-mapper",
@@ -40983,7 +41097,7 @@
       "hardcodedRole": null
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "jsonPath": "clientScopes.5.protocolMappers.1",
       "name": "auth_time",
       "mapperType": "oidc-usersessionmodel-note-mapper",
@@ -41155,14 +41269,11 @@
       "disposition": "replace_with_versioned_keycloak_seed_contract",
       "operations": [
         "DELETE:organization_membership",
-        "POST:organization_membership",
-        "PUT:organization_membership"
+        "POST:organization_membership"
       ],
       "lines": [
-        78,
-        84,
-        90,
-        126
+        76,
+        111
       ],
       "classification": "reviewed"
     },
@@ -44500,7 +44611,7 @@
       "sha256": "069796298b58ebea7c877cff3bb49f55bf6b9fb41f8206a9d2eaf7b4949b749e"
     },
     {
-      "path": "stack/config/iam/realm-athyper-demosetup.json",
+      "path": "deploy/config/iam/realm-athyper-demosetup.json",
       "generator": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
       "owner": "platform-iam",
       "generatorPath": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
@@ -44509,7 +44620,7 @@
       "sha256": "47bdffb78e9dde8bc7bad9fe6425ebc6c2702f2fdb032f0e84d7177029605c3a"
     },
     {
-      "path": "stack/config/iam/realm-athyper.json",
+      "path": "deploy/config/iam/realm-athyper.json",
       "generator": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
       "owner": "platform-iam",
       "generatorPath": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
@@ -44518,7 +44629,7 @@
       "sha256": "ffc7053259d9a78bc8513540cdae1ec2b2c9e21be787fa45b26cc3a43487d4b0"
     },
     {
-      "path": "stack/config/iam/realm-platform-control-demosetup.json",
+      "path": "deploy/config/iam/realm-platform-control-demosetup.json",
       "generator": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
       "owner": "platform-iam",
       "generatorPath": "tooling/tools/scripts/generate-athyper-demo-iam.cjs",
@@ -44527,7 +44638,7 @@
       "sha256": "779e6923560ac433641b36dba0188c52253b4eb2ae2c03545981e63dca239754"
     },
     {
-      "path": "stack/config/iam/realm-platform-control.json",
+      "path": "deploy/config/iam/realm-platform-control.json",
       "generator": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",
       "owner": "platform-iam",
       "generatorPath": "tooling/tools/scripts/prepare-keycloak-realm-import.cjs",

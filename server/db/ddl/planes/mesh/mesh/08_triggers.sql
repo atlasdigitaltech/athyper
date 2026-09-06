@@ -264,3 +264,7 @@ CREATE TRIGGER wave6_network_relationship_scopes AFTER INSERT OR UPDATE OF statu
 CREATE TRIGGER trg_network_account_profile_publication_immutable BEFORE UPDATE OR DELETE ON mesh.network_account_profile_publication FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_profile_publication_mutation();
 CREATE TRIGGER trg_network_account_profile_publication_event_immutable BEFORE UPDATE OR DELETE ON mesh.network_account_profile_publication_event FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_profile_publication_mutation();
 CREATE TRIGGER wave6_network_lifecycle_event_immutable BEFORE UPDATE OR DELETE ON mesh.network_lifecycle_event FOR EACH ROW EXECUTE FUNCTION mesh.trg_reject_network_lifecycle_event_mutation();
+
+CREATE TRIGGER delivery_acknowledgement_immutable BEFORE UPDATE OR DELETE
+  ON mesh.business_partner_delivery_acknowledgement FOR EACH ROW
+  EXECUTE FUNCTION mesh.trg_delivery_acknowledgement_immutable();

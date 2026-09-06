@@ -80,7 +80,7 @@ describe("production identity-gate experience", () => {
 
   it("centers the public identity composition on mobile while preserving readable form alignment", () => {
     const appCss = readFileSync("packages/platform/iam/identity-gate/src/styles.css", "utf8");
-    const iamCss = readFileSync("stack/config/iam/themes/neon/login/resources/css/login.css", "utf8");
+    const iamCss = readFileSync("deploy/config/iam/themes/neon/login/resources/css/login.css", "utf8");
     assert.match(appCss, /@media\(max-width:52rem\)\{\.a-identity-panel\{text-align:center\}/);
     assert.match(iamCss, /\.kc-page-header\s*\{\s*justify-content:\s*center;/);
     assert.match(iamCss, /\.kc-panel-right\s*\{\s*justify-content:\s*center;/);
@@ -89,8 +89,8 @@ describe("production identity-gate experience", () => {
   });
 
   it("uses concise page-specific IAM and application browser titles", () => {
-    const context = readFileSync("stack/config/iam/themes/neon/login/_iam-context.ftl", "utf8");
-    const resolver = readFileSync("stack/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
+    const context = readFileSync("deploy/config/iam/themes/neon/login/_iam-context.ftl", "utf8");
+    const resolver = readFileSync("deploy/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
     assert.match(context, /<\#return "\$\{pageTitle\} \$\{iamProductName\}">/);
     assert.doesNotMatch(context, /Athyper (?:Neon|Mesh|Studio) -/);
     assert.doesNotMatch(resolver, /document\.title/);

@@ -37,7 +37,7 @@ import type { NumberingService } from "@athyper/server-contract-numbering";
 import type { BusinessPartnerEligibilityService, BusinessPartnerInvitationService, BusinessPartnerRequestService, WorkforceService } from "@athyper/server-contract-master-data";
 import type { BookPeriodService, FinancePostingGuard, RoundingResolver } from "@athyper/server-service-finance";
 import type { BusinessPartnerAccountBankLinkageService, BusinessPartnerProfileMatchService, BusinessPartnerProfileProjectionService, NeonFinanceRegistration } from "@athyper/server-plane-neon";
-import type { BusinessPartnerBankDisclosureService, BusinessPartnerProfilePublicationService } from "@athyper/server-plane-mesh";
+import type { BusinessPartnerBankDisclosureService, BusinessPartnerNetworkExchangeService, BusinessPartnerProfilePublicationService } from "@athyper/server-plane-mesh";
 import type { ChannelConsentService, CycleCertificationService, CycleDeviationService, CycleRunService, CycleTaskService, LegalHoldService, ModerationService, ReportPackService } from "@athyper/server-contract-governance";
 import type { CycleConfigReader, CycleConfigService } from "@athyper/server-contract-control-admin";
 import type { ControlServices, ControlServiceRouteFlags, RuntimeCommandService } from "@athyper/server-platform-control-admin";
@@ -138,6 +138,7 @@ export interface Container {
     businessPartnerProfileProjections?: BusinessPartnerProfileProjectionService;
     businessPartnerProfileMatches?: BusinessPartnerProfileMatchService;
     businessPartnerBankDisclosures?: BusinessPartnerBankDisclosureService;
+    businessPartnerNetworkExchange?: BusinessPartnerNetworkExchangeService;
     businessPartnerAccountBankLinkage?: BusinessPartnerAccountBankLinkageService;
     publication?: {
       readonly authority: PublicationAuthorityRepository;

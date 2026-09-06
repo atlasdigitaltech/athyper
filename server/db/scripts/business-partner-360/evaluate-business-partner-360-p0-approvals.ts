@@ -1,4 +1,5 @@
 #!/usr/bin/env tsx
+import { parseInstant } from "@athyper/platform-temporal";
 
 import { access, readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
@@ -138,7 +139,7 @@ function groupBy<T>(values: readonly T[], key: (value: T) => string) {
 }
 function isActor(value: string | null): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._@-]{2,127}$/.test(value); }
 function isTimestamp(value: string | null): value is string {
-  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(parseInstant(value));
 }
 function isEvidenceReference(value: string) { return /^docs\/architecture\/[A-Za-z0-9][A-Za-z0-9._/-]{5,255}$/.test(value); }
 function isApprovalReference(value: string | null): value is string { return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._:/#-]{5,255}$/.test(value); }

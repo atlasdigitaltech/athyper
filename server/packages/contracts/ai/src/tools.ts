@@ -97,7 +97,16 @@ export interface AtlasToolRunResult {
 
 export interface AtlasReadToolHandlerContext { readonly context: VerifiedRequestContext; readonly records: AtlasRecordDataGateway; readonly signal: AbortSignal }
 export interface AtlasReadToolHandler { execute(input: { readonly context: AtlasReadToolHandlerContext; readonly arguments: Readonly<Record<string, unknown>> }): Promise<{ readonly data: unknown; readonly sources: readonly AtlasToolSourceEvidence[] }> }
-export interface AtlasRegisteredTool { readonly manifest: AtlasToolManifest; readonly readHandler?: AtlasReadToolHandler }
+export interface AtlasRegisteredTool {
+  readonly manifest: AtlasToolManifest;
+  readonly readHandler?: AtlasReadToolHandler;
+  /** Code-owned validation runs before preview persistence and again before execution. */
+  readonly validateArguments?: (argumentsValue: Readonly<Record<string, unknown>>, target: {
+    readonly affectedEntityType?: string;
+    readonly affectedEntityId?: string;
+    readonly expectedRowVersion?: number;
+  }) => void;
+}
 
 export interface AtlasToolPolicyDecision {
   readonly allowed: boolean;

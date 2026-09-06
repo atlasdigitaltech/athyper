@@ -278,6 +278,8 @@ CREATE TABLE control.supplier_preference_designation (
     supplier_id                 uuid                                 NOT NULL,
     operating_organization_id   uuid,
     company_code_id             uuid,
+    country_code                character(2),
+    channel_code                text,
     commodity_category_id       uuid,
     effective_from              date                                 NOT NULL,
     effective_until             date,
@@ -347,6 +349,8 @@ CREATE TABLE control.customer_account_designation (
     customer_id                 uuid                                          NOT NULL,
     operating_organization_id   uuid,
     company_code_id             uuid,
+    country_code                character(2),
+    channel_code                text,
     designation_type            control.customer_account_designation_type_d   NOT NULL,
     priority_tier               smallint,
     effective_from              date                                          NOT NULL,
@@ -376,6 +380,8 @@ CREATE TABLE control.customer_account_designation (
     CONSTRAINT customer_account_designation_pkey PRIMARY KEY (id),
     CONSTRAINT customer_account_designation_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT customer_account_designation_priority_chk CHECK (priority_tier IS NULL OR priority_tier BETWEEN 1 AND 5),
+    CONSTRAINT customer_account_designation_country_chk CHECK (country_code IS NULL OR country_code ~ '^[A-Z]{2}$'),
+    CONSTRAINT customer_account_designation_channel_chk CHECK (channel_code IS NULL OR channel_code ~ '^[a-z0-9][a-z0-9._-]{0,63}$'),
     CONSTRAINT customer_account_designation_idempotency_chk CHECK (btrim(idempotency_key) = idempotency_key AND length(idempotency_key) BETWEEN 8 AND 200),
     CONSTRAINT customer_account_designation_decision_key_chk CHECK (decision_idempotency_key IS NULL OR (btrim(decision_idempotency_key) = decision_idempotency_key AND length(decision_idempotency_key) BETWEEN 8 AND 200)),
     CONSTRAINT customer_account_designation_revocation_key_chk CHECK (revocation_idempotency_key IS NULL OR (btrim(revocation_idempotency_key) = revocation_idempotency_key AND length(revocation_idempotency_key) BETWEEN 8 AND 200)),
@@ -397,7 +403,7 @@ CREATE TABLE control.customer_account_designation (
 );
 
 COMMENT ON TABLE control.customer_account_designation IS
-  'Governed effective-dated customer account designation by sales operating organization and optional company code. It models key-account, strategic, and priority-service decisions separately from supplier preference, credit, eligibility, and customer master status.';
+  'Governed effective-dated customer account designation by sales operating organization with optional company, geography, and channel coordinates. It models key-account, strategic, and priority-service decisions separately from supplier preference, credit, eligibility, and customer master status.';
 
 COMMENT ON COLUMN control.customer_account_designation.priority_tier IS
   'Optional tenant-defined priority from 1 (highest) through 5 (lowest); it does not grant credit or override blocks.';

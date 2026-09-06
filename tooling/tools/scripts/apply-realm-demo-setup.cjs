@@ -3,10 +3,10 @@
  * Applies a non-importable Athyper Keycloak realm demo fixture.
  *
  * This keeps importable realm files clean:
- *   stack/config/iam/realm-<plane>.json
+ *   deploy/config/iam/realm-<plane>.json
  *
  * Demo users, tenant organizations, and memberships live in:
- *   stack/config/iam/realm-<plane>-demosetup.json
+ *   deploy/config/iam/realm-<plane>-demosetup.json
  *
  * The script talks to the running Keycloak container through kcadm.sh so it
  * does not depend on host DNS, TLS trust, or public gateway routing.

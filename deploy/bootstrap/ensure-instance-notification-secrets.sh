@@ -39,7 +39,7 @@ chmod 600 "$staging"/*
 for name in vapid-subject vapid-public-key vapid-private-key; do mv "$staging/$name" "$secret_root/$name"; done
 node - "$instance_root/secrets-receipt.json" <<'NODE'
 const fs=require("node:fs"),path=process.argv[2],receipt=JSON.parse(fs.readFileSync(path,"utf8"));
-receipt.secretCount=18;receipt.notificationProviderKeysAddedAt=new Date().toISOString();
+receipt.secretCount=Number(receipt.secretCount||0)+3;receipt.notificationProviderKeysAddedAt=new Date().toISOString();
 fs.writeFileSync(path,`${JSON.stringify(receipt,null,2)}\n`,{mode:0o600});
 NODE
 trap - EXIT INT TERM

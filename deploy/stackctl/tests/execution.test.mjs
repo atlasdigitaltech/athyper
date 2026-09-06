@@ -27,6 +27,12 @@ function fixture(options = {}) {
     if (options.failInstanceUp && args.includes("athyper-dev") && args.includes("up")) {
       return { ok: false, status: 1, stderr: "fixture startup failure" };
     }
+    if (options.failRestore && args.some((value) => value.includes("pg_restore"))) {
+      return { ok: false, status: 1, stderr: "fixture restore failure" };
+    }
+    if (options.failRestoreCleanup && (args.includes("rm") || (args.includes("down") && args.some((value) => value.includes("restore"))))) {
+      return { ok: false, status: 1, stderr: "fixture cleanup failure" };
+    }
     const cpIndex = args.indexOf("cp");
     if (cpIndex >= 0 && args[cpIndex + 1]?.startsWith("db:/tmp/")) {
       writeFileSync(args[cpIndex + 2], `PostgreSQL fixture: ${args[cpIndex + 1]}\n`);
@@ -228,6 +234,24 @@ test("backup is checksummed and restore targets a new retained volume", () => {
   assert.ok(restoreCommands.some((line) => line.includes(" rm -f ") && line.includes("postgres-globals.sql")));
   assert.ok(restoreCommands.some((line) => line.includes(" down --remove-orphans")));
   assert.ok(restoreCommands.every((line) => !line.includes("--volumes")));
+});
+
+test("restore cleanup cannot mask the primary pg_restore failure", () => {
+  const options = {};
+  const context = fixture(options);
+  executeStackOperation(defaultRepoRoot, "up", "dev", { confirm: "dev" }, context.dependencies);
+  executeStackOperation(defaultRepoRoot, "backup", "dev", { confirm: "dev" }, context.dependencies);
+  options.failRestore = true;
+  options.failRestoreCleanup = true;
+  assert.throws(
+    () => executeStackOperation(defaultRepoRoot, "restore", "dev", {
+      confirm: "dev", backupId: "20260821T123456Z", confirmRestore: "20260821T123456Z",
+    }, context.dependencies),
+    /fixture restore failure/u,
+  );
+  const receipt = JSON.parse(readFileSync(join(context.root, "instances/dev/receipts/20260821T123456Z-restore.json"), "utf8"));
+  assert.match(receipt.spec.error, /fixture restore failure/u);
+  assert.ok(context.calls.filter(({ args }) => args.includes("rm") || args.includes("down")).length >= 2);
 });
 
 test("mutations require exact explicit confirmation before Docker execution", () => {

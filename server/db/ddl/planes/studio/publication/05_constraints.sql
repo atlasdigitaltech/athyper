@@ -16,3 +16,14 @@ ALTER TABLE publication.deployment_event
     ADD CONSTRAINT publication_deployment_event_deployment_fk FOREIGN KEY (deployment_id) REFERENCES publication.deployment(id) ON DELETE RESTRICT;
 ALTER TABLE publication.deployment_acknowledgement
     ADD CONSTRAINT publication_deployment_ack_deployment_fk FOREIGN KEY (deployment_id) REFERENCES publication.deployment(id) ON DELETE RESTRICT;
+
+ALTER TABLE publication.business_partner_case_contract_release_link
+    ADD CONSTRAINT business_partner_case_contract_release_link_release_fk
+    FOREIGN KEY (publication_release_id)
+    REFERENCES publication.release (id),
+    ADD CONSTRAINT business_partner_case_contract_release_link_revision_fk
+    FOREIGN KEY (tenant_id, revision_id)
+    REFERENCES snapshot.business_partner_case_contract_revision (tenant_id, id),
+    ADD CONSTRAINT business_partner_case_contract_release_link_created_by_fk
+    FOREIGN KEY (tenant_id, created_by)
+    REFERENCES master.principal (tenant_id, id);

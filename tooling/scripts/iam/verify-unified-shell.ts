@@ -13,11 +13,11 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "../../..");
-const loginRoot = path.join(repoRoot, "stack/config/iam/themes/neon/login");
+const loginRoot = path.join(repoRoot, "deploy/config/iam/themes/neon/login");
 const cssRoot = path.join(loginRoot, "resources/css");
 const presentationProviderRoot = path.join(
   repoRoot,
-  "stack/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation",
+  "deploy/config/iam/extensions/iam-presentation-context/src/main/java/com/athyper/iam/presentation",
 );
 
 const REQUIRED_PAGES = [
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
   const loginCss = await readFile(path.join(cssRoot, "login.css"), "utf8");
   const tokenCss = await readFile(path.join(cssRoot, "iam.tokens.css"), "utf8");
   const generatedCss = await readFile(path.join(cssRoot, "iam.generated.css"), "utf8");
-  const realm = await readFile(path.join(repoRoot, "stack/config/iam/realm-athyper.json"), "utf8");
+  const realm = await readFile(path.join(repoRoot, "deploy/config/iam/realm-athyper.json"), "utf8");
   const realmConfig = JSON.parse(realm) as { supportedLocales?: unknown };
   const presentationForm = await readFile(
     path.join(presentationProviderRoot, "IamPresentationUsernamePasswordForm.java"),
@@ -132,9 +132,9 @@ async function main(): Promise<void> {
     path.join(presentationProviderRoot, "RedisPresentationContextStore.java"),
     "utf8",
   );
-  const iamDockerfile = await readFile(path.join(repoRoot, "stack/config/iam/Dockerfile"), "utf8");
+  const iamDockerfile = await readFile(path.join(repoRoot, "deploy/config/iam/Dockerfile"), "utf8");
   const redisAclTemplate = await readFile(
-    path.join(repoRoot, "stack/config/memorycache/redis-acl.conf.tpl"),
+    path.join(repoRoot, "deploy/config/memorycache/redis-acl.conf.tpl"),
     "utf8",
   );
 

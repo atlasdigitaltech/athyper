@@ -20,7 +20,7 @@ const PROTECTED_PATH_PREFIXES = [
   "server/packages/",
   "server/src/",
   "server/db/seed/",
-  "stack/config/iam/",
+  "deploy/config/iam/",
   "tooling/tools/",
 ] as const;
 

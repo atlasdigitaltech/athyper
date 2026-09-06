@@ -26,15 +26,15 @@ describe("foundation theme contract", () => {
     assert.equal(COLOR_TOKENS.light.brandForeground, ATLAS_MODERN_BRAND.colors.primaryForeground);
     assert.equal(COLOR_TOKENS.dark.brandHover, "color-mix(in srgb, var(--a-brand) 42%, white)");
     assert.notEqual(COLOR_TOKENS.dark.primary, COLOR_TOKENS.dark.brandHover);
-    const iamTokens = readFileSync("stack/config/iam/themes/neon/login/resources/css/iam.tokens.css", "utf8");
+    const iamTokens = readFileSync("deploy/config/iam/themes/neon/login/resources/css/iam.tokens.css", "utf8");
     assert.match(iamTokens, /--a-theme-family:atlas-modern/);
     assert.match(iamTokens, /--a-primary: var\(--a-brand\)/);
     assert.match(iamTokens, /--a-brand: #234B84/);
     assert.match(iamTokens, /--a-story-start: color-mix\(in srgb, var\(--a-brand\)/);
     assert.match(iamTokens, /--plane-accent:var\(--a-primary\)/);
-    const iamResolver = readFileSync("stack/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
+    const iamResolver = readFileSync("deploy/config/iam/themes/neon/login/_theme-resolver.ftl", "utf8");
     assert.match(iamResolver, /fallbackTheme = "atlas-modern"/);
-    for (const page of ["deploy/compose/instance/config/nginx/status.html", "deploy/compose/platform/outage/status.html", "stack/config/gateway/fallback/status.html"]) {
+    for (const page of ["deploy/compose/instance/config/nginx/status.html", "deploy/compose/platform/outage/status.html"]) {
       const html = readFileSync(page, "utf8");
       assert.match(html, /data-theme-family="atlas-modern"/);
       assert.match(html, /theme-color" content="#234B84"/);

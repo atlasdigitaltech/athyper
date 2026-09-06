@@ -1,5 +1,6 @@
 "use client";
 
+import { parseInstant } from "@athyper/platform-temporal";
 import { useAtlasAnswer, type AtlasConversationMessage, type AtlasExperienceAgent, type AtlasGovernedAction } from "@athyper/platform-ai-agent-ui";
 import { CloseIcon, HistoryIcon, LockIcon, Maximize2Icon, MessageSquareIcon, PanelRightIcon, SparklesIcon } from "@athyper/platform-icons";
 import { Tooltip } from "@athyper/platform-ui";
@@ -60,4 +61,4 @@ function contextForPath(path:string):string{const clean=path.split("?")[0]??"/ho
 function StructuredResult({value}:{readonly value:unknown}){if(Array.isArray(value)&&value.length&&value.every((item)=>item&&typeof item==="object"&&!Array.isArray(item))){const rows=value.slice(0,20)as readonly Record<string,unknown>[],columns=Array.from(new Set(rows.flatMap((row)=>Object.keys(row)))).slice(0,6);return <div className="athyper-atlas-workspace__result"><table><thead><tr>{columns.map((column)=><th key={column}>{column}</th>)}</tr></thead><tbody>{rows.map((row,index)=><tr key={index}>{columns.map((column)=><td key={column}>{displayValue(row[column])}</td>)}</tr>)}</tbody></table>{value.length>20?<small>Showing 20 of {value.length} rows</small>:null}</div>;}if(value&&typeof value==="object"){const entries=Object.entries(value as Record<string,unknown>).slice(0,20);return <dl className="athyper-atlas-workspace__result">{entries.map(([key,item])=><div key={key}><dt>{key}</dt><dd>{displayValue(item)}</dd></div>)}</dl>;}return <pre className="athyper-atlas-workspace__result">{displayValue(value)}</pre>;}
 function displayValue(value:unknown):string{if(value===null||value===undefined)return"—";if(typeof value==="string"||typeof value==="number"||typeof value==="boolean")return String(value);try{return JSON.stringify(value);}catch{return"[Unsupported value]";}}
 function timeLabel(value:string):string{try{return new Intl.DateTimeFormat(undefined,{hour:"2-digit",minute:"2-digit"}).format(new Date(value));}catch{return"";}}
-function relativeDate(value:string):string{const elapsed=Date.now()-Date.parse(value),days=Math.floor(elapsed/86_400_000);return days<=0?"Today":days===1?"Yesterday":`${days} days ago`;}
+function relativeDate(value:string):string{const elapsed=Date.now()-parseInstant(value),days=Math.floor(elapsed/86_400_000);return days<=0?"Today":days===1?"Yesterday":`${days} days ago`;}

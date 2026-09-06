@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-PGPASSWORD="$(< /run/secrets/postgres-password)"
+read_secret() {
+  local path="/run/secrets/$1" value
+  [[ -s "$path" ]] || { echo "required secret is absent or empty: $path" >&2; exit 1; }
+  value="$(< "$path")"
+  [[ -n "$value" ]] || { echo "required secret is empty: $path" >&2; exit 1; }
+  printf '%s' "$value"
+}
+
+PGPASSWORD="$(read_secret postgres-password)"
 export PGPASSWORD
-iam_password="$(< /run/secrets/iam-db-password)"
-runtime_password="$(< /run/secrets/runtime-db-password)"
-worker_password="$(< /run/secrets/worker-db-password)"
+iam_password="$(read_secret iam-db-password)"
+runtime_password="$(read_secret runtime-db-password)"
+worker_password="$(read_secret worker-db-password)"
 
 psql --set=ON_ERROR_STOP=1 \
   --set=iam_password="$iam_password" \

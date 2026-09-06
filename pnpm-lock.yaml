@@ -35,6 +35,12 @@ importers:
       prettier:
         specifier: ^3.8.1
         version: 3.9.6
+      react:
+        specifier: ^19.2.5
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.8(react@19.2.8)
       syncpack:
         specifier: ^14.3.0
         version: 14.3.0
@@ -511,6 +517,10 @@ importers:
         version: 6.0.3
 
   packages/contracts/platform/auth-session:
+    dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/temporal
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -551,6 +561,9 @@ importers:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../tooling/tsconfig
+      esbuild:
+        specifier: ^0.27.7
+        version: 0.27.7
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -643,6 +656,9 @@ importers:
 
   packages/planes/neon/business-partner:
     dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../contracts/platform/entity-runtime
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
@@ -652,6 +668,9 @@ importers:
       '@athyper/platform-surface-kit':
         specifier: workspace:*
         version: link:../../../platform/foundation/surface-kit
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../../platform/foundation/ui
@@ -665,9 +684,15 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
       react:
         specifier: ^19.2.5
         version: 19.2.8
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -797,6 +822,13 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/planes/studio/business-partner:
+    dependencies:
+      '@athyper/platform-api-client':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/api-client
+      '@athyper/platform-shell-app-foundation':
+        specifier: workspace:*
+        version: link:../../../platform/shell/app-foundation
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -804,12 +836,24 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      jsdom:
+        specifier: ^25.0.1
+        version: 25.0.1
       react:
         specifier: ^19.2.5
         version: 19.2.8
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
+      vitest:
+        specifier: ^4.1.0
+        version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   packages/planes/studio/shell:
     dependencies:
@@ -894,6 +938,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -996,6 +1043,9 @@ importers:
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../shell/shell
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../../foundation/ui
@@ -1051,6 +1101,9 @@ importers:
       '@athyper/platform-i18n':
         specifier: workspace:*
         version: link:../i18n
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../temporal
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1166,6 +1219,9 @@ importers:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../tooling/tsconfig
+      tsx:
+        specifier: ^4.21.0
+        version: 4.21.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -1238,6 +1294,9 @@ importers:
       '@athyper/platform-iam-session-store':
         specifier: workspace:*
         version: link:../session-store
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
       jose:
         specifier: ^6.2.2
         version: 6.2.8
@@ -1257,6 +1316,9 @@ importers:
       '@athyper/platform-brand':
         specifier: workspace:*
         version: link:../../foundation/brand
+      '@athyper/platform-iam-session':
+        specifier: workspace:*
+        version: link:../session
       '@athyper/platform-icons':
         specifier: workspace:*
         version: link:../../foundation/icons
@@ -1285,6 +1347,9 @@ importers:
       '@athyper/contract-platform-auth-session':
         specifier: workspace:*
         version: link:../../../contracts/platform/auth-session
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -1354,6 +1419,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/platform-iam-session':
+        specifier: workspace:*
+        version: link:../../iam/session
       '@athyper/platform-query':
         specifier: workspace:*
         version: link:../../foundation/query
@@ -1363,6 +1431,9 @@ importers:
       '@athyper/platform-surface-kit':
         specifier: workspace:*
         version: link:../../foundation/surface-kit
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../foundation/ui
@@ -1485,6 +1556,9 @@ importers:
       '@athyper/platform-shell-runtime':
         specifier: workspace:*
         version: link:../shell-runtime
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
       '@athyper/platform-ui':
         specifier: workspace:*
         version: link:../../foundation/ui
@@ -1522,6 +1596,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../foundation/temporal
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -1803,6 +1880,9 @@ importers:
 
   server/db:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../packages/platform/foundation/temporal
       '@athyper/server-service-master-data':
         specifier: workspace:*
         version: link:../packages/services/master-data
@@ -2189,6 +2269,9 @@ importers:
 
   server/packages/adapters/publication-signing:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-meta-entity-authoring':
         specifier: workspace:*
         version: link:../../contracts/meta-entity-authoring
@@ -2259,6 +2342,9 @@ importers:
 
   server/packages/adapters/telemetry-otel:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-jobs':
         specifier: workspace:*
         version: link:../../contracts/jobs
@@ -2830,6 +2916,9 @@ importers:
       '@athyper/server-contract-records':
         specifier: workspace:*
         version: link:../../contracts/records
+      '@athyper/server-contract-secrets':
+        specifier: workspace:*
+        version: link:../../contracts/secrets
       '@athyper/server-runtime-http':
         specifier: workspace:*
         version: link:../../runtime/http
@@ -2973,6 +3062,9 @@ importers:
 
   server/packages/platform/ai:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-ai':
         specifier: workspace:*
         version: link:../../contracts/ai
@@ -3040,6 +3132,10 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   server/packages/platform/classification:
+    dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
     devDependencies:
       typescript:
         specifier: ^6.0.3
@@ -3090,6 +3186,9 @@ importers:
 
   server/packages/platform/control-admin:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../contracts/auth
@@ -3123,6 +3222,10 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   server/packages/platform/entitlements:
+    dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
     devDependencies:
       typescript:
         specifier: ^6.0.3
@@ -3167,6 +3270,9 @@ importers:
 
   server/packages/platform/features:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       semver:
         specifier: 7.8.5
         version: 7.8.5
@@ -3180,6 +3286,9 @@ importers:
 
   server/packages/platform/governance:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -3269,6 +3378,9 @@ importers:
 
   server/packages/platform/jobs:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../contracts/auth
@@ -3480,6 +3592,9 @@ importers:
 
   server/packages/platform/workflow:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -3595,6 +3710,9 @@ importers:
 
   server/packages/services/attachments:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-attachments':
         specifier: workspace:*
         version: link:../../contracts/attachments
@@ -3737,6 +3855,9 @@ importers:
 
   server/packages/services/documents:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -3789,6 +3910,9 @@ importers:
 
   server/packages/services/finance:
     dependencies:
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-finance':
         specifier: workspace:*
         version: link:../../contracts/finance
@@ -3876,6 +4000,12 @@ importers:
 
   server/packages/services/master-data:
     dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-runtime
+      '@athyper/platform-temporal':
+        specifier: workspace:*
+        version: link:../../../../packages/platform/foundation/temporal
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -3969,6 +4099,9 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17
     devDependencies:
+      '@athyper/server-platform-audit':
+        specifier: workspace:*
+        version: link:../../platform/audit
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0

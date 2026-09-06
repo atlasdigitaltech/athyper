@@ -1293,3 +1293,23 @@ CREATE TABLE mesh.network_lifecycle_event (
     CONSTRAINT network_lifecycle_event_evidence_chk CHECK(jsonb_typeof(evidence)='object')
 );
 COMMENT ON TABLE mesh.network_lifecycle_event IS 'Append-only BNA and buyer-supplier relationship lifecycle evidence visible to the owning and participating tenants through Mesh RLS.';
+
+-- Source-side confirmation written atomically with completion of a claimed outbox
+-- delivery, after the recipient transaction has committed. No profile payloads.
+CREATE TABLE mesh.business_partner_delivery_acknowledgement (
+  id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+  source_tenant_id uuid NOT NULL,
+  recipient_tenant_id uuid NOT NULL,
+  source_network_account_id uuid NOT NULL,
+  outbox_id uuid NOT NULL,
+  event_id uuid NOT NULL,
+  delivery_lease_id text NOT NULL,
+  attempt_no integer NOT NULL CHECK (attempt_no > 0),
+  disposition text NOT NULL CHECK (disposition IN ('applied','duplicate','stale','quarantined')),
+  reason_code text,
+  acknowledged_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+  UNIQUE (outbox_id, delivery_lease_id),
+  CHECK (length(delivery_lease_id) BETWEEN 1 AND 300),
+  CHECK (reason_code IS NULL OR length(reason_code) <= 120)
+);
+-- Outbox records may be purged independently; receipt coordinates survive purge.

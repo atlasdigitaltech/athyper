@@ -1,0 +1,110 @@
+{
+  "schema": "athyper.business-partner-v1-target-progress/1",
+  "recordedAt": "2026-09-05T17:41:21Z",
+  "target": "https://neon.dev.athyper.test",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "sourceRevision": "68600dfd3880821ec02196cd2316e660e85b1bce",
+  "workingTreeDirty": true,
+  "productionQualified": false,
+  "definition": {
+    "publicationKey": "studio.business_partner.definition.business_partner.onboarding",
+    "releaseId": "e0abaddf-5319-4393-a0a9-a30a9507d4ac",
+    "releaseNo": 1,
+    "status": "active",
+    "semanticVersion": "2.1.1",
+    "signedActivationReceipt": "local/2026-09-05/cirrusatlantic-signed-release-and-activation-receipts.json"
+  },
+  "actors": {
+    "fixture": "tooling/scripts/iam/provision-business-partner-v1-local.mjs",
+    "credentialReference": "node_modules/.cache/bp-qualification/v1-environment.json",
+    "credentialFileMode": "0600",
+    "distinctPrincipals": true,
+    "requester": "acceptance.bp.v1.requester",
+    "approver": "acceptance.bp.v1.approver",
+    "materializer": "acceptance.bp.v1.materializer"
+  },
+  "targetRun": {
+    "command": "node tooling/scripts/verification/run-business-partner-local-journey.mjs --slice=v1",
+    "scenario": "BP-SUP-001",
+    "passed": true,
+    "authenticationPassed": true,
+    "routeAdmissionPassed": true,
+    "contextDiscoveryPassed": true,
+    "makerCheckerPassed": true,
+    "mfaStepUpPassed": true,
+    "materializationPassed": true,
+    "caseId": "e29bc88c-73e5-49ae-9c89-93665f3a94bb",
+    "caseStatus": "materialized",
+    "businessPartnerId": "01a072a7-de38-7871-8faf-77ba3e97377d",
+    "businessPartnerStatus": "active",
+    "playwrightResult": "1 passed (11.0s)",
+    "retainedEvidence": "local/2026-09-06/cirrusatlantic-v1-bp-sup-001-e2e.json",
+    "retainedEvidenceSha256": "6b453b31d750840ec499fd728fa62b51227c12ba885041d9c328af1584fd27c6"
+  },
+  "activeCaseContract": {
+    "publicationKey": "metadata.entity.master_business_partner.44444444444444448444444444444444",
+    "releaseId": "f9db7a14-2831-45c5-a175-546f30b3af46",
+    "releaseNo": 4,
+    "revisionId": "be662cda-e534-4247-a8f7-4f509c79645c",
+    "contractHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "status": "published",
+    "propertyCount": 43,
+    "activationReceipt": "local/2026-09-06/cirrusatlantic-v1-case-contract-release-and-activation.json"
+  },
+  "correction": {
+    "reviewPacket": "local/2026-09-06/cirrusatlantic-v1-r4-case-contract-review.json",
+    "candidateHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "existingPropertiesUnchanged": true,
+    "addedProperties": [
+      "customerType",
+      "legalClassification",
+      "partnerCategory",
+      "supplierType"
+    ],
+    "approvalStatus": "published",
+    "immutableRevisionId": "be662cda-e534-4247-a8f7-4f509c79645c",
+    "signedReleaseId": "f9db7a14-2831-45c5-a175-546f30b3af46",
+    "consumerActivationReceipt": "local/2026-09-06/cirrusatlantic-v1-case-contract-release-and-activation.json"
+  },
+  "publicationValidator": {
+    "initialSimulationStatus": 400,
+    "initialSimulationError": "CASE_CONTRACT_UNSUPPORTED_PROPERTY",
+    "cause": "The native case-contract extension allowlist did not include the four governed role fields in the review packet.",
+    "correctedFields": [
+      "customerType",
+      "legalClassification",
+      "partnerCategory",
+      "supplierType"
+    ],
+    "regressionSuite": "84 passed",
+    "typecheck": "passed",
+    "runtimeImage": "athyper-runtime-server:publication-dev@sha256:fce7a5154d14e2b1be84f1adf28a3191c45d6415525e4d65be4274881030fdaa",
+    "apiHealth": "healthy",
+    "deployedAt": "2026-09-05T17:03:23Z",
+    "browserRetryPending": false,
+    "browserRetryStatus": 200,
+    "browserRetryResult": "compatible",
+    "browserRetryContractHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95",
+    "immutableRevisionPending": false
+  },
+  "accessibility": {
+    "standard": "WCAG 2.2 AA",
+    "automatedSurfacesPassed": [
+      "supplier-create",
+      "requester-pending-case",
+      "approval-dialog",
+      "materialized-result-proof",
+      "materialized-supplier-procurement-desktop",
+      "materialized-supplier-procurement-phone"
+    ],
+    "reflowChecksPassed": [
+      "supplier-create@200%",
+      "materialized-supplier-procurement-desktop@200%",
+      "materialized-supplier-procurement-phone"
+    ],
+    "manualAssistiveTechnologyReview": "pending_human_review",
+    "manualReviewDraft": "local/2026-09-06/cirrusatlantic-v1-manual-accessibility-review.draft.json",
+    "manualReviewInstructions": "docs/runbooks/business-partner-v1-accessibility-review.md"
+  },
+  "remaining": ["Named manual assistive-technology review"]
+}

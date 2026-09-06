@@ -6,5 +6,5 @@ providers:
   objectStorage: { allowedModes: [internal, external, mock], applicationVariable: S3_ENDPOINT, healthPath: /minio/health/ready, timeoutMs: 10000, dataOwner: object-storage, backupOwner: object-storage }
   mail: { allowedModes: [internal, external, mock, disabled], applicationVariable: EMAIL_PROVIDER, timeoutMs: 10000, dataOwner: communications, backupOwner: disposable }
   push: { allowedModes: [external, mock, disabled], applicationVariable: VAPID_PUBLIC_KEY, timeoutMs: 10000, dataOwner: communications, backupOwner: disposable }
-  scanner: { allowedModes: [internal, external, mock, disabled], applicationVariable: CLAMAV_URL, timeoutMs: 30000, dataOwner: security, backupOwner: rebuildable }
+  scanner: { allowedModes: [internal, external, mock, disabled], applicationVariable: CLAMD_HOST, companionVariables: [CLAMD_PORT], timeoutMs: 30000, dataOwner: security, backupOwner: rebuildable }
   rendering: { allowedModes: [internal, external, mock, disabled], applicationVariable: DOCRENDER_BASE_URL, healthPath: /health, timeoutMs: 30000, dataOwner: documents, backupOwner: source }

@@ -504,6 +504,7 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
       const globalsPath = join(directory, globals.file);
       compose(["config", "--quiet"], restoreProject);
       compose(["up", "--detach", "--wait", "db"], restoreProject);
+      let restoreFailure;
       try {
         compose(["cp", globalsPath, `db:/tmp/${globals.file}`], restoreProject);
         compose(["exec", "-T", "db", "sh", "-ec", `export PGPASSWORD=\"$(cat /run/secrets/postgres-password)\"; sed '/^CREATE ROLE postgres;$/d' /tmp/${globals.file} | psql --set=ON_ERROR_STOP=1 --username postgres --dbname postgres`], restoreProject);
@@ -514,9 +515,18 @@ function executeLocked(repoRoot, operation, instanceId, options = {}, dependenci
           compose(["exec", "-T", "db", "sh", "-ec", `export PGPASSWORD=\"$(cat /run/secrets/postgres-password)\"; pg_restore --username postgres --clean --if-exists --dbname ${item.database} /tmp/${item.file}`], restoreProject);
         }
         compose(["exec", "-T", "db", "psql", "--username", "postgres", "--dbname", "postgres", "--tuples-only", "--command", "SELECT 1"], restoreProject);
+      } catch (error) {
+        restoreFailure = error;
+        throw error;
       } finally {
-        compose(["exec", "-T", "db", "rm", "-f", `/tmp/${globals.file}`, ...backup.spec.database.dumps.map((item) => `/tmp/${item.file}`)], restoreProject);
-        compose(["down", "--remove-orphans"], restoreProject);
+        const cleanupFailures = [];
+        for (const args of [
+          ["exec", "-T", "db", "rm", "-f", `/tmp/${globals.file}`, ...backup.spec.database.dumps.map((item) => `/tmp/${item.file}`)],
+          ["down", "--remove-orphans"],
+        ]) {
+          try { compose(args, restoreProject); } catch (error) { cleanupFailures.push(error); }
+        }
+        if (!restoreFailure && cleanupFailures.length) throw cleanupFailures[0];
       }
       const volume = `${restoreProject}_db-data`;
       invoke("docker", ["volume", "inspect", volume]);

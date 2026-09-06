@@ -31,7 +31,7 @@ export interface EntityContractProjection {
 export interface EntityDescriptorProjection {
   readonly id: string;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime";
   readonly descriptorSchemaVersion: string;
   readonly sourceContractHash: string;
   readonly compiledHash: string;
@@ -119,7 +119,7 @@ export interface ActiveEntityProjection {
   readonly contractHash: string;
   readonly contract: Readonly<Record<string, unknown>>;
   readonly plane: PublicationPlane;
-  readonly descriptorKind: "entity_runtime";
+  readonly descriptorKind: "entity_runtime" | "entity_case_runtime";
   readonly compiledHash: string;
   readonly descriptor: Readonly<Record<string, unknown>>;
   readonly activatedAt: string;

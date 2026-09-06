@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { OutboxWriter } from "@athyper/server-contract-events";
@@ -116,8 +117,8 @@ function validateCreate(command: CreateWorkItemCommand): void {
   for (const [name, value] of [["assigneePrincipalId", command.assigneePrincipalId], ["assigneeTeamId", command.assigneeTeamId]] as const) {
     if (value && !isUuid(value)) throw new WorkflowError(400, "INVALID_ASSIGNMENT", `${name} must be a UUID`);
   }
-  const available = command.availableAt ? Date.parse(command.availableAt) : Date.now();
-  const due = command.dueAt ? Date.parse(command.dueAt) : undefined;
+  const available = command.availableAt ? parseInstant(command.availableAt) : Date.now();
+  const due = command.dueAt ? parseInstant(command.dueAt) : undefined;
   if (!Number.isFinite(available) || (due !== undefined && (!Number.isFinite(due) || due < available))) throw new WorkflowError(400, "INVALID_SCHEDULE", "Due time must be valid and not precede availability");
 }
 

@@ -9,6 +9,7 @@ import {
   createDeliverySweepHandler,
   createNotificationDiscoveryHandler,
   createNotificationOutboxSweepHandler,
+  notificationPlanningFailureDisposition,
   createWebhookSweepHandler,
 } from "../index.js";
 
@@ -16,9 +17,18 @@ const TENANT_ID = "11111111-1111-4111-8111-111111111111";
 const PRINCIPAL_ID = "22222222-2222-4222-8222-222222222222";
 
 describe("durable notification jobs", () => {
+  it("retries planning failures and dead-letters the exhausted tenth attempt", () => {
+    expect(notificationPlanningFailureDisposition(1)).toBe("retry");
+    expect(notificationPlanningFailureDisposition(9)).toBe("retry");
+    expect(notificationPlanningFailureDisposition(10)).toBe("dead_letter");
+    expect(() => notificationPlanningFailureDisposition(0)).toThrow(
+      /positive integer/,
+    );
+  });
   it("completes and retries outbox items independently", async () => {
     const complete = vi.fn();
     const fail = vi.fn();
+    const telemetry = vi.fn();
     const events = [sourceEvent("event-1"), sourceEvent("event-2")];
     const repository = {
       claim: vi.fn().mockResolvedValue([
@@ -42,6 +52,7 @@ describe("durable notification jobs", () => {
     const handler = createNotificationOutboxSweepHandler({
       repository,
       planner,
+      telemetry,
     } as never);
 
     await expect(
@@ -55,6 +66,20 @@ describe("durable notification jobs", () => {
       request(),
       expect.objectContaining({ stateId: "state-2" }),
       "invalid template",
+    );
+    expect(telemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: "completed",
+        eventCode: "record.changed",
+        attemptCount: 1,
+      }),
+    );
+    expect(telemetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        outcome: "retry",
+        eventCode: "record.changed",
+        attemptCount: 1,
+      }),
     );
   });
 

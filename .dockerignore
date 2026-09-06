@@ -29,10 +29,9 @@
 # Preserved legacy server is behavioral reference only and must never enter images.
 server-backup
 
-# Stack ops directory — contains redis-acl.conf (SHA-256 hashes),
-# pgbouncer userlist.txt (hashed credentials), and other ops-only files.
-# None of these are needed by Next.js or the server build.
-stack/
+# Pre-rendered Redis ACL — contains SHA-256 password hashes. Not needed by
+# Next.js or the server build.
+deploy/config/memorycache/redis-acl.conf
 
 # Documentation
 docs/

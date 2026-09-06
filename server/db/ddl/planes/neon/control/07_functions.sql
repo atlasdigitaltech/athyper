@@ -1000,9 +1000,9 @@ BEGIN
     v_until:=NULLIF(p_payload->>'effectiveUntil','')::date;
     PERFORM set_config('app.normalized_decision_scope_write','on',true);
     IF p_aggregate_kind='qualification' THEN
-      INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,role_id,
+      INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,
         qualification_type_code,idempotency_key,risk_assessment_id,effective_from,effective_until,next_review_at,created_by)
-      VALUES(v_id,p_tenant_id,p_business_partner_id,p_partner_role::master.partner_role_d,p_role_id,
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_partner_role::master.partner_role_d,
         p_payload->>'qualificationTypeCode',p_idempotency_key,NULLIF(p_payload->>'riskAssessmentId','')::uuid,
         NULLIF(p_payload->>'effectiveFrom','')::date,v_until,NULLIF(p_payload->>'nextReviewAt','')::date,p_actor_id);
     ELSIF p_aggregate_kind='supplier_preference' THEN
@@ -1011,13 +1011,18 @@ BEGIN
       VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,v_from,v_until,p_payload->>'rationale',p_idempotency_key,p_actor_id);
     ELSIF p_aggregate_kind='customer_designation' THEN
       INSERT INTO control.customer_account_designation(id,tenant_id,business_partner_id,customer_id,
-        designation_type,priority_tier,effective_from,effective_until,rationale,idempotency_key,created_by)
-      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,(p_payload->>'designationType')::control.customer_account_designation_type_d,
+        operating_organization_id,company_code_id,country_code,channel_code,designation_type,priority_tier,effective_from,effective_until,
+        rationale,idempotency_key,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,p_operating_organization_id,p_company_code_id,
+        NULLIF(p_payload->>'countryCode','')::character(2),NULLIF(p_payload->>'channelCode',''),
+        (p_payload->>'designationType')::control.customer_account_designation_type_d,
         NULLIF(p_payload->>'priorityTier','')::smallint,v_from,v_until,p_payload->>'rationale',p_idempotency_key,p_actor_id);
     ELSE
-      INSERT INTO control.customer_credit_review(id,tenant_id,business_partner_id,customer_id,review_type_code,
-        requested_credit_limit,requested_currency_code,risk_class_code,effective_from,effective_until,idempotency_key,created_by)
-      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,COALESCE(p_payload->>'reviewTypeCode','initial'),
+      INSERT INTO control.customer_credit_review(id,tenant_id,business_partner_id,customer_id,
+        operating_organization_id,company_code_id,review_type_code,requested_credit_limit,
+        requested_currency_code,risk_class_code,effective_from,effective_until,idempotency_key,created_by)
+      VALUES(v_id,p_tenant_id,p_business_partner_id,p_role_id,p_operating_organization_id,p_company_code_id,
+        COALESCE(p_payload->>'reviewTypeCode','initial'),
         NULLIF(p_payload->>'requestedCreditLimit','')::numeric,NULLIF(p_payload->>'requestedCurrencyCode','')::character(3),
         NULLIF(p_payload->>'riskClassCode',''),v_from,v_until,p_idempotency_key,p_actor_id);
     END IF;
@@ -1066,6 +1071,8 @@ BEGIN
         OR NEW.supplier_id IS DISTINCT FROM OLD.supplier_id
         OR NEW.operating_organization_id IS DISTINCT FROM OLD.operating_organization_id
         OR NEW.company_code_id IS DISTINCT FROM OLD.company_code_id
+        OR NEW.country_code IS DISTINCT FROM OLD.country_code
+        OR NEW.channel_code IS DISTINCT FROM OLD.channel_code
         OR NEW.commodity_category_id IS DISTINCT FROM OLD.commodity_category_id
         OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
         OR NEW.effective_until IS DISTINCT FROM OLD.effective_until
@@ -1101,6 +1108,8 @@ BEGIN
            AND existing.operating_organization_id = NEW.operating_organization_id
            AND existing.status = 'approved'
            AND (existing.company_code_id IS NULL OR NEW.company_code_id IS NULL OR existing.company_code_id = NEW.company_code_id)
+           AND (existing.country_code IS NULL OR NEW.country_code IS NULL OR existing.country_code = NEW.country_code)
+           AND (existing.channel_code IS NULL OR NEW.channel_code IS NULL OR existing.channel_code = NEW.channel_code)
            AND (existing.commodity_category_id IS NULL OR NEW.commodity_category_id IS NULL OR existing.commodity_category_id = NEW.commodity_category_id)
            AND daterange(existing.effective_from, existing.effective_until, '[)') && daterange(NEW.effective_from, NEW.effective_until, '[)')
     ) THEN

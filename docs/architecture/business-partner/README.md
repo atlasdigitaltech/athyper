@@ -1,112 +1,58 @@
-# Business Partner capability documentation
+# Business Partner architecture
 
-Status: Phase 0 architecture accepted; later product scope decisions remain open
+Status: canonical architecture boundary
 
-Scope: Business Partner organizations, Supplier and Customer commercial roles, and supplier-provided Workforce
+Business Partner is NEON's tenant-local representation of an external organization. Supplier and Customer are commercial roles of that organization; a dual-role organization remains one Business Partner. Supplier-provided workers are people governed through requisition, engagement, placement, and IAM lifecycles and are never modeled as Business Partners.
 
-This documentation defines the product, architecture and evidence-backed execution baseline. It consolidates the repository audit in
-[`../business-partner-experience-plan.md`](../business-partner-experience-plan.md), the governed lifecycle ADR, and the detailed working proposals reviewed on 2026-09-04.
+## Authority
 
-It does not claim that every described capability is implemented or production-qualified. Current-state claims must be backed by repository or target-environment evidence.
-
-## Read this first
-
-The capability contains three related but distinct subject types:
-
-1. A **Business Partner** is a recipient-local external organization in NEON.
-2. A **Supplier** or **Customer** is a commercial role held by that organization. A dual-role organization remains one Business Partner.
-3. A **supplier-provided worker** is a person supplied under a relationship, requisition, work order or statement of work. The person is not a Business Partner.
-
-The word **workforce** is also used for internal employees operating the product. Documentation must therefore distinguish:
-
-- workforce requester, steward or approver: an internal user;
-- supplier administrator or recruiter: a user acting for a supplier organization;
-- candidate or external worker: a person proposed or engaged through that supplier.
-
-## Document map
-
-| Document | Purpose |
+| Concern | Authority |
 | --- | --- |
-| [Scope and domain model](scope-and-domain-model.md) | Subject boundaries, authority, shared lifecycle, data movement and invariants |
-| [Supplier journeys](supplier-journeys.md) | Supplier onboarding, qualification, activation and lifecycle |
-| [Customer journeys](customer-journeys.md) | Customer onboarding, credit/designation, activation and lifecycle |
-| [Supplier Workforce journeys](supplier-workforce-journeys.md) | Requisition, candidate disclosure, engagement, placement and deprovisioning |
-| [Acceptance scenarios](acceptance-scenarios.md) | Stable scenario identifiers, expected outcomes and cross-cutting quality requirements |
-| [Decision register](decision-register.md) | Decisions already made, decisions requiring approval, and known source inconsistencies |
-| [Implementation status](implementation-status.md) | Point-in-time repository evidence by capability and delivery level |
-| [Build plan](build-plan.md) | Workstreams, scenario mapping and the first executable vertical slice |
-| [Phase 0 baseline](phase-0-baseline.md) | Frontend health, route/catalog/operation inventory, relay corrections and release status |
-| [Protected documents](protected-documents.md) | Classification floors and target-environment storage qualification checklist |
-| [Notification matrix](notifications.md) | Event, recipient, delivery, template and deep-link policy |
+| Definitions, forms, policies, and releases | Studio |
+| Network accounts, relationships, capabilities, and disclosures | MESH |
+| Business Partner records and commercial roles | NEON |
+| Cases, decisions, evidence, and materialization | Owning plane |
+| Authentication and access context | IAM and runtime authorization |
+| Attachment metadata and bytes | Document service and Object Storage |
+| Notification delivery | Notification service |
+| Drafting and explanation | Atlas, without mutation authority |
 
-Supporting sources:
+Cross-plane data is a proposal until accepted by the receiving authority. Canonical-party, IAM-organization, MESH-account, Business Partner, role, Person, engagement, and placement identifiers are distinct coordinates and do not imply one another.
 
-- [`../decisions/governed-entity-lifecycle.md`](../decisions/governed-entity-lifecycle.md) remains normative for the governed entity lifecycle.
-- [`../decisions/business-partner-phase-0.md`](../decisions/business-partner-phase-0.md) records the accepted authority, applicant, workflow UI, document, notification and release decisions.
-- [`../business-partner-experience-plan.md`](../business-partner-experience-plan.md) is the point-in-time repository audit and experience proposal.
-- [`../frontend-first-business-module.md`](../frontend-first-business-module.md) governs frontend module composition.
-
-If this package conflicts with the governed lifecycle ADR, the ADR wins until a new architectural decision is approved. If a current-state statement conflicts with executable repository evidence, the evidence wins and this package must be corrected.
-
-## Capability map
+## Lifecycle
 
 ```text
-Business Partner organization
-├── Supplier role
-│   ├── onboarding and identity resolution
-│   ├── qualification, banking and activation
-│   └── profile, qualification and relationship lifecycle
-├── Customer role
-│   ├── onboarding and identity resolution
-│   ├── credit, designation and activation
-│   └── credit, account and status lifecycle
-└── Supplier relationship
-    └── Supplier-provided Workforce
-        ├── requisition and candidate disclosure
-        ├── evaluation, selection and engagement
-        ├── Person/external-worker materialization
-        └── placement, IAM provisioning and deprovisioning
+published definition
+  -> draft and evidence
+  -> deterministic validation
+  -> identity/conflict review
+  -> human decision
+  -> governed materialization
+  -> readiness and activation
+  -> controlled change
+  -> suspension, termination, or archive
 ```
 
-## Documentation rules
+Every case is pinned to an immutable definition release. Every mutation validates tenant, actor, scope, expected version, idempotency key, and current policy; commits state, evidence, lineage, audit, and outbox records atomically; and returns explicit replay, conflict, denial, and invalid-transition outcomes.
 
-Every journey specification identifies:
+## Security boundaries
 
-- actors and their trust context;
-- the owning authority for each mutation;
-- prerequisites and terminal outcomes;
-- happy, return, rejection, conflict and replay paths;
-- evidence and sensitive-data boundaries;
-- notifications and operational signals;
-- required UI experiences without treating UI visibility as authorization;
-- stable acceptance-scenario identifiers.
+- UI visibility is not authorization.
+- MESH and Studio never write NEON master authority directly.
+- Requested relationships or capabilities grant no access.
+- Supplier profile exchange excludes Person and protected workforce data.
+- Bank, identity, and protected-document access is purpose-bound and audited.
+- Notifications and Atlas retain references, not protected payload copies.
+- AI may explain or draft, but cannot approve, qualify, merge, activate, or grant access.
 
-The build plan traces workstreams and the first vertical slice to acceptance scenarios. A screen, route or component is not complete merely because it renders.
+## Sources of truth
 
-## Delivery dependency summary
+Executable contracts and canonical DDL define implemented behavior:
 
-This is the dependency summary; detailed workstreams and relative sizing are in [build-plan.md](build-plan.md):
+- `server/db/ddl/planes/{studio,neon,mesh}`
+- `packages/contracts` and `server/packages/contracts`
+- plane and service tests
+- versioned governance configuration and retained evidence
+- active operational runbooks under `docs/runbooks`
 
-```text
-Baseline and approved contracts
-  -> governed case/evidence/decision foundation
-     -> Supplier onboarding
-        -> Supplier lifecycle
-        -> Supplier-provided Workforce
-     -> Customer onboarding
-        -> Customer lifecycle
-  -> Studio authoring, operational proof and legacy retirement
-```
-
-Customer work may proceed in parallel with Supplier lifecycle work after the common foundation is proven. Supplier-provided Workforce must not begin as a Business Partner extension; it depends on an approved supplier relationship and the People/Workforce authority model.
-
-## Readiness for implementation commitment
-
-The proposed build plan is ready to become an implementation commitment when:
-
-- the decisions required for the selected release slice are approved;
-- the remaining disputed product semantics have accountable-owner decisions;
-- product owners approve the journey outcomes and personas;
-- security and privacy approve applicant, candidate and protected-profile boundaries;
-- every Phase 1 candidate scenario has an accountable owner and test fixture;
-- the target release boundary is chosen: internal supplier, invited supplier, Customer, or supplier Workforce.
+Completed plans, dated reviews, status reports, and qualification narratives belong in Git history or retained governance evidence rather than this architecture document.

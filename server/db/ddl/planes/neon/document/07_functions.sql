@@ -4775,6 +4775,28 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_engagement_lifecycle_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
+DECLARE v_execution_id uuid;
+BEGIN
+ IF NEW.status IS NOT DISTINCT FROM OLD.status THEN RETURN NEW;END IF;
+ v_execution_id:=NULLIF(current_setting('app.worker_engagement_lifecycle_command_execution_id',true),'')::uuid;
+ IF v_execution_id IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution command WHERE command.id=v_execution_id AND command.tenant_id=NEW.tenant_id AND command.actor_principal_id=NULLIF(current_setting('app.current_principal_id',true),'')::uuid AND command.source_service='neon.worker-engagement-lifecycle' AND command.command_code IN('workforce.external_worker.engagement.terminate') AND command.status='processing') THEN
+  RAISE EXCEPTION 'Worker engagement lifecycle state is command-owned' USING ERRCODE='insufficient_privilege';
+ END IF;RETURN NEW;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.trg_guard_worker_operational_placement_mutation()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
+DECLARE v_execution_id uuid;v_tenant_id uuid;
+BEGIN
+ v_tenant_id:=CASE WHEN TG_OP='DELETE' THEN OLD.tenant_id ELSE NEW.tenant_id END;
+ v_execution_id:=NULLIF(current_setting('app.worker_engagement_lifecycle_command_execution_id',true),'')::uuid;
+ IF v_execution_id IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution command WHERE command.id=v_execution_id AND command.tenant_id=v_tenant_id AND command.actor_principal_id=NULLIF(current_setting('app.current_principal_id',true),'')::uuid AND command.source_service='neon.worker-engagement-lifecycle' AND command.command_code IN('workforce.external_worker.placement.activate','workforce.external_worker.engagement.terminate') AND command.status='processing') THEN
+  RAISE EXCEPTION 'Worker operational placement is command-owned' USING ERRCODE='insufficient_privilege';
+ END IF;IF TG_OP='DELETE' THEN RETURN OLD;END IF;RETURN NEW;
+END;$$;
+
 CREATE OR REPLACE FUNCTION document.command_worker_engagement_iam_projection(
     p_tenant_id uuid,
     p_worker_engagement_id uuid,
@@ -5005,6 +5027,194 @@ BEGIN
 END;
 $$;
 
+-- R7 guarded product entrypoint. The legacy six-argument function remains an
+-- internal implementation detail and is not executable by application roles.
+CREATE OR REPLACE FUNCTION document.command_worker_engagement_iam_projection(
+    p_tenant_id uuid,
+    p_worker_engagement_id uuid,
+    p_expected_version bigint,
+    p_idempotency_key text,
+    p_actor_id uuid,
+    p_correlation_id uuid,
+    p_policy_evidence jsonb
+) RETURNS TABLE(
+    worker_engagement_id uuid,
+    desired_status text,
+    desired_version bigint,
+    desired_hash text,
+    outbox_id uuid,
+    replayed boolean
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, document, event, shared
+AS $$
+DECLARE
+    v_policy_evidence jsonb;
+    v_existing_policy jsonb;
+    v_result record;
+BEGIN
+    IF p_policy_evidence IS NULL
+       OR jsonb_typeof(p_policy_evidence) <> 'object'
+       OR p_policy_evidence->>'boundary' <> 'iam_project'
+       OR jsonb_typeof(p_policy_evidence->'coordinates') <> 'array'
+       OR jsonb_array_length(p_policy_evidence->'coordinates') <> 2
+       OR (SELECT count(DISTINCT coordinate->>'decisionId')
+             FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate) <> 2
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q004')
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q006')
+       OR EXISTS (
+           SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+            WHERE COALESCE(coordinate->>'version','') !~ '^[1-9][0-9]*$'
+               OR COALESCE(coordinate->>'hash','') !~ '^[a-f0-9]{64}$'
+               OR COALESCE(coordinate->>'approvalEvidenceId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+       ) THEN
+        RAISE EXCEPTION 'Worker engagement IAM requires approved BP-Q004 and BP-Q006 evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    v_policy_evidence := jsonb_build_object(
+        'boundary', 'iam_project',
+        'coordinates', (
+            SELECT jsonb_agg(jsonb_build_object(
+                'decisionId', coordinate->>'decisionId',
+                'version', (coordinate->>'version')::bigint,
+                'hash', coordinate->>'hash',
+                'approvalEvidenceId', coordinate->>'approvalEvidenceId'
+            ) ORDER BY coordinate->>'decisionId')
+              FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+        )
+    );
+    PERFORM pg_advisory_xact_lock(hashtextextended(
+        p_tenant_id::text || ':external-worker-iam:' || p_idempotency_key, 0
+    ));
+    SELECT command.result_payload->'policyEvidence' INTO v_existing_policy
+      FROM event.command_execution command
+     WHERE command.tenant_id=p_tenant_id
+       AND command.command_code='workforce.external_worker.iam.project'
+       AND command.idempotency_key=p_idempotency_key;
+    IF FOUND AND v_existing_policy IS DISTINCT FROM v_policy_evidence THEN
+        RAISE EXCEPTION 'Worker engagement IAM idempotency key was reused with different policy evidence'
+            USING ERRCODE = 'unique_violation';
+    END IF;
+    SELECT * INTO v_result
+      FROM document.command_worker_engagement_iam_projection(
+        p_tenant_id,p_worker_engagement_id,p_expected_version,p_idempotency_key,
+        p_actor_id,p_correlation_id
+      );
+    IF NOT v_result.replayed THEN
+        UPDATE event.command_execution command
+           SET result_payload=command.result_payload||jsonb_build_object('policyEvidence',v_policy_evidence),
+               updated_by=p_actor_id
+         WHERE command.tenant_id=p_tenant_id
+           AND command.command_code='workforce.external_worker.iam.project'
+           AND command.idempotency_key=p_idempotency_key;
+        UPDATE event.outbox outbox
+           SET payload=outbox.payload||jsonb_build_object('policyEvidence',v_policy_evidence)
+         WHERE outbox.tenant_id=p_tenant_id AND outbox.id=v_result.outbox_id;
+    END IF;
+    RETURN QUERY SELECT v_result.worker_engagement_id,v_result.desired_status,
+                        v_result.desired_version,v_result.desired_hash,
+                        v_result.outbox_id,v_result.replayed;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.normalize_supplier_workforce_policy_evidence(
+    p_boundary text,
+    p_policy_evidence jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+BEGIN
+    IF p_boundary NOT IN ('placement_change','engagement_end')
+       OR p_policy_evidence IS NULL
+       OR jsonb_typeof(p_policy_evidence) <> 'object'
+       OR p_policy_evidence->>'boundary' <> p_boundary
+       OR jsonb_typeof(p_policy_evidence->'coordinates') <> 'array'
+       OR jsonb_array_length(p_policy_evidence->'coordinates') <> 2
+       OR (SELECT count(DISTINCT coordinate->>'decisionId') FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate) <> 2
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q004')
+       OR NOT EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate WHERE coordinate->>'decisionId'='BP-Q006')
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+                   WHERE COALESCE(coordinate->>'version','') !~ '^[1-9][0-9]*$'
+                      OR COALESCE(coordinate->>'hash','') !~ '^[a-f0-9]{64}$'
+                      OR COALESCE(coordinate->>'approvalEvidenceId','') !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$') THEN
+        RAISE EXCEPTION 'Worker engagement lifecycle command requires approved BP-Q004 and BP-Q006 evidence'
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN jsonb_build_object('boundary',p_boundary,'coordinates',(
+        SELECT jsonb_agg(jsonb_build_object('decisionId',coordinate->>'decisionId','version',(coordinate->>'version')::bigint,'hash',coordinate->>'hash','approvalEvidenceId',coordinate->>'approvalEvidenceId') ORDER BY coordinate->>'decisionId')
+          FROM jsonb_array_elements(p_policy_evidence->'coordinates') coordinate
+    ));
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION document.command_worker_operational_placement_activate(
+    p_tenant_id uuid,p_worker_engagement_id uuid,p_expected_version bigint,
+    p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid,
+    p_effective_from date,p_effective_until date,p_company_code_id uuid,
+    p_position_id uuid,p_org_unit_id uuid,p_manager_employee_id uuid,
+    p_cost_center_id uuid,p_profit_center_id uuid,p_project_id uuid,p_site_id uuid,
+    p_allocation_percent numeric,p_is_primary boolean,p_metadata jsonb,p_policy_evidence jsonb
+) RETURNS TABLE(worker_engagement_id uuid,placement_id uuid,engagement_version bigint,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,event,shared
+AS $$
+DECLARE v_policy jsonb;v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_engagement document.worker_engagement%ROWTYPE;v_placement_id uuid;v_version bigint;v_outbox uuid;v_execution uuid;v_payload jsonb;v_effective_until date;
+BEGIN
+ IF current_setting('app.database_plane',true) IS DISTINCT FROM 'neon' OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Placement command context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 OR p_effective_until IS NOT NULL AND p_effective_until<=p_effective_from OR p_allocation_percent<=0 OR p_allocation_percent>100 OR jsonb_typeof(p_metadata)<>'object' THEN RAISE EXCEPTION 'Invalid placement activation command' USING ERRCODE='check_violation';END IF;
+ v_policy:=document.normalize_supplier_workforce_policy_evidence('placement_change',p_policy_evidence);
+ v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('engagement',p_worker_engagement_id,'version',p_expected_version,'from',p_effective_from,'until',p_effective_until,'company',p_company_code_id,'position',p_position_id,'orgUnit',p_org_unit_id,'manager',p_manager_employee_id,'costCenter',p_cost_center_id,'profitCenter',p_profit_center_id,'project',p_project_id,'site',p_site_id,'allocation',p_allocation_percent,'primary',p_is_primary,'metadata',p_metadata,'policy',v_policy)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':placement:'||p_idempotency_key,0));
+ SELECT * INTO v_existing FROM event.command_execution WHERE tenant_id=p_tenant_id AND command_code='workforce.external_worker.placement.activate' AND idempotency_key=p_idempotency_key;
+ IF FOUND THEN
+  IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Placement idempotency key reused' USING ERRCODE='unique_violation';END IF;
+  IF v_existing.status<>'succeeded' THEN RAISE EXCEPTION 'Prior placement command is not replayable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
+  RETURN QUERY SELECT (v_existing.result_payload->>'workerEngagementId')::uuid,(v_existing.result_payload->>'placementId')::uuid,(v_existing.result_payload->>'engagementVersion')::bigint,(v_existing.result_payload->>'outboxId')::uuid,true;RETURN;
+ END IF;
+ SELECT * INTO v_engagement FROM document.worker_engagement WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'Worker engagement not found' USING ERRCODE='no_data_found';END IF;
+ IF v_engagement.row_version<>p_expected_version THEN RAISE EXCEPTION 'Worker engagement version is stale' USING ERRCODE='serialization_failure';END IF;
+ IF v_engagement.status<>'active' OR v_engagement.company_code_id<>p_company_code_id OR p_effective_from<v_engagement.start_date OR p_effective_from>=v_engagement.end_date OR p_effective_until IS NOT NULL AND p_effective_until>v_engagement.end_date THEN RAISE EXCEPTION 'Placement must be within an active engagement and its buyer company/date scope' USING ERRCODE='check_violation';END IF;
+ v_effective_until:=COALESCE(p_effective_until,v_engagement.end_date);
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'workforce.external_worker.placement.activate',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id',v_execution::text,true);
+ IF p_is_primary THEN UPDATE document.worker_operational_placement placement SET effective_until=CASE WHEN placement.effective_from<p_effective_from THEN p_effective_from ELSE placement.effective_until END,status='superseded',updated_at=clock_timestamp(),updated_by=p_actor_id WHERE placement.tenant_id=p_tenant_id AND placement.worker_engagement_id=p_worker_engagement_id AND placement.is_primary AND placement.status='active' AND daterange(placement.effective_from,COALESCE(placement.effective_until,'infinity'::date),'[)')&&daterange(p_effective_from,v_effective_until,'[)');END IF;
+ INSERT INTO document.worker_operational_placement(tenant_id,worker_engagement_id,position_id,org_unit_id,manager_employee_id,company_code_id,cost_center_id,profit_center_id,project_id,site_id,allocation_percent,effective_from,effective_until,is_primary,metadata,status,created_by) VALUES(p_tenant_id,p_worker_engagement_id,p_position_id,p_org_unit_id,p_manager_employee_id,p_company_code_id,p_cost_center_id,p_profit_center_id,p_project_id,p_site_id,p_allocation_percent,p_effective_from,v_effective_until,p_is_primary,p_metadata,'active',p_actor_id) RETURNING id INTO v_placement_id;
+ UPDATE document.worker_engagement SET updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id AND row_version=p_expected_version RETURNING row_version INTO v_version;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id','',true);
+ v_payload:=jsonb_build_object('workerEngagementId',p_worker_engagement_id,'placementId',v_placement_id,'engagementVersion',v_version,'effectiveFrom',p_effective_from,'effectiveUntil',v_effective_until,'policyEvidence',v_policy,'commandExecutionId',v_execution);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'neon-workforce','workforce.external_worker.placement.activated','worker-placement:'||v_placement_id::text,'worker_operational_placement',v_placement_id,'worker_engagement',p_worker_engagement_id,LEAST(v_version,2147483647)::integer,p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+ UPDATE event.command_execution SET status='succeeded',result_payload=v_payload||jsonb_build_object('outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution;
+ RETURN QUERY SELECT p_worker_engagement_id,v_placement_id,v_version,v_outbox,false;
+END;$$;
+
+CREATE OR REPLACE FUNCTION document.command_worker_engagement_terminate(
+ p_tenant_id uuid,p_worker_engagement_id uuid,p_expected_version bigint,p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid,p_reason_code text,p_effective_at timestamptz,p_policy_evidence jsonb
+) RETURNS TABLE(worker_engagement_id uuid,engagement_version bigint,iam_outbox_id uuid,iam_desired_hash text,outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,document,event,shared AS $$
+DECLARE v_policy jsonb;v_iam_policy jsonb;v_fingerprint text;v_existing event.command_execution%ROWTYPE;v_engagement document.worker_engagement%ROWTYPE;v_after_version bigint;v_iam record;v_outbox uuid;v_execution uuid;v_payload jsonb;
+BEGIN
+ IF current_setting('app.database_plane',true) IS DISTINCT FROM 'neon' OR NULLIF(current_setting('app.current_tenant_id',true),'')::uuid IS DISTINCT FROM p_tenant_id OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN RAISE EXCEPTION 'Engagement termination context mismatch' USING ERRCODE='insufficient_privilege';END IF;
+ IF p_expected_version<1 OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 180 OR p_reason_code!~'^[A-Z][A-Z0-9_.-]{1,126}$' OR p_effective_at IS NULL THEN RAISE EXCEPTION 'Invalid engagement termination command' USING ERRCODE='check_violation';END IF;
+ v_policy:=document.normalize_supplier_workforce_policy_evidence('engagement_end',p_policy_evidence);v_iam_policy:=jsonb_set(v_policy,'{boundary}','"iam_project"'::jsonb);
+ v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('engagement',p_worker_engagement_id,'version',p_expected_version,'reason',p_reason_code,'effectiveAt',p_effective_at,'policy',v_policy)::text,'UTF8'),'sha256'),'hex');
+ PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':engagement-end:'||p_idempotency_key,0));SELECT * INTO v_existing FROM event.command_execution WHERE tenant_id=p_tenant_id AND command_code='workforce.external_worker.engagement.terminate' AND idempotency_key=p_idempotency_key;
+ IF FOUND THEN IF v_existing.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Termination idempotency key reused' USING ERRCODE='unique_violation';END IF;IF v_existing.status<>'succeeded' THEN RAISE EXCEPTION 'Prior termination command is not replayable' USING ERRCODE='object_not_in_prerequisite_state';END IF;RETURN QUERY SELECT (v_existing.result_payload->>'workerEngagementId')::uuid,(v_existing.result_payload->>'engagementVersion')::bigint,(v_existing.result_payload->>'iamOutboxId')::uuid,v_existing.result_payload->>'iamDesiredHash',(v_existing.result_payload->>'outboxId')::uuid,true;RETURN;END IF;
+ SELECT * INTO v_engagement FROM document.worker_engagement WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id FOR UPDATE;IF NOT FOUND THEN RAISE EXCEPTION 'Worker engagement not found' USING ERRCODE='no_data_found';END IF;IF v_engagement.row_version<>p_expected_version THEN RAISE EXCEPTION 'Worker engagement version is stale' USING ERRCODE='serialization_failure';END IF;IF v_engagement.status NOT IN('active','suspended') THEN RAISE EXCEPTION 'Only active or suspended engagements may be terminated' USING ERRCODE='invalid_parameter_value';END IF;IF p_effective_at>clock_timestamp()+interval '5 minutes' OR p_effective_at<v_engagement.activated_at THEN RAISE EXCEPTION 'Termination effective time must be current and after activation' USING ERRCODE='check_violation';END IF;
+ INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,correlation_id,started_at,status_changed_at,status_changed_by,created_by) VALUES(p_tenant_id,'workforce.external_worker.engagement.terminate',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution;
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id',v_execution::text,true);
+ UPDATE document.worker_engagement SET status='terminated',status_changed_at=p_effective_at,status_changed_by=p_actor_id,closed_at=p_effective_at,closed_by=p_actor_id,metadata=metadata||jsonb_build_object('terminationReasonCode',p_reason_code),updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_worker_engagement_id AND row_version=p_expected_version RETURNING row_version INTO v_after_version;
+ UPDATE document.worker_operational_placement placement SET effective_until=CASE WHEN placement.effective_from<p_effective_at::date THEN LEAST(COALESCE(placement.effective_until,p_effective_at::date),p_effective_at::date) ELSE placement.effective_until END,status='inactive',updated_at=clock_timestamp(),updated_by=p_actor_id WHERE placement.tenant_id=p_tenant_id AND placement.worker_engagement_id=p_worker_engagement_id AND placement.status='active';
+ PERFORM set_config('app.worker_engagement_lifecycle_command_execution_id','',true);
+ SELECT * INTO v_iam FROM document.command_worker_engagement_iam_projection(p_tenant_id,p_worker_engagement_id,v_after_version,p_idempotency_key||':iam',p_actor_id,p_correlation_id,v_iam_policy);
+ v_payload:=jsonb_build_object('workerEngagementId',p_worker_engagement_id,'engagementVersion',v_iam.desired_version,'reasonCode',p_reason_code,'effectiveAt',p_effective_at,'iamOutboxId',v_iam.outbox_id,'iamDesiredHash',v_iam.desired_hash,'policyEvidence',v_policy,'commandExecutionId',v_execution);
+ INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,correlation_id,partition_key,payload,created_by) VALUES(p_tenant_id,'neon-workforce','workforce.external_worker.engagement.terminated','worker-engagement:'||p_worker_engagement_id::text||':v'||v_iam.desired_version::text,'worker_engagement',p_worker_engagement_id,'worker_engagement',p_worker_engagement_id,LEAST(v_iam.desired_version,2147483647)::integer,p_actor_id,'neon.worker-engagement-lifecycle',p_correlation_id,p_tenant_id::text,v_payload,p_actor_id) RETURNING id INTO v_outbox;
+ UPDATE event.command_execution SET status='succeeded',result_payload=v_payload||jsonb_build_object('outboxId',v_outbox),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution;
+ RETURN QUERY SELECT p_worker_engagement_id,v_iam.desired_version,v_iam.outbox_id,v_iam.desired_hash,v_outbox,false;
+END;$$;
+
 CREATE OR REPLACE FUNCTION document.trg_guard_external_revision()
 RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog AS $$
 BEGIN
@@ -5043,7 +5253,6 @@ BEGIN
     RETURN NEW;
 END;
 $$;
-\ir 07_internal_workforce_iam.sql
 CREATE OR REPLACE FUNCTION document.command_workforce_iam_projection(
   p_tenant_id uuid,p_projection_id uuid,p_expected_version bigint,
   p_idempotency_key text,p_actor_id uuid,p_correlation_id uuid DEFAULT NULL
@@ -5244,7 +5453,7 @@ $$;
 CREATE OR REPLACE FUNCTION document.trg_guard_entity_case_mutation() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,event AS $$
 DECLARE execution uuid:=NULLIF(current_setting('app.entity_case_command_execution_id',true),'')::uuid;tenant uuid:=COALESCE(NEW.tenant_id,OLD.tenant_id);
 BEGIN
- IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
+ IF execution IS NULL OR NOT EXISTS(SELECT 1 FROM event.command_execution e WHERE e.id=execution AND e.tenant_id=tenant AND e.command_code IN('entity.case.draft.write','entity.case.validation','entity.case.lifecycle','entity.case.materialize.internal_business_partner','entity.case.materialize.business_partner_role','entity.case.materialize.business_partner_company','entity.case.materialize.business_partner_change','entity.case.materialize.mesh_profile_change') AND e.status='processing' AND e.actor_principal_id=master.current_principal_id_soft()) THEN RAISE EXCEPTION 'Entity case mutations require the governed command' USING ERRCODE='insufficient_privilege';END IF;RETURN COALESCE(NEW,OLD);
 END $$;
 
 CREATE OR REPLACE FUNCTION document.command_entity_case_validation(
@@ -5305,17 +5514,27 @@ BEGIN
  IF p_action='submit' THEN
   IF current.status<>'draft' OR (p_cycle_task_id IS NOT NULL AND task.status NOT IN('pending','ready','in_progress')) THEN RAISE EXCEPTION 'Entity case is not submittable' USING ERRCODE='object_not_in_prerequisite_state';END IF;
   IF NOT EXISTS(SELECT 1 FROM document.entity_case_validation v WHERE v.tenant_id=p_tenant_id AND v.entity_case_id=p_case_id AND v.evaluated_snapshot_id=current.current_snapshot_id AND v.details->'validationSummary'->>'outcome'='passed') THEN RAISE EXCEPTION 'Entity case requires successful validation of the current snapshot' USING ERRCODE='object_not_in_prerequisite_state';END IF;
-  IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status='published'),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
+  IF cardinality(document.fn_validate_entity_case_payload((SELECT c.contract_json FROM runtime_meta.entity_contract c WHERE c.tenant_id=p_tenant_id AND c.id=current.entity_contract_id AND c.entity_contract_hash=current.entity_contract_hash AND c.status IN('published','superseded')),payload))>0 THEN RAISE EXCEPTION 'Entity case submission failed pinned contract validation' USING ERRCODE='check_violation';END IF;
   next_status:='submitted';
  ELSE
   IF current.status NOT IN('submitted','in_review') OR p_actor_id=current.created_by OR (p_cycle_task_id IS NOT NULL AND (task.status NOT IN('in_progress','ready') OR (task.owner_principal_id IS NOT NULL AND task.owner_principal_id<>p_actor_id) OR NOT EXISTS(SELECT 1 FROM governance.cycle_subject s WHERE s.tenant_id=p_tenant_id AND s.cycle_run_id=p_cycle_run_id AND s.cycle_task_id=p_cycle_task_id AND s.entity_case_id=p_case_id AND s.is_primary))) THEN RAISE EXCEPTION 'Entity case decision violates maker-checker authority' USING ERRCODE='insufficient_privilege';END IF;
+  IF p_action='approve' AND current.operation_code='amend_partner' THEN
+   PERFORM 1 FROM document.mesh_profile_change_resolution resolution
+    JOIN document.mesh_profile_change_case link ON link.tenant_id=resolution.tenant_id AND link.resolution_id=resolution.id
+    JOIN master.business_partner bp ON bp.tenant_id=resolution.tenant_id AND bp.id=resolution.business_partner_id
+    JOIN control.mesh_business_partner_profile_projection projection ON projection.tenant_id=resolution.tenant_id AND projection.id=resolution.projection_id
+    WHERE link.tenant_id=p_tenant_id AND link.entity_case_id=p_case_id AND bp.status='active'
+     AND bp.record_version=resolution.expected_target_version AND projection.projection_status='active' AND projection.current_snapshot_id=resolution.incoming_snapshot_id
+    FOR SHARE OF bp,projection;
+   IF NOT FOUND THEN RAISE EXCEPTION 'Profile source or target changed before approval' USING ERRCODE='serialization_failure'; END IF;
+  END IF;
   next_status:=CASE p_action WHEN 'approve' THEN 'approved' WHEN 'reject' THEN 'rejected' ELSE 'draft' END;
  END IF;
  next_snapshot:=snapshot.fn_capture_entity('document.entity_case',p_case_id,current.case_code,1,current.entity_contract_hash,next_version,'entity.case.'||p_action,'version',payload,p_correlation_id,NULL,NULL,NULL,'legal','governed-entity-case');
  lineage_hash:=encode(public.digest(convert_to(jsonb_build_object('caseId',p_case_id,'sourceSnapshotId',current.current_snapshot_id,'targetSnapshotId',next_snapshot,'action',p_action,'version',next_version)::text,'UTF8'),'sha256'),'hex');
  INSERT INTO snapshot.entity_case_snapshot_lineage(tenant_id,entity_case_id,source_snapshot_id,target_snapshot_id,lineage_role,transformation_code,transformation_version,evidence_hash,created_by) VALUES(p_tenant_id,p_case_id,current.current_snapshot_id,next_snapshot,CASE WHEN p_action='submit' THEN 'submitted_from' ELSE 'decided_from' END,'entity.case.'||p_action,'1',lineage_hash,p_actor_id);
  IF p_cycle_task_id IS NOT NULL THEN
-  IF p_action='submit' THEN INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by) VALUES(p_tenant_id,p_cycle_run_id,p_cycle_task_id,'governed_case',p_case_id,true,p_actor_id) ON CONFLICT DO NOTHING;UPDATE governance.cycle_task SET status='in_progress',started_at=COALESCE(started_at,clock_timestamp()),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run SET status='running',started_at=COALESCE(started_at,clock_timestamp()),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id AND status IN('draft','scheduled');
+  IF p_action='submit' THEN INSERT INTO governance.cycle_subject(tenant_id,cycle_run_id,cycle_task_id,subject_role,entity_case_id,is_primary,created_by) VALUES(p_tenant_id,p_cycle_run_id,p_cycle_task_id,'governed_case',p_case_id,true,p_actor_id) ON CONFLICT DO NOTHING;UPDATE governance.cycle_task SET status='in_progress',started_at=COALESCE(started_at,clock_timestamp()),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run run SET status='running',started_at=COALESCE(run.started_at,clock_timestamp()),updated_by=p_actor_id,version=run.version+1 WHERE run.tenant_id=p_tenant_id AND run.id=p_cycle_run_id AND run.status IN('draft','scheduled');
   ELSIF p_action='return' THEN UPDATE governance.cycle_task SET status='ready',started_at=NULL,completed_at=NULL,completion_evidence=jsonb_build_object('caseId',p_case_id,'decision','return','snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;
   ELSE UPDATE governance.cycle_task SET status='completed',completed_at=clock_timestamp(),completion_evidence=jsonb_build_object('caseId',p_case_id,'decision',p_action,'snapshotId',next_snapshot,'reason',p_reason),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_task_id;UPDATE governance.cycle_run SET status='completed',completed_at=clock_timestamp(),updated_by=p_actor_id,version=version+1 WHERE tenant_id=p_tenant_id AND id=p_cycle_run_id;END IF;
  END IF;
@@ -5342,3 +5561,82 @@ DO $$ BEGIN
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN GRANT EXECUTE ON FUNCTION document.fn_entity_case_approvers(uuid,uuid,uuid,uuid),document.command_entity_case_validation(uuid,uuid,bigint,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,text,uuid,uuid),document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid),document.command_entity_case_attachment(uuid,uuid,text,uuid,text,text,uuid) TO athyperapp;END IF;
  IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperadmin') THEN GRANT EXECUTE ON FUNCTION document.fn_entity_case_approvers(uuid,uuid,uuid,uuid),document.command_entity_case_validation(uuid,uuid,bigint,uuid,text,text,text,jsonb,jsonb,jsonb,jsonb,text,uuid,uuid),document.command_entity_case_lifecycle(uuid,uuid,text,bigint,uuid,uuid,text,text,uuid,uuid),document.command_entity_case_attachment(uuid,uuid,text,uuid,text,text,uuid) TO athyperadmin;END IF;
 END $$;
+-- BP-WRK-001: publish one approved requisition to an externally verified set
+-- of qualified Supplier/capability coordinates. No candidate, Person,
+-- engagement, placement, or IAM authority is created by this command.
+CREATE OR REPLACE FUNCTION document.command_publish_workforce_requisition(
+    p_tenant_id uuid,
+    p_requisition_id uuid,
+    p_expected_version bigint,
+    p_distributions jsonb,
+    p_idempotency_key text,
+    p_actor_id uuid
+) RETURNS TABLE(requisition_id uuid,status text,row_version bigint,distribution_ids uuid[],outbox_id uuid,replayed boolean)
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path=pg_catalog,document,event,shared
+AS $$
+DECLARE
+    v_requisition document.workforce_requisition%ROWTYPE;
+    v_prior event.command_execution%ROWTYPE;
+    v_execution_id uuid;
+    v_outbox_id uuid;
+    v_distribution_ids uuid[] := ARRAY[]::uuid[];
+    v_distribution jsonb;
+    v_distribution_id uuid;
+    v_fingerprint text;
+BEGIN
+    IF current_database()<>'athyper_neon'
+       OR shared.current_tenant_id() IS DISTINCT FROM p_tenant_id
+       OR NULLIF(current_setting('app.current_principal_id',true),'')::uuid IS DISTINCT FROM p_actor_id THEN
+      RAISE EXCEPTION 'Workforce requisition publication context mismatch' USING ERRCODE='insufficient_privilege';
+    END IF;
+    IF p_expected_version<1 OR jsonb_typeof(p_distributions)<>'array'
+       OR jsonb_array_length(p_distributions) NOT BETWEEN 1 AND 100
+       OR btrim(p_idempotency_key)<>p_idempotency_key OR length(p_idempotency_key) NOT BETWEEN 8 AND 200 THEN
+      RAISE EXCEPTION 'Invalid workforce requisition publication command' USING ERRCODE='check_violation';
+    END IF;
+    IF EXISTS(SELECT 1 FROM jsonb_array_elements(p_distributions) item
+      WHERE jsonb_typeof(item)<>'object'
+         OR (SELECT count(*) FROM jsonb_object_keys(item))<>6 + CASE WHEN item?'responseDueAt' THEN 1 ELSE 0 END
+         OR NOT(item?'supplierId' AND item?'networkRelationshipId' AND item?'capabilityId' AND item?'qualificationId' AND item?'evidenceHash' AND item?'evaluatedAt')
+         OR item->>'evidenceHash' !~ '^[a-f0-9]{64}$'
+         OR NULLIF(item->>'evaluatedAt','')::timestamptz IS NULL
+         OR (item?'responseDueAt' AND NULLIF(item->>'responseDueAt','')::timestamptz IS NULL)
+    ) OR (SELECT count(DISTINCT item->>'supplierId') FROM jsonb_array_elements(p_distributions) item)<>jsonb_array_length(p_distributions) THEN
+      RAISE EXCEPTION 'Workforce requisition distributions require distinct, complete eligibility proof' USING ERRCODE='check_violation';
+    END IF;
+    v_fingerprint:=encode(public.digest(convert_to(jsonb_build_object('tenantId',p_tenant_id,'requisitionId',p_requisition_id,'expectedVersion',p_expected_version,'distributions',p_distributions,'actorId',p_actor_id)::text,'UTF8'),'sha256'),'hex');
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_tenant_id::text||':workforce-requisition-publish:'||p_idempotency_key,0));
+    SELECT command.* INTO v_prior FROM event.command_execution command WHERE command.tenant_id=p_tenant_id AND command.command_code='workforce.requisition.publish' AND command.idempotency_key=p_idempotency_key;
+    IF FOUND THEN
+      IF v_prior.request_fingerprint::text IS DISTINCT FROM v_fingerprint THEN RAISE EXCEPTION 'Workforce requisition publication idempotency conflict' USING ERRCODE='unique_violation'; END IF;
+      RETURN QUERY SELECT (v_prior.result_payload->>'requisitionId')::uuid,v_prior.result_payload->>'status',(v_prior.result_payload->>'rowVersion')::bigint,ARRAY(SELECT jsonb_array_elements_text(v_prior.result_payload->'distributionIds')::uuid),(v_prior.result_payload->>'outboxId')::uuid,true; RETURN;
+    END IF;
+    SELECT * INTO v_requisition FROM document.workforce_requisition WHERE tenant_id=p_tenant_id AND id=p_requisition_id FOR UPDATE;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Workforce requisition not found' USING ERRCODE='no_data_found'; END IF;
+    IF v_requisition.row_version<>p_expected_version THEN RAISE EXCEPTION 'Workforce requisition publication version conflict' USING ERRCODE='serialization_failure'; END IF;
+    IF v_requisition.status<>'approved' OR v_requisition.approved_at IS NULL THEN RAISE EXCEPTION 'Only an approved workforce requisition can be published' USING ERRCODE='check_violation'; END IF;
+    INSERT INTO event.command_execution(tenant_id,command_code,idempotency_key,request_fingerprint,status,actor_principal_id,source_service,started_at,status_changed_at,status_changed_by,created_by)
+    VALUES(p_tenant_id,'workforce.requisition.publish',p_idempotency_key,v_fingerprint,'processing',p_actor_id,'neon-supplier-workforce',clock_timestamp(),clock_timestamp(),p_actor_id,p_actor_id) RETURNING id INTO v_execution_id;
+    FOR v_distribution IN SELECT value FROM jsonb_array_elements(p_distributions) value LOOP
+      v_distribution_id:=shared.uuidv7();
+      INSERT INTO document.workforce_requisition_supplier(id,tenant_id,workforce_requisition_id,supplier_id,distributed_at,distributed_by,response_due_at,distribution_snapshot,status,created_by)
+      VALUES(v_distribution_id,p_tenant_id,p_requisition_id,(v_distribution->>'supplierId')::uuid,clock_timestamp(),p_actor_id,NULLIF(v_distribution->>'responseDueAt','')::timestamptz,jsonb_build_object('networkRelationshipId',v_distribution->>'networkRelationshipId','capabilityId',v_distribution->>'capabilityId','qualificationId',v_distribution->>'qualificationId','eligibilityEvidenceHash',v_distribution->>'evidenceHash','evaluatedAt',v_distribution->>'evaluatedAt'),'distributed',p_actor_id);
+      v_distribution_ids:=array_append(v_distribution_ids,v_distribution_id);
+    END LOOP;
+    UPDATE document.workforce_requisition SET status='released',status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,row_version=row_version+1,updated_at=clock_timestamp(),updated_by=p_actor_id WHERE tenant_id=p_tenant_id AND id=p_requisition_id RETURNING * INTO v_requisition;
+    INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,event_version,actor_id,source,partition_key,payload,created_by)
+    VALUES(p_tenant_id,'neon-supplier-workforce','workforce.requisition.published','workforce-requisition:'||p_requisition_id::text||':v'||v_requisition.row_version::text,'document.workforce_requisition',p_requisition_id,'workforce_requisition',p_requisition_id,LEAST(v_requisition.row_version,2147483647)::integer,p_actor_id,'neon-supplier-workforce',p_tenant_id::text,jsonb_build_object('requisitionId',p_requisition_id,'rowVersion',v_requisition.row_version,'status','released','distributionCount',cardinality(v_distribution_ids),'commandExecutionId',v_execution_id),p_actor_id) RETURNING id INTO v_outbox_id;
+    UPDATE event.command_execution SET status='succeeded',result_payload=jsonb_build_object('requisitionId',p_requisition_id,'status','released','rowVersion',v_requisition.row_version,'expectedVersion',p_expected_version,'supplierTargets',(SELECT jsonb_agg(jsonb_strip_nulls(jsonb_build_object('supplierId',item->>'supplierId','responseDueAt',item->>'responseDueAt')) ORDER BY item->>'supplierId') FROM jsonb_array_elements(p_distributions) item),'distributionIds',to_jsonb(v_distribution_ids),'outboxId',v_outbox_id),completed_at=clock_timestamp(),status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=v_execution_id;
+    RETURN QUERY SELECT p_requisition_id,'released',v_requisition.row_version,v_distribution_ids,v_outbox_id,false;
+END $$;
+
+CREATE FUNCTION document.trg_mesh_profile_resolution_immutable()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Profile resolution evidence is immutable'
+        USING ERRCODE = 'integrity_constraint_violation';
+END
+$$;

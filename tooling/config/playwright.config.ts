@@ -28,6 +28,11 @@ const planeBaseUrls = {
     "https://neon.athyper.local",
   mesh: process.env.PLAYWRIGHT_MESH_BASE_URL ?? "https://mesh.athyper.local",
 } as const;
+const requestedSessionPlane = process.env.PLAYWRIGHT_SESSION_PLANE;
+const sessionPlane =
+  requestedSessionPlane === "studio" || requestedSessionPlane === "mesh"
+    ? requestedSessionPlane
+    : "neon";
 
 export default defineConfig({
   testDir: "../../tests/e2e",
@@ -62,13 +67,45 @@ export default defineConfig({
     {
       name: "session",
       testMatch: "**/session/**/*.spec.ts",
-      use: { browserName: "chromium" },
+      metadata: { plane: sessionPlane },
+      use: {
+        browserName: "chromium",
+        baseURL: planeBaseUrls[sessionPlane],
+        storageState: `../../tests/e2e/.auth/${sessionPlane}.json`,
+      },
     },
     {
       name: "visual",
       testMatch: "**/visual/**/*.spec.ts",
       use: { browserName: "chromium" },
     },
+    {
+      name: "bp-v1-009",
+      testMatch: "**/business-partner/bp-v1-009.spec.ts",
+      use: {
+        browserName: "chromium",
+        baseURL: planeBaseUrls.neon,
+        storageState: undefined,
+      },
+    },
+    {
+      name: "bp-r2",
+      testMatch: "**/business-partner/bp-r2.spec.ts",
+      use: {
+        browserName: "chromium",
+        baseURL: planeBaseUrls.neon,
+        storageState: undefined,
+      },
+    },
+    {
+      name: "bp-r3",
+      testMatch: "**/business-partner/bp-r3.spec.ts",
+      use: { browserName: "chromium", baseURL: planeBaseUrls.neon, storageState: undefined },
+    },
+    { name:"bp-r5",testMatch:"**/business-partner/bp-r5.spec.ts",use:{browserName:"chromium",baseURL:planeBaseUrls.neon,storageState:undefined} },
+    { name:"bp-r6-amendment",testMatch:"**/business-partner/bp-r6-amendment.spec.ts",use:{browserName:"chromium",baseURL:planeBaseUrls.neon,storageState:undefined} },
+    { name:"bp-r6",testMatch:"**/business-partner/bp-r6.spec.ts",use:{browserName:"chromium",baseURL:planeBaseUrls.mesh,storageState:undefined} },
+    { name:"bp-r7",testMatch:"**/business-partner/bp-r7.spec.ts",use:{browserName:"chromium",baseURL:planeBaseUrls.neon,storageState:undefined} },
     ...(["studio", "neon", "mesh"] as const).flatMap((plane) => [
       {
         name: `production-${plane}-desktop`,

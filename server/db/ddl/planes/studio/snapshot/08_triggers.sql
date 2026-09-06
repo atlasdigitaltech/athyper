@@ -51,3 +51,8 @@ FOR EACH ROW EXECUTE FUNCTION snapshot.trg_reject_entity_release_artifact_mutati
 CREATE TRIGGER business_partner_definition_revision_immutable
 BEFORE UPDATE OR DELETE ON snapshot.business_partner_definition_revision
 FOR EACH ROW EXECUTE FUNCTION snapshot.trg_guard_business_partner_definition_revision();
+
+CREATE TRIGGER case_contract_revision_immutable
+    BEFORE UPDATE OR DELETE ON snapshot.business_partner_case_contract_revision
+    FOR EACH ROW
+    EXECUTE FUNCTION snapshot.trg_reject_case_contract_mutation();

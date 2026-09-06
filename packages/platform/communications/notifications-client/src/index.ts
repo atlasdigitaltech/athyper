@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createOperation, encodePathSegment, type HttpClient } from "@athyper/platform-api-client";
 
 export type NotificationPriority = "low" | "normal" | "high" | "urgent";
@@ -82,5 +83,5 @@ function record(value:unknown,name:string):Record<string,unknown>{if(!value||typ
 function required(value:unknown,name:string):string{if(typeof value!=="string"||!value.trim())throw new TypeError(`${name} must be a non-empty string`);return value;}
 function optional(value:unknown):string|undefined{return typeof value==="string"&&value.trim()?value:undefined;}
 function nonNegative(value:unknown,name:string):number{if(!Number.isSafeInteger(value)||Number(value)<0)throw new TypeError(`${name} must be a non-negative integer`);return Number(value);}
-function date(value:unknown,name:string):string{const result=required(value,name);if(!Number.isFinite(Date.parse(result)))throw new TypeError(`${name} must be an ISO date`);return result;}
+function date(value:unknown,name:string):string{const result=required(value,name);if(!Number.isFinite(parseInstant(result)))throw new TypeError(`${name} must be an ISO date`);return result;}
 function optionals<const K extends readonly string[]>(body:Record<string,unknown>,keys:K):Partial<Record<K[number],string>>{return Object.fromEntries(keys.flatMap((key)=>optional(body[key])?[[key,optional(body[key])]]:[])) as Partial<Record<K[number],string>>;}

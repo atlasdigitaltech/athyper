@@ -1,0 +1,7 @@
+{
+  "schema": "athyper.business-partner-browser-environment-preflight/1",
+  "slice": "v1",
+  "ready": true,
+  "missing": [],
+  "invalid": []
+}

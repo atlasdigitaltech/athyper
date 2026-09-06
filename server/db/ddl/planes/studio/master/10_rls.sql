@@ -401,3 +401,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+-- Publication resolves configured tenant-local service identities for target jobs.
+CREATE POLICY publication_service_principal_read ON master.principal
+  FOR SELECT TO athyper_publication_service
+  USING (tenant_id=shared.current_tenant_id_soft() AND principal_type='service_account');

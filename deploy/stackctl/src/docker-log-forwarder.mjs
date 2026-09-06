@@ -7,6 +7,10 @@ const DEFAULT_REFRESH_MS = 10_000;
 const DEFAULT_FLUSH_MS = 500;
 const MAX_QUEUE = 20_000;
 
+export function retainNewest(entries, maximum = MAX_QUEUE) {
+  if (entries.length > maximum) entries.splice(0, entries.length - maximum);
+}
+
 function required(options, name) {
   const value = options[name]?.trim();
   if (!value) throw new Error(`${name} is required`);
@@ -91,7 +95,7 @@ export async function runDockerLogForwarder(configuration) {
   const enqueue = (container, stream, value) => {
     const parsed = parseDockerLogLine(value);
     queue.push({ ...parsed, labels: streamLabels(container, stream, configuration) });
-    if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
+    retainNewest(queue);
   };
   const start = (container) => {
     const child = spawn("docker", ["logs", "--follow", "--timestamps", "--since", configuration.since, container.id], {
@@ -128,7 +132,7 @@ export async function runDockerLogForwarder(configuration) {
       heartbeat();
     } catch (error) {
       queue.unshift(...batch);
-      if (queue.length > MAX_QUEUE) queue.length = MAX_QUEUE;
+      retainNewest(queue);
       process.stderr.write(`[forwarder] push failed: ${error.message}\n`);
     } finally { flushing = false; }
   };

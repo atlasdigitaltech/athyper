@@ -95,6 +95,60 @@
       "disposition": "migrate_or_archive_in_mesh_boundary",
       "retention": "Mesh security/audit retention and legal hold",
       "evidence": "Mesh archive checksum/retrieval drill and zero-row Neon proof"
+    },
+    "ai": {
+      "dataClass": "ai_governance_and_runtime",
+      "disposition": "migrate_policy_and_audit_archive_runtime",
+      "retention": "AI governance, conversation, and audit retention policy",
+      "evidence": "policy revision, tenant counts, content hashes, and credential-reference validation"
+    },
+    "audit": {
+      "dataClass": "audit_log",
+      "disposition": "migrate_or_immutable_archive",
+      "retention": "security/audit retention and legal hold",
+      "evidence": "partition manifest, tamper-evident checksum, and retrieval drill"
+    },
+    "authz": {
+      "dataClass": "authorization_authority",
+      "disposition": "migrate_in_exact_plane_boundary",
+      "retention": "authorization policy and decision-evidence retention",
+      "evidence": "plane identity, source/target epochs, row counts, and canonical checksums"
+    },
+    "metadata": {
+      "dataClass": "metadata_authority",
+      "disposition": "migrate_published_authority_and_rebuild_projections",
+      "retention": "published metadata and governance history retention",
+      "evidence": "release hashes, source counts, and projection rebuild parity"
+    },
+    "onboarding": {
+      "dataClass": "business_workflow_transactional",
+      "disposition": "migrate_in_declared_fk_order",
+      "retention": "business workflow, privacy, and statutory retention policy",
+      "evidence": "case/revision counts, stable-ID map, and canonical checksums"
+    },
+    "ops": {
+      "dataClass": "operational_state_and_evidence",
+      "disposition": "migrate_active_state_and_archive_terminal_evidence",
+      "retention": "operations, incident, and rollout evidence retention",
+      "evidence": "active-work manifest, terminal archive checksum, and replay drill"
+    },
+    "publication": {
+      "dataClass": "published_definition_authority",
+      "disposition": "migrate_published_artifacts_and_release_history",
+      "retention": "published release and deployment evidence retention",
+      "evidence": "artifact hashes, release graph, and deployment acknowledgement parity"
+    },
+    "runtime_meta": {
+      "dataClass": "derived_runtime_projection",
+      "disposition": "rebuild_from_published_authority",
+      "retention": "discard after certified rebuild unless held as rollout evidence",
+      "evidence": "applied release hashes, epoch parity, and authoritative source comparison"
+    },
+    "trustiam": {
+      "dataClass": "identity_desired_state_authority",
+      "disposition": "migrate_authority_without_provider_credentials",
+      "retention": "identity governance, provisioning, and reconciliation evidence retention",
+      "evidence": "authority tenant counts, desired-state hashes, and provider credential-reference audit"
     }
   },
   "runtimeTableOverrides": {

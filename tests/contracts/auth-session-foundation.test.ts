@@ -159,7 +159,7 @@ describe("Phase 3 authentication foundation", () => {
   });
 
   it("keeps application TTL policy aligned with the effective Keycloak realm and client settings", () => {
-    const realm = JSON.parse(readFileSync(new URL("../../stack/config/iam/realm-athyper.json", import.meta.url), "utf8")) as { ssoSessionIdleTimeout: number; ssoSessionMaxLifespan: number; clients: Array<{ clientId: string; attributes?: Record<string, string> }> };
+    const realm = JSON.parse(readFileSync(new URL("../../deploy/config/iam/realm-athyper.json", import.meta.url), "utf8")) as { ssoSessionIdleTimeout: number; ssoSessionMaxLifespan: number; clients: Array<{ clientId: string; attributes?: Record<string, string> }> };
     assert.deepEqual(KEYCLOAK_SESSION_TTLS_MS.neon, { idleTtlMs: realm.ssoSessionIdleTimeout * 1_000, absoluteTtlMs: realm.ssoSessionMaxLifespan * 1_000 });
     assert.deepEqual(KEYCLOAK_SESSION_TTLS_MS.mesh, KEYCLOAK_SESSION_TTLS_MS.neon);
     const studio = realm.clients.find((client) => client.clientId === "studio-web"); assert.ok(studio);
@@ -246,4 +246,15 @@ describe("Phase 3 authentication foundation", () => {
   it("rejects stale, expired, or nonce-bearing backchannel logout tokens", async () => {
     for (const token of ["stale", "expired", "nonce"]) { const value = setup(); const response = await value.handlers.backchannelLogout(new Request("https://neon.example/api/auth/backchannel-logout", { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: `logout_token=${token}` })); assert.equal(response.status, 401, token); assert.match(await response.text(), /auth.invalid_identity/); }
   });
+});
+
+it("restores the exact deep link from server-side OAuth state in all three planes", async () => {
+  const destination = "/mdg/business-partner/f7688c3d-8c92-5651-a469-da3f4f786375/supplier?view=open&filter=a%20b";
+  for (const plane of ["neon", "mesh", "studio"] as const) {
+    const value = setup({}, 0, undefined, { plane, clientId: `${plane}-web`, authorizedRole: "grp:workbench:user", origin: `https://${plane}.example` });
+    const { callback } = await authenticate(value, destination);
+    assert.equal(callback.status, 303);
+    assert.equal(callback.headers.get("location"), destination);
+    assert.equal(value.store.states.size, 0, "OAuth state is consumed once");
+  }
 });

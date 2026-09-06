@@ -14,6 +14,7 @@ function atomicJson(path, document) {
   chmodSync(dirname(path), 0o700);
   const temporary = `${path}.tmp-${process.pid}`;
   writeFileSync(temporary, `${JSON.stringify(document, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(temporary, 0o600);
   renameSync(temporary, path);
 }
 function sourceRevision(repoRoot) {
@@ -85,17 +86,18 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
       return result;
     };
     const compose = (args) => invoke("docker", ["compose", "--project-name", PROJECT, "--file", composeFile, ...args]);
-    const writeActive = (state) => atomicJson(activePath, validate({ apiVersion: "athyper.io/v1alpha1", kind: "ActiveInstanceReceipt", metadata: { instance: "operations" }, spec: { project: PROJECT, state, updatedAt: now().toISOString(), sourceRevision: revision, composeFiles: [composeFile] } }, activePath));
+    const writeActive = (state, activeMode) => atomicJson(activePath, validate({ apiVersion: "athyper.io/v1alpha1", kind: "ActiveInstanceReceipt", metadata: { instance: "operations" }, spec: { project: PROJECT, state, updatedAt: now().toISOString(), sourceRevision: revision, composeFiles: [composeFile], ...(activeMode ? { mode: activeMode } : {}) } }, activePath));
     const receipt = (status, artifacts, rollback, error) => {
       const document = { apiVersion: "athyper.io/v1alpha1", kind: "StackOperationReceipt", metadata: { instance: "operations", id }, spec: { operation, status, project: PROJECT, startedAt: started.toISOString(), completedAt: now().toISOString(), sourceRevision: revision, commands, artifacts, rollback, ...(error ? { error } : {}) } };
       validate(document, receiptPath); atomicJson(receiptPath, document); return { ...document, receiptPath };
     };
-    const artifacts = { operator: dependencies.operator ?? userInfo().username, mode: mode ?? "lite" };
+    const artifacts = { operator: dependencies.operator ?? userInfo().username };
     mkdirSync(join(root,"operations","prometheus-targets"),{recursive:true,mode:0o755});
     chmodSync(join(root,"operations","prometheus-targets"),0o755);
     let rollback = { attempted: false, succeeded: false };
     try {
       if (operation === "up") {
+        artifacts.mode = mode;
         if (existsSync(activePath)) {
           const active = validate(JSON.parse(readFileSync(activePath, "utf8")), activePath);
           if (active.spec.project !== PROJECT) throw new Error(`Ownership receipt does not match ${PROJECT}.`);
@@ -113,15 +115,16 @@ export function executeOperationsOperation(repoRoot, operation, mode, options = 
         invoke("curl", ["--fail", "--silent", "--show-error", "--request", "POST", "--header", "content-type: application/json", "--data", "{\"streams\":[]}", "http://127.0.0.1:53901/loki/api/v1/push"]);
         const pid = (dependencies.startForwarder ?? defaultStartForwarder)(repoRoot, forwarderDirectory, revision);
         artifacts.forwarderPid = pid;
-        writeActive("running");
+        writeActive("running", mode);
         return receipt("succeeded", artifacts, rollback);
       }
       if (!existsSync(activePath)) throw new Error(`No controller ownership receipt exists for ${PROJECT}: ${activePath}`);
       const active = validate(JSON.parse(readFileSync(activePath, "utf8")), activePath);
       if (active.spec.project !== PROJECT) throw new Error(`Ownership receipt does not match ${PROJECT}.`);
+      artifacts.mode = active.spec.mode ?? "unknown";
       (dependencies.stopForwarder ?? stopForwarder)(pidPath);
       compose(["down", "--remove-orphans"]);
-      writeActive("stopped");
+      writeActive("stopped", active.spec.mode);
       return receipt("succeeded", artifacts, rollback);
     } catch (error) {
       if (operation === "up" && commands.some(({ arguments: args }) => args.includes("up"))) {

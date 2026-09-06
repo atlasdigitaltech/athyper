@@ -236,9 +236,9 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     } finally { await config.store.releaseRefreshLock(binding, id, owner); }
   });
   const backchannelLogout = run(async (request) => { const contentType = request.headers.get("content-type") ?? ""; const body = contentType.includes("application/json") ? await request.json() as { logout_token?: string } : Object.fromEntries(new URLSearchParams(await request.text())); const token = required(body.logout_token, "logout_token"); const identity = await config.provider.verifyBackchannelLogoutToken(token); validateBackchannel(identity, config, now(), logoutTokenMaxAge); const claimed = await config.store.claimLogoutToken(binding, hashOpaqueSessionId(identity.tokenId), logoutTokenMaxAge); if (!claimed) { config.observeSecurityEvent?.({ type: "backchannel_logout", plane: config.plane, outcome: "replay", revokedSessions: 0 }); return new Response(null, { status: 204 }); } const revoked = await config.store.revokeProviderSession(binding, identity.providerSessionId); config.observeSecurityEvent?.({ type: "backchannel_logout", plane: config.plane, outcome: revoked > 0 ? "revoked" : "no_match", revokedSessions: revoked }); return new Response(null, { status: 204 }); });
-  const elevateFromTrustedDevice = async (request: Request, requireDevice: boolean): Promise<Response | undefined> => {
+  const elevateFromTrustedDevice = async (request: Request, requireDevice: boolean, suppliedCsrfToken?: string): Promise<Response | undefined> => {
     const rawId = readCookie(request.headers.get("cookie"), cookieName); if (!rawId) throw new AuthFlowError("auth.unauthenticated", 401, "No session");
-    if (config.deriveCsrfToken) validateUnsafeSessionRequest(request, new URL(config.redirectUri).origin, csrfExpectations(config, rawId));
+    if (config.deriveCsrfToken) validateUnsafeSessionRequest(request, new URL(config.redirectUri).origin, csrfExpectations(config, rawId), suppliedCsrfToken);
     const id = hashOpaqueSessionId(rawId); const current = await currentById(id);
     if (!current?.tenantId || !current.encryptedTokenBundle) throw new AuthFlowError("auth.unauthenticated", 401, "No active tenant session");
     const deviceToken = readCookie(request.headers.get("cookie"), trustedCookieName);
@@ -261,7 +261,9 @@ export function createAuthHandlers(config: AuthBffConfig): AuthHandlers {
     return response;
   };
   const stepUpStart = run(async (request) => {
-    const remembered = await elevateFromTrustedDevice(request, false); if (remembered) return remembered;
+    const contentType=request.headers.get("content-type")??"";
+    const suppliedCsrfToken=contentType.includes("application/x-www-form-urlencoded")?new URLSearchParams(await request.text()).get("csrfToken")??undefined:undefined;
+    const remembered = await elevateFromTrustedDevice(request, false, suppliedCsrfToken); if (remembered) return remembered;
     const rawId = readCookie(request.headers.get("cookie"), cookieName); if (!rawId) throw new AuthFlowError("auth.unauthenticated", 401, "No session");
     const id = hashOpaqueSessionId(rawId); if (!await currentById(id)) throw new AuthFlowError("auth.unauthenticated", 401, "Session expired");
     const url = new URL(request.url); const browserBinding = randomBytes(32).toString("base64url"); const transaction = { ...(await createPkceTransaction({ returnTo: sanitizeReturnTo(url.searchParams.get("returnTo") ?? "/"), browserBinding, now: now() })), purpose: "step_up" as const, sessionIdHash: id, ...(url.searchParams.get("rememberDevice") === "true" ? { rememberDevice: true } : {}) };

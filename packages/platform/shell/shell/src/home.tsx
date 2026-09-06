@@ -1,5 +1,6 @@
 "use client";
 
+import { parseInstant } from "@athyper/platform-temporal";
 import { useAtlasAnswer, type AtlasActionAuditEntry, type AtlasGovernedAction, type AtlasRecordCitation } from "@athyper/platform-ai-agent-ui";
 import { AttachmentApiError, createAttachmentApiClient, convertClipboard, serializeForClipboard, type AttachmentProcessingStatus, type RichTextDocument } from "@athyper/platform-communications-collaboration-ui";
 import { ArrowDownIcon, ArrowUpIcon, Building2Icon, ChevronRightIcon, FileTextIcon, HistoryIcon, LibraryBigIcon, Maximize2Icon, PanelRightIcon, PlusIcon, SearchIcon, SlidersHorizontalIcon, SparklesIcon, TrashIcon } from "@athyper/platform-icons";
@@ -93,7 +94,7 @@ export function PlatformHome({ suggestions, searchItems, quickActions, workspace
   const allowedSuggestions = useMemo(() => configuredPrompts?.length ? configuredPrompts.map((item) => item.prompt) : suggestions, [configuredPrompts, suggestions]);
   const recent = useMemo(() => Object.entries(personalization.interactions)
     .flatMap(([href, interaction]) => { const item = allowedSearchItems.find((candidate) => candidate.href === href); return item ? [{ item, interaction }] : []; })
-    .sort((left, right) => Date.parse(right.interaction.lastVisitedAt) - Date.parse(left.interaction.lastVisitedAt))
+    .sort((left, right) => parseInstant(right.interaction.lastVisitedAt) - parseInstant(left.interaction.lastVisitedAt))
     .slice(0, 4)
     .map(({ item }) => item), [personalization.interactions, allowedSearchItems]);
 

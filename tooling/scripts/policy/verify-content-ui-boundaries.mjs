@@ -23,26 +23,26 @@
  */
 
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { extname, join, relative } from "node:path";
+import { extname, join, relative, resolve } from "node:path";
 
-const repoRoot = process.cwd();
-const contentUiRoot = join(repoRoot, "packages", "shared", "content-ui");
+const repoRoot = resolve(import.meta.dirname, "../../..");
+const contentUiRoot = join(repoRoot, "packages", "platform", "entity", "runtime", "content-ui");
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ Forbidden imports Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
 
 const forbiddenImports = [
   {
-    pattern: /from\s+["']@athyper\/runtime-canvas(\/[^"']+)?["']/,
+    pattern: /^@athyper\/runtime-canvas(?:\/|$)/,
     label:   "@athyper/runtime-canvas",
     why:     "content-ui is presentational; runtime-canvas owns orchestration. One-way dep.",
   },
   {
-    pattern: /from\s+["']@athyper\/runtime-contracts(\/[^"']+)?["']/,
+    pattern: /^@athyper\/runtime-contracts(?:\/|$)/,
     label:   "@athyper/runtime-contracts",
     why:     "content-ui must not depend on descriptor contracts.",
   },
   {
-    pattern: /from\s+["']@tanstack\/react-query["']/,
+    pattern: /^@tanstack\/react-query(?:\/|$)/,
     label:   "@tanstack/react-query",
     why:     "useQuery / useMutation belong in runtime-canvas/document-runtime/.",
   },
@@ -79,20 +79,34 @@ function checkSourceImports() {
   for (const file of walkSourceFiles(srcDir)) {
     const text = readFileSync(file, "utf8");
     for (const rule of forbiddenImports) {
-      const match = text.match(rule.pattern);
+      const match = moduleSpecifiers(text).find((entry) => rule.pattern.test(entry.specifier));
       if (match) {
-        const lineNumber = text.slice(0, match.index ?? 0).split("\n").length;
+        const lineNumber = text.slice(0, match.index).split("\n").length;
         violations.push({
           file:        relative(repoRoot, file).replaceAll("\\", "/"),
           line:        lineNumber,
           forbidden:   rule.label,
           rule:        rule.why,
-          excerpt:     match[0],
+          excerpt:     match.specifier,
         });
       }
     }
   }
   return violations;
+}
+
+function moduleSpecifiers(text) {
+  const matches = [];
+  const patterns = [
+    /\b(?:from|import|export)\s*["']([^"']+)["']/gu,
+    /\b(?:import|require)\s*\(\s*["']([^"']+)["']\s*\)/gu,
+  ];
+  for (const pattern of patterns) {
+    for (const match of text.matchAll(pattern)) {
+      matches.push({ specifier: match[1], index: match.index ?? 0 });
+    }
+  }
+  return matches;
 }
 
 function checkPackageJsonDeps() {

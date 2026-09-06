@@ -7,6 +7,7 @@ const items: readonly SectionNavigationItem[] = [
   { href: "/mdg/business-partner", label: "Overview" },
   { href: "/mdg/business-partner/partners", label: "Manage" },
   { href: "/mdg/business-partner/requests", label: "Review & Approval" },
+  { href: "/mdg/business-partner/mesh-proposals", label: "MESH Proposals" },
   { href: "/mdg/business-partner/new", label: "Create" },
 ];
 

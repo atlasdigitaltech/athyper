@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.audit.event-contracts
--- seed-pack-version: 1.5.0
+-- seed-pack-version: 1.9.0
 -- seed-dataset: master.audit-event-contract
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
@@ -9,7 +9,7 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:25
+-- seed-expected-row-count: exact:26
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
@@ -153,13 +153,24 @@ VALUES
     ),
     (
         'business_partner_request_event',
-        '^business_partner\.(request\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|failed|cancelled|superseded)|qualification\.(created|approved|conditional|rejected|suspended)|preference\.(created|approved|rejected|revoked)|profile_publication\.(published|withdrawn)|bank_disclosure\.(approved|rejected|revoked))$',
+        '(^business_partner\.(request\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|failed|cancelled|superseded)|workflow\.(stage\.activated|vote\.recorded)|qualification\.(created|approved|conditional|rejected|suspended)|preference\.(created|approved|rejected|revoked)|customer\.(credit\.(created|approved|conditional|rejected)|designation\.(created|approved|rejected|revoked)|activated|suspended|reactivated|deactivated|archived)|profile_publication\.(published|withdrawn)|bank_disclosure\.(approved|rejected|revoked)|bank_verification\.(requested|verified|rejected|applied))$)|(^business_partner_invitation\.(supplier|customer)\.(created|resent|accepted|cancelled)$)',
         21,
         ARRAY['create','update','execute','approve','reject','revoke']::audit.operation_d[],
         'warning',
         ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
-        'tenant', false, 'safe_values', 65536, 5,
-        '{"event_category":"business_critical","owner":"master-data","purpose":"business_partner_onboarding_qualification_profile_and_bank_disclosure_evidence"}'::jsonb,
+        'tenant', false, 'safe_values', 65536, 9,
+        '{"event_category":"business_critical","owner":"master-data","purpose":"business_partner_onboarding_workflow_qualification_profile_and_bank_disclosure_evidence"}'::jsonb,
+        'active'
+    ),
+    (
+        'business_partner_case_event',
+        '^business_partner\.case\.(created|updated|validated|submitted|returned|rejected|approved|applying|applied|materialized|failed|cancelled|superseded)$',
+        20,
+        ARRAY['create','update','execute','approve','reject','revoke']::audit.operation_d[],
+        'warning',
+        ARRAY['user','service_account','bot','integration','support','system']::audit.actor_type_d[],
+        'tenant', false, 'safe_values', 65536, 2,
+        '{"event_category":"business_critical","owner":"master-data","purpose":"business_partner_governed_case_evidence"}'::jsonb,
         'active'
     ),
     (
@@ -355,15 +366,15 @@ DECLARE
       'pci_event','pii_access_event','pii_modification_event','audit_system_event',
       'iam_authentication_event','iam_session_event','iam_authorization_event',
       'iam_provisioning_event','iam_general_event','entity_row_change_event',
-      'entity_access_event','business_partner_request_event','finance_period_event','entity_business_event',
+      'entity_access_event','business_partner_case_event','business_partner_request_event','finance_period_event','entity_business_event',
       'inbox_routing_event','records_transfer_event','integration_event','data_import_event','ai_support_event',
       'ai_event','schema_authoring_event','notification_event','config_change_event',
       'platform_system_event','generic_action_event'
     ];
 BEGIN
     -- seed-assertion: expected-count
-    IF (SELECT count(*) FROM master.audit_event_contract WHERE code = ANY(v_codes)) <> 25 THEN
-        RAISE EXCEPTION '[common.audit.event-contracts] expected 25 rows';
+    IF (SELECT count(*) FROM master.audit_event_contract WHERE code = ANY(v_codes)) <> 26 THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] expected 26 rows';
     END IF;
     -- seed-assertion: orphan
     IF EXISTS (SELECT 1 FROM master.audit_event_contract WHERE code = ANY(v_codes) AND allowed_operations IS NULL) THEN

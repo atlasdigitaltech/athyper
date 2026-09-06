@@ -780,3 +780,19 @@ CREATE POLICY workforce_iam_projection_tenant
     ON document.workforce_iam_projection
     USING (tenant_id = shared.current_tenant_id_soft())
     WITH CHECK (tenant_id = shared.current_tenant_id());
+
+ALTER TABLE document.mesh_profile_change_resolution ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_resolution FORCE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_case ENABLE ROW LEVEL SECURITY;
+ALTER TABLE document.mesh_profile_change_case FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_access ON document.mesh_profile_change_resolution
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY tenant_access ON document.mesh_profile_change_case
+    USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id());
+CREATE POLICY owner_access ON document.mesh_profile_change_resolution
+    TO CURRENT_USER USING (true) WITH CHECK (true);
+CREATE POLICY owner_access ON document.mesh_profile_change_case
+    TO CURRENT_USER USING (true) WITH CHECK (true);

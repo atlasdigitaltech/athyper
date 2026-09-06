@@ -33,8 +33,7 @@ pids/
 # the test report bundle. Reference screenshots in __screenshots__/
 # ARE committed (they're the regression baseline).
 tests/e2e/.auth/
-tests/e2e/.playwright-output/
-tests/e2e/.playwright-bp360-output/
+tests/e2e/.playwright*-output/
 playwright-report/
 test-results/
 
@@ -96,8 +95,8 @@ next-env.d.ts
 !*.env.example
 
 # Grafana provisioning config dirs are named *.env but contain YAML, not secrets
-!stack/config/telemetry/provisioning.env/
-!stack/config/telemetry/provisioning.env/**
+!deploy/config/telemetry/provisioning.env/
+!deploy/config/telemetry/provisioning.env/**
 
 # Sentry CLI auth token (used by @sentry/nextjs source-map upload)
 .sentryclirc
@@ -125,6 +124,7 @@ Desktop.ini
 !.vscode/launch.json
 .vscode-test/
 .history/
+*.code-workspace
 
 # Editor backups / swap files
 *.swp
@@ -139,18 +139,6 @@ Desktop.ini
 
 # Docker volume data / runtime data
 /data/
-stack/data/
-stack/**/data/
-stack/logs/
-stack/tmp/
-
-# Generated TLS / secrets (if any)
-stack/config/**/certs/*.key
-stack/config/**/certs/*.crt
-stack/config/**/certs/*.pem
-stack/config/**/certs/*.pfx
-stack/config/**/certs/*.p12
-stack/config/**/certs/ca.*
 
 # Tool outputs
 tooling/tools/**/tmp/

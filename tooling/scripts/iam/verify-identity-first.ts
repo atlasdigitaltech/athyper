@@ -1,7 +1,8 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = process.cwd();
+const root = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 
 async function source(path: string): Promise<string> {
   return readFile(resolve(root, path), "utf8");
@@ -12,36 +13,39 @@ function requireText(label: string, contents: string, text: string): void {
 }
 
 async function main(): Promise<void> {
-  const [gate, bff, resolver, registry] = await Promise.all([
-    source("packages/shared/platform-auth/identity-gate/src/login-gate-client.tsx"),
-    source("packages/shared/platform-auth/auth-bff/src/index.ts"),
-    source("server/packages/services/iam/discovery/discovery.service.ts"),
-    source("server/db/ddl/planes/neon/master/03_tables.sql"),
+  const [gate, bff, resolver, projectionDdl, identityDdl] = await Promise.all([
+    source("packages/platform/iam/identity-gate/src/index.tsx"),
+    source("packages/platform/iam/auth-bff/src/index.ts"),
+    source("server/packages/platform/iam/src/kysely-identity-context-resolver.ts"),
+    source("server/db/ddl/common/authz/03_tables.sql"),
+    source("server/db/ddl/common/master/03_platform_tables.sql"),
   ]);
 
-  requireText("identity gate", gate, "Work email or user ID");
-  requireText("identity gate", gate, "candidate.authMethodLabel");
-  requireText("identity gate", gate, "Organization route found");
-  requireText("identity gate", gate, "More than one organization matches this work email domain.");
+  requireText("identity gate", gate, 'kind: "select-context"');
+  requireText("identity gate", gate, "Only active contexts authorized for this identity are shown");
+  requireText("identity gate", gate, "safeReturnTo");
+  requireText("identity gate", gate, "requiredActions");
 
-  requireText("auth BFF", bff, "body[\"action\"] === \"select\"");
-  requireText("auth BFF", bff, "const returnUrl = sanitizeReturnUrl(payload.returnUrl");
-  requireText("auth BFF", bff, "status: verifiedDomainRoute ? \"routed\" : \"verified\"");
-  requireText("auth BFF", bff, "resolutionKind === \"identity\"");
+  requireText("auth BFF", bff, "sanitizeReturnTo");
+  requireText("auth BFF", bff, "config.resolveContexts");
+  requireText("auth BFF", bff, 'AuthFlowError("auth.context_not_allowed"');
+  requireText("auth BFF", bff, "sessionVersion: current.sessionVersion + 1");
 
-  requireText("tenant resolver", resolver, "tenant_identity_domain");
-  requireText("tenant resolver", resolver, "resolution_kind");
-  requireText("tenant resolver", resolver, "result.rows.length > 0 || identifier.kind !== \"email\"");
+  requireText("identity resolver", resolver, "REPEATABLE READ, READ ONLY");
+  requireText("identity resolver", resolver, "authz.fn_resolve_active_application_projections");
+  requireText("identity resolver", resolver, "master.fn_resolve_principal_identity");
+  requireText("identity resolver", resolver, "createKyselyPermissionResolver");
 
   for (const secretName of ["client_secret", "clientSecret", "access_token", "refresh_token", "saml_signing_key"]) {
-    if (registry.toLowerCase().includes(secretName.toLowerCase())) {
+    if ((projectionDdl + identityDdl).toLowerCase().includes(secretName.toLowerCase())) {
       throw new Error(`Tenant identity registry must not contain provider secret material: ${secretName}`);
     }
   }
 
-  requireText("tenant identity provider registry", registry, "keycloak_alias");
-  requireText("tenant identity provider registry", registry, "allowed_planes");
-  requireText("tenant identity domain registry", registry, "verification_status");
+  requireText("application projection registry", projectionDdl, "authz.application_projection");
+  requireText("application projection registry", projectionDdl, "external_organization_id");
+  requireText("principal identity registry", identityDdl, "master.principal_identity_binding");
+  requireText("principal identity registry", identityDdl, "subject_id");
 
   console.log("Identity-first discovery contracts verified.");
 }

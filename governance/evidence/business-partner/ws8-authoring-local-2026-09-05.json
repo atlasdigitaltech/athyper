@@ -1,0 +1,51 @@
+{
+  "$schema": "athyper.business-partner-local-engineering-evidence/1",
+  "asOf": "2026-09-05",
+  "scope": "WS8 / R8 Studio authoring and independent release approval",
+  "environment": "local",
+  "implementationStatus": "local_authoring_and_approval_verified",
+  "productionQualified": false,
+  "productionQualification": "blocked",
+  "productionGatesPassed": 0,
+  "productionGatesRequired": 5,
+  "checks": [
+    { "command": "pnpm --filter @athyper/product-studio-business-partner test", "status": "passed", "tests": 6 },
+    { "command": "pnpm --filter @athyper/server-service-publication test -- src/__tests__/business-partner-definition.test.ts src/__tests__/business-partner-definition-routes.test.ts", "status": "passed", "tests": 60, "note": "The package command ran the full publication suite." },
+    { "command": "pnpm exec tsx --test tests/contracts/business-partner-r8-contracts.test.ts", "status": "passed", "tests": 5 },
+    { "command": "node --test tooling/scripts/verification/business-partner-r8-qualification.test.mjs", "status": "passed", "tests": 4 },
+    { "command": "pnpm --filter @athyper/product-studio-business-partner typecheck", "status": "passed" },
+    { "command": "pnpm --filter @athyper/studio typecheck", "status": "passed" },
+    { "command": "pnpm --filter @athyper/server-service-publication typecheck", "status": "passed" },
+    { "command": "pnpm qualify:business-partner-r8", "status": "passed", "note": "Manifest verification succeeds while reporting 0/5 production gates passed and production qualification blocked." }
+  ],
+  "evidence": [
+    "packages/planes/studio/business-partner/src/authoring.test.tsx",
+    "packages/planes/studio/business-partner/src/definition-client.test.ts",
+    "server/packages/services/publication/src/__tests__/business-partner-definition-routes.test.ts",
+    "server/packages/services/publication/src/__tests__/business-partner-definition.test.ts",
+    "tests/contracts/business-partner-r8-contracts.test.ts",
+    "tooling/scripts/verification/business-partner-r8-qualification.test.mjs"
+  ],
+  "verifiedBehaviors": [
+    "Consumer changes invalidate simulation before immutable save.",
+    "Saved revision and source hash are available for independent review.",
+    "Approval requires loaded immutable content and explicit review confirmation.",
+    "Denied approval cannot enqueue a job or appear as publication success.",
+    "Same command retries retain the key within the mounted workspace.",
+    "Changed revision, consumers or runtime constraint receives a different command key.",
+    "Publication commands use authenticated Studio relay transport and CSRF.",
+    "Approved release queues the stable compilation job with the verified checker context."
+  ],
+  "remainingQualification": [
+    "Target evidence lifecycle receipt with immutable 90-day retention",
+    "Named manual assistive-technology accessibility review",
+    "Distinct clean and upgrade target database parity receipt",
+    "Three-plane production canary and exact prior-head rollback receipt",
+    "Four distinct named owner certifications"
+  ],
+  "limitations": [
+    "UI interaction tests use jsdom and mocked HTTP; they are not live target browser evidence.",
+    "No production publication, deployment, rollback or human approval was performed.",
+    "Retry keys are scoped to the mounted workspace; reconcile command evidence after a reload or session change."
+  ]
+}

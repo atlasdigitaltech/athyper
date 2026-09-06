@@ -7,6 +7,8 @@ import {
   type PublicationPlane,
 } from "@athyper/server-contract-publication";
 import { sql, type Kysely } from "kysely";
+import { KyselyPublicationAuthorityRepository } from "./kysely-authority-repository.js";
+import { compileBusinessPartnerDefinition } from "./business-partner-definition-compiler.js";
 
 type Database=Record<string,never>;type Row=Record<string,unknown>;
 
@@ -17,7 +19,17 @@ export class BusinessPartnerDefinitionError extends Error {
 export class BusinessPartnerDefinitionService {
   constructor(private readonly options:{readonly database:Kysely<Database>;readonly authority:PublicationAuthorityRepository;readonly canonicalizer:PublicationCanonicalizer}){}
 
-  async author(input:{readonly tenantId:string;readonly actorId:string;readonly idempotencyKey:string;readonly bundle:unknown;readonly targetPlanes:readonly PublicationPlane[]}){
+  private async scoped<T>(tenantId:string,actorId:string|undefined,work:(service:BusinessPartnerDefinitionService)=>Promise<T>):Promise<T>{
+    return this.options.database.transaction().execute(async database=>{
+      await sql`SELECT set_config('app.current_tenant_id',${tenantId},true),set_config('app.current_principal_id',${actorId??""},true)`.execute(database);
+      return work(new BusinessPartnerDefinitionService({...this.options,database,authority:new KyselyPublicationAuthorityRepository(database)}));
+    });
+  }
+  author(input:Parameters<BusinessPartnerDefinitionService["authorScoped"]>[0]){return this.scoped(input.tenantId,input.actorId,service=>service.authorScoped(input));}
+  get(tenantId:string,revisionId:string){return this.scoped(tenantId,undefined,service=>service.getScoped(tenantId,revisionId));}
+  publish(input:Parameters<BusinessPartnerDefinitionService["publishScoped"]>[0]){return this.scoped(input.tenantId,input.actorId,service=>service.publishScoped(input));}
+
+  private async authorScoped(input:{readonly tenantId:string;readonly actorId:string;readonly idempotencyKey:string;readonly bundle:unknown;readonly targetPlanes:readonly PublicationPlane[]}){
     const bundle=parseBusinessPartnerDefinitionBundle(input.bundle);const targetPlanes=uniquePlanes(input.targetPlanes);
     const bundleHash=this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(bundle));
     const id=randomUUID();
@@ -31,19 +43,27 @@ export class BusinessPartnerDefinitionService {
     return mapRevision(selected);
   }
 
-  async get(tenantId:string,revisionId:string){const result=await sql<Row>`SELECT * FROM snapshot.business_partner_definition_revision WHERE tenant_id=${tenantId}::uuid AND id=${revisionId}::uuid`.execute(this.options.database);return result.rows[0]?mapRevision(result.rows[0]):null;}
+  private async getScoped(tenantId:string,revisionId:string){const result=await sql<Row>`SELECT * FROM snapshot.business_partner_definition_revision WHERE tenant_id=${tenantId}::uuid AND id=${revisionId}::uuid`.execute(this.options.database);return result.rows[0]?mapRevision(result.rows[0]):null;}
 
-  async publish(input:{readonly tenantId:string;readonly revisionId:string;readonly actorId:string;readonly idempotencyKey:string;readonly minimumRuntimeVersion?:string}){
+  async simulate(input:{readonly tenantId:string;readonly bundle:unknown;readonly targetPlanes:readonly PublicationPlane[];readonly againstRevisionId?:string}){
+    const prior=input.againstRevisionId?await this.get(input.tenantId,input.againstRevisionId):null;
+    if(input.againstRevisionId&&!prior)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_NOT_FOUND");
+    return simulateBusinessPartnerDefinition({bundle:input.bundle,targetPlanes:input.targetPlanes,canonicalizer:this.options.canonicalizer,...(prior?{prior:{revisionId:prior.id,bundle:prior.bundle}}:{})});
+  }
+
+  private async publishScoped(input:{readonly tenantId:string;readonly revisionId:string;readonly actorId:string;readonly idempotencyKey:string;readonly minimumRuntimeVersion?:string}){
     const revisionResult=await sql<Row>`SELECT * FROM snapshot.business_partner_definition_revision WHERE tenant_id=${input.tenantId}::uuid AND id=${input.revisionId}::uuid`.execute(this.options.database);
     const revision=revisionResult.rows[0];if(!revision)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_NOT_FOUND");
     if(text(revision,"created_by")===input.actorId)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_SELF_PUBLISH_FORBIDDEN");
     const prior=(await sql<Row>`SELECT prior.semantic_version,prior.bundle_json FROM snapshot.business_partner_definition_revision prior JOIN publication.business_partner_definition_release_link link ON link.definition_revision_id=prior.id JOIN publication.release release ON release.id=link.publication_release_id WHERE prior.tenant_id=${input.tenantId}::uuid AND prior.bundle_code=${text(revision,"bundle_code")} AND prior.id<>${input.revisionId}::uuid AND release.status IN('approved','published') ORDER BY release.release_no DESC LIMIT 1`.execute(this.options.database)).rows[0];
     if(prior){if(compareVersions(text(revision,"semantic_version"),text(prior,"semantic_version"))<=0)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_DOWNGRADE_FORBIDDEN");assertBackwardCompatible(parseBusinessPartnerDefinitionBundle(revision["bundle_json"]),parseBusinessPartnerDefinitionBundle(prior["bundle_json"]));}
     const key=`studio.business_partner.definition.${text(revision,"bundle_code")}`,publishKey=required(input.idempotencyKey,"idempotencyKey");
-    const releaseId=await this.options.database.transaction().execute(async transaction=>{
+    const releaseId=await (async (transaction:Kysely<Database>)=>{
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${key},0))`.execute(transaction);
       const replay=await sql<Row>`SELECT publication_release_id,definition_revision_id FROM publication.business_partner_definition_release_link WHERE publish_idempotency_key=${publishKey}`.execute(transaction);
       if(replay.rows[0]){if(text(replay.rows[0],"definition_revision_id")!==input.revisionId)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_PUBLISH_IDEMPOTENCY_CONFLICT");return text(replay.rows[0],"publication_release_id");}
+      const existing=await sql<Row>`SELECT publication_release_id FROM publication.business_partner_definition_release_link WHERE definition_revision_id=${input.revisionId}::uuid`.execute(transaction);
+      if(existing.rows[0])return text(existing.rows[0],"publication_release_id");
       const numberResult=await sql<Row>`SELECT COALESCE(max(release_no),0)+1 release_no FROM publication.release WHERE release_key=${key}`.execute(transaction);
       const releaseNo=Number(numberResult.rows[0]?.["release_no"]);const id=randomUUID();
       const manifestHash=this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes({revisionId:input.revisionId,bundleHash:text(revision,"bundle_hash"),releaseNo,targetPlanes:revision["target_planes"]}));
@@ -51,10 +71,24 @@ export class BusinessPartnerDefinitionService {
         VALUES(${id}::uuid,${input.tenantId}::uuid,${key},${releaseNo},'publish','preparing','backward_compatible',${text(revision,"bundle_hash")},${manifestHash},${input.minimumRuntimeVersion??null},${input.actorId}::uuid,${JSON.stringify({publishIdempotencyKey:publishKey,definitionSemanticVersion:text(revision,"semantic_version")})}::jsonb)`.execute(transaction);
       await sql`INSERT INTO publication.business_partner_definition_release_link(publication_release_id,definition_revision_id,publish_idempotency_key,created_by) VALUES(${id}::uuid,${input.revisionId}::uuid,${publishKey},${input.actorId}::uuid)`.execute(transaction);
       return id;
-    });
+    })(this.options.database);
     const release=await this.options.authority.getRelease(releaseId);if(!release)throw new BusinessPartnerDefinitionError("PUBLICATION_RELEASE_NOT_FOUND");
     return release.status==="preparing"?this.options.authority.transitionRelease({releaseId:release.id,status:"approved",actorId:input.actorId,evidence:{definitionRevisionId:input.revisionId,noSelfPublish:true}}):release;
   }
+}
+
+export function simulateBusinessPartnerDefinition(input:{readonly bundle:unknown;readonly targetPlanes:readonly PublicationPlane[];readonly canonicalizer:PublicationCanonicalizer;readonly prior?:{readonly revisionId:string;readonly bundle:unknown}}){
+  const bundle=parseBusinessPartnerDefinitionBundle(input.bundle),targetPlanes=uniquePlanes(input.targetPlanes),prior=input.prior?parseBusinessPartnerDefinitionBundle(input.prior.bundle):undefined;
+  if(prior){
+    if(prior.bundleCode!==bundle.bundleCode)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_BUNDLE_MISMATCH");
+    if(compareVersions(bundle.semanticVersion,prior.semanticVersion)<=0)throw new BusinessPartnerDefinitionError("BUSINESS_PARTNER_DEFINITION_DOWNGRADE_FORBIDDEN");
+    assertBackwardCompatible(bundle,prior);
+  }
+  const planes=targetPlanes.map(plane=>{
+    const compiled=compileBusinessPartnerDefinition({bundle,plane,canonicalizer:input.canonicalizer,...(prior?{priorSemanticVersion:prior.semanticVersion}:{})});
+    return Object.freeze({plane,sourceBundleHash:compiled.sourceBundleHash,compiledBundleHash:compiled.compiledBundleHash,report:compiled.report});
+  });
+  return Object.freeze({schema:"athyper.business-partner-definition-simulation/1" as const,readOnly:true,publicationAuthorized:false,bundleCode:bundle.bundleCode,semanticVersion:bundle.semanticVersion,...(input.prior?{againstRevisionId:input.prior.revisionId,againstSemanticVersion:prior!.semanticVersion}:{}),compatible:true as const,planes:Object.freeze(planes)});
 }
 
 export function parseBusinessPartnerDefinitionBundle(value:unknown):BusinessPartnerDefinitionBundleV1{

@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { randomUUID } from "node:crypto";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 import type { WorkflowRepository, WorkItem, WorkItemListResult } from "@athyper/server-contract-workflow";
@@ -53,7 +54,7 @@ export function createInMemoryWorkflowPersistence(options: { readonly now?: () =
         || item.eligibilityEvidence?.candidates.some((candidate) => candidate.principalId === principalId);
       if (!eligible) return null;
       let updated: WorkItem;
-      if (action === "claim" && item.status === "open" && Date.parse(item.availableAt) <= Date.now()) updated = { ...item, status: "claimed", claimantPrincipalId: principalId, claimedAt: now(), rowVersion: item.rowVersion + 1 };
+      if (action === "claim" && item.status === "open" && parseInstant(item.availableAt) <= Date.now()) updated = { ...item, status: "claimed", claimantPrincipalId: principalId, claimedAt: now(), rowVersion: item.rowVersion + 1 };
       else if ((action === "complete" || action === "approve" || action === "reject") && ["claimed", "in_progress", "open"].includes(item.status)) updated = { ...item, status: "completed", completedAt: now(), outcome: { ...outcome, action }, rowVersion: item.rowVersion + 1 };
       else if (action === "cancel" && !["completed", "cancelled"].includes(item.status)) updated = { ...item, status: "cancelled", rowVersion: item.rowVersion + 1 };
       else return null;

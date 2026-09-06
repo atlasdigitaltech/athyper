@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import { createHash } from "node:crypto";
 
 import { buildCanonicalCatalogV2, type CanonicalCatalogV2, type CatalogPlane } from "./canonical-catalog-v2-model.js";
@@ -107,6 +108,6 @@ function operationScopeKinds(operation: InventoryOperation): string[] { return [
 function isMutation(operationKey:string):boolean { return !["read","download","list","search","preview"].includes(operationKey); }
 function hasCoordinate(operation: InventoryOperation, kind: string): boolean { return Boolean(operation.scopeCoordinateKeys?.[kind]?.trim()) || Boolean(operation.coordinates?.some((item) => item.authorizationRequired && item.scopeKind === kind && item.coordinateKey?.trim())); }
 function propagation(plane: PromotionPlane, kind: string): ScopePropagation { if (plane === "mesh" && kind === "network_relationship") return "relationship_participants"; return kind === "operating_organization" ? "subtree" : "exact"; }
-function validDate(value?: string): boolean { return Boolean(value && !Number.isNaN(Date.parse(value))); }
+function validDate(value?: string): boolean { return Boolean(value && !Number.isNaN(parseInstant(value))); }
 function unique(values: readonly string[], label: string, blockers: string[]): void { const seen=new Set<string>(); for(const value of values){if(seen.has(value))blockers.push(`duplicate ${label}: ${value}`);seen.add(value);} }
 function deterministicId(value:string):string { const hash=createHash("sha256").update(value).digest("hex"); return `${hash.slice(0,8)}-${hash.slice(8,12)}-5${hash.slice(13,16)}-a${hash.slice(17,20)}-${hash.slice(20,32)}`; }

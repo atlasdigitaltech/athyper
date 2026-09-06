@@ -1,3 +1,5 @@
+import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
+import { createBusinessPartnerDefinitionAuthorizer } from "./business-partner-definition-authorizer.js";
 import type {
   CommandExecutionStore,
   OutboxWriter,
@@ -191,6 +193,8 @@ import {
   AtlasSurfaceDraftGenerator,
   AtlasThreadService,
   AtlasToolRegistry,
+  createBusinessPartnerAtlasTools,
+  createBusinessPartnerAtlasCommandBus,
   AtlasToolService,
   AtlasExperienceConfigurationService,
   KyselyAtlasAttachmentContextResolver,
@@ -231,15 +235,19 @@ import {
   createBusinessPartnerDeliveryHandler,
   createBusinessPartnerReconciliationHandler,
   createBusinessPartnerBankDisclosureService,
+  createBusinessPartnerNetworkExchangeService,
+  createHttpSelfRegistrationPolicyAdapter,
   createBusinessPartnerProfilePublicationService,
   createMeshRecordCollectionScopeResolver,
   createMeshRelationshipRequestImportAdapter,
   DELIVER_BUSINESS_PARTNER_EVENTS_JOB,
   KyselyBusinessPartnerBankDisclosureRepository,
+  KyselyBusinessPartnerNetworkExchangeRepository,
   KyselyBusinessPartnerDeliveryRepository,
   KyselyBusinessPartnerProfilePublicationRepository,
   RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
   registerBusinessPartnerBankDisclosureRoutes,
+  registerBusinessPartnerNetworkExchangeRoutes,
   registerBusinessPartnerProfilePublicationRoutes,
   type BusinessPartnerDeliveryItem,
   type DeliveryDisposition,
@@ -403,15 +411,24 @@ import {
   createGovernedInternalBusinessPartnerCaseService,
   createSupplierActivationReevaluationHandler,
   createSupplierQualificationExpiryHandler,
+  createSupplierWorkforceRequisitionService,
+  createSupplierWorkforceCommandGuard,
+  createWorkerEngagementIamService,
+  createWorkerEngagementLifecycleService,
+  createHttpSupplierWorkforceDistributionEligibility,
   createWorkforceService,
   EXPIRE_BUSINESS_PARTNER_INVITATIONS_JOB,
   EXPIRE_SUPPLIER_QUALIFICATIONS_JOB,
   KyselyBusinessPartnerEligibilityRepository,
   KyselyBusinessPartnerInvitationRepository,
+  KyselyBusinessPartnerOnboardingCycleCoordinator,
   KyselyBusinessPartnerCaseRepository,
   KyselyGovernedInternalBusinessPartnerCaseRepository,
   KyselyWorkforceRepository,
   KyselyWorkforceRequestRepository,
+  KyselySupplierWorkforceRequisitionRepository,
+  KyselyWorkerEngagementIamRepository,
+  KyselyWorkerEngagementLifecycleRepository,
   MasterDataError,
   REEVALUATE_SUPPLIER_ACTIVATIONS_JOB,
   registerBusinessPartnerEligibilityRoutes,
@@ -419,6 +436,9 @@ import {
   registerBusinessPartnerRequestRoutes,
   registerGovernedInternalBusinessPartnerRoutes,
   registerWorkforceRoutes,
+  registerSupplierWorkforceRequisitionRoutes,
+  registerWorkerEngagementIamRoutes,
+  registerWorkerEngagementLifecycleRoutes,
   SUPPLIER_READINESS_MAINTENANCE_QUEUE,
 } from "@athyper/server-service-master-data";
 import {
@@ -431,7 +451,7 @@ import {
   parseBusinessPartner360Definition,
   registerBusinessPartner360Routes,
 } from "@athyper/server-service-master-data";
-import { BUSINESS_PARTNER_360_PERMISSIONS } from "@athyper/server-contract-master-data";
+import { BUSINESS_PARTNER_360_PERMISSIONS, parseSupplierWorkforcePolicyCoordinates } from "@athyper/server-contract-master-data";
 import { registerFinanceRoutes } from "./finance-routes.js";
 import {
   createKyselyRecordRepository,
@@ -487,6 +507,8 @@ import {
   KyselyPublicationAuthorityRepository,
   KyselyPublicationAuthorityWork,
   BusinessPartnerDefinitionService,
+  BusinessPartnerCaseContractService,
+  registerBusinessPartnerCaseContractRoutes,
   KyselyPublicationOperationsRepository,
   PublicationOrchestrator,
   PublicationOperationsService,
@@ -700,7 +722,12 @@ export function registerServices(
     registerPublication(
       container,
       config,
-      metadataDatabases,
+      {
+        ...metadataDatabases,
+        ...(container.adapters.jobAthyperDatabase ? { studio: container.adapters.jobAthyperDatabase.database as unknown as Kysely<Record<string, never>> } : {}),
+        ...(container.adapters.jobNeonDatabase ? { neon: container.adapters.jobNeonDatabase.database as unknown as Kysely<Record<string, never>> } : {}),
+        ...(container.adapters.jobMeshDatabase ? { mesh: container.adapters.jobMeshDatabase.database as unknown as Kysely<Record<string, never>> } : {}),
+      },
       iam,
       authorizer,
       audit,
@@ -1612,6 +1639,57 @@ export function registerServices(
         }
       },
     );
+    const networkExchange = createBusinessPartnerNetworkExchangeService({
+      authorizer: createPermissionAuthorizer({
+        policyGate: {
+          async evaluate(input) {
+            const selected = input.context.permissions.networkAccountId;
+            return {
+              allowed: Boolean(selected),
+              reason: selected
+                ? "verified_network_account_context"
+                : "network_account_context_required",
+            };
+          },
+        },
+      }),
+      repository: new KyselyBusinessPartnerNetworkExchangeRepository(),
+      transactions: transactions as never,
+      ...(process.env["MESH_SELF_REGISTRATION_POLICY_URL"]
+        ? { selfRegistrationPolicy: createHttpSelfRegistrationPolicyAdapter({
+            endpoint: process.env["MESH_SELF_REGISTRATION_POLICY_URL"],
+            bearerToken: process.env["MESH_SELF_REGISTRATION_POLICY_BEARER_TOKEN"],
+          }) }
+        : {}),
+    });
+    container.services.businessPartnerNetworkExchange = networkExchange;
+    const networkExchangeCount = container.adapters.openTelemetry?.metrics.counter(
+      "athyper_mesh_business_partner_exchange_http_total",
+      "MESH Business Partner relationship and registration exchange HTTP operations by outcome",
+    );
+    const networkExchangeDuration = container.adapters.openTelemetry?.metrics.histogram(
+      "athyper_mesh_business_partner_exchange_http_duration_ms",
+      "MESH Business Partner relationship and registration exchange HTTP operation duration",
+    );
+    container.platform.httpRegistrars.push((application) =>
+      registerBusinessPartnerNetworkExchangeRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service: networkExchange,
+        telemetry: (event) => {
+          const labels = { operation: event.operation, outcome: event.outcome, status_code: String(event.statusCode) };
+          networkExchangeCount?.increment(labels);
+          networkExchangeDuration?.record(event.durationMs, labels);
+        },
+      }),
+    );
+    container.runtimes.health.register("business-partner-network-exchange.mesh", async () => {
+      try {
+        const result = await sql<{ relationship_command:string|null; exchange_command:string|null; permission_count:number }>`SELECT to_regprocedure('mesh.command_request_network_relationship(uuid,uuid,uuid,uuid,text,date,date,text,text,uuid)')::text relationship_command,to_regprocedure('mesh.command_issue_registration_exchange(uuid,uuid,uuid,text,text,text,integer,text,jsonb,text,timestamptz,text,text,uuid)')::text exchange_command,(SELECT count(*)::int FROM authz.permission WHERE canonical_code LIKE 'mesh.business_partner_exchange.%' AND status='published') permission_count`.execute(meshDatabase);
+        const row=result.rows[0];
+        return row?.relationship_command&&row.exchange_command&&row.permission_count===3?{status:"healthy"}:{status:"unhealthy",message:"MESH relationship/exchange command or permission contract is incomplete"};
+      } catch(error) { return {status:"unhealthy",message:error instanceof Error?error.message:"MESH relationship/exchange readiness check failed"}; }
+    });
   }
   if (container.adapters.neonDatabase) {
     const neonDatabase = container.adapters.neonDatabase
@@ -1700,6 +1778,8 @@ export function registerServices(
       repository: new KyselyBusinessPartnerAccountBankRepository(),
       transactions: transactions as never,
       audit: audit as never,
+      ...(container.adapters.secretStore ? { secrets: container.adapters.secretStore } : {}),
+      onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
     });
     container.services.businessPartnerAccountBankLinkage = accountBankLinkage;
     const accountBankCount = container.adapters.openTelemetry?.metrics.counter(
@@ -1822,7 +1902,7 @@ export function registerServices(
                 envelope:
                   item.envelope as unknown as MeshBankDisclosureEnvelope,
               }));
-        const disposition = String(result.disposition);
+        const disposition = String("processingDisposition" in result ? result.processingDisposition ?? result.disposition : result.disposition);
         if (
           !["applied", "duplicate", "stale", "quarantined"].includes(
             disposition,
@@ -1840,10 +1920,13 @@ export function registerServices(
             item.kind === "profile"
               ? sql`control.mesh_business_partner_profile_inbox`
               : sql`control.mesh_bank_account_disclosure_inbox`;
+          const processingProof = item.kind === "profile"
+            ? sql`AND (SELECT attempt.disposition FROM control.mesh_business_partner_profile_processing_attempt attempt WHERE attempt.tenant_id=inbox.tenant_id AND attempt.inbox_event_id=inbox.id ORDER BY attempt.attempt_no DESC LIMIT 1) IN ('applied','stale')`
+            : sql`AND EXISTS(SELECT 1 FROM control.mesh_bank_account_projection projection WHERE projection.tenant_id=inbox.tenant_id AND projection.network_relationship_id=inbox.network_relationship_id AND (projection.current_disclosure_version>inbox.disclosure_version OR (projection.current_disclosure_version=inbox.disclosure_version AND projection.current_lifecycle_version>=inbox.lifecycle_version)))`;
           const row = (
             await sql<{
               received: boolean;
-            }>`SELECT EXISTS(SELECT 1 FROM ${table} WHERE tenant_id=${item.recipientTenantId}::uuid AND event_id=${item.eventId}::uuid) received`.execute(
+            }>`SELECT EXISTS(SELECT 1 FROM ${table} inbox WHERE inbox.tenant_id=${item.recipientTenantId}::uuid AND inbox.event_id=${item.eventId}::uuid ${processingProof}) received`.execute(
               transaction,
             )
           ).rows[0];
@@ -1853,18 +1936,22 @@ export function registerServices(
     };
     async function recipientPrincipal(tenantId: string) {
       const row = await neonAdapter.withSystemTransaction(
-        async (transaction) =>
-          (
+        async (transaction) => {
+          await sql`SELECT set_config('app.current_tenant_id',${tenantId},true),set_config('app.current_plane_key','neon',true)`.execute(
+            transaction,
+          );
+          return (
             await sql<{
               id: string;
-            }>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' ORDER BY (principal_type='service_account') DESC,created_at,id LIMIT 1`.execute(
+            }>`SELECT id FROM master.principal WHERE tenant_id=${tenantId}::uuid AND status='active' AND principal_type='service_account' ORDER BY created_at,id LIMIT 1`.execute(
               transaction,
             )
-          ).rows[0],
+          ).rows[0];
+        },
       );
       if (!row)
         throw Object.assign(
-          new Error("Recipient tenant has no active delivery principal"),
+          new Error("Recipient tenant has no active delivery service account"),
           { status: 409, code: "BUSINESS_PARTNER_RECIPIENT_PRINCIPAL_MISSING" },
         );
       return row.id;
@@ -1948,7 +2035,7 @@ export function registerServices(
           execution: {
             planeKey: "mesh",
             scope: "plane",
-            principalId: "business-partner-delivery",
+            principalId: "00000000-0000-0000-0000-000000000000",
           },
         },
       });
@@ -1969,7 +2056,7 @@ export function registerServices(
           execution: {
             planeKey: "mesh",
             scope: "plane",
-            principalId: "business-partner-reconciliation",
+            principalId: "00000000-0000-0000-0000-000000000000",
           },
         },
       });
@@ -1979,6 +2066,8 @@ export function registerServices(
         if (!deliveryEnabled)
           return { status: "healthy", message: "disabled for staged rollout" };
         try {
+          const schema = await meshAdapter.withSystemTransaction(async transaction => (await sql<{table_name:string|null}>`SELECT to_regclass('mesh.business_partner_delivery_acknowledgement')::text table_name`.execute(transaction)).rows[0]);
+          if (!schema?.table_name) return {status:"unhealthy",message:"Business Partner delivery acknowledgement migration is required"};
           const row = await meshAdapter.withSystemTransaction(
             async (transaction) =>
               (
@@ -1986,7 +2075,7 @@ export function registerServices(
                   pending: number;
                   dead_letters: number;
                   oldest_seconds: number | null;
-                }>`SELECT count(*) FILTER(WHERE status IN ('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN ('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic='mesh-business-partner'`.execute(
+                }>`SELECT count(*) FILTER(WHERE status IN ('pending','failed','processing'))::int pending,count(*) FILTER(WHERE status='dead_letter')::int dead_letters,extract(epoch FROM clock_timestamp()-min(created_at) FILTER(WHERE status IN ('pending','failed','processing')))::int oldest_seconds FROM event.outbox WHERE topic IN ('mesh-business-partner','mesh-business-partner-profile','mesh-business-partner-bank')`.execute(
                   transaction,
                 )
               ).rows[0],
@@ -2207,19 +2296,17 @@ export function registerServices(
     const businessPartnerAuthorizer = createPermissionAuthorizer({
       policyGate: {
         async evaluate(input) {
-          if (
-            input.permissionCode ===
-            "neon.relationship.entity_case.submit"
-          )
+          if (["neon.supplier_registration.invitation.create", "neon.customer_registration.invitation.create"].includes(input.permissionCode)) {
+            const proposalOnly = input.resource?.["proposalOnly"] === true && input.resource?.["makerCheckerEnforced"] === true;
+            return { allowed: proposalOnly, sodSatisfied: proposalOnly, reason: "invitation_governed_proposal_required" };
+          }
+          if (input.permissionCode === "neon.relationship.entity_case.submit")
             return {
               allowed: input.resource?.["makerCheckerEnforced"] === true,
               sodSatisfied: input.resource?.["makerCheckerEnforced"] === true,
               reason: "maker_checker_policy_required",
             };
-          if (
-            input.permissionCode ===
-            "neon.relationship.entity_case.decide"
-          ) {
+          if (input.permissionCode === "neon.relationship.entity_case.decide") {
             const submittedBy = input.resource?.["submittedBy"];
             const separated =
               typeof submittedBy === "string" &&
@@ -2231,8 +2318,7 @@ export function registerServices(
             };
           }
           if (
-            input.permissionCode ===
-            "neon.relationship.entity_case.materialize"
+            input.permissionCode === "neon.relationship.entity_case.materialize"
           ) {
             const pinned = input.resource?.["approvedEvidencePinned"] === true;
             return {
@@ -2289,19 +2375,45 @@ export function registerServices(
               reason: "customer_credit_separation_required",
             };
           }
+          if (input.permissionCode === "neon.customer.designation.create")
+            return {
+              allowed:
+                input.resource?.["designationControl"] === true &&
+                input.resource?.["makerCheckerEnforced"] === true,
+              sodSatisfied: true,
+              reason: "customer_designation_control_required",
+            };
+          if (input.permissionCode === "neon.customer.designation.decide") {
+            const creator = input.resource?.["createdBy"],
+              separated =
+                typeof creator === "string" &&
+                creator !== input.context.principalId,
+              controlled =
+                input.resource?.["designationControl"] === true &&
+                input.resource?.["makerCheckerEnforced"] === true;
+            return {
+              allowed: controlled && separated,
+              sodSatisfied: controlled && separated,
+              reason: "customer_designation_separation_required",
+            };
+          }
           if (
             [
               "neon.customer.lifecycle.activate",
               "neon.customer.lifecycle.suspend",
               "neon.customer.lifecycle.reactivate",
+              "neon.customer.lifecycle.deactivate",
+              "neon.customer.lifecycle.archive",
             ].includes(input.permissionCode)
           ) {
-            const suspend = input.permissionCode.endsWith("suspend"),
+            const requiresReadiness =
+                input.permissionCode.endsWith("activate") ||
+                input.permissionCode.endsWith("reactivate"),
               pinned = input.resource?.["readinessEvidencePinned"] === true;
             return {
               allowed:
                 input.resource?.["makerCheckerEnforced"] === true &&
-                (suspend || pinned),
+                (!requiresReadiness || pinned),
               sodSatisfied: true,
               reason: "customer_lifecycle_control_required",
             };
@@ -2329,6 +2441,7 @@ export function registerServices(
               "neon.relationship.entity_case.validate",
               "neon.relationship.business_partner.read",
               "neon.customer.credit.read",
+              "neon.customer.designation.read",
               "neon.business_partner_profile_match.create",
               "neon.business_partner_profile_match.read",
               "neon.business_partner_profile_match.request",
@@ -2476,13 +2589,19 @@ export function registerServices(
         schemas: {
           async resolve(input) {
             try {
-              return await localDefinitions.requestSchema({
+              return await transactions.run("neon", {
+                tenantId: input.context.tenantId,
+                principalId: input.context.principalId,
+              }, async (transaction) => new LocalBusinessPartnerDefinitionConsumer({
+                local: new KyselyLocalProjectionRepository(transaction),
+                canonicalizer: { canonicalBytes, sha256 },
+              }).requestSchema({
                 kind: input.kind,
                 sourceKind: input.sourceKind,
                 ...(input.requestedRole
                   ? { requestedRole: input.requestedRole }
                   : {}),
-              });
+              }));
             } catch (error) {
               throw new MasterDataError(
                 503,
@@ -2502,26 +2621,38 @@ export function registerServices(
             }>`SELECT principal_id::text FROM document.fn_entity_case_approvers(${input.context.tenantId}::uuid,${input.request.operatingOrganizationId!}::uuid,${input.request.companyCodeId ?? null}::uuid,${input.context.principalId}::uuid)`.execute(
               transaction,
             );
-            const artifact = await localDefinitions.workflow({
+            const artifact = await new LocalBusinessPartnerDefinitionConsumer({
+              local: new KyselyLocalProjectionRepository(transaction),
+              canonicalizer: { canonicalBytes, sha256 },
+            }).workflow({
               kind: input.request.kind,
+              proposedPayload: input.request.proposedPayload,
               ...(input.request.requestedRole
                 ? { requestedRole: input.request.requestedRole }
                 : {}),
             });
+            const approverPrincipalIds = candidates.rows.map(
+              (row) => row.principal_id,
+            );
             return {
               code: artifact.code,
               version: artifact.version,
               hash: artifact.hash,
               stageCode: artifact.stageCode,
               stageName: artifact.stageName,
-              approverPrincipalIds: candidates.rows.map(
-                (row) => row.principal_id,
-              ),
+              approverPrincipalIds,
+              stages: artifact.stages.map((stage) => ({
+                ...stage,
+                quorum: stage.quorum as { kind: "all" | "any" | "count" | "percentage"; value?: number },
+                approverPrincipalIds,
+                escalationPrincipalIds: approverPrincipalIds.slice(1),
+              })),
             };
           },
         },
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
+        onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
       });
     container.services.businessPartnerRequests = businessPartnerRequests;
     const governedInternalBusinessPartnerCases =
@@ -2621,6 +2752,49 @@ export function registerServices(
       ...(protectedValues ? { protectedValues } : {}),
     });
     container.services.workforce = workforce;
+    const supplierWorkforceEligibility =
+      process.env["MESH_WORKFORCE_ELIGIBILITY_BASE_URL"] &&
+      process.env["MESH_WORKFORCE_ELIGIBILITY_CREDENTIAL_REFERENCE"] &&
+      container.adapters.secretStore
+        ? createHttpSupplierWorkforceDistributionEligibility({
+            baseUrl: process.env["MESH_WORKFORCE_ELIGIBILITY_BASE_URL"],
+            credentialReference:
+              process.env["MESH_WORKFORCE_ELIGIBILITY_CREDENTIAL_REFERENCE"],
+            secrets: container.adapters.secretStore,
+          })
+        : {
+            async evaluate() {
+              return {
+                allowed: false as const,
+                reasonCodes: ["MESH_WORKFORCE_ELIGIBILITY_UNAVAILABLE"],
+              };
+            },
+          };
+    const supplierWorkforcePolicies = parseSupplierWorkforcePolicyCoordinates(
+      process.env["SUPPLIER_WORKFORCE_POLICY_COORDINATES_JSON"],
+    );
+    const supplierWorkforceGuard = createSupplierWorkforceCommandGuard({
+      authorizer: businessPartnerAuthorizer,
+      policies: supplierWorkforcePolicies,
+    });
+    const supplierWorkforceRequisitions =
+      createSupplierWorkforceRequisitionService<RecordTransaction>({
+        authorizer: businessPartnerAuthorizer,
+        repository: new KyselySupplierWorkforceRequisitionRepository(),
+        eligibility: supplierWorkforceEligibility,
+        policies: supplierWorkforcePolicies,
+        transactions,
+      });
+    const workerEngagementIam = createWorkerEngagementIamService<RecordTransaction>({
+      guard: supplierWorkforceGuard,
+      repository: new KyselyWorkerEngagementIamRepository(),
+      transactions,
+    });
+    const workerEngagementLifecycle = createWorkerEngagementLifecycleService<RecordTransaction>({
+      guard: supplierWorkforceGuard,
+      repository: new KyselyWorkerEngagementLifecycleRepository(),
+      transactions,
+    });
     const businessPartnerInvitations =
       createBusinessPartnerInvitationService<RecordTransaction>({
         authorizer: businessPartnerAuthorizer,
@@ -2629,13 +2803,19 @@ export function registerServices(
         schemas: {
           async resolve(input) {
             try {
-              return await localDefinitions.requestSchema({
+              return await transactions.run("neon", {
+                tenantId: input.context.tenantId,
+                principalId: input.context.principalId,
+              }, async (transaction) => new LocalBusinessPartnerDefinitionConsumer({
+                local: new KyselyLocalProjectionRepository(transaction),
+                canonicalizer: { canonicalBytes, sha256 },
+              }).requestSchema({
                 kind: input.kind,
                 sourceKind: input.sourceKind,
                 ...(input.requestedRole
                   ? { requestedRole: input.requestedRole }
                   : {}),
-              });
+              }));
             } catch (error) {
               throw new MasterDataError(
                 503,
@@ -2649,6 +2829,30 @@ export function registerServices(
         },
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
+        onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
+        requests: businessPartnerRequests,
+        evidence: {
+          async stage(input) {
+            const service = container.services.attachments;
+            if (!service)
+              throw new MasterDataError(
+                503,
+                "BUSINESS_PARTNER_INVITATION_EVIDENCE_UNAVAILABLE",
+                "Attachment service is unavailable",
+              );
+            return service.stage(input);
+          },
+          async finalize(input, contentType) {
+            const service = container.services.attachments;
+            if (!service)
+              throw new MasterDataError(
+                503,
+                "BUSINESS_PARTNER_INVITATION_EVIDENCE_UNAVAILABLE",
+                "Attachment service is unavailable",
+              );
+            return service.finalize(input, contentType);
+          },
+        },
       });
     container.services.businessPartnerInvitations = businessPartnerInvitations;
     const businessPartnerProfileMatches =
@@ -2667,6 +2871,7 @@ export function registerServices(
         transactions,
         audit,
         outbox: createDatabaseOutboxWriter("business-partner"),
+        onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
       });
     container.services.businessPartnerEligibility = businessPartnerEligibility;
     const requestCount = container.adapters.openTelemetry?.metrics.counter(
@@ -2735,6 +2940,16 @@ export function registerServices(
       "athyper_business_partner_case_oldest_open_seconds",
       "Age of the oldest non-terminal Business Partner case",
     );
+    const requestNotificationOldestPending =
+      container.adapters.openTelemetry?.metrics.gauge(
+        "athyper_business_partner_notification_oldest_pending_seconds",
+        "Age of the oldest pending Business Partner notification plan",
+      );
+    const requestNotificationDeadLetters =
+      container.adapters.openTelemetry?.metrics.gauge(
+        "athyper_business_partner_notification_dead_letters",
+        "Current Business Partner notification planning dead letters",
+      );
     const invitationGuard = createBusinessPartnerInvitationExternalGuard({
       onRejected: (reason) =>
         invitationCount?.increment({
@@ -2822,6 +3037,27 @@ export function registerServices(
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         service: workforce,
+      }),
+    );
+    container.platform.httpRegistrars.push((application) =>
+      registerSupplierWorkforceRequisitionRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service: supplierWorkforceRequisitions,
+      }),
+    );
+    container.platform.httpRegistrars.push((application) =>
+      registerWorkerEngagementIamRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service: workerEngagementIam,
+      }),
+    );
+    container.platform.httpRegistrars.push((application) =>
+      registerWorkerEngagementLifecycleRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service: workerEngagementLifecycle,
       }),
     );
     container.platform.httpRegistrars.push((application) =>
@@ -3188,6 +3424,25 @@ export function registerServices(
             )
           ).rows[0];
           requestOldestOpen?.set(Number(row?.oldest_open_seconds ?? 0));
+          const notification = (
+            await sql<{
+              oldest_pending_seconds: number;
+              dead_letters: number;
+            }>`SELECT
+              COALESCE(extract(epoch FROM clock_timestamp()-(min(state.created_at) FILTER (WHERE state.status IN('pending','failed','processing')))),0)::int oldest_pending_seconds,
+              count(*) FILTER (WHERE state.status='dead_letter')::int dead_letters
+            FROM event.notification_outbox_state state
+            JOIN event.outbox outbox ON outbox.tenant_id=state.tenant_id AND outbox.id=state.outbox_id
+            WHERE outbox.event_type LIKE 'business_partner.%'`.execute(
+              neonDatabase,
+            )
+          ).rows[0];
+          requestNotificationOldestPending?.set(
+            Number(notification?.oldest_pending_seconds ?? 0),
+          );
+          requestNotificationDeadLetters?.set(
+            Number(notification?.dead_letters ?? 0),
+          );
           return { status: "healthy" };
         } catch (error) {
           return {
@@ -3377,6 +3632,16 @@ export function registerServices(
     transactions: exactTransactions,
     consent: consent ?? denyAllConsent,
   });
+  const notificationPlanningCount =
+    container.adapters.openTelemetry?.metrics.counter(
+      "athyper_business_partner_notification_planning_total",
+      "Business Partner notification planning outcomes",
+    );
+  const notificationPlanningDuration =
+    container.adapters.openTelemetry?.metrics.histogram(
+      "athyper_business_partner_notification_planning_duration_ms",
+      "Business Partner notification planning duration",
+    );
   const durableDelivery = createDurableNotificationDeliveryRepository({
     transactions,
   });
@@ -3461,6 +3726,17 @@ export function registerServices(
       createNotificationOutboxSweepHandler({
         repository: outboxPlanning,
         planner: notificationPlanner,
+        telemetry: (measurement) => {
+          if (!measurement.eventCode.startsWith("business_partner.")) return;
+          const labels = {
+            lifecycle: businessPartnerNotificationLifecycle(
+              measurement.eventCode,
+            ),
+            outcome: measurement.outcome,
+          };
+          notificationPlanningCount?.increment(labels);
+          notificationPlanningDuration?.record(measurement.durationMs, labels);
+        },
       }),
     );
     jobs.register(
@@ -4149,14 +4425,21 @@ export function registerAtlas(
   const bindings = new AtlasBindingRegistry(dependencies.bindings);
   const providers = new AtlasProviderRegistry(dependencies.providers);
   for (const binding of dependencies.bindings) providers.resolve(binding);
-  const registry = new AtlasToolRegistry(dependencies.registeredTools);
+  const registry = new AtlasToolRegistry([...dependencies.registeredTools, ...createBusinessPartnerAtlasTools()]);
   const tools = new AtlasToolService({
     registry,
     authority: dependencies.toolAuthority,
     proposals: ledger,
     records: dependencies.recordGateway,
     confirmations: dependencies.confirmations,
-    commands: dependencies.commands,
+    commands: createBusinessPartnerAtlasCommandBus({
+      fallback: dependencies.commands,
+      submit: async (command) => {
+        const owner = container.services.businessPartnerRequests;
+        if (!owner) throw new Error("Business Partner case owner is unavailable.");
+        return owner.submit(command);
+      },
+    }),
   });
   const coordinator = toolsEnabled
     ? new AtlasRegisteredToolCoordinator(registry, tools)
@@ -4521,9 +4804,9 @@ function registerPublication(
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
     });
-    orchestrators[plane] = new PublicationOrchestrator(
-      authority,
-      projection,
+    orchestrators[plane] = new TenantPublicationOrchestrator(
+      authorityDatabase,
+      database,
       loader,
     );
   }
@@ -4645,6 +4928,19 @@ function registerPublication(
     const handlers = createPublicationAuthorityHandlers(
       work,
       container.runtimes.jobs,
+      async (execution, plane) => {
+        if (!execution.tenantId) throw new Error("PUBLICATION_APPLIER_TENANT_REQUIRED");
+        const adapter = plane === "neon" ? container.adapters.neonDatabase : plane === "mesh" ? container.adapters.meshDatabase : container.adapters.athyperDatabase;
+        if (!adapter) throw new Error("PUBLICATION_APPLIER_DATABASE_UNAVAILABLE");
+        const database = adapter.database as unknown as Kysely<Record<string, never>>;
+        const principalId = await database.transaction().execute(async transaction => {
+          await sql`SELECT set_config('app.current_tenant_id',${execution.tenantId!},true)`.execute(transaction);
+          const rows = (await sql<{id:string}>`SELECT id FROM master.principal WHERE tenant_id=${execution.tenantId!}::uuid AND code=${process.env["PUBLICATION_APPLIER_PRINCIPAL_CODE"] ?? "publication.worker"} AND principal_type='service_account' AND status='active'`.execute(transaction)).rows;
+          if (rows.length !== 1) throw new Error("PUBLICATION_APPLIER_SERVICE_PRINCIPAL_REQUIRED");
+          return rows[0]!.id;
+        });
+        return { ...execution, planeKey: plane, principalId };
+      },
     );
     for (const name of [
       COMPILE_PUBLICATION_ARTIFACT_JOB,
@@ -4684,6 +4980,14 @@ function registerPublication(
       authority,
       canonicalizer: { canonicalBytes, sha256 },
     });
+    const caseContracts = container.adapters.neonDatabase ? new BusinessPartnerCaseContractService({
+      database: authorityDatabase, canonicalizer: { canonicalBytes, sha256 },
+      current: async tenantId => container.adapters.neonDatabase!.database.transaction().execute(async db => {
+        await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(db);
+        const row = (await sql<Record<string, unknown>>`SELECT * FROM runtime_meta.entity_contract WHERE tenant_id=${tenantId}::uuid AND entity_code='master.business_partner' AND status='published' ORDER BY release_no DESC LIMIT 1`.execute(db)).rows[0];
+        return row ? { id:String(row["id"]),tenantId,entityId:String(row["entity_id"]),publicationKey:String(row["publication_key"]),contractHash:String(row["entity_contract_hash"]),releaseNo:Number(row["release_no"]),contract:row["contract_json"] as Record<string,unknown> } : null;
+      }),
+    }) : undefined;
     container.services.publication = {
       ...container.services.publication,
       definitions,
@@ -4699,10 +5003,15 @@ function registerPublication(
         apiEnabled: true,
         operations,
       });
+      if (caseContracts) registerBusinessPartnerCaseContractRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
+        authorizer: createBusinessPartnerDefinitionAuthorizer(caseContracts), audit,
+        jobs: container.runtimes.jobs!, service: caseContracts,
+      });
       registerBusinessPartnerDefinitionRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
-        authorizer,
+        authorizer: createBusinessPartnerDefinitionAuthorizer(definitions),
         audit,
         jobs: container.runtimes.jobs!,
         service: definitions,
@@ -4891,3 +5200,16 @@ const denyAllConsent = {
   checkAt: async () => null,
   history: async () => ({ items: [], hasMore: false }),
 } satisfies ChannelConsentService<RecordTransaction>;
+
+function businessPartnerNotificationLifecycle(eventCode: string): string {
+  const lifecycle = eventCode.split(".").at(-1) ?? "unknown";
+  return [
+    "submitted",
+    "returned",
+    "approved",
+    "rejected",
+    "materialized",
+  ].includes(lifecycle)
+    ? lifecycle
+    : "other";
+}

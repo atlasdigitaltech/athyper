@@ -1,0 +1,17 @@
+{
+  "schema": "athyper.business-partner-r6-delivery-probe/1",
+  "productionQualified": false,
+  "passed": [
+    "acknowledgement_migration_column_parity",
+    "profile_and_bank_topics",
+    "malformed_isolation",
+    "lease_fencing",
+    "atomic_source_acknowledgement",
+    "quarantine_acknowledgement",
+    "acknowledgement_immutability",
+    "expired_final_lease_dead_letter"
+  ],
+  "recordedAt": "2026-09-05T01:23:35.818Z",
+  "environment": "disposable_local",
+  "scope": "Delivery repository SQL, acknowledgement DDL and migration column parity; no target browser execution"
+}

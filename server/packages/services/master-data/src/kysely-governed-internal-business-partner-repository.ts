@@ -65,16 +65,28 @@ export class KyselyGovernedInternalBusinessPartnerCaseRepository implements Gove
     >[0],
     transaction: Tx,
   ) {
-    return execute(async () =>
-      map(
-        (
-          await sql<Row>`SELECT * FROM master.command_materialize_internal_business_partner_case(
+    return execute(async () => {
+      const role = (
+        await sql<{ requested_role: string | null }>`SELECT snapshot.payload_json->>'requestedRole' requested_role
+        FROM document.entity_case governed_case
+        JOIN snapshot.entity_snapshot snapshot
+          ON snapshot.tenant_id=governed_case.tenant_id AND snapshot.snapshot_id=governed_case.decision_snapshot_id
+        WHERE governed_case.tenant_id=${command.context.tenantId}::uuid AND governed_case.id=${command.caseId}::uuid`.execute(
+          transaction,
+        )
+      ).rows[0]?.requested_role;
+      const result =
+        role === "supplier" || role === "customer"
+          ? await sql<Row>`SELECT * FROM master.command_materialize_business_partner_role_case(
       ${command.context.tenantId}::uuid,${command.caseId}::uuid,${command.expectedVersion}::bigint,${command.idempotencyKey},
       ${command.context.principalId}::uuid,${command.context.correlationId ?? null}::uuid
     )`.execute(transaction)
-        ).rows[0],
-      ),
-    );
+          : await sql<Row>`SELECT * FROM master.command_materialize_internal_business_partner_case(
+      ${command.context.tenantId}::uuid,${command.caseId}::uuid,${command.expectedVersion}::bigint,${command.idempotencyKey},
+      ${command.context.principalId}::uuid,${command.context.correlationId ?? null}::uuid
+    )`.execute(transaction);
+      return map(result.rows[0]);
+    });
   }
 }
 

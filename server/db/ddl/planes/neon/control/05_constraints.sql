@@ -965,6 +965,8 @@ ALTER TABLE control.customer_account_designation
     FOREIGN KEY (tenant_id, operating_organization_id) REFERENCES master.operating_organization (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_company_fk
     FOREIGN KEY (tenant_id, company_code_id) REFERENCES master.company_code (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT customer_account_designation_country_fk
+    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_reviewed_by_fk
     FOREIGN KEY (tenant_id, reviewed_by) REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT customer_account_designation_approved_by_fk

@@ -17,7 +17,7 @@ const packageRoot = path.resolve(
 const repoRoot = path.resolve(packageRoot, "../../../..");
 const output = path.join(
   repoRoot,
-  "stack/config/iam/themes/neon/login/resources/css/iam.tokens.css",
+  "deploy/config/iam/themes/neon/login/resources/css/iam.tokens.css",
 );
 const check = process.argv.includes("--check");
 

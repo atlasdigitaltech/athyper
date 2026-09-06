@@ -13,11 +13,10 @@ describe("HeaderContextIdentity", () => {
     assert.match(markup, /le-asah · Athyper Saudi Hospitality/);
   });
 
-  it("falls back to the universal company tile when no logo is configured", () => {
-    const markup = renderToStaticMarkup(<HeaderContextIdentity name="Athyper Taiwan Electronics Mfg" countryCode="TW" />);
+  it("falls back to the universal company tile and supplied name when no logo is configured", () => {
+    const markup = renderToStaticMarkup(<HeaderContextIdentity name="Athyper Taiwan Electronics Mfg" />);
     assert.doesNotMatch(markup, /<img/);
     assert.match(markup, /athyper-context-identity__company/);
-    assert.doesNotMatch(markup, /TW flag/);
     assert.match(markup, /Athyper Taiwan Electronics Mfg/);
   });
 

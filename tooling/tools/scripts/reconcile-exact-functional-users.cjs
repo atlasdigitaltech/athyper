@@ -5,7 +5,7 @@ const fs = require("fs");
 const path = require("path");
 
 const repoRoot = path.resolve(__dirname, "..", "..", "..");
-const fixture = JSON.parse(fs.readFileSync(path.join(repoRoot, "stack/config/iam/realm-athyper-demosetup.json"), "utf8"));
+const fixture = JSON.parse(fs.readFileSync(path.join(repoRoot, "deploy/config/iam/realm-athyper-demosetup.json"), "utf8"));
 const container = process.env.DOCKER_CONTAINER_IAM || "athyper-iam-1";
 const adminUser = process.env.IAM_ADMIN;
 const adminPassword = process.env.IAM_ADMIN_PASSWORD;

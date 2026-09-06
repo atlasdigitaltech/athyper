@@ -204,8 +204,12 @@ CREATE TABLE snapshot.mesh_business_partner_profile_received (
     CONSTRAINT mesh_bp_profile_received_inbox_uq UNIQUE (tenant_id, inbox_event_id),
     CONSTRAINT mesh_bp_profile_received_publication_uq UNIQUE (tenant_id, publication_id),
     CONSTRAINT mesh_bp_profile_received_participants_chk CHECK (tenant_id <> source_tenant_id),
-    CONSTRAINT mesh_bp_profile_received_version_chk CHECK (publication_version >= 1 AND schema_version = 1),
-    CONSTRAINT mesh_bp_profile_received_schema_chk CHECK (schema_code = 'mesh.business_partner_profile' AND field_set_code = 'recipient_safe_v1'),
+    CONSTRAINT mesh_bp_profile_received_version_chk CHECK (publication_version >= 1),
+    CONSTRAINT mesh_bp_profile_received_schema_chk CHECK (
+        schema_code = 'mesh.business_partner_profile'
+        AND schema_version IN (1, 2)
+        AND field_set_code = 'recipient_safe_v' || schema_version::text
+    ),
     CONSTRAINT mesh_bp_profile_received_payload_chk CHECK (jsonb_typeof(payload_json) = 'object' AND pg_column_size(payload_json) <= 262144),
     CONSTRAINT mesh_bp_profile_received_hash_chk CHECK (payload_hash ~ '^[a-f0-9]{64}$')
 );

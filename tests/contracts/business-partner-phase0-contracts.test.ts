@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
 import {
   parseEvidenceItemView,
@@ -6,6 +7,8 @@ import {
   parseGovernedCaseView,
   parseNotificationEvent,
 } from "../../packages/contracts/platform/entity-runtime/src/index";
+import { BUSINESS_PARTNER_CASE_RELAY_OPERATIONS, BUSINESS_PARTNER_RELAY_OPERATIONS } from "../../packages/platform/gateway/bff-relay/src/index";
+import { toGovernedBusinessPartnerCaseView } from "../../server/packages/services/master-data/src/business-partner-case-view";
 
 const uuid = "11111111-1111-4111-8111-111111111111";
 const secondUuid = "22222222-2222-4222-8222-222222222222";
@@ -29,6 +32,9 @@ describe("Business Partner Phase 0 experience contracts", () => {
       authorizationEpoch: 4,
       assertedPermission: "admin",
     });
+    for (const asOf of ["2026-02-29T00:00:00Z", "2026-09-04", "2026-09-04T00:00:00", "2026-09-04T25:00:00Z"])
+      assert.throws(() => parseExperienceContextCoordinate({...parsed, asOf}));
+    assert.equal(parseExperienceContextCoordinate({...parsed, asOf:"2024-02-29T23:59:59+08:00"}).asOf,"2024-02-29T23:59:59+08:00");
     assert.equal(parsed.roleLens, "supplier");
     assert.equal("assertedPermission" in parsed, false);
     assert.equal(Object.isFrozen(parsed.definition), true);
@@ -63,6 +69,21 @@ describe("Business Partner Phase 0 experience contracts", () => {
       },
     };
     assert.equal(parseGovernedCaseView(input).allowedActions[0]?.id, "submit");
+    const stripped = parseGovernedCaseView({
+      ...input,
+      serverOnly: "discard",
+      subject: { ...input.subject, authorizationClaim: "discard" },
+    });
+    assert.equal("serverOnly" in stripped, false);
+    assert.equal("authorizationClaim" in stripped.subject, false);
+    assert.throws(
+      () => parseGovernedCaseView({ ...input, status: "unknown_state" }),
+      /status/,
+    );
+    assert.throws(
+      () => parseGovernedCaseView({ ...input, sections: [{ ...input.sections[0], state: "unknown_state" }] }),
+      /sections\[0\]\.state/,
+    );
     assert.throws(
       () =>
         parseGovernedCaseView({
@@ -71,6 +92,66 @@ describe("Business Partner Phase 0 experience contracts", () => {
         }),
       /completed cannot exceed/,
     );
+  });
+
+  it("keeps the real governed projection adapter in parity with the compatibility payload", () => {
+    const fixture = JSON.parse(
+      readFileSync(
+        "packages/contracts/platform/fixtures/business-partner-case-view-parity.v1.json",
+        "utf8",
+      ),
+    ) as Record<string, Record<string, unknown>>;
+    const legacy = fixture.legacy!;
+    const native = fixture.native!;
+    const view = toGovernedBusinessPartnerCaseView(
+      legacy.request as Parameters<typeof toGovernedBusinessPartnerCaseView>[0],
+      {
+        permissionCodes: [
+          "neon.relationship.entity_case.update",
+          "neon.relationship.entity_case.validate",
+          "neon.relationship.entity_case.submit",
+        ],
+        validationFindings: legacy.validationFindings as Parameters<typeof toGovernedBusinessPartnerCaseView>[1]["validationFindings"],
+      },
+    );
+    assert.deepEqual(view, parseGovernedCaseView(native.case));
+    const request = legacy.request as Record<string, unknown>;
+    const schema = request.schema as Record<string, unknown>;
+    assert.deepEqual(view.definition, {
+      id: schema.releaseId,
+      version: schema.version,
+      contentHash: schema.hash,
+    });
+    assert.equal(view.ownership.requesterId, request.createdBy);
+    assert.equal(view.evidenceSummary.active, 1);
+  });
+
+  it("allowlists the complete native case relay and no compatibility request path", () => {
+    const signatures = BUSINESS_PARTNER_CASE_RELAY_OPERATIONS.map(
+      ({ method, path }) => `${method} ${path}`,
+    );
+    assert.deepEqual(signatures, [
+      "POST /api/neon/business-partner-cases",
+      "GET /api/neon/business-partner-cases",
+      "GET /api/neon/business-partner-cases/:caseId",
+      "GET /api/neon/business-partner-cases/:caseId/view",
+      "PATCH /api/neon/business-partner-cases/:caseId",
+      "POST /api/neon/business-partner-cases/:caseId/validate",
+      "POST /api/neon/business-partner-cases/:caseId/submit",
+      "POST /api/neon/business-partner-cases/:caseId/decisions",
+      "POST /api/neon/business-partner-cases/:caseId/materialize",
+    ]);
+    assert.equal(
+      BUSINESS_PARTNER_RELAY_OPERATIONS.some(({ path }) =>
+        path.includes("business-partner-requests"),
+      ),
+      false,
+    );
+    const browserClient = readFileSync(
+      "packages/planes/neon/business-partner/src/client.ts",
+      "utf8",
+    );
+    assert.doesNotMatch(browserClient, /\/api\/neon\/business-partner-requests/);
   });
 
   it("publishes evidence metadata without leaking storage coordinates", () => {

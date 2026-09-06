@@ -2,12 +2,12 @@
 
 > Generated deterministically by `tooling/scripts/policy/authorization-inventory.ts` from the reviewed exact-object registry. Edit the registry or scanner, then regenerate; do not hand-edit this report.
 
-Registry SHA-256: `ce0f89057da260dde40fe4cc6360f93067bcd70b36ec5ea24b12dc23ea76c00c`
-Files scanned / authorization-bearing: 2743 / 526
+Registry SHA-256: `963befb838222089a41e6422a6c767b5c357d902360c247e24ce2d9aea940bc0`
+Files scanned / authorization-bearing: 2780 / 532
 Registered authorization objects: 466
-Aggregated object references: 822
+Aggregated object references: 823
 Writer references: 68
-Contract/UI field references: 873
+Contract/UI field references: 881
 Permission definitions / uses: 83 / 394
 Authorization-bearing routes: 11
 Keycloak mappers: 145
@@ -81,7 +81,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | function.visibility_scope | `master.get_effective_visibility_scope` | neon | legacy_scope_evaluator | platform-iam | neon | remove_after_shadow | 0 | 0 | 0 |
 | identity.legal_entity_binding | `master.legal_entity_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep_as_non_granting_identity_projection | 0 | 2 | 0 |
 | identity.principal | `master.principal` | neon | identity | platform-iam | studio, neon | keep | 1 | 113 | 15 |
-| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 40 | 7 |
+| identity.principal_binding | `master.principal_identity_binding` | neon | identity_binding | platform-iam | studio, neon | keep | 1 | 41 | 7 |
 | identity.principal_profile | `master.principal_profile` | neon | identity_profile | platform-iam | studio, neon | remove_duplicate_idp_fields | 1 | 27 | 0 |
 | identity.tenant | `master.tenant` | neon | identity | platform-iam | studio, neon | keep | 1 | 107 | 14 |
 | identity.tenant_domain | `master.tenant_identity_domain` | neon | authentication_configuration | platform-iam | studio, neon | keep | 0 | 2 | 0 |
@@ -780,7 +780,7 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 
 | Symbol | Classification | Artifact class | Path | Lines |
 |---|---|---|---|---|
-| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4090 |
+| `authorizeAdmin` | reviewed | runtime | server/apps/platform-host/src/composition/register-services.ts | 4133 |
 | `authorizeAdmin` | reviewed | test | server/packages/platform/ai/src/__tests__/experience-routes.test.ts | 6 |
 | `authorizeAdmin` | reviewed | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 8, 10 |
 | `authorizeDescriptorOperation` | reviewed | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 67, 84, 94, 101, 140, 159, 225, 242, 270, 314 |
@@ -789,21 +789,21 @@ Any non-zero structural finding blocks the Wave 0 inventory-completeness gate. O
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/entity-list-service.ts | 10, 28 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/query-service.ts | 7, 37 |
 | `authorizeRecordListRead` | reviewed | runtime | server/packages/services/records/src/record-read-access.ts | 5 |
-| `checkAnyPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 936 |
-| `checkPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 936 |
-| `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
-| `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 936 |
+| `checkAnyPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 942 |
+| `checkPermission` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 942 |
+| `getEffectiveModuleAccess` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
+| `requireAllow` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 942 |
 | `requireCatalogPermission` | unclassified | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 54, 109 |
 | `requirePermission` | reviewed | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 26, 39, 51, 58, 59, 60, 61, 62, 63, 73 |
-| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 8, 85 |
+| `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 9, 86 |
 | `requirePermission` | reviewed | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 27, 70, 108, 431 |
 | `requirePermission` | reviewed | runtime | server/packages/services/documents/src/document-service.ts | 29, 34, 80, 120 |
 | `requirePermission` | reviewed | runtime | server/packages/services/finance/src/planning/planning-service.ts | 8, 9, 14, 15, 24 |
 | `requirePermission` | reviewed | runtime | server/packages/services/master-data/src/services.ts | 46, 60, 70, 79, 93, 102, 103, 104, 124 |
 | `requirePermission` | reviewed | route | server/packages/services/publication/src/publication-routes.ts | 37, 46, 54, 62, 72, 81, 90, 107, 123, 136 |
-| `resolveAccessibleCompany` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
-| `resolveAccessScope` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
-| `resolveCurrentAuthEpoch` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 684 |
+| `resolveAccessibleCompany` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
+| `resolveAccessScope` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
+| `resolveCurrentAuthEpoch` | reviewed | tool | tooling/scripts/policy/authorization-inventory.ts | 690 |
 
 ## Unknown source findings
 
@@ -914,7 +914,7 @@ Capture DDLs:
 | tooling/tools/scripts/deploy-broker-flows.cjs | reviewed | platform-iam | `POST:authentication_flow`<br>`PUT:authentication_flow` | replace_with_versioned_keycloak_seed_contract | 115, 131, 138, 146 |
 | tooling/tools/scripts/deploy-realm-demosetup.cjs | reviewed | platform-iam | `DELETE:client_role`<br>`DELETE:organization`<br>`DELETE:organization_membership`<br>`POST:identity_provider`<br>`POST:organization`<br>`POST:organization_membership`<br>`POST:protocol_mapper_or_realm_import`<br>`PUT:admin_other`<br>`PUT:identity_provider`<br>`PUT:organization`<br>`PUT:user` | replace_with_versioned_keycloak_seed_contract | 115, 139, 159, 189, 194, 223, 234, 257, 304, 359, 366, 395 |
 | tooling/tools/scripts/deploy-users-groups-idps.cjs | reviewed | platform-iam | `DELETE:user`<br>`POST:client_role`<br>`POST:group`<br>`POST:group_role_mapping`<br>`POST:identity_provider`<br>`POST:organization_membership`<br>`POST:user`<br>`PUT:identity_provider`<br>`PUT:user_group_membership` | replace_with_versioned_keycloak_seed_contract | 134, 166, 183, 203, 236, 255, 279, 321, 324 |
-| tooling/tools/scripts/fix-org-memberships.cjs | reviewed | platform-iam | `DELETE:organization_membership`<br>`POST:organization_membership`<br>`PUT:organization_membership` | replace_with_versioned_keycloak_seed_contract | 78, 84, 90, 126 |
+| tooling/tools/scripts/fix-org-memberships.cjs | reviewed | platform-iam | `DELETE:organization_membership`<br>`POST:organization_membership` | replace_with_versioned_keycloak_seed_contract | 76, 111 |
 | tooling/tools/scripts/rebuild-broker-flows.cjs | reviewed | platform-iam | `DELETE:authentication_flow`<br>`POST:authentication_flow`<br>`PUT:authentication_flow` | replace_with_versioned_keycloak_seed_contract | 49, 54, 60, 80, 89 |
 
 ## Permission seed inventory
@@ -1025,18 +1025,18 @@ Capture DDLs:
 
 | Field | Artifact class | Path | Lines |
 |---|---|---|---|
-| `allowed` | runtime | governance/config/governance/authorization-data-disposition-inventory.v1.json | 1930 |
-| `allowed` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 150 |
+| `allowed` | runtime | governance/config/governance/authorization-data-disposition-inventory.v1.json | 1795 |
+| `allowed` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 204 |
 | `allowed` | runtime | packages/contracts/platform/authorization/src/index.ts | 2, 7, 18, 21 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 4 |
 | `allowed` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 23 |
 | `allowed` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 28 |
-| `allowed` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 50 |
-| `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 339 |
+| `allowed` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 51 |
+| `allowed` | ui | packages/platform/shell/shell/src/home.tsx | 340 |
 | `allowed` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
 | `allowed` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
 | `allowed` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 515, 819, 874 |
-| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857, 1443, 1451, 2215, 2228, 2239, 2252, 2265, 2272, 2302, 2355, 2366, 2370, 4091, 4094, 4095, 4244, 4245, 4455, 4783 |
+| `allowed` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857, 1443, 1451, 2212, 2222, 2232, 2245, 2258, 2265, 2295, 2348, 2359, 2363, 4134, 4137, 4138, 4287, 4288, 4498, 4826 |
 | `allowed` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 50 |
 | `allowed` | tool | server/db/scripts/checks/seeds/authorization-release-gates.ts | 52, 187 |
 | `allowed` | tool | server/db/scripts/seed/compile-mesh-authorization-inventory.ts | 228, 229 |
@@ -1078,13 +1078,13 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 27, 28, 29 |
 | `allowed` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
 | `allowed` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
-| `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 57, 59, 79, 86, 122, 196 |
+| `allowed` | runtime | server/packages/platform/ai/src/tool-service.ts | 58, 60, 80, 87, 123, 197 |
 | `allowed` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `allowed` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `allowed` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 73 |
 | `allowed` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 10, 70, 96, 124, 127, 128, 129, 130 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 55, 56, 57, 58, 84, 85, 101 |
-| `allowed` | runtime | server/packages/platform/control-admin/src/control-services.ts | 144 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 56, 57, 58, 59, 85, 86, 102 |
+| `allowed` | runtime | server/packages/platform/control-admin/src/control-services.ts | 145 |
 | `allowed` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 436 |
 | `allowed` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 344 |
@@ -1094,7 +1094,7 @@ Capture DDLs:
 | `allowed` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
 | `allowed` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
 | `allowed` | test | server/packages/platform/governance/src/moderation/moderation-service.test.ts | 18 |
-| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 47 |
+| `allowed` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 48 |
 | `allowed` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 15, 24, 34, 44, 51, 58, 64, 71, 78, 84, 91, 97, 103 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 12 |
 | `allowed` | test | server/packages/platform/iam/src/__tests__/iam-foundation.test.ts | 11, 12, 13, 14 |
@@ -1124,7 +1124,7 @@ Capture DDLs:
 | `allowed` | test | server/packages/platform/search/src/__tests__/document-search-service.test.ts | 3 |
 | `allowed` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `allowed` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 79 |
-| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 69, 76, 127 |
+| `allowed` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 70, 77, 128 |
 | `allowed` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3, 5 |
 | `allowed` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
 | `allowed` | test | server/packages/services/content/src/content-service.test.ts | 2 |
@@ -1137,20 +1137,21 @@ Capture DDLs:
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-commercial-controls.test.ts | 9 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-explainability.test.ts | 4 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2, 6, 14 |
-| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 39, 43 |
+| `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 41, 45 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 156 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 26, 62 |
 | `allowed` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 10 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 11 |
 | `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 16, 18, 21 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 77, 93 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1103 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 148 |
-| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 78, 94 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1104 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 149 |
+| `allowed` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
+| `allowed` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
 | `allowed` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 101 |
 | `allowed` | runtime | server/packages/services/master-data/src/services.ts | 124 |
-| `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
+| `allowed` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
 | `allowed` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
 | `allowed` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
 | `allowed` | route | server/packages/services/publication/src/publication-routes.ts | 138 |
@@ -1169,17 +1170,17 @@ Capture DDLs:
 | `allowed` | route | server/packages/services/records/src/snapshots/snapshot-routes.ts | 8 |
 | `allowed` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
 | `allowed` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
-| `allowed` | keycloak | stack/config/iam/realm-athyper-clean-slate.json | 2248, 2258, 2260, 2694, 2722, 2726, 2741, 2753, 2757 |
-| `allowed` | keycloak | stack/config/iam/realm-athyper.json | 2259, 2269, 2271, 2864, 2892, 2896, 2911, 2923, 2927 |
-| `allowed` | keycloak | stack/config/iam/realm-platform-control-clean-slate.json | 209, 218, 220 |
-| `allowed` | keycloak | stack/config/iam/realm-platform-control.json | 213, 222, 224 |
+| `allowed` | keycloak | deploy/config/iam/realm-athyper-clean-slate.json | 2248, 2258, 2260, 2694, 2722, 2726, 2741, 2753, 2757 |
+| `allowed` | keycloak | deploy/config/iam/realm-athyper.json | 2259, 2269, 2271, 2864, 2892, 2896, 2911, 2923, 2927 |
+| `allowed` | keycloak | deploy/config/iam/realm-platform-control-clean-slate.json | 209, 218, 220 |
+| `allowed` | keycloak | deploy/config/iam/realm-platform-control.json | 213, 222, 224 |
 | `allowed` | test | tests/contracts/access-consumption-phase9.test.ts | 13, 37, 41 |
 | `allowed` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `allowed` | test | tests/contracts/auth-session-foundation.test.ts | 35 |
 | `allowed` | test | tests/contracts/home-personalization-phase3.test.ts | 26, 28, 30 |
-| `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 733, 919, 936 |
+| `allowed` | tool | tooling/scripts/policy/authorization-inventory.ts | 739, 925, 942 |
 | `allowed` | tool | tooling/scripts/policy/verify-api-client-phase2.mjs | 10, 13 |
-| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4788 |
+| `authorizationScopes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4831 |
 | `authorizationScopes` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `authorizationScopes` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 25 |
 | `authorizationScopes` | runtime | server/packages/contracts/auth/src/authorization.ts | 80 |
@@ -1221,14 +1222,15 @@ Capture DDLs:
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `authorizationScopes` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
+| `denied` | test | packages/planes/neon/business-partner/src/case-experience.test.ts | 105 |
 | `denied` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 18, 132 |
 | `denied` | runtime | packages/platform/iam/auth-bff/package.json | 12, 13, 18, 19 |
 | `denied` | runtime | packages/platform/iam/auth-bff/src/index.ts | 252, 253, 327 |
 | `denied` | runtime | packages/platform/iam/session-store/package.json | 12, 13 |
 | `denied` | runtime | packages/platform/shell/activity-center-data/src/index.ts | 24, 31, 32 |
-| `denied` | runtime | packages/platform/shell/app-foundation/src/error-taxonomy.ts | 6, 50 |
+| `denied` | runtime | packages/platform/shell/app-foundation/src/error-taxonomy.ts | 7, 51 |
 | `denied` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
-| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1249, 4784 |
+| `denied` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1249, 4827 |
 | `denied` | ddl | server/db/ddl/common/ai/05_constraints.sql | 218 |
 | `denied` | ddl | server/db/ddl/common/ai/07_functions.sql | 64 |
 | `denied` | ddl | server/db/ddl/common/audit/02_domains.sql | 65 |
@@ -1259,7 +1261,7 @@ Capture DDLs:
 | `denied` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 15, 57 |
 | `denied` | route | server/packages/platform/ai/src/atlas-experience-routes.ts | 15 |
 | `denied` | runtime | server/packages/platform/ai/src/context.ts | 23 |
-| `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 88, 124, 196 |
+| `denied` | runtime | server/packages/platform/ai/src/tool-service.ts | 89, 125, 197 |
 | `denied` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `denied` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `denied` | route | server/packages/platform/control-admin/src/authorization-management-routes.ts | 14, 16 |
@@ -1282,11 +1284,11 @@ Capture DDLs:
 | `denied` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 3 |
 | `denied` | test | server/packages/services/content/src/content-service.test.ts | 2 |
 | `denied` | test | server/packages/services/documents/src/__tests__/document-service.test.ts | 35 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1107 |
-| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1108 |
+| `denied` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
 | `denied` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 105 |
 | `denied` | runtime | server/packages/services/master-data/src/services.ts | 124 |
-| `denied` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
+| `denied` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
 | `denied` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
 | `denied` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `denied` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
@@ -1294,29 +1296,29 @@ Capture DDLs:
 | `denied` | runtime | server/packages/services/records/src/bookmarks/record-bookmark-service.ts | 60 |
 | `denied` | test | tests/contracts/auth-session-foundation.test.ts | 96, 171 |
 | `denied` | test | tests/contracts/home-personalization-phase3.test.ts | 27, 29, 30 |
-| `denied` | test | tests/e2e/production/surface-matrix.spec.ts | 197 |
+| `denied` | test | tests/e2e/production/surface-matrix.spec.ts | 203 |
 | `denied` | test | tests/foundation-browser/error-boundaries.spec.ts | 5 |
 | `denied` | test | tests/foundation/error-boundaries.test.tsx | 13 |
-| `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 734 |
+| `denied` | tool | tooling/scripts/policy/authorization-inventory.ts | 740 |
 | `denied` | tool | tooling/scripts/policy/verify-auth-session-phase3.mjs | 10 |
 | `denied` | ui | tooling/scripts/verification/render-boundary-fixture.tsx | 9 |
 | `groupIds` | test | server/db/scripts/__tests__/provisioning/three-plane-provision.test.ts | 220, 229, 232 |
 | `groupIds` | tool | server/db/scripts/provisioning/authorization-pack-applicator.ts | 119, 145, 158 |
 | `groupIds` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 273, 282, 285 |
-| `groupIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 735, 755 |
-| `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
-| `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
-| `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
+| `groupIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 741, 761 |
+| `matchedGrantId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
+| `matchedGroupId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
+| `matchedRoleId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
 | `permissionCode` | ui | apps/studio/app/(shell)/mdg/business-partner/ai-experience/experience-editor.tsx | 62, 72, 293, 296 |
 | `permissionCode` | ui | packages/planes/neon/business-partner/src/360/components/network-section.tsx | 222 |
 | `permissionCode` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 21, 137 |
-| `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 7, 14 |
+| `permissionCode` | runtime | packages/platform/shell/work-inbox/src/index.ts | 8, 15 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 20 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/metadata-records-vertical.test.ts | 35, 36, 37, 38, 40 |
 | `permissionCode` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 22 |
 | `permissionCode` | route | server/apps/platform-host/src/composition/finance-routes.ts | 9 |
 | `permissionCode` | runtime | server/apps/platform-host/src/composition/register-platform.ts | 512, 817, 872 |
-| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1442, 1448, 2211, 2220, 2234, 2244, 2257, 2270, 2278, 2297, 2299, 2310, 2352, 2363, 4453 |
+| `permissionCode` | runtime | server/apps/platform-host/src/composition/register-services.ts | 1442, 1448, 2210, 2216, 2228, 2237, 2250, 2263, 2271, 2290, 2292, 2303, 2345, 2356, 4496 |
 | `permissionCode` | ddl | server/db/ddl/common/authz/07_functions.sql | 1720, 1721, 1722, 1723, 1724, 1732, 1750, 1764 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 14, 31 |
 | `permissionCode` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 15 |
@@ -1339,7 +1341,7 @@ Capture DDLs:
 | `permissionCode` | tool | server/db/scripts/seed/entity-operation-projection-compiler.ts | 21, 39, 48, 66, 78, 79, 80, 81, 82, 83, 90, 98, 102, 111 |
 | `permissionCode` | tool | server/db/scripts/seed/exact-scope-compatibility-model.ts | 6, 30, 31, 33, 34, 60, 66, 67, 68, 77, 79, 80 |
 | `permissionCode` | tool | server/db/scripts/seed/export-entity-operation-release.ts | 38 |
-| `permissionCode` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 10, 28, 35, 57, 58, 60, 61, 65, 85, 86, 89, 92, 98, 99, 100, 102 |
+| `permissionCode` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 11, 29, 36, 58, 59, 61, 62, 66, 86, 87, 90, 93, 99, 100, 101, 103 |
 | `permissionCode` | tool | server/db/scripts/seed/mesh-authorization-inventory-model.ts | 44, 59, 232, 233, 234, 235, 237, 269, 372 |
 | `permissionCode` | tool | server/db/scripts/seed/neon-authorization-inventory-model.ts | 37, 52, 218, 219, 220, 221, 223, 257, 350 |
 | `permissionCode` | tool | server/db/scripts/seed/tenant-authority-projection.ts | 67, 144, 145, 151, 252 |
@@ -1394,8 +1396,8 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/audit/src/governance-service.ts | 101 |
 | `permissionCode` | runtime | server/packages/platform/collaboration/src/collaboration-service.ts | 73 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 70, 96 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 84, 85 |
-| `permissionCode` | runtime | server/packages/platform/control-admin/src/control-services.ts | 144 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/authorization-management-service.ts | 85, 86 |
+| `permissionCode` | runtime | server/packages/platform/control-admin/src/control-services.ts | 145 |
 | `permissionCode` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 48 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/cycle/cycle-config-service.ts | 434, 436 |
 | `permissionCode` | runtime | server/packages/platform/control-admin/src/runtime-command-service.ts | 343, 344 |
@@ -1404,7 +1406,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/legal-hold-service.ts | 71 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/compliance/report-pack-service.ts | 96 |
 | `permissionCode` | runtime | server/packages/platform/governance/src/cycles/cycle-execution-services.ts | 128 |
-| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 45 |
+| `permissionCode` | route | server/packages/platform/governance/src/routes/governance-routes.ts | 46 |
 | `permissionCode` | runtime | server/packages/platform/iam/src/__fixtures__/authorization-golden-corpus.v1.json | 13, 14, 19, 21, 22, 28, 31, 32, 38, 41, 42, 48, 50, 55, 57, 62, 63, 68, 70, 75, 77, 82, 88, 90, 95, 96, 101, 102 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/authorization-golden-corpus.test.ts | 9, 32 |
 | `permissionCode` | test | server/packages/platform/iam/src/__tests__/iam-service.test.ts | 51 |
@@ -1425,7 +1427,7 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/platform/search/src/document-search-service.ts | 3 |
 | `permissionCode` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 22, 82 |
 | `permissionCode` | runtime | server/packages/platform/workflow/src/sla-automation.ts | 8, 11, 13 |
-| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 127, 128 |
+| `permissionCode` | runtime | server/packages/platform/workflow/src/workflow-service.ts | 128, 129 |
 | `permissionCode` | test | server/packages/services/attachments/src/attachment-routes.test.ts | 5 |
 | `permissionCode` | route | server/packages/services/attachments/src/attachment-routes.ts | 37, 38 |
 | `permissionCode` | runtime | server/packages/services/content/src/content-service.ts | 4 |
@@ -1441,21 +1443,22 @@ Capture DDLs:
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-mesh-network-adapter.test.ts | 5, 7 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-production-integrations.test.ts | 8 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 6, 14 |
-| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 43 |
+| `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 45 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 8 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 28, 155 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 61 |
 | `permissionCode` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 16 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 7, 10, 34 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-mesh-network-adapter.ts | 8, 11, 35 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-policy.ts | 15, 18, 20 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 29, 68, 69, 72, 76, 93 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1095, 1100, 1107 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 148 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 298 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 30, 69, 70, 73, 77, 94 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-eligibility-service.ts | 1096, 1101, 1108 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-invitation-service.ts | 149 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/business-partner-request-service.ts | 309 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/governed-internal-business-partner-service.ts | 88, 93, 105 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/kysely-business-partner-case-repository.ts | 345 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/kysely-workforce-request-repository.ts | 61 |
 | `permissionCode` | runtime | server/packages/services/master-data/src/services.ts | 124 |
-| `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 42 |
+| `permissionCode` | runtime | server/packages/services/master-data/src/workforce-service.ts | 43 |
 | `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-consumer-routes.ts | 8 |
 | `permissionCode` | route | server/packages/services/publication/src/business-partner-definition-routes.ts | 20 |
 | `permissionCode` | route | server/packages/services/publication/src/publication-routes.ts | 136, 138 |
@@ -1475,16 +1478,16 @@ Capture DDLs:
 | `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-jobs.ts | 120, 121 |
 | `permissionCode` | runtime | server/packages/services/records/src/transfer/transfer-service.ts | 314, 315 |
 | `permissionCode` | test | tests/contracts/three-plane-list-scope.test.ts | 30 |
-| `permissionCode` | runtime | tests/e2e/acceptance/governed-import-smoke.mjs | 296 |
-| `permissionCode` | runtime | tests/e2e/acceptance/public-record-transfer-smoke.mjs | 301 |
-| `permissionCode` | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 937 |
+| `permissionCode` | runtime | tests/e2e/acceptance/governed-import-smoke.mjs | 299 |
+| `permissionCode` | runtime | tests/e2e/acceptance/public-record-transfer-smoke.mjs | 304 |
+| `permissionCode` | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 943 |
 | `permissionCodes` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
 | `permissionCodes` | runtime | server/apps/platform-host/src/composition/register-services.ts | 857 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/entity-operation-projection-compiler.test.ts | 89, 190 |
 | `permissionCodes` | test | server/db/scripts/__tests__/authorization/exact-scope-compatibility.test.ts | 12, 28, 41, 62, 71, 97 |
 | `permissionCodes` | tool | server/db/scripts/seed/build-exact-scope-compatibility.ts | 20 |
 | `permissionCodes` | tool | server/db/scripts/seed/exact-scope-compatibility-model.ts | 24, 28, 29 |
-| `permissionCodes` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 93 |
+| `permissionCodes` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 94 |
 | `permissionCodes` | tool | server/db/scripts/seed/mesh-authorization-inventory-model.ts | 227, 232, 233 |
 | `permissionCodes` | tool | server/db/scripts/seed/neon-authorization-inventory-model.ts | 213, 218, 219 |
 | `permissionCodes` | runtime | server/packages/contracts/finance/src/commands.ts | 7 |
@@ -1492,19 +1495,22 @@ Capture DDLs:
 | `permissionCodes` | test | server/packages/planes/neon/src/finance-jobs.test.ts | 6 |
 | `permissionCodes` | test | server/packages/platform/workflow/src/__tests__/workflow-service.test.ts | 13, 79 |
 | `permissionCodes` | runtime | server/packages/services/finance/src/shared/permission-checker.ts | 6 |
-| `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 180, 996, 998, 1028, 2107 |
+| `permissionCodes` | test | server/packages/services/master-data/src/__tests__/business-partner-case-view.test.ts | 62, 90, 120, 124, 150, 163, 169 |
+| `permissionCodes` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 17, 182 |
+| `permissionCodes` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
+| `permissionCodes` | test | tests/contracts/business-partner-phase0-contracts.test.ts | 106 |
+| `permissionCodes` | tool | tooling/scripts/policy/authorization-inventory.ts | 180, 1001, 1003, 1033, 2112 |
 | `permissions` | ui | packages/planes/neon/business-partner/src/customer-controls.tsx | 11, 71, 72 |
-| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 44, 54, 58, 85 |
-| `permissions` | test | packages/planes/neon/business-partner/src/workflow.test.ts | 5, 8, 9, 10, 11 |
-| `permissions` | runtime | packages/planes/neon/business-partner/src/workflow.ts | 3 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/index.tsx | 39, 81 |
+| `permissions` | ui | packages/planes/neon/business-partner/src/role-extension-experience.tsx | 90, 91 |
 | `permissions` | ui | packages/planes/neon/list-view/src/index.tsx | 10, 14 |
 | `permissions` | runtime | packages/platform/ai/agent-runtime/src/index.ts | 19, 136 |
 | `permissions` | runtime | packages/platform/foundation/api-client/src/bootstrap.ts | 27, 50, 52 |
-| `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 52, 53, 60, 119 |
+| `permissions` | ui | packages/platform/shell/app-foundation/src/index.tsx | 57, 58, 65, 125 |
 | `permissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 8, 19, 32, 37, 38, 52, 53 |
 | `permissions` | runtime | packages/platform/shell/shell/src/core.ts | 41, 133 |
-| `permissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 64 |
-| `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 134, 296, 339 |
+| `permissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 65 |
+| `permissions` | ui | packages/platform/shell/shell/src/home.tsx | 135, 297, 340 |
 | `permissions` | runtime | packages/platform/shell/shell/src/messages.ts | 9 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/documents-vertical.test.ts | 16 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/iam-audit-vertical.test.ts | 25, 54, 77 |
@@ -1513,7 +1519,7 @@ Capture DDLs:
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
 | `permissions` | test | server/apps/platform-host/src/composition/__tests__/workflow-vertical.test.ts | 20, 21 |
 | `permissions` | route | server/apps/platform-host/src/composition/finance-routes.ts | 19 |
-| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 754, 783, 791, 803, 857, 4091, 4094, 4095, 4244, 4245, 4775 |
+| `permissions` | runtime | server/apps/platform-host/src/composition/register-services.ts | 754, 783, 791, 803, 857, 4134, 4137, 4138, 4287, 4288, 4818 |
 | `permissions` | ddl | server/db/ddl/common/authz/00_schema.sql | 4 |
 | `permissions` | ddl | server/db/ddl/common/authz/07_functions.sql | 578 |
 | `permissions` | ddl | server/db/ddl/common/master/03_platform_tables.sql | 53, 191 |
@@ -1541,7 +1547,7 @@ Capture DDLs:
 | `permissions` | tool | server/db/scripts/seed/compile-mesh-authorization-inventory.ts | 185 |
 | `permissions` | tool | server/db/scripts/seed/entity-operation-projection-compiler.ts | 65, 66 |
 | `permissions` | tool | server/db/scripts/seed/exact-scope-compatibility-model.ts | 12, 30, 39, 60, 65 |
-| `permissions` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 88, 89, 90, 91, 93, 94, 101 |
+| `permissions` | tool | server/db/scripts/seed/inventory-promotion-model.ts | 89, 90, 91, 92, 94, 95, 102 |
 | `permissions` | tool | server/db/scripts/seed/validate-canonical-catalogs.ts | 28, 47, 74, 79 |
 | `permissions` | test | server/db/scripts/tests/integration/atlas/tools-rls.ts | 175 |
 | `permissions` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 135 |
@@ -1585,7 +1591,7 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/platform/ai/src/experience-configuration.ts | 18, 19, 28, 86 |
 | `permissions` | runtime | server/packages/platform/ai/src/knowledge.ts | 172 |
 | `permissions` | runtime | server/packages/platform/ai/src/surface-draft-generation.ts | 109 |
-| `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 80, 196 |
+| `permissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 81, 197 |
 | `permissions` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `permissions` | test | server/packages/platform/control-admin/src/authorization-management-service.test.ts | 69 |
 | `permissions` | test | server/packages/platform/control-admin/src/cycle/cycle-config-service.test.ts | 46 |
@@ -1618,7 +1624,7 @@ Capture DDLs:
 | `permissions` | test | server/packages/services/finance/src/closing/closing-services.test.ts | 9, 17, 19, 21, 23, 25 |
 | `permissions` | runtime | server/packages/services/finance/src/closing/closing-services.ts | 7, 12, 29, 41, 54, 56, 71 |
 | `permissions` | test | server/packages/services/finance/src/inventory/f4-acceptance.test.ts | 9, 61 |
-| `permissions` | runtime | server/packages/services/finance/src/inventory/inventory-service.ts | 52, 65, 75, 80, 136 |
+| `permissions` | runtime | server/packages/services/finance/src/inventory/inventory-service.ts | 53, 66, 76, 81, 137 |
 | `permissions` | runtime | server/packages/services/finance/src/ledger/commitment-service.ts | 6, 8, 22 |
 | `permissions` | runtime | server/packages/services/finance/src/ledger/cross-book-posting-service.ts | 8, 10, 25 |
 | `permissions` | test | server/packages/services/finance/src/ledger/f3-acceptance.test.ts | 13, 30, 35, 40 |
@@ -1634,12 +1640,14 @@ Capture DDLs:
 | `permissions` | runtime | server/packages/services/finance/src/tax/tax-credit-service.ts | 8, 13, 47 |
 | `permissions` | test | server/packages/services/finance/src/tax/tax-services.test.ts | 11, 26, 42 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-360-service.test.ts | 2 |
-| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 40, 43, 52, 72, 78, 98, 121, 126, 128, 140, 162, 164, 168 |
+| `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-case-service.test.ts | 8, 42, 45, 54, 74, 80, 100, 123, 128, 130, 142, 172, 174, 183 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/business-partner-eligibility-service.test.ts | 6, 8, 11, 14 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/customer-onboarding-service.test.ts | 37, 155, 179, 229 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/governed-internal-business-partner-service.test.ts | 15, 28, 61, 76, 122 |
 | `permissions` | test | server/packages/services/master-data/src/__tests__/workforce-service.test.ts | 6, 16, 21, 22 |
-| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 22, 40, 42 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-360-service.ts | 23, 41, 43 |
+| `permissions` | runtime | server/packages/services/master-data/src/business-partner-case-view.ts | 182, 186, 187, 192, 200, 208, 211 |
+| `permissions` | route | server/packages/services/master-data/src/business-partner-request-routes.ts | 44 |
 | `permissions` | runtime | server/packages/services/master-data/src/kysely-business-partner-360-repository.ts | 124, 275, 292 |
 | `permissions` | test | server/packages/services/publication/src/__tests__/studio-authority-ddl.test.ts | 9 |
 | `permissions` | test | server/packages/services/records/src/__tests__/advanced-records.test.ts | 9 |
@@ -1659,24 +1667,24 @@ Capture DDLs:
 | `permissions` | test | tests/contracts/query-provider-lifecycle.test.ts | 13 |
 | `permissions` | test | tests/contracts/shared-shell-navigation.test.ts | 45, 117, 164, 194, 197, 261 |
 | `permissions` | test | tests/foundation/access-gates-phase9.test.tsx | 6 |
-| `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 736, 796, 798, 919, 938, 939, 978, 982 |
+| `permissions` | tool | tooling/scripts/policy/authorization-inventory.ts | 742, 802, 804, 925, 944, 945, 983, 987 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.mjs | 98 |
 | `permissions` | tool | tooling/scripts/policy/host-capability-registry.test.mjs | 32 |
 | `permissions` | tool | tooling/scripts/policy/verify-access-consumption-phase9.mjs | 12 |
 | `permissions` | tool | tooling/scripts/policy/verify-shared-shell-phase8.mjs | 14, 20 |
-| `persona` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 308 |
+| `persona` | runtime | governance/config/governance/authorization-data-disposition-policy.v1.json | 362 |
 | `persona` | runtime | governance/config/governance/authorization-legacy-freeze-baseline.v1.json | 6497, 6649, 6663, 6664, 6671, 6672, 6679, 6680, 6687, 6688, 6695, 6696, 6703, 6704, 6711, 6712, 6719, 6720, 6727, 6728, 6735, 6736, 6743, 6744, 6751, 6752, 6753, 6759, 6760, 6767, 6768, 6775, 6776, 6783, 6784, 6791, 6792, 6799, 6800, 7041, 7049, 7057 |
 | `persona` | test | server/db/scripts/__tests__/authorization/cirrusatlantic-demo-authorization.test.ts | 14, 17, 19, 21, 28 |
 | `persona` | tool | server/db/scripts/checks/seeds/authorization.ts | 72 |
 | `persona` | tool | server/db/scripts/provisioning/cirrusatlantic-demo-authorization-model.ts | 64, 65, 66, 67, 68, 70, 72 |
 | `persona` | tool | server/db/scripts/provisioning/provision-cirrusatlantic-demo-authorization.ts | 35, 56, 57, 58, 59, 60, 61, 64, 149, 158, 159, 163, 164, 169, 172, 173, 179, 184, 185, 190, 193, 194, 198, 199, 209, 210, 222, 233, 234 |
 | `persona` | tool | server/db/scripts/provisioning/provision-three-tenant-demo-authorization.ts | 68 |
-| `persona` | keycloak | stack/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
-| `persona` | tool | tooling/scripts/policy/authorization-inventory.ts | 558, 737, 742 |
+| `persona` | keycloak | deploy/config/iam/realm-athyper-demosetup.json | 1703, 1745, 1778, 1811, 1848, 1881, 1914, 1947, 1989, 2022, 2055, 2092, 2125, 2158, 2191, 2233, 2266, 2299, 2336, 2369, 2402, 2435, 2477, 2510, 2543, 2580, 2613, 2646, 2679, 2721, 2754, 2787, 2824, 2857, 2890, 2923, 2965, 2998, 3031, 3068, 3101, 3134, 3167, 3209, 3242, 3275, 3312, 3345, 3378, 3411, 3453, 3486, 3519, 3556, 3589, 3622, 3655, 3697, 3730, 3763, 3800, 3833, 3866, 3899, 3941, 3974, 4007, 4044, 4077, 4110, 4143, 4185, 4218, 4251, 4288, 4321, 4354, 4387, 4429, 4462, 4495, 4532, 4565, 4598, 4631, 4673, 4706, 4739, 4776, 4809, 4842, 4875, 4917, 4950, 4983, 5020, 5053, 5086, 5119, 5161, 5194, 5227, 5264, 5297, 5330, 5367, 5400, 5433, 5470, 5507, 5549, 5582, 5615, 5652, 5685, 5718, 5751, 5793, 5826, 5859, 5896, 5929, 5962, 5995, 6037, 6070, 6103, 6140, 6173, 6206, 6749, 6782, 6815 |
+| `persona` | tool | tooling/scripts/policy/authorization-inventory.ts | 564, 743, 748 |
 | `persona` | tool | tooling/tools/scripts/generate-athyper-demo-iam.cjs | 71, 85, 99, 100, 101, 117, 128, 132, 140, 141, 147, 148, 163, 254 |
 | `persona` | tool | tooling/tools/scripts/verify-athyper-demo-iam.cjs | 107, 108, 110 |
-| `personaId` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
-| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4786 |
+| `personaId` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
+| `planeExcluded` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4829 |
 | `planeExcluded` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planeExcluded` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 23 |
 | `planeExcluded` | runtime | server/packages/contracts/auth/src/authorization.ts | 78 |
@@ -1718,7 +1726,7 @@ Capture DDLs:
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `planeExcluded` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4785 |
+| `planLocked` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4828 |
 | `planLocked` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `planLocked` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 22 |
 | `planLocked` | runtime | server/packages/contracts/auth/src/authorization.ts | 77 |
@@ -1760,8 +1768,8 @@ Capture DDLs:
 | `planLocked` | test | server/packages/services/records/src/__tests__/entity-list-service.test.ts | 20 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/records-vertical.test.ts | 43 |
 | `planLocked` | test | server/packages/services/records/src/__tests__/transfer-jobs.test.ts | 8 |
-| `planLocked` | tool | tooling/scripts/policy/authorization-inventory.ts | 755 |
-| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4779 |
+| `planLocked` | tool | tooling/scripts/policy/authorization-inventory.ts | 761 |
+| `principalFingerprint` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4822 |
 | `principalFingerprint` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `principalFingerprint` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 16 |
 | `principalFingerprint` | runtime | server/packages/contracts/auth/src/authorization.ts | 69 |
@@ -1806,7 +1814,7 @@ Capture DDLs:
 | `profileHash` | runtime | packages/contracts/platform/fixtures/authorization-snapshot.v1.json | 3 |
 | `profileHash` | runtime | packages/contracts/platform/fixtures/platform-bootstrap.v1.json | 22 |
 | `profileHash` | test | server/apps/platform-host/src/composition/__tests__/verification-routes.test.ts | 7 |
-| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4763, 4772, 4779, 4780, 4781 |
+| `profileHash` | runtime | server/apps/platform-host/src/composition/register-services.ts | 4806, 4815, 4822, 4823, 4824 |
 | `profileHash` | test | server/db/scripts/tests/integration/governed-internal-business-partner-http.mjs | 134 |
 | `profileHash` | test | server/packages/adapters/experience-postgres/src/experience.postgres.test.ts | 56 |
 | `profileHash` | test | server/packages/contracts/auth/src/__tests__/api.test.ts | 17, 35 |
@@ -1827,7 +1835,7 @@ Capture DDLs:
 | `profileHash` | runtime | server/packages/platform/ai/src/context.ts | 10, 16 |
 | `profileHash` | runtime | server/packages/platform/ai/src/kysely-tool-proposal-store.ts | 176 |
 | `profileHash` | runtime | server/packages/platform/ai/src/record-data-gateway.ts | 36 |
-| `profileHash` | runtime | server/packages/platform/ai/src/tool-service.ts | 76, 77, 80, 120, 129 |
+| `profileHash` | runtime | server/packages/platform/ai/src/tool-service.ts | 77, 78, 81, 121, 130 |
 | `profileHash` | test | server/packages/platform/collaboration/src/__tests__/collaboration-service.test.ts | 58 |
 | `profileHash` | test | server/packages/platform/experience/src/service.test.ts | 14, 15 |
 | `profileHash` | runtime | server/packages/platform/experience/src/service.ts | 97, 936, 988 |
@@ -1859,24 +1867,24 @@ Capture DDLs:
 | `profileHash` | runtime | server/packages/test-utils/src/index.ts | 15, 22 |
 | `profileHash` | test | tests/contracts/api-client-transport.test.ts | 97 |
 | `profileHash` | test | tests/contracts/frontend-spine-browser-contracts.test.ts | 21 |
-| `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 919, 937 |
+| `required_permission` | tool | tooling/scripts/policy/authorization-inventory.ts | 925, 943 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/parsers.ts | 140 |
 | `requiredPermission` | runtime | packages/contracts/platform/entity-list/src/types.ts | 110 |
 | `requiredPermission` | runtime | server/packages/services/records/src/entity-list-service.ts | 178, 179 |
 | `requiredPermission` | test | tests/contracts/entity-list-contract.test.ts | 41, 46 |
-| `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 937 |
+| `requiredPermission` | tool | tooling/scripts/policy/authorization-inventory.ts | 943 |
 | `requiredPermissions` | ui | apps/neon/lib/experience-runtime.tsx | 50, 61, 72, 93, 104, 117 |
 | `requiredPermissions` | runtime | packages/planes/mesh/shell/src/navigation.ts | 11 |
 | `requiredPermissions` | runtime | packages/planes/neon/navigation/src/index.ts | 12 |
 | `requiredPermissions` | runtime | packages/planes/studio/shell/src/navigation.ts | 11 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell-runtime/src/core.ts | 29, 51 |
 | `requiredPermissions` | runtime | packages/platform/shell/shell/src/core.ts | 13, 97, 137 |
-| `requiredPermissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 8, 47, 59, 64 |
+| `requiredPermissions` | runtime | packages/platform/shell/shell/src/home-personalization.ts | 9, 48, 60, 65 |
 | `requiredPermissions` | runtime | server/packages/contracts/ai/src/tools.ts | 19 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/governance.test.ts | 24, 33, 41 |
 | `requiredPermissions` | test | server/packages/platform/ai/src/__tests__/tool-ledger-lifecycle.test.ts | 17 |
 | `requiredPermissions` | runtime | server/packages/platform/ai/src/runtime-tool-coordinator.ts | 17 |
-| `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 56, 78, 118, 196 |
+| `requiredPermissions` | runtime | server/packages/platform/ai/src/tool-service.ts | 57, 79, 119, 197 |
 | `requiredPermissions` | test | tests/contracts/access-consumption-phase9.test.ts | 5, 31, 32 |
 | `requiredPermissions` | test | tests/contracts/app-composition-phase10.test.ts | 24 |
 | `requiredPermissions` | test | tests/contracts/first-business-module-readiness.test.ts | 12 |
@@ -1896,158 +1904,158 @@ Capture DDLs:
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/mesh/seed-pack.v1.json | 1134, 1982, 2006, 2030, 2054, 2078, 2102, 2126, 2150, 2174, 2198, 2222, 2246, 2270, 2294, 2318, 2342, 2366, 2390, 2414, 2438, 2462, 2486, 2510, 2534, 2558, 2582, 2606, 2630, 2654, 2678, 2702, 2726, 2750, 2774, 2798, 2822, 2846, 2870, 2894, 2918, 2942, 2966, 2990, 3014, 3038, 3062, 3086, 3110, 3134, 3158, 3182, 3206, 3230, 3254 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/neon/seed-pack.v1.json | 773, 2979, 3003, 3027, 3051, 3075, 3099, 3123, 3147, 3171, 3195, 3219, 3243, 3267, 3291, 3315, 3339, 3363, 3387, 3411, 3435, 3459, 3483, 3507, 3531, 3555, 3579, 3603, 3627, 3651, 3675, 3699, 3723, 3747, 3771, 3795, 3819, 3843, 3867, 3891, 3915, 3939, 3963, 3987, 4011, 4035, 4059, 4083, 4107, 4131, 4155, 4179, 4203, 4227, 4251, 4275, 4299, 4323, 4347, 4371, 4395, 4419, 4443, 4467, 4491, 4515, 4539, 4563, 4587, 4611, 4635, 4659, 4683, 4707, 4731, 4755, 4779, 4803, 4827, 4851, 4875, 4899, 4923, 4947, 4971, 4995, 5019, 5043, 5067, 5091, 5115, 5139, 5163, 5187, 5211, 5235, 5259, 5283, 5307, 5331, 5355, 5379, 5403, 5427, 5451, 5475, 5499, 5523, 5547, 5571, 5595, 5619, 5643, 5667, 5691, 5715, 5739, 5763, 5787, 5811, 5835, 5859, 5883, 5907, 5931, 5955, 5979, 6003, 6027, 6051, 6075, 6099, 6123, 6147, 6171, 6195, 6219, 6243, 6267, 6291, 6315, 6339, 6363, 6387, 6411, 6435, 6459, 6483, 6507, 6531, 6555, 6579 |
 | `roleIds` | runtime | server/db/seed/packs/authorization-v2/studio/seed-pack.v1.json | 771, 1255, 1279, 1303, 1327, 1351, 1375, 1399, 1423, 1447, 1471, 1495, 1519, 1543, 1567, 1591, 1615, 1639, 1663, 1687, 1711, 1735, 1759, 1783, 1807, 1831, 1855, 1879, 1903 |
-| `roleIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 738, 755 |
+| `roleIds` | tool | tooling/scripts/policy/authorization-inventory.ts | 744, 761 |
 | `roleIds` | tool | tooling/tools/scripts/update-realm-neon.cjs | 94, 96 |
 
 ## Keycloak mapper inventory
 
 | Source | JSON path | Name | Mapper | User attribute | Claim | Hardcoded role |
 |---|---|---|---|---|---|---|
-| stack/config/iam/realm-athyper-clean-slate.json | clients.1.protocolMappers.0 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.10.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.11.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.12.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.13.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.3.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.5.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.6.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clients.8.protocolMappers.0 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.0.protocolMappers.0 | role list | saml-role-list-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.0 | Client ID | oidc-usersessionmodel-note-mapper | — | client_id | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.1 | Client Host | oidc-usersessionmodel-note-mapper | — | clientHost | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.2 | Client IP Address | oidc-usersessionmodel-note-mapper | — | clientAddress | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.10.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.0 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.1 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.2 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.12.protocolMappers.0 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.12.protocolMappers.1 | sub | oidc-sub-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.14.protocolMappers.0 | organization | saml-organization-membership-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.3.protocolMappers.0 | phone number | oidc-usermodel-attribute-mapper | phoneNumber | phone_number | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.3.protocolMappers.1 | phone number verified | oidc-usermodel-attribute-mapper | phoneNumberVerified | phone_number_verified | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.4.protocolMappers.0 | groups | oidc-usermodel-realm-role-mapper | foo | groups | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.4.protocolMappers.1 | upn | oidc-usermodel-attribute-mapper | username | upn | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.5.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.5.protocolMappers.1 | amr | oidc-amr-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.0 | Athyper identity provider | oidc-usersessionmodel-note-mapper | — | athyper.identity_provider | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.1 | Athyper external acr | oidc-usersessionmodel-note-mapper | — | athyper.external_acr | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.2 | Athyper external amr | oidc-usersessionmodel-note-mapper | — | athyper.external_amr | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.3 | Athyper SAML authentication context | oidc-usersessionmodel-note-mapper | — | athyper.saml_authn_context | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.4 | Athyper MFA source | oidc-usersessionmodel-note-mapper | — | athyper.mfa_source | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.7.protocolMappers.0 | address | oidc-address-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.8.protocolMappers.0 | organization | oidc-organization-membership-mapper | — | organization | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.0 | given name | oidc-usermodel-attribute-mapper | firstName | given_name | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.1 | nickname | oidc-usermodel-attribute-mapper | nickname | nickname | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.10 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.11 | family name | oidc-usermodel-attribute-mapper | lastName | family_name | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.12 | website | oidc-usermodel-attribute-mapper | website | website | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.13 | picture | oidc-usermodel-attribute-mapper | picture | picture | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.2 | birthdate | oidc-usermodel-attribute-mapper | birthdate | birthdate | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.3 | full name | oidc-full-name-mapper | — | — | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.4 | zoneinfo | oidc-usermodel-attribute-mapper | zoneinfo | zoneinfo | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.5 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.6 | gender | oidc-usermodel-attribute-mapper | gender | gender | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.7 | middle name | oidc-usermodel-attribute-mapper | middleName | middle_name | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.8 | profile | oidc-usermodel-attribute-mapper | profile | profile | — |
-| stack/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.9 | updated at | oidc-usermodel-attribute-mapper | updatedAt | updated_at | — |
-| stack/config/iam/realm-athyper.json | clients.1.protocolMappers.0 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.10.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.11.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.12.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.13.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.3.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.5.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.6.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clients.8.protocolMappers.0 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
-| stack/config/iam/realm-athyper.json | clientScopes.0.protocolMappers.0 | role list | saml-role-list-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.0 | Client ID | oidc-usersessionmodel-note-mapper | — | client_id | — |
-| stack/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.1 | Client Host | oidc-usersessionmodel-note-mapper | — | clientHost | — |
-| stack/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.2 | Client IP Address | oidc-usersessionmodel-note-mapper | — | clientAddress | — |
-| stack/config/iam/realm-athyper.json | clientScopes.10.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.0 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
-| stack/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.1 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
-| stack/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.2 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.12.protocolMappers.0 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
-| stack/config/iam/realm-athyper.json | clientScopes.12.protocolMappers.1 | sub | oidc-sub-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.14.protocolMappers.0 | organization | saml-organization-membership-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
-| stack/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
-| stack/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
-| stack/config/iam/realm-athyper.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
-| stack/config/iam/realm-athyper.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
-| stack/config/iam/realm-athyper.json | clientScopes.3.protocolMappers.0 | phone number | oidc-usermodel-attribute-mapper | phoneNumber | phone_number | — |
-| stack/config/iam/realm-athyper.json | clientScopes.3.protocolMappers.1 | phone number verified | oidc-usermodel-attribute-mapper | phoneNumberVerified | phone_number_verified | — |
-| stack/config/iam/realm-athyper.json | clientScopes.4.protocolMappers.0 | groups | oidc-usermodel-realm-role-mapper | foo | groups | — |
-| stack/config/iam/realm-athyper.json | clientScopes.4.protocolMappers.1 | upn | oidc-usermodel-attribute-mapper | username | upn | — |
-| stack/config/iam/realm-athyper.json | clientScopes.5.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.5.protocolMappers.1 | amr | oidc-amr-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.0 | Athyper identity provider | oidc-usersessionmodel-note-mapper | — | athyper.identity_provider | — |
-| stack/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.1 | Athyper external acr | oidc-usersessionmodel-note-mapper | — | athyper.external_acr | — |
-| stack/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.2 | Athyper external amr | oidc-usersessionmodel-note-mapper | — | athyper.external_amr | — |
-| stack/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.3 | Athyper SAML authentication context | oidc-usersessionmodel-note-mapper | — | athyper.saml_authn_context | — |
-| stack/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.4 | Athyper MFA source | oidc-usersessionmodel-note-mapper | — | athyper.mfa_source | — |
-| stack/config/iam/realm-athyper.json | clientScopes.7.protocolMappers.0 | address | oidc-address-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.8.protocolMappers.0 | organization | oidc-organization-membership-mapper | — | organization | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.0 | given name | oidc-usermodel-attribute-mapper | firstName | given_name | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.1 | nickname | oidc-usermodel-attribute-mapper | nickname | nickname | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.10 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.11 | family name | oidc-usermodel-attribute-mapper | lastName | family_name | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.12 | website | oidc-usermodel-attribute-mapper | website | website | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.13 | picture | oidc-usermodel-attribute-mapper | picture | picture | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.2 | birthdate | oidc-usermodel-attribute-mapper | birthdate | birthdate | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.3 | full name | oidc-full-name-mapper | — | — | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.4 | zoneinfo | oidc-usermodel-attribute-mapper | zoneinfo | zoneinfo | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.5 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.6 | gender | oidc-usermodel-attribute-mapper | gender | gender | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.7 | middle name | oidc-usermodel-attribute-mapper | middleName | middle_name | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.8 | profile | oidc-usermodel-attribute-mapper | profile | profile | — |
-| stack/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.9 | updated at | oidc-usermodel-attribute-mapper | updatedAt | updated_at | — |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.0 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.1 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.2 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.3 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.4 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.5 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
-| stack/config/iam/realm-athyper.json | identityProviderMappers.6 | github-avatar | hardcoded-attribute-idp-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.0.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.0 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.1 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.2 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.3.protocolMappers.0 | full name | oidc-full-name-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.3.protocolMappers.1 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.4.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.5.protocolMappers.0 | sub | oidc-sub-mapper | — | — | — |
-| stack/config/iam/realm-platform-control-clean-slate.json | clientScopes.5.protocolMappers.1 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.0.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.0 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.1 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.2 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.3.protocolMappers.0 | full name | oidc-full-name-mapper | — | — | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.3.protocolMappers.1 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.4.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.5.protocolMappers.0 | sub | oidc-sub-mapper | — | — | — |
-| stack/config/iam/realm-platform-control.json | clientScopes.5.protocolMappers.1 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.1.protocolMappers.0 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.10.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.11.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.12.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.13.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.3.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.5.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.6.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clients.8.protocolMappers.0 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.0.protocolMappers.0 | role list | saml-role-list-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.0 | Client ID | oidc-usersessionmodel-note-mapper | — | client_id | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.1 | Client Host | oidc-usersessionmodel-note-mapper | — | clientHost | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.1.protocolMappers.2 | Client IP Address | oidc-usersessionmodel-note-mapper | — | clientAddress | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.10.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.0 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.1 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.11.protocolMappers.2 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.12.protocolMappers.0 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.12.protocolMappers.1 | sub | oidc-sub-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.14.protocolMappers.0 | organization | saml-organization-membership-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.15.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.16.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.17.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.3.protocolMappers.0 | phone number | oidc-usermodel-attribute-mapper | phoneNumber | phone_number | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.3.protocolMappers.1 | phone number verified | oidc-usermodel-attribute-mapper | phoneNumberVerified | phone_number_verified | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.4.protocolMappers.0 | groups | oidc-usermodel-realm-role-mapper | foo | groups | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.4.protocolMappers.1 | upn | oidc-usermodel-attribute-mapper | username | upn | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.5.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.5.protocolMappers.1 | amr | oidc-amr-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.0 | Athyper identity provider | oidc-usersessionmodel-note-mapper | — | athyper.identity_provider | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.1 | Athyper external acr | oidc-usersessionmodel-note-mapper | — | athyper.external_acr | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.2 | Athyper external amr | oidc-usersessionmodel-note-mapper | — | athyper.external_amr | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.3 | Athyper SAML authentication context | oidc-usersessionmodel-note-mapper | — | athyper.saml_authn_context | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.6.protocolMappers.4 | Athyper MFA source | oidc-usersessionmodel-note-mapper | — | athyper.mfa_source | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.7.protocolMappers.0 | address | oidc-address-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.8.protocolMappers.0 | organization | oidc-organization-membership-mapper | — | organization | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.0 | given name | oidc-usermodel-attribute-mapper | firstName | given_name | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.1 | nickname | oidc-usermodel-attribute-mapper | nickname | nickname | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.10 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.11 | family name | oidc-usermodel-attribute-mapper | lastName | family_name | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.12 | website | oidc-usermodel-attribute-mapper | website | website | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.13 | picture | oidc-usermodel-attribute-mapper | picture | picture | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.2 | birthdate | oidc-usermodel-attribute-mapper | birthdate | birthdate | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.3 | full name | oidc-full-name-mapper | — | — | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.4 | zoneinfo | oidc-usermodel-attribute-mapper | zoneinfo | zoneinfo | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.5 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.6 | gender | oidc-usermodel-attribute-mapper | gender | gender | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.7 | middle name | oidc-usermodel-attribute-mapper | middleName | middle_name | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.8 | profile | oidc-usermodel-attribute-mapper | profile | profile | — |
+| deploy/config/iam/realm-athyper-clean-slate.json | clientScopes.9.protocolMappers.9 | updated at | oidc-usermodel-attribute-mapper | updatedAt | updated_at | — |
+| deploy/config/iam/realm-athyper.json | clients.1.protocolMappers.0 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.10.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.11.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.12.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.13.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.3.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.5.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.6.protocolMappers.0 | athyper-api-runtime audience | oidc-audience-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clients.8.protocolMappers.0 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.0.protocolMappers.0 | role list | saml-role-list-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.0 | Client ID | oidc-usersessionmodel-note-mapper | — | client_id | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.1 | Client Host | oidc-usersessionmodel-note-mapper | — | clientHost | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.1.protocolMappers.2 | Client IP Address | oidc-usersessionmodel-note-mapper | — | clientAddress | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.10.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.0 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.1 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.11.protocolMappers.2 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.12.protocolMappers.0 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.12.protocolMappers.1 | sub | oidc-sub-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.14.protocolMappers.0 | organization | saml-organization-membership-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.15.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.16.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.0 | plane | oidc-hardcoded-claim-mapper | — | plane | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.1 | realm_key | oidc-hardcoded-claim-mapper | — | realm_key | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.17.protocolMappers.2 | tenant_code | oidc-usermodel-attribute-mapper | tenant_code | athyper.tenant_code | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.3.protocolMappers.0 | phone number | oidc-usermodel-attribute-mapper | phoneNumber | phone_number | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.3.protocolMappers.1 | phone number verified | oidc-usermodel-attribute-mapper | phoneNumberVerified | phone_number_verified | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.4.protocolMappers.0 | groups | oidc-usermodel-realm-role-mapper | foo | groups | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.4.protocolMappers.1 | upn | oidc-usermodel-attribute-mapper | username | upn | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.5.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.5.protocolMappers.1 | amr | oidc-amr-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.0 | Athyper identity provider | oidc-usersessionmodel-note-mapper | — | athyper.identity_provider | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.1 | Athyper external acr | oidc-usersessionmodel-note-mapper | — | athyper.external_acr | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.2 | Athyper external amr | oidc-usersessionmodel-note-mapper | — | athyper.external_amr | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.3 | Athyper SAML authentication context | oidc-usersessionmodel-note-mapper | — | athyper.saml_authn_context | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.6.protocolMappers.4 | Athyper MFA source | oidc-usersessionmodel-note-mapper | — | athyper.mfa_source | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.7.protocolMappers.0 | address | oidc-address-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.8.protocolMappers.0 | organization | oidc-organization-membership-mapper | — | organization | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.0 | given name | oidc-usermodel-attribute-mapper | firstName | given_name | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.1 | nickname | oidc-usermodel-attribute-mapper | nickname | nickname | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.10 | locale | oidc-usermodel-attribute-mapper | locale | locale | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.11 | family name | oidc-usermodel-attribute-mapper | lastName | family_name | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.12 | website | oidc-usermodel-attribute-mapper | website | website | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.13 | picture | oidc-usermodel-attribute-mapper | picture | picture | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.2 | birthdate | oidc-usermodel-attribute-mapper | birthdate | birthdate | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.3 | full name | oidc-full-name-mapper | — | — | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.4 | zoneinfo | oidc-usermodel-attribute-mapper | zoneinfo | zoneinfo | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.5 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.6 | gender | oidc-usermodel-attribute-mapper | gender | gender | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.7 | middle name | oidc-usermodel-attribute-mapper | middleName | middle_name | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.8 | profile | oidc-usermodel-attribute-mapper | profile | profile | — |
+| deploy/config/iam/realm-athyper.json | clientScopes.9.protocolMappers.9 | updated at | oidc-usermodel-attribute-mapper | updatedAt | updated_at | — |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.0 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.1 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.2 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.3 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.4 | NEON_USER | oidc-hardcoded-role-idp-mapper | — | — | NEON_USER |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.5 | AUTHORIZED | oidc-hardcoded-role-idp-mapper | — | — | neon-web.AUTHORIZED |
+| deploy/config/iam/realm-athyper.json | identityProviderMappers.6 | github-avatar | hardcoded-attribute-idp-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.0.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.0 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.1 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.1.protocolMappers.2 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.3.protocolMappers.0 | full name | oidc-full-name-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.3.protocolMappers.1 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.4.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.5.protocolMappers.0 | sub | oidc-sub-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control-clean-slate.json | clientScopes.5.protocolMappers.1 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.0.protocolMappers.0 | allowed web origins | oidc-allowed-origins-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.0 | realm roles | oidc-usermodel-realm-role-mapper | foo | realm_access.roles | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.1 | audience resolve | oidc-audience-resolve-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.1.protocolMappers.2 | client roles | oidc-usermodel-client-role-mapper | foo | resource_access.${client_id}.roles | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.2.protocolMappers.0 | email verified | oidc-usermodel-property-mapper | emailVerified | email_verified | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.2.protocolMappers.1 | email | oidc-usermodel-attribute-mapper | email | email | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.3.protocolMappers.0 | full name | oidc-full-name-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.3.protocolMappers.1 | username | oidc-usermodel-attribute-mapper | username | preferred_username | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.4.protocolMappers.0 | acr loa level | oidc-acr-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.5.protocolMappers.0 | sub | oidc-sub-mapper | — | — | — |
+| deploy/config/iam/realm-platform-control.json | clientScopes.5.protocolMappers.1 | auth_time | oidc-usersessionmodel-note-mapper | — | auth_time | — |
 
 ## Generated authorization artifacts
 
@@ -2056,10 +2064,10 @@ Capture DDLs:
 | server/db/prisma/schema.mesh.prisma | server/db/prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma | database-platform | yes | yes |
 | server/db/prisma/schema.neon.prisma | server/db/prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma | database-platform | yes | yes |
 | server/db/prisma/schema.studio.prisma | server/db/prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma | database-platform | yes | yes |
-| stack/config/iam/realm-athyper-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
-| stack/config/iam/realm-athyper.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
-| stack/config/iam/realm-platform-control-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
-| stack/config/iam/realm-platform-control.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
+| deploy/config/iam/realm-athyper-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
+| deploy/config/iam/realm-athyper.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
+| deploy/config/iam/realm-platform-control-demosetup.json | tooling/tools/scripts/generate-athyper-demo-iam.cjs | platform-iam | yes | yes |
+| deploy/config/iam/realm-platform-control.json | tooling/tools/scripts/prepare-keycloak-realm-import.cjs | platform-iam | yes | yes |
 
 ## Classification contract
 

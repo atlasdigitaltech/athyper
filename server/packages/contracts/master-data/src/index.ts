@@ -15,3 +15,4 @@ export * from "./business-partner-invitations.js";
 export type * from "./business-partner-invitation-ports.js";
 export * from "./workforce.js";
 export type * from "./workforce-ports.js";
+export * from "./supplier-workforce.js";

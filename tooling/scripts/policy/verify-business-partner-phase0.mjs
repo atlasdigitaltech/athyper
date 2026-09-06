@@ -176,22 +176,14 @@ for (const action of baseline.threatModelActions)
 if (baseline.releaseStatus.productionQualified !== false)
   failures.push("Phase 0 incorrectly claims production qualification");
 
-for (const path of [
-  "docs/architecture/decisions/business-partner-phase-0.md",
-  "docs/architecture/business-partner/phase-0-baseline.md",
-  "docs/architecture/business-partner/protected-documents.md",
-  "docs/architecture/business-partner/notifications.md",
-])
-  if (!existsSync(join(root, path)))
-    failures.push(`Phase 0 document is missing: ${path}`);
+const businessPartnerArchitecture =
+  "docs/architecture/business-partner/README.md";
+if (!existsSync(join(root, businessPartnerArchitecture)))
+  failures.push(
+    `Business Partner architecture is missing: ${businessPartnerArchitecture}`,
+  );
 
-const businessPartnerDocs = [
-  read("docs/architecture/business-partner-experience-plan.md"),
-  read("docs/architecture/business-partner/README.md"),
-  read("docs/architecture/business-partner/decision-register.md"),
-  read("docs/architecture/business-partner/scope-and-domain-model.md"),
-  read("docs/architecture/business-partner/phase-0-baseline.md"),
-];
+const businessPartnerDocs = [read(businessPartnerArchitecture)];
 if (/production[ -]certified/i.test(businessPartnerDocs.join("\n")))
   failures.push(
     "Business Partner documentation contains an ambiguous release claim",

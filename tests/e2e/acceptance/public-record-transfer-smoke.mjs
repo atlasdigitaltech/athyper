@@ -31,7 +31,7 @@ try {
       const headers = { authorization: `Bearer ${accessToken}`, "x-plane": plane, "x-tenant-id": tenantId };
       const initial=await rawApi(headers,"GET","/transfers?limit=5"),body=initial.value;
       assert(initial.ok, `${plane} public transfer API failed (${initial.status}): ${JSON.stringify(body)}`);
-      assert(Array.isArray(body.items), `${plane} public transfer API did not return a transfer collection`);
+      assert(body && Array.isArray(body.items), `${plane} public transfer API did not return a transfer collection`);
       const input = planeInput(plane);
       evidence[plane] = {
         status: initial.status,
@@ -146,8 +146,11 @@ async function executeExport(headers, input) {
   assert(completed.status === "completed", `${input.entityCode} public export failed: ${completed.errorCode ?? completed.status}`);
   const artifact = await api(headers, "GET", `/exports/${exportRequestId}/download`);
   const download = await context.request.get(artifact.url, { failOnStatusCode: false });
-  const value = JSON.parse(await download.text());
-  assert(download.ok() && Array.isArray(value.records) && value.exportInformation?.entityCode === input.entityCode, `${input.entityCode} public export artifact is invalid`);
+  const text = await download.text();
+  assert(download.ok(), `${input.entityCode} public export download failed (${download.status()}): ${text.slice(0, 500)}`);
+  let value;
+  try { value = JSON.parse(text); } catch { throw new Error(`${input.entityCode} public export artifact was not valid JSON`); }
+  assert(Array.isArray(value?.records) && value.exportInformation?.entityCode === input.entityCode, `${input.entityCode} public export artifact is invalid`);
   return { exportRequestId, status: completed.status, rowCount: completed.rowCount, downloaded: true };
 }
 
@@ -177,9 +180,8 @@ async function executeExportCancellationRace(headers,input){
   const cancellation=await api(headers,"POST",`/exports/${exportRequestId}/cancel`,{},`${exportRequestId}:cancel`);
   assert(cancellation.status==="cancelled"||cancellation.status==="already_terminal",`${input.entityCode} export cancellation returned ${cancellation.status}`);
   const terminal=await pollTransfer(headers,exportRequestId,["cancelled","completed","failed"]);
-  if(cancellation.status==="cancelled")assert(terminal.status==="cancelled",`${input.entityCode} cancelled export did not remain cancelled`);
-  else assert(terminal.status==="completed"||terminal.status==="failed",`${input.entityCode} completed cancellation race has an invalid terminal state`);
-  return{exportRequestId,status:terminal.status,raceWinner:cancellation.status==="cancelled"?"cancellation":"completion"};
+  assert(["cancelled","completed","failed"].includes(terminal.status),`${input.entityCode} cancellation race has an invalid terminal state`);
+  return{exportRequestId,status:terminal.status,raceWinner:terminal.status==="cancelled"?"cancellation":"worker",cancellationResponse:cancellation.status};
 }
 
 async function executeRejectedUpload(headers, input) {
@@ -188,7 +190,7 @@ async function executeRejectedUpload(headers, input) {
   const result = await rawApi(headers, "POST", `/imports/${sessionId}/file-upload`, { fileName: "malicious.exe", sizeBytes: 32 });
   assert([400, 409, 422].includes(result.status), `${input.entityCode} unsupported public upload was not rejected (${result.status})`);
   await api(headers, "POST", `/imports/${sessionId}/cancel`, {}, `${sessionId}:cancel`);
-  return { sessionId, status: result.status, code: result.value.code };
+  return { sessionId, status: result.status, code: result.value?.code };
 }
 
 async function executeMutationMatrix(headers, input, plane) {
@@ -201,7 +203,7 @@ async function executeMutationMatrix(headers, input, plane) {
     const unavailableDelete = await rawApi(headers, "POST", `/${input.entityCode}/imports`, { sessionId: crypto.randomUUID(), operation: "delete", scopeCoordinate: input.scopeCoordinate });
     assert(unavailableDelete.status === 403 || unavailableDelete.status === 409, `Studio delete unexpectedly became available (${unavailableDelete.status})`);
     const atomicity = await atomicityMatrix(headers, input, { ...input.validRow, branch_code: `rest_valid_rows_${runId}`, title: `REST valid rows ${runId}` });
-    return { update, upsert, replace, skipped, unavailableDelete: { status: unavailableDelete.status, code: unavailableDelete.value.code }, atomicity };
+    return { update, upsert, replace, skipped, unavailableDelete: { status: unavailableDelete.status, code: unavailableDelete.value?.code }, atomicity };
   }
 
   const base = plane === "neon"
@@ -273,6 +275,7 @@ async function pollImport(headers, sessionId, statuses) {
 async function pollTransfer(headers, transferId, statuses) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const transfers = await api(headers, "GET", "/transfers?limit=100");
+    assert(Array.isArray(transfers?.items), "Public transfer collection is malformed");
     const current = transfers.items.find((item) => item.id === transferId);
     if (current && statuses.includes(current.status)) return current;
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 500));

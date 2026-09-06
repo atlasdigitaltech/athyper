@@ -1,6 +1,7 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type {
   BusinessPartnerEligibilityRepository,
+  CustomerAccountDesignation,
   CustomerCreditReview,
   PartnerEligibilityDecision,
 } from "@athyper/server-contract-master-data";
@@ -30,9 +31,11 @@ function fixture(
   }) => boolean = () => true,
 ) {
   let review: CustomerCreditReview | undefined,
+    designation: CustomerAccountDesignation | undefined,
     status: "prospect" | "active" | "suspended" | "inactive" | "archived" =
       "prospect",
     version = 1;
+  const outboxPayloads: {eventType:string;payload:Record<string,unknown>}[] = [];
   const events: string[] = [],
     permissions: string[] = [];
   const repository = {
@@ -91,7 +94,57 @@ function fixture(
     async listCustomerCreditReviews() {
       return review ? [review] : [];
     },
+    async findCustomerDesignationByIdempotencyKey(
+      _tenant: string,
+      key: string,
+    ) {
+      return designation && key === "customer-designation-create-001"
+        ? designation
+        : null;
+    },
+    async createCustomerDesignation(input: any) {
+      designation = {
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        tenantId: input.tenantId,
+        businessPartnerId: input.businessPartnerId,
+        customerId: input.customerId,
+        operatingOrganizationId: input.operatingOrganizationId,
+        companyCodeId: input.companyCodeId,
+        countryCode: input.countryCode,
+        channelCode: input.channelCode,
+        designationType: input.designationType,
+        priorityTier: input.priorityTier,
+        effectiveFrom: input.effectiveFrom,
+        effectiveUntil: input.effectiveUntil,
+        rationale: input.rationale,
+        status: "pending",
+        rowVersion: 1,
+        createdAt: "2026-09-05T00:00:00.000Z",
+        createdBy: input.createdBy,
+      };
+      return designation;
+    },
+    async getCustomerDesignation() {
+      return designation ?? null;
+    },
+    async decideCustomerDesignation(input: any) {
+      if (!designation || designation.rowVersion !== input.expectedVersion)
+        return null;
+      designation = {
+        ...designation,
+        status: input.decision,
+        decisionReason: input.reason,
+        rowVersion: designation.rowVersion + 1,
+      };
+      return { designation, replayed: false };
+    },
+    async listCustomerDesignations() {
+      return designation ? [designation] : [];
+    },
     async resolve(input: any) {
+      // Exercise the real lifecycle/readiness boundary instead of accepting orders
+      // from a suspended Customer in this test double.
+      if (status === "suspended") expect(input.operationCode).toBe("activation");
       const raw: Omit<PartnerEligibilityDecision, "decisionFingerprint"> = {
         businessPartnerId: input.businessPartnerId,
         role: "customer",
@@ -170,12 +223,14 @@ function fixture(
     outbox: {
       async append(input) {
         events.push(input.eventType);
+        outboxPayloads.push({eventType:input.eventType,payload:input.payload as Record<string,unknown>});
       },
     },
   });
   return {
     service,
     events,
+    outboxPayloads,
     permissions,
     get review() {
       return review;
@@ -226,6 +281,7 @@ describe("customer onboarding controls", () => {
       decision: "approved",
       approvedBy: approver.principalId,
     });
+    expect(value.status).toBe("prospect");
     expect(value.permissions).toEqual([
       "neon.customer.credit.create",
       "neon.customer.credit.decide",
@@ -250,7 +306,15 @@ describe("customer onboarding controls", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN", status: 403 });
     expect(value.review).toBeUndefined();
   });
-  it("activates, suspends, and reactivates through scoped lifecycle commands", async () => {
+  it("retains a negative credit decision and rejects stale follow-up commands", async () => {
+    const value = fixture();
+    const created = await value.service.createCustomerCreditReview({context:maker,idempotencyKey:"customer-credit-negative-001",businessPartnerId:bp,customerId:customer,operatingOrganizationId:organization,companyCodeId:company,reviewTypeCode:"initial",requestedCreditLimit:50000,requestedCurrencyCode:"MYR",effectiveFrom:"2026-09-05"});
+    const rejected = await value.service.decideCustomerCreditReview({context:approver,reviewId:created.review.id,expectedVersion:1,decision:"rejected",reason:"Risk threshold exceeded",idempotencyKey:"customer-credit-negative-decision-001"});
+    expect(rejected.review).toMatchObject({decision:"rejected",decisionReason:"Risk threshold exceeded",rowVersion:2});
+    expect(rejected.review.approvedCreditLimit).toBeUndefined();
+    await expect(value.service.decideCustomerCreditReview({context:approver,reviewId:created.review.id,expectedVersion:1,decision:"approved",reason:"Stale override",idempotencyKey:"customer-credit-stale-decision-001"})).rejects.toMatchObject({code:"CUSTOMER_CREDIT_DECISION_CONFLICT"});
+  });
+  it("executes all five scoped lifecycle commands with optimistic versions", async () => {
     const value = fixture(),
       credit = await value.service.createCustomerCreditReview({
         context: maker,
@@ -307,6 +371,104 @@ describe("customer onboarding controls", () => {
         idempotencyKey: "customer-reactivate-001",
       }),
     ).resolves.toMatchObject({ status: "active", resultingVersion: 4 });
+    await expect(
+      value.service.transitionCustomer({
+        ...base,
+        action: "deactivate",
+        expectedVersion: 4,
+        reasonCode: "CUSTOMER_CLOSED",
+        idempotencyKey: "customer-deactivate-001",
+      }),
+    ).resolves.toMatchObject({ status: "inactive", resultingVersion: 5 });
+    await expect(
+      value.service.transitionCustomer({
+        ...base,
+        action: "archive",
+        expectedVersion: 5,
+        reasonCode: "RETENTION_COMPLETE",
+        idempotencyKey: "customer-archive-001",
+      }),
+    ).resolves.toMatchObject({ status: "archived", resultingVersion: 6 });
     expect(value.events).toContain("customer.portal_iam_projection.requested");
+    const notifications=value.outboxPayloads.filter(event=>/^business_partner\.customer\.(activated|suspended|reactivated|deactivated|archived)$/.test(event.eventType));
+    expect(notifications).toHaveLength(5);
+    for(const event of notifications) expect(event.payload).toMatchObject({recipient_principal_ids:[approver.principalId],customerId:customer,lifecycleEventId:expect.any(String),resultingVersion:expect.any(Number)});
+  });
+  it("governs scoped designations with maker-checker and versioned decisions", async () => {
+    const value = fixture();
+    const created = await value.service.createCustomerDesignation({
+      context: maker,
+      idempotencyKey: "customer-designation-create-001",
+      businessPartnerId: bp,
+      customerId: customer,
+      operatingOrganizationId: organization,
+      companyCodeId: company,
+      countryCode: "MY",
+      channelCode: "direct",
+      designationType: "strategic",
+      priorityTier: 1,
+      effectiveFrom: "2026-09-05",
+      rationale: "Regional account governance",
+    });
+    expect(created.designation).toMatchObject({
+      status: "pending",
+      designationType: "strategic",
+      rowVersion: 1,
+      countryCode: "MY",
+      channelCode: "direct",
+    });
+    await expect(
+      value.service.createCustomerDesignation({
+        context: maker,
+        idempotencyKey: "customer-designation-create-001",
+        businessPartnerId: bp,
+        customerId: customer,
+        operatingOrganizationId: organization,
+        companyCodeId: company,
+        designationType: "strategic",
+        priorityTier: 1,
+        effectiveFrom: "2026-09-05",
+        rationale: "Different replay content",
+      }),
+    ).rejects.toMatchObject({
+      code: "CUSTOMER_DESIGNATION_IDEMPOTENCY_CONFLICT",
+    });
+    await expect(
+      value.service.decideCustomerDesignation({
+        context: maker,
+        designationId: created.designation.id,
+        expectedVersion: 1,
+        decision: "approved",
+        reason: "Designation approved",
+        idempotencyKey: "customer-designation-decision-self",
+      }),
+    ).rejects.toMatchObject({
+      code: "CUSTOMER_DESIGNATION_SELF_APPROVAL_FORBIDDEN",
+    });
+    const approved = await value.service.decideCustomerDesignation({
+      context: approver,
+      designationId: created.designation.id,
+      expectedVersion: 1,
+      decision: "approved",
+      reason: "Designation approved",
+      idempotencyKey: "customer-designation-decision-001",
+    });
+    expect(approved.designation).toMatchObject({
+      status: "approved",
+      rowVersion: 2,
+    });
+    expect(value.status).toBe("prospect");
+    await expect(
+      value.service.decideCustomerDesignation({
+        context: approver,
+        designationId: created.designation.id,
+        expectedVersion: 1,
+        decision: "revoked",
+        reason: "Stale revoke",
+        idempotencyKey: "customer-designation-revoke-stale",
+      }),
+    ).rejects.toMatchObject({ code: "CUSTOMER_DESIGNATION_DECISION_CONFLICT" });
+    expect(value.permissions).toContain("neon.customer.designation.create");
+    expect(value.permissions).toContain("neon.customer.designation.decide");
   });
 });

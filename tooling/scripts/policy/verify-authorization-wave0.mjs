@@ -31,22 +31,7 @@ const inventoryArtifactCheck = runCommand(
   ],
   repositoryRoot,
 );
-const neonCaptureArtifactCheck = runCommand(
-  process.execPath,
-  [
-    tsxCli,
-    "scripts/verify/verify-authorization-change-capture.ts",
-  ],
-  resolve(repositoryRoot, "server/db"),
-);
-const meshCaptureArtifactCheck = runCommand(
-  process.execPath,
-  [
-    tsxCli,
-    "scripts/verify/verify-mesh-authorization-change-capture.ts",
-  ],
-  resolve(repositoryRoot, "server/db"),
-);
+const authorizationInvalidationArtifactCheck = await staticInvalidationContract();
 
 const checks = [];
 const inventory = await optionalJson(
@@ -115,26 +100,30 @@ if (!inventory) {
             : []),
         ].join(", ")}`,
   );
-  const knownSourceAnomalies = inventory?.gates?.knownSourceAnomalies ?? [];
+  const knownSourceAnomalies = inventory?.gates?.knownSourceAnomalies;
   check(
     "known_authorization_source_anomalies_resolved",
     "static",
     Array.isArray(knownSourceAnomalies) && knownSourceAnomalies.length === 0
       ? "pass"
       : "fail",
-    Array.isArray(knownSourceAnomalies) && knownSourceAnomalies.length > 0
+    !Array.isArray(knownSourceAnomalies)
+      ? "Inventory gate knownSourceAnomalies is missing or invalid."
+      : knownSourceAnomalies.length > 0
       ? `${knownSourceAnomalies.length} owned catalog/reference anomalies require repair or retirement.`
       : "No owned source anomaly remains.",
   );
   const meshBoundaryFindings =
-    inventory?.gates?.zeroMeshNeonBoundaryFindings ?? [];
+    inventory?.gates?.zeroMeshNeonBoundaryFindings;
   check(
     "zero_mesh_specific_data_neon_boundary_implemented",
     "static",
     Array.isArray(meshBoundaryFindings) && meshBoundaryFindings.length === 0
       ? "pass"
       : "fail",
-    Array.isArray(meshBoundaryFindings) && meshBoundaryFindings.length > 0
+    !Array.isArray(meshBoundaryFindings)
+      ? "Inventory gate zeroMeshNeonBoundaryFindings is missing or invalid."
+      : meshBoundaryFindings.length > 0
       ? `${meshBoundaryFindings.length} owned legacy table/seed/reader/configuration or RLS-bypass findings still violate the target boundary.`
       : "No Mesh-specific Neon source, cross-plane fallback, or RLS-bypassing Mesh runtime identity remains.",
   );
@@ -184,19 +173,12 @@ check(
 check(
   "authorization_change_capture_baseline_present",
   "static",
-  neonCaptureArtifactCheck.passed && meshCaptureArtifactCheck.passed
+  authorizationInvalidationArtifactCheck.passed
     ? "pass"
     : "fail",
-  neonCaptureArtifactCheck.passed && meshCaptureArtifactCheck.passed
-    ? "Independent Neon and Mesh commit-ordered capture foundations pass their static verifiers."
-    : `Capture verifier blockers: ${[
-        ...(!neonCaptureArtifactCheck.passed
-          ? [`neon=${neonCaptureArtifactCheck.detail}`]
-          : []),
-        ...(!meshCaptureArtifactCheck.passed
-          ? [`mesh=${meshCaptureArtifactCheck.detail}`]
-          : []),
-      ].join(", ")}`,
+  authorizationInvalidationArtifactCheck.passed
+    ? "The common plane-local authorization invalidation outbox, epoch capture, immutable evidence, and trigger installation contracts are present."
+    : `Invalidation verifier blockers: ${authorizationInvalidationArtifactCheck.detail}`,
 );
 
 check(
@@ -543,50 +525,88 @@ async function adrDecisionStatus() {
 }
 
 async function rolloutStaticStatus(value) {
-  const [packageIndex, policy] = await Promise.all([
-    readFile(
-      resolve(repositoryRoot, "server/packages/services/iam/index.ts"),
-      "utf8",
-    ).catch(() => ""),
-    readFile(
-      resolve(
-        repositoryRoot,
-        "server/packages/services/iam/authorization-rollout/authorization-rollout.policy.ts",
-      ),
-      "utf8",
-    ).catch(() => ""),
-  ]);
+  const service = await readFile(
+    resolve(repositoryRoot, "server/packages/platform/control-admin/src/authorization-management-service.ts"),
+    "utf8",
+  ).catch(() => "");
   return value?.supportedModes?.join(",") === "legacy,shadow,enforce" &&
     value?.initialSnapshots?.neon?.defaultMode === "legacy" &&
-    value?.initialSnapshots?.admin?.defaultMode === "legacy" &&
+    value?.initialSnapshots?.studio?.defaultMode === "legacy" &&
     value?.initialSnapshots?.mesh?.defaultMode === "legacy" &&
     value?.failureBehavior?.missingOrMismatchedCertification === "legacy" &&
     ["goldenCorpusSha256", "sourceDatabaseId", "minimumAppliedWatermark"]
       .every((field) => value?.requiredApprovalFields?.includes(field)) &&
-    packageIndex.includes("AuthorizationRolloutService") &&
-    packageIndex.includes("AuthorizationDecisionRouter") &&
-    policy.includes(
-      "!context.cohortCode || context.cohortCode !== rule.cohortCode",
-    ) &&
-    policy.includes("certification.goldenCorpusSha256") &&
-    policy.includes("certification.appliedWatermark")
+    service.includes('options.mutationsEnabled ?? false') &&
+    service.includes('selected.mode === "legacy"') &&
+    service.includes('selected.mode === "shadow"') &&
+    service.includes("requireQualifiedWriterSwitch(writerSwitch)") &&
+    service.includes("provider.forExactPlane(planeKey)") &&
+    service.includes("state.sourceWatermark !== state.appliedWatermark") &&
+    service.includes("state.goldenCorpusSha256")
     ? "pass"
     : "fail";
 }
 
+async function staticInvalidationContract() {
+  const [tables, functions, triggers] = await Promise.all([
+    readFile(
+      resolve(repositoryRoot, "server/db/ddl/common/event/03_tables.sql"),
+      "utf8",
+    ).catch(() => ""),
+    readFile(
+      resolve(repositoryRoot, "server/db/ddl/common/event/07_functions.sql"),
+      "utf8",
+    ).catch(() => ""),
+    readFile(
+      resolve(repositoryRoot, "server/db/ddl/common/authz/08_triggers.sql"),
+      "utf8",
+    ).catch(() => ""),
+  ]);
+  const missing = [
+    [tables, "CREATE TABLE event.authorization_invalidation_outbox"],
+    [tables, "global_epoch"],
+    [tables, "tenant_epoch"],
+    [tables, "plane_epoch"],
+    [functions, "event.fn_authorization_emit_invalidation"],
+    [functions, "FOR UPDATE SKIP LOCKED"],
+    [triggers, "event.trg_capture_authorization_invalidation"],
+    [triggers, "AFTER INSERT OR UPDATE OR DELETE ON authz.%I"],
+  ].filter(([source, token]) => !source.includes(token)).map(([, token]) => token);
+  return {
+    passed: missing.length === 0,
+    detail: missing.length === 0 ? "current plane-local invalidation contract verified" : `missing ${missing.join(", ")}`,
+  };
+}
+
 function collectInventoryUnknowns(value) {
+  const requiredGates = [
+    "unknownSources",
+    "unknownWriters",
+    "unownedObjects",
+    "unclassifiedWriters",
+    "missingDefinitions",
+    "generatedArtifactFailures",
+    "unknownCaptureSources",
+    "staleCaptureSourceRegistrations",
+    "duplicateCaptureSources",
+    "crossPlaneCaptureSources",
+    "unknownKeycloakRestWriters",
+    "staleKeycloakRestWriterRules",
+  ];
+  const blockers = requiredGates
+    .filter((name) => !Array.isArray(value?.gates?.[name]))
+    .map((name) => `${name}=missing_or_invalid`);
   const candidates = [
     value?.summary?.gates,
     value?.gates,
   ].filter(Boolean);
-  const blockers = [];
   const pattern = /(unknown|unowned|unclassified|stale)/i;
   for (const candidate of candidates) {
     for (const [name, result] of Object.entries(candidate)) {
       if (!pattern.test(name)) continue;
       if (Array.isArray(result) && result.length > 0) blockers.push(`${name}=${result.length}`);
       else if (typeof result === "number" && result > 0) blockers.push(`${name}=${result}`);
-      else if (result === false && /zero|empty|none/i.test(name)) blockers.push(`${name}=false`);
+      else if (result === false) blockers.push(`${name}=false`);
     }
   }
   return blockers;

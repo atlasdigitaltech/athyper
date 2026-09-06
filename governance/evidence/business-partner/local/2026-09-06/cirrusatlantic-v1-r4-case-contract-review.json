@@ -1,0 +1,181 @@
+{
+  "schema": "athyper.business-partner-case-contract-review/1",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "targetPlane": "neon",
+  "publicationKey": "metadata.entity.master_business_partner.44444444444444448444444444444444",
+  "previous": {
+    "contractId": "edb2b32c-9ae3-4ae5-9cc9-78d5502fa171",
+    "releaseNo": 3,
+    "recordedContractHash": "70f0f7ae6fabfe32476241a01021eea6d106a4898feee7c05679dce23d79f6c7",
+    "canonicalContentHash": "70f0f7ae6fabfe32476241a01021eea6d106a4898feee7c05679dce23d79f6c7"
+  },
+  "candidate": {
+    "contractSchemaCode": "athyper.entity-contract",
+    "contractSchemaVersion": "1.0.0",
+    "entityCode": "master.business_partner",
+    "contract": {
+      "type": "object",
+      "required": ["businessPartnerCode", "name", "ownershipClass"],
+      "additionalProperties": false,
+      "properties": {
+        "businessPartnerCode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "legalName": {
+          "type": "string"
+        },
+        "legalForm": {
+          "type": "string"
+        },
+        "registrationCountryCode": {
+          "type": "string"
+        },
+        "incorporationDate": {
+          "type": "string"
+        },
+        "websiteUrl": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "ownershipClass": {
+          "type": "string",
+          "enum": ["internal", "external"]
+        },
+        "partnerCategory": {
+          "type": "string",
+          "enum": ["organization", "person"]
+        },
+        "legalClassification": {
+          "type": "string"
+        },
+        "requestedRole": {
+          "type": "string",
+          "enum": ["supplier", "customer"]
+        },
+        "roleCode": {
+          "type": "string"
+        },
+        "registrationChannel": {
+          "type": "string"
+        },
+        "operatingOrganizationId": {
+          "type": "string"
+        },
+        "meshRegistrationExchangeId": {
+          "type": "string"
+        },
+        "meshRegistrationEvidenceHash": {
+          "type": "string"
+        },
+        "bankDisclosureReceiptId": {
+          "type": "string"
+        },
+        "bankDisclosurePurposeCode": {
+          "type": "string"
+        },
+        "qualificationTypeCode": {
+          "type": "string"
+        },
+        "preferenceRationale": {
+          "type": "string"
+        },
+        "companyCodeId": {
+          "type": "string"
+        },
+        "commodityCategoryId": {
+          "type": "string"
+        },
+        "preflight": {
+          "type": "object"
+        },
+        "supplierType": {
+          "type": "string"
+        },
+        "customerType": {
+          "type": "string"
+        },
+        "expectedBusinessPartnerVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "priorStatus": {
+          "type": "string"
+        },
+        "reasonCode": {
+          "type": "string"
+        },
+        "dependencies": {
+          "type": "array"
+        },
+        "bankProjectionId": {
+          "type": "string"
+        },
+        "supplierCompanyProfileId": {
+          "type": "string"
+        },
+        "expectedBankSnapshotId": {
+          "type": "string"
+        },
+        "priorBankLinkId": {
+          "type": "string"
+        },
+        "effectiveFrom": {
+          "type": "string"
+        },
+        "effectiveUntil": {
+          "type": "string"
+        },
+        "currencyCode": {
+          "type": "string"
+        },
+        "paymentTermId": {
+          "type": "string"
+        },
+        "defaultAccountingProfileId": {
+          "type": "string"
+        },
+        "defaultDimensionSetId": {
+          "type": "string"
+        },
+        "preferredRemittanceBankLinkId": {
+          "type": "string"
+        },
+        "statementCycleCode": {
+          "type": "string"
+        }
+      }
+    },
+    "canonicalContentHash": "d6b3c830fb4e2e906aea8ee10227eeacaa089774291f793c4f02ea608515df95"
+  },
+  "compatibility": {
+    "classification": "properties_added_and_required_fields_relaxed",
+    "noLongerRequired": [],
+    "addedProperties": [
+      "customerType",
+      "legalClassification",
+      "partnerCategory",
+      "supplierType"
+    ],
+    "existingPropertiesUnchanged": true,
+    "existingCaseSnapshotsRemainPinned": true
+  },
+  "approvalStatus": "pending",
+  "signedReleaseId": null,
+  "consumerActivationReceipt": null,
+  "constraints": [
+    "This is a JSON Schema case contract, not the onboarding definition bundle or a metadata graph.",
+    "Use native independent approval and Ed25519 signing; development bootstrap attestations are not approval evidence.",
+    "Recheck the active source contract before publication and create fresh cases after activation.",
+    "Bank case materialization starts verification; it does not authorize remittance switching."
+  ]
+}

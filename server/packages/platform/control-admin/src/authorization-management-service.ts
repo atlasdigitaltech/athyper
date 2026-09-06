@@ -1,3 +1,4 @@
+import { parseInstant } from "@athyper/platform-temporal";
 import type { Authorizer } from "@athyper/server-contract-auth";
 import { authorizationManagementPermissions, authorizationMutationKinds, type AuthorizationManagementAudit, type AuthorizationManagementCommand, type AuthorizationManagementRepository, type AuthorizationManagementRepositoryProvider, type AuthorizationManagementResult, type AuthorizationManagementRolloutSelector, type AuthorizationManagementService, type AuthorizationMutationKind, type AuthorizationProofDecision, type AuthorizationProofInput, type AuthorizationShadowObservation, type AuthorizationWriterSwitchGate, type AuthorizationWriterSwitchState, type LegacyAuthorizationWriter, type VerifiedRequestContext } from "@athyper/server-contract-auth";
 
@@ -76,7 +77,7 @@ function validate(command: AuthorizationManagementCommand): void {
   if (command.kind === "trustedDevice.register") {
     const deviceTokenHash = required(payload, "deviceTokenHash");
     if (!/^[a-f0-9]{64}$/.test(deviceTokenHash)) throw coded("AUTHZ_INVALID_DEVICE_TOKEN_HASH");
-    const expiresAt = Date.parse(required(payload, "expiresAt"));
+    const expiresAt = parseInstant(required(payload, "expiresAt"));
     if (!Number.isFinite(expiresAt)) throw coded("AUTHZ_INVALID_EFFECTIVE_WINDOW");
   }
 }
@@ -92,8 +93,8 @@ function required(payload: Readonly<Record<string, unknown>>, field: string): st
 function validateEffectiveWindow(effectiveFrom: string | undefined, effectiveUntil: string | undefined, requiredWindow: boolean): void {
   if (!effectiveFrom && !effectiveUntil && !requiredWindow) return;
   if (!effectiveFrom || !effectiveUntil) throw coded("AUTHZ_INVALID_EFFECTIVE_WINDOW");
-  const from = Date.parse(effectiveFrom);
-  const until = Date.parse(effectiveUntil);
+  const from = parseInstant(effectiveFrom);
+  const until = parseInstant(effectiveUntil);
   if (!Number.isFinite(from) || !Number.isFinite(until) || until <= from) throw coded("AUTHZ_INVALID_EFFECTIVE_WINDOW");
 }
 function nonEmpty(value: string | null): value is string { return typeof value === "string" && value.trim().length > 0; }

@@ -77,8 +77,8 @@ jobs:
             build_args: ''
           - id: iam
             image: ghcr.io/atlasdigitaltech/athyper-keycloak
-            context: stack/config/iam
-            dockerfile: stack/config/iam/Dockerfile
+            context: deploy/config/iam
+            dockerfile: deploy/config/iam/Dockerfile
             build_args: ''
     steps:
       - name: Checkout exact revision

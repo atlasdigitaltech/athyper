@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
-import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 const session = (plane = "neon", tenantId = "tenant-1", token = "server-token"): RelaySessionContext => ({ accessToken: token, plane, realmKey: "athyper", tenantId, principalId: "principal-1", authEpoch: 7, csrfToken: "csrf-proof" });
@@ -9,6 +9,20 @@ function authority(current = session()): RelaySessionAuthority & { invalidated: 
 function relay(input: { plane?: string; operation?: RelayOperation; authority?: RelaySessionAuthority; fetch?: typeof fetch; diagnostics?: RelayDiagnostic[]; timeout?: number } = {}) { return createRelayHandler({ plane: input.plane ?? "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [input.operation ?? IAM_ME_OPERATION], session: input.authority ?? authority(), fetch: input.fetch ?? (async () => new Response("{}", { headers: { "content-type": "application/json" } })), timeouts: input.timeout ? { json: input.timeout, stream: input.timeout, upload: input.timeout, download: input.timeout } : undefined, onDiagnostic: (value) => input.diagnostics?.push(value) }); }
 
 describe("Phase 4 hardened BFF relay", () => {
+  it("requires session, CSRF and idempotency before relaying a bounded invitation create", async () => {
+    let calls = 0;
+    const handler = relay({ operation: NEON_BP_INVITATION_CREATE_OPERATION, fetch: async () => { calls++; return Response.json({ invitation: { id: "fixture" } }, { status: 201 }); } });
+    const send = (headers: Record<string,string>) => handler(new Request("https://neon.example/api/relay/neon/business-partner-invitations", {
+      method: "POST", headers: { origin: "https://neon.example", "content-type": "application/json", ...headers }, body: "{}",
+    }), context("neon", "business-partner-invitations"));
+    assert.equal((await send({ "x-csrf-token": "csrf-proof" })).status, 428);
+    assert.equal((await send({ "idempotency-key": "invitation-1", "x-csrf-token": "wrong" })).status, 403);
+    assert.equal(calls, 0);
+    assert.equal((await send({ "idempotency-key": "invitation-1", "x-csrf-token": "csrf-proof" })).status, 201);
+    assert.equal(calls, 1);
+    const anonymous = relay({ operation: NEON_BP_INVITATION_CREATE_OPERATION, authority: { resolve: async () => null, refresh: async () => null, invalidate: async () => {} } });
+    assert.equal((await anonymous(new Request("https://neon.example/api/relay/neon/business-partner-invitations", { method: "POST", body: "{}" }), context("neon", "business-partner-invitations"))).status, 401);
+  });
   it("registers governed Atlas confirmation, cancellation, and audit history in every plane", async () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");

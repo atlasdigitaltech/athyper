@@ -43,6 +43,9 @@ const ruleDefinitions = Object.freeze([
   { code: "customer.person.policy", severity: "error", fieldPath: "$.partnerCategory" },
   { code: "customer.sales_scope.required", severity: "error", fieldPath: "$.operatingOrganizationId" },
   { code: "customer.authority_fields.prohibited", severity: "error", fieldPath: "$.proposedPayload" },
+  { code: "supplier.qualification_type.required", severity: "error", fieldPath: "$.qualificationTypeCode" },
+  { code: "relationship.primary_address.required", severity: "error", fieldPath: "$.relationshipProposals.addresses" },
+  { code: "relationship.primary_contact.required", severity: "error", fieldPath: "$.relationshipProposals.contactPersons" },
 ] as const);
 
 export const businessPartnerRequestRuleset = Object.freeze({
@@ -62,7 +65,13 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
       const customer=request.requestedRole==="customer";
       const duplicateCustomerAuthorityFields=["isKeyAccount","is_key_account","creditLimit","credit_limit","creditLimitCurrencyCode","credit_limit_currency_code"].filter(key=>request.proposedPayload[key]!==undefined);
       const requestedCategory=stringValue(request.proposedPayload,"partnerCategory","partner_category");
+      const ownershipClass=stringValue(request.proposedPayload,"ownershipClass","ownership_class");
+      const qualificationTypeCode=stringValue(request.proposedPayload,"qualificationTypeCode","qualification_type_code");
+      const externalSupplier=request.requestedRole==="supplier"&&ownershipClass==="external";
       const organizationCategory=!requestedCategory||requestedCategory==="organization";
+      const relationships=recordValue(request.proposedPayload["relationshipProposals"]),addresses=arrayValue(relationships["addresses"]),contactPersons=arrayValue(relationships["contactPersons"]),contactChannels=arrayValue(relationships["contactChannels"]);
+      const primaryAddresses=addresses.filter(item=>item["isPrimary"]===true),primaryContacts=contactPersons.filter(item=>item["isPrimary"]===true),primaryContactKey=primaryContacts.length===1?primaryContacts[0]?.["clientItemKey"]:undefined,primaryChannels=contactChannels.filter(item=>item["isPrimary"]===true&&item["contactClientItemKey"]===primaryContactKey);
+      const relationshipRulesApply=isNew&&organizationCategory&&request.proposedPayload["relationshipProposals"]!==undefined;
       const lifecycle=["deactivate","reactivate","archive"].includes(request.kind);
       const lifecycleDependencies=request.proposedPayload["dependencies"];
       const requiredDependencyCodes=["supplier_roles","customer_roles","active_organization_assignments","active_employments","effective_blocks","effective_qualifications"];
@@ -73,6 +82,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         || (request.kind === "add_customer" && request.requestedRole === "customer")
         || ((request.kind === "assign_organization" || request.kind === "configure_company") && (request.requestedRole === "supplier" || request.requestedRole === "customer"))
         || (request.kind === "change_bank" && request.requestedRole === "supplier")
+        || (request.kind === "activate_supplier" && request.requestedRole === "supplier")
         || (roleless && !request.requestedRole);
       const meshPinned = request.source.kind !== "mesh" || (
         request.source.systemCode === "athyper_mesh" && Boolean(request.source.entityCode) && Boolean(request.source.entityId)
@@ -96,14 +106,16 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         request.kind === "configure_company" ? finding("company.code.required", "error", "$.companyCodeId", Boolean(request.companyCodeId), "COMPANY_CODE_REQUIRED", { companyCodeId: request.companyCodeId ?? null }) : skipped("company.code.required", "error", "$.companyCodeId", "COMPANY_CODE_NOT_REQUIRED"),
         customer ? finding("customer.sales_scope.required","error","$.operatingOrganizationId",Boolean(request.operatingOrganizationId),"CUSTOMER_SALES_SCOPE_REQUIRED",{operatingOrganizationId:request.operatingOrganizationId??null}) : skipped("customer.sales_scope.required","error","$.operatingOrganizationId","CUSTOMER_SCOPE_NOT_APPLICABLE"),
         customer ? finding("customer.authority_fields.prohibited","error","$.proposedPayload",duplicateCustomerAuthorityFields.length===0,"CUSTOMER_GOVERNED_AUTHORITY_REQUIRED",{prohibitedFields:duplicateCustomerAuthorityFields,designationAuthority:"control.customer_account_designation",creditAuthority:"control.customer_credit_review"}) : skipped("customer.authority_fields.prohibited","error","$.proposedPayload","CUSTOMER_AUTHORITY_NOT_APPLICABLE"),
+        externalSupplier ? finding("supplier.qualification_type.required","error","$.qualificationTypeCode",/^[a-z][a-z0-9_.-]{1,62}$/.test(qualificationTypeCode??""),"SUPPLIER_QUALIFICATION_TYPE_REQUIRED",{qualificationTypeCode:qualificationTypeCode??null}) : skipped("supplier.qualification_type.required","error","$.qualificationTypeCode","SUPPLIER_QUALIFICATION_NOT_REQUIRED"),
         isNew ? finding("identity.organization_boundary","error","$.partnerCategory",organizationCategory,"BUSINESS_PARTNER_ORGANIZATION_REQUIRED",{partnerCategory:requestedCategory??"organization"}) : skipped("identity.organization_boundary","error","$.partnerCategory","EXISTING_IDENTITY_REUSED"),
         finding("source.mesh.pin.required", "error", "$.source", meshPinned, "MESH_SOURCE_PIN_REQUIRED", { sourceKind: request.source.kind, sourceVersion: request.source.version ?? null }),
         registrationCountryCode
           ? finding("identity.registration_country.format", "error", "$.registrationCountryCode", /^[A-Z]{2}$/.test(registrationCountryCode), "REGISTRATION_COUNTRY_INVALID", { registrationCountryCode })
           : skipped("identity.registration_country.format", "error", "$.registrationCountryCode", "REGISTRATION_COUNTRY_NOT_PROVIDED"),
         isNew && legalName
-          ? finding("identity.legal_name.duplicate", "warning", "$.legalName", candidates.length === 0, "LEGAL_NAME_DUPLICATE_CANDIDATE", { candidateIds: candidates.map(candidate => candidate.id), candidateCount: candidates.length })
+          ? finding("identity.legal_name.duplicate", "warning", "$.legalName", candidates.length === 0, "LEGAL_NAME_DUPLICATE_CANDIDATE", { candidateIds: candidates.map(candidate => candidate.id), candidateCount: candidates.length, matchMethod: "exact_legal_name_case_insensitive", sourceEntity: "master.business_partner" })
           : skipped("identity.legal_name.duplicate", "warning", "$.legalName", "LEGAL_NAME_NOT_AVAILABLE"),
+        ...(relationshipRulesApply?[finding("relationship.primary_address.required","error","$.relationshipProposals.addresses",addresses.length>0&&primaryAddresses.length===1,"PRIMARY_ADDRESS_REQUIRED",{addressCount:addresses.length,primaryCount:primaryAddresses.length}),finding("relationship.primary_contact.required","error","$.relationshipProposals.contactPersons",contactPersons.length>0&&primaryContacts.length===1&&primaryChannels.length>=1,"PRIMARY_CONTACT_REQUIRED",{contactCount:contactPersons.length,primaryContactCount:primaryContacts.length,primaryChannelCount:primaryChannels.length})]:[]),
         lifecycle ? finding("lifecycle.reason.required","error","$.reasonCode",/^[A-Z][A-Z0-9_.-]{2,126}$/.test(stringValue(request.proposedPayload,"reasonCode","reason_code")??""),"LIFECYCLE_REASON_REQUIRED",{}) : skipped("lifecycle.reason.required","error","$.reasonCode","LIFECYCLE_REASON_NOT_APPLICABLE"),
         lifecycle ? finding("lifecycle.dependencies.required","error","$.dependencies",lifecycleDependenciesValid,"LIFECYCLE_DEPENDENCY_EVIDENCE_REQUIRED",{requiredDependencyCodes}) : skipped("lifecycle.dependencies.required","error","$.dependencies","LIFECYCLE_DEPENDENCIES_NOT_APPLICABLE"),
       ];
@@ -117,7 +129,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
         valid,
         findings,
         validationSummary: { outcome: valid ? "passed" : "failed", counts, ruleset: businessPartnerRequestRuleset },
-        duplicateSummary: { exactLegalNameCandidateCount: candidates.length, requiresResolution: candidates.length > 0, candidates },
+        duplicateSummary: { matchMethod: "exact_legal_name_case_insensitive", sourceEntity: "master.business_partner", sourceField: "legal_name_or_name", scored: false, exactLegalNameCandidateCount: candidates.length, requiresResolution: candidates.length > 0, candidates },
         changeImpact: lifecycle ? {
           requestKind: request.kind,
           targetBusinessPartnerId: request.targetBusinessPartnerId ?? null,
@@ -152,3 +164,5 @@ function stringValue(payload: Readonly<Record<string, unknown>>, ...keys: readon
   }
   return undefined;
 }
+function recordValue(value:unknown):Readonly<Record<string,unknown>>{return value&&typeof value==="object"&&!Array.isArray(value)?value as Readonly<Record<string,unknown>>:{};}
+function arrayValue(value:unknown):readonly Readonly<Record<string,unknown>>[]{return Array.isArray(value)?value.map(recordValue):[];}

@@ -59,7 +59,7 @@ async function verifyApplications(): Promise<void> {
 }
 
 async function verifyKeycloak(): Promise<void> {
-  const root = "stack/config/iam/themes/neon/login";
+  const root = "deploy/config/iam/themes/neon/login";
   const resolver = await text(`${root}/_theme-resolver.ftl`);
   const tokens = await text(`${root}/resources/css/iam.tokens.css`);
   const head = await text(`${root}/_iam-head.ftl`);
@@ -93,11 +93,9 @@ async function verifyKeycloak(): Promise<void> {
 }
 
 async function verifyGateways(): Promise<void> {
-  const canonicalIcon = sha256(await read("packages/platform/foundation/brand/assets/master-marks/mark-blue-transparent-2048.png"));
   for (const page of [
     "deploy/compose/instance/config/nginx/status.html",
     "deploy/compose/platform/outage/status.html",
-    "stack/config/gateway/fallback/status.html",
   ]) {
     const html = await text(page);
     if (!html.includes('data-theme-family="atlas-modern"')) failures.push(`${page} does not declare Atlas Modern`);
@@ -105,18 +103,9 @@ async function verifyGateways(): Promise<void> {
   }
 
   const instancePage = await text("deploy/compose/instance/config/nginx/status.html");
-  const legacyPage = await text("stack/config/gateway/fallback/status.html");
   for (const plane of ["neon", "mesh", "studio"] as const) {
     const canonical = await read(`packages/platform/foundation/brand/assets/plane-lockups/${plane}.svg`);
-    const legacy = `stack/config/gateway/fallback/brand/${plane}-advertising.svg`;
-    if (!(await exists(legacy)) || sha256(await read(legacy)) !== sha256(canonical)) failures.push(`Legacy gateway ${plane} pre-authentication lockup is stale`);
-    const legacyIcon = `stack/config/gateway/fallback/brand/${plane}-icon.png`;
-    if (!(await exists(legacyIcon)) || sha256(await read(legacyIcon)) !== canonicalIcon) failures.push(`Legacy gateway ${plane} icon is stale`);
     if (!instancePage.includes(`data-plane-brand="${plane}" src="data:image/svg+xml;base64,${canonical.toString("base64")}"`)) failures.push(`Stack v2 gateway ${plane} embedded lockup is stale`);
-    if (!legacyPage.includes(`wordmark: "/brand/${plane}-advertising.svg"`)) failures.push(`Legacy gateway does not select the ${plane} pre-authentication lockup`);
-  }
-  for (const obsolete of ["admin-wordmark-black.png", "mesh-wordmark-black.png", "neon-wordmark-black.png"] as const) {
-    if (legacyPage.includes(obsolete) || await exists(`stack/config/gateway/fallback/brand/${obsolete}`)) failures.push(`Legacy gateway still contains obsolete asset ${obsolete}`);
   }
 }
 
@@ -129,7 +118,7 @@ async function main(): Promise<void> {
     console.error(["Brand sync verification FAILED:", ...failures.map((failure) => `- ${failure}`)].join("\n"));
     process.exitCode = 1;
   } else {
-    console.log(`Brand sync verified for ${ATLAS_MODERN_BRAND.name}, ${BRAND_PLANES.length} planes, Keycloak, and both gateway layers.`);
+    console.log(`Brand sync verified for ${ATLAS_MODERN_BRAND.name}, ${BRAND_PLANES.length} planes, Keycloak, and the gateway.`);
   }
 }
 

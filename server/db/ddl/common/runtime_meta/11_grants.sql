@@ -41,6 +41,7 @@ DO $$ BEGIN
     GRANT USAGE ON SCHEMA runtime_meta TO athyperadmin;
   END IF;
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_projection_applier') THEN
+    GRANT USAGE ON SCHEMA runtime_meta, shared TO athyper_projection_applier;
     GRANT SELECT ON runtime_meta.entity_contract,runtime_meta.entity_descriptor,runtime_meta.applied_release_payload TO athyper_projection_applier;
     GRANT EXECUTE ON FUNCTION
       runtime_meta.fn_stage_entity_projection(uuid,jsonb),
@@ -98,6 +99,7 @@ REVOKE ALL ON FUNCTION runtime_meta.fn_active_business_partner_definition(text) 
 REVOKE ALL ON FUNCTION runtime_meta.fn_stage_applied_release_payload(uuid,jsonb) FROM PUBLIC;
 DO $$ BEGIN
   IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_projection_applier') THEN
+    GRANT USAGE ON SCHEMA runtime_meta, shared TO athyper_projection_applier;
     GRANT SELECT ON runtime_meta.applied_release,runtime_meta.release_activation_head,runtime_meta.release_activation_event TO athyper_projection_applier;
     GRANT EXECUTE ON FUNCTION runtime_meta.fn_stage_release(text,uuid,bigint,uuid,text,jsonb),runtime_meta.fn_stage_entity_projection(uuid,jsonb),runtime_meta.fn_stage_applied_release_payload(uuid,jsonb),runtime_meta.fn_stage_release_projection(text,uuid,bigint,uuid,text,jsonb,jsonb),runtime_meta.fn_verify_release(uuid,text,jsonb),runtime_meta.fn_activate_release(uuid,jsonb),runtime_meta.fn_rollback_release(text,uuid,jsonb),runtime_meta.fn_active_release(text),runtime_meta.fn_active_entity_descriptor(text,text),runtime_meta.fn_active_business_partner_definition(text) TO athyper_projection_applier;
   END IF;

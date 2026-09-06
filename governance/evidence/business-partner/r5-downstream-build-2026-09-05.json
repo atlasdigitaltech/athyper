@@ -1,0 +1,78 @@
+{
+  "schema": "athyper.business-partner-r5-downstream-build/1",
+  "asOf": "2026-09-05",
+  "implementationStatus": "local_verified",
+  "productionQualified": false,
+  "productApprovalRecorded": false,
+  "runtimeDeployedByThisBuild": false,
+  "providerContactedBySqlProbes": false,
+  "checks": [
+    {
+      "command": "pnpm --filter @athyper/server-platform-iam test",
+      "result": "passed",
+      "tests": 89,
+      "files": 14
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data test",
+      "result": "passed",
+      "tests": 131,
+      "files": 21
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-iam typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-host typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-service-master-data typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "customer downstream collector typecheck",
+      "result": "passed"
+    },
+    {
+      "command": "customer-downstream-evidence.test.ts",
+      "result": "passed",
+      "tests": 3
+    },
+    {
+      "command": "customer-portal-consumer-probe.ts against isolated Studio PostgreSQL",
+      "result": "passed",
+      "synthetic": true,
+      "transaction": "rolled_back",
+      "includes": "staging replay, unchanged grants, hierarchy-cycle denial, stale/conflicting event denial, pending versus successful saga linkage"
+    },
+    {
+      "command": "customer-portal-source-probe.ts against isolated NEON PostgreSQL",
+      "result": "passed",
+      "synthetic": true,
+      "transaction": "rolled_back",
+      "includes": "authoritative contact scope, lease fencing, atomic receipt and duplicate completion denial"
+    },
+    {
+      "command": "Customer notification seed against isolated NEON PostgreSQL",
+      "result": "passed",
+      "templates": 5,
+      "routes": 5
+    }
+  ],
+  "sourceHashes": {
+    "server/packages/platform/iam/src/customer-portal-delivery.ts": "41df77c264073ea3e75761db03134db5f4404eaa0ac518274d9c1282f67feb28",
+    "server/apps/platform-host/src/composition/register-platform.ts": "6e7be06c25af8d78afb068ac2c1a9cff55abe1ddb7e2d8f107a6e9dbc7f7bca9",
+    "server/db/ddl/planes/studio/master/07_functions.sql": "cecfe9efbe8a59cc17a0236ca4aea890bd3bf9e7428991ee7718c630b50c7cc5",
+    "server/db/ddl/planes/neon/control/12_notification_reference_seed.sql": "f3475d08e9eef279bcf2a6d7ebafad20b8a7aaa04613b8c844e316df11a5fd04",
+    "server/db/scripts/business-partner-360/collect-customer-downstream-evidence.ts": "2a7178c28ce9da22728e26511dbcba7a1e809c034263245fbffaee73994ded85"
+  },
+  "targetEvidence": "governance/evidence/business-partner/r5-authenticated-target-2026-09-05.json",
+  "remaining": [
+    "Publish/activate the prepared Customer definition through Studio author/checker authority.",
+    "Deploy consumer/API/worker/scheduler and notification reference rows.",
+    "Provide existing approved Customer contact identity projections and verify real provider and in-app deliveries after each lifecycle action.",
+    "Retain complete R5/R2 target evidence and named NEON Master Data BP-Q002 approval."
+  ]
+}

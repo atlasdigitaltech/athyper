@@ -26,7 +26,13 @@ export function qualificationRoot() {
 export function qualificationGateFailures() {
   const path = hostQualificationPath();
   if (!existsSync(path)) return { path, failures: ["qualification-evidence=absent"] };
-  const document = readYaml(path);
+  let document;
+  try { document = readYaml(path); } catch (error) {
+    return { path, failures: [`qualification-evidence=invalid (${error.message})`] };
+  }
+  if (!document || typeof document !== "object") {
+    return { path, failures: ["qualification-evidence=invalid (expected a YAML mapping)"] };
+  }
   const status = document.status ?? {};
   const failures = requiredDeploymentGates
     .filter((gate) => !String(status[gate] ?? "absent").startsWith("complete"))

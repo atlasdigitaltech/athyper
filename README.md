@@ -76,7 +76,6 @@ server/          Shared Express API + BullMQ workers + DB DDL/seeds
 deploy/          Stack v2 Compose, controller, catalogs, and instance definitions
 tests/           Repository-wide contract, foundation, and end-to-end tests
 governance/      Platform catalogs, governed configuration, policies, and reports
-stack/config/    Shared IAM, branding, and validation assets used by Stack v2 builds
 tooling/         Repository configuration, automation, developer tools, and performance assets
 ```
 

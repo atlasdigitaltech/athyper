@@ -13,7 +13,7 @@
     { "id": "derived-navigation", "evidence": ["tooling/scripts/policy/verify-shared-shell-phase8.mjs", "tests/contracts/shared-shell-navigation.test.ts", "tooling/scripts/policy/verify-access-consumption-phase9.mjs"] },
     { "id": "server-authority", "evidence": ["server/packages/runtime/http/src/route-contract.ts", "server/packages/platform/experience/src/routes.ts", "tests/contracts/access-consumption-phase9.test.ts"] },
     { "id": "three-plane-qualification", "evidence": ["tooling/scripts/policy/verify-app-composition-phase10.mjs", "tests/contracts/app-composition-phase10.test.ts", "governance/config/deployment/profiles.json"] },
-    { "id": "rollback-observability", "evidence": ["stack/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"] },
+    { "id": "rollback-observability", "evidence": ["deploy/config/telemetry/provisioning/dashboards/json/frontend-spine-production.json"] },
     { "id": "business-module-readiness", "evidence": ["docs/architecture/frontend-first-business-module.md", "tests/contracts/first-business-module-readiness.test.ts"] }
   ]
 }

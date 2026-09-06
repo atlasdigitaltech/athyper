@@ -33,7 +33,16 @@ fi
 mkdir -p "$instance_root"
 chmod 700 "$runtime_root" "$runtime_root/instances" "$instance_root" 2>/dev/null || true
 staging="$(mktemp -d "$instance_root/.secrets-staging.XXXXXXXX")"
-cleanup() { rm -rf -- "$staging"; }
+preserved="$instance_root/.preserved-vapid"
+installed=false
+receipt="${instance_root}/secrets-receipt.json"
+receipt_staging=""
+cleanup() {
+  rm -rf -- "$staging"
+  rm -f -- "$receipt_staging"
+  if [[ "$installed" == "true" ]]; then rm -rf -- "$secret_root" "$receipt"; fi
+  if [[ -d "$preserved" ]]; then mv -- "$preserved" "$secret_root"; fi
+}
 trap cleanup EXIT INT TERM
 
 if [[ "$preserve_stg_vapid" == "true" ]]; then
@@ -44,6 +53,8 @@ random_urlsafe() { openssl rand -base64 48 | tr -d '\r\n' | tr '+/' '-_'; }
 random_base64_32() { openssl rand -base64 32 | tr -d '\r\n'; }
 
 for name in \
+  analytics-db-password grafana-admin-password infisical-auth-secret \
+  infisical-db-password infisical-encryption-key jobs-redis-password \
   iam-admin-password iam-db-password mesh-iam-client-secret minio-root-password \
   neon-iam-client-secret objectstorage-app-secret-key postgres-password redis-password \
   runtime-db-password runtime-iam-client-secret search-master-key \
@@ -67,21 +78,20 @@ NODE
 fi
 
 chmod 600 "$staging"/*
-expected=18
+expected=24
 count="$(find "$staging" -mindepth 1 -maxdepth 1 -type f | wc -l | tr -d ' ')"
 [[ "$count" == "$expected" ]] || { echo "Expected $expected secrets, generated $count" >&2; exit 1; }
 if [[ "$preserve_stg_vapid" == "true" ]]; then
-  mv "$secret_root" "$instance_root/.preserved-vapid"
+  mv "$secret_root" "$preserved"
   mv "$staging" "$secret_root"
-  rm -rf -- "$instance_root/.preserved-vapid"
 else
   mv "$staging" "$secret_root"
 fi
-trap - EXIT INT TERM
+installed=true
 
-receipt="$instance_root/secrets-receipt.json"
 generated_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-cat > "$receipt" <<EOF
+receipt_staging="$(mktemp "$instance_root/.secrets-receipt.XXXXXXXX")"
+cat > "$receipt_staging" <<EOF
 {
   "apiVersion": "athyper.io/v1alpha1",
   "kind": "InstanceSecretsReceipt",
@@ -94,5 +104,9 @@ cat > "$receipt" <<EOF
   "devSecretsReused": false
 }
 EOF
-chmod 600 "$receipt"
+chmod 600 "$receipt_staging"
+mv "$receipt_staging" "$receipt"
+receipt_staging=""
+rm -rf -- "$preserved"
+trap - EXIT INT TERM
 echo "Generated $expected owner-only $instance secrets under $secret_root; values were not printed."

@@ -25,7 +25,7 @@ const KC_BASE   = process.env.KEYCLOAK_BASE_URL || 'https://iam.athyper.local';
 const KC_REALM  = process.env.NEON_KEYCLOAK_REALM || 'neon';
 const KC_ADMIN  = 'athyperadmin';
 const KC_PASS   = 'athyperadmin';
-const REALM_FILE = path.join(__dirname, '../../../stack/config/iam/realm-neon.json');
+const REALM_FILE = path.join(__dirname, '../../../deploy/config/iam/realm-neon.json');
 
 function requiredEnv(name) {
   const value = process.env[name];

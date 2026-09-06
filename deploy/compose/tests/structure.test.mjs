@@ -188,7 +188,9 @@ test("release instances use an image-contained fail-closed forward migration run
   assert.match(runner, /operator resolution is required/u);
   for (const plane of ["studio", "neon", "mesh"]) {
     const manifest = readFileSync(join(repoRoot, `server/db/migrations/manifests/${plane}.txt`), "utf8");
-    assert.doesNotMatch(manifest, /^[^#\s]/mu);
+    const names = manifest.split(/\r?\n/u).filter(line => line && !line.startsWith("#"));
+    assert.deepEqual(names, []);
+    for (const name of names) assert.ok(readFileSync(join(repoRoot, "server/db/migrations", name), "utf8").includes("BEGIN;"));
   }
 });
 
@@ -287,7 +289,7 @@ test("OIDC uses public HTTPS issuers with private backchannel endpoints", () => 
   assert.match(runtime, /IAM_ISSUER_URL="https:\/\/iam\.\$\{ATHYPER_DOMAIN_SUFFIX:-dev\.athyper\.test\}\/realms\/athyper"/u);
   assert.match(runtime, /export KEYCLOAK_REALM=athyper/u);
   assert.match(runtime, /KEYCLOAK_JWKS_URL=http:\/\/iam:8080\/realms\/athyper\/protocol\/openid-connect\/certs/u);
-  const realm = read("stack/config/iam/realm-athyper-clean-slate.json");
+  const realm = read("deploy/config/iam/realm-athyper-clean-slate.json");
   for (const plane of ["studio", "neon", "mesh"]) {
     const client = realm.clients.find(({ clientId }) => clientId === `${plane}-web`);
     const origin = `https://${plane}.dev.athyper.test`;
