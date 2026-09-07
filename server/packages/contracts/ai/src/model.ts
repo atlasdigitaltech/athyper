@@ -1,4 +1,4 @@
-export type AtlasProviderId = "anthropic" | "openai" | "gemini";
+export type AtlasProviderId = "anthropic" | "openai" | "gemini" | "ollama";
 export type AtlasPublicModelId = "atlas-fast" | "atlas-balanced" | "atlas-best" | (string & {});
 export type AtlasDataClass = "public" | "internal" | "confidential" | "restricted" | "synthetic";
 
@@ -24,7 +24,8 @@ export interface AtlasModelBinding {
   readonly exposure: "product" | "internal_evaluation";
   readonly status: "available" | "restricted" | "disabled";
   readonly capabilities: AtlasModelCapabilities;
-  readonly credentialPolicy: "platform" | "tenant_required";
+  readonly credentialPolicy: "platform" | "tenant_required" | "local_transport";
+  readonly modelDigest?: string;
   readonly credentialOwnerId: string;
   readonly providerRegion: string;
   readonly dataHandlingProfileId: string;
@@ -55,13 +56,23 @@ export interface AtlasModelPrompt {
 }
 
 /** Secret leases are resolved server-side after exact binding resolution. */
-export interface AtlasProviderCredentialLease {
+export interface AtlasApiKeyCredentialLease {
+  readonly authMode?: "api_key";
   readonly secret: string;
   readonly credentialId: string;
   readonly credentialRevision: string;
   readonly ownerId: string;
   readonly expiresAt?: string;
 }
+
+export type AtlasProviderCredentialLease = AtlasApiKeyCredentialLease | {
+  readonly authMode: "local_transport";
+  readonly endpoint: string;
+  readonly ownerId: string;
+  readonly secret?: never;
+  readonly credentialId: null;
+  readonly credentialRevision: null;
+};
 
 export interface AtlasProviderInvocation {
   readonly binding: AtlasModelBinding;

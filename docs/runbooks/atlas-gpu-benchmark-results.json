@@ -1,0 +1,1416 @@
+{
+  "schema": "atlas-gpu-qualification/1",
+  "qualification": "Conditional approval for local integration development. Native queue admission and oversized-input handling are not sufficient for enabling shared application chat.",
+  "primary": {
+    "schema": "atlas-benchmark-summary/1",
+    "sourceDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/receipts/atlas-benchmark/20260907T045941Z",
+    "startedAt": "2026-09-07T04:59:41.394985+00:00",
+    "endedAt": "2026-09-07T05:01:37.264147+00:00",
+    "config": {
+      "schema": "atlas-local-inference/1",
+      "engine": {
+        "version": "0.33.3",
+        "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+        "sourceTag": "ollama/ollama:0.33.3"
+      },
+      "endpoint": "http://atlas-inference:11434",
+      "model": {
+        "upstream": "qwen3:8b",
+        "digest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "displayName": "Atlas RE 1.0 Local",
+        "publicId": "atlas-re-1.0-local"
+      },
+      "request": {
+        "num_ctx": 4096,
+        "num_predict": 1024,
+        "think": false
+      },
+      "cloudEnabled": false
+    },
+    "fixtureSha256": "0e9d6dc96fc13805d8e1d9f07c4dac357fe1b23fe2bdf7ec6f46f530cc4a0020",
+    "gpu": "NVIDIA GeForce RTX 4080 Laptop GPU, 610.88, 12282 MiB",
+    "coldDefinition": "Inference engine restarted and model unloaded; host filesystem and driver caches retained.",
+    "percentileMethod": "nearest rank",
+    "groups": {
+      "business-summary": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 39.859920999995666,
+        "ttftP95Ms": 58.87363699999696,
+        "totalP50Ms": 1200.0641839999953,
+        "totalP95Ms": 1233.1448819999969,
+        "medianOutputTokensPerSecond": 60.61165299738193,
+        "outputTokens": 207
+      },
+      "cancellation-recovery": {
+        "requests": 4,
+        "successful": 4,
+        "qualityPassed": 4,
+        "ttftMedianMs": 63.240773499997886,
+        "ttftP95Ms": 83.01618199999939,
+        "totalP50Ms": 84.02840000000288,
+        "totalP95Ms": 117.00826999999845,
+        "medianOutputTokensPerSecond": 99.97358284389665,
+        "outputTokens": 10
+      },
+      "cold": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 2688.355337,
+        "ttftP95Ms": 2688.355337,
+        "totalP50Ms": 4076.3219029999996,
+        "totalP95Ms": 4076.3219029999996,
+        "medianOutputTokensPerSecond": 57.65250528961736,
+        "outputTokens": 80
+      },
+      "input-scaling": {
+        "requests": 5,
+        "successful": 5,
+        "qualityPassed": 5,
+        "ttftMedianMs": 276.0822709999993,
+        "ttftP95Ms": 956.2134289999958,
+        "totalP50Ms": 654.4196779999984,
+        "totalP95Ms": 1380.0818040000013,
+        "medianOutputTokensPerSecond": 58.48555824465344,
+        "outputTokens": 103
+      },
+      "interruption-recovery": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 2808.047538999992,
+        "ttftP95Ms": 2808.047538999992,
+        "totalP50Ms": 2892.890348999994,
+        "totalP95Ms": 2892.890348999994,
+        "medianOutputTokensPerSecond": 34.41985337142464,
+        "outputTokens": 3
+      },
+      "multi-turn": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 50.756836000000476,
+        "ttftP95Ms": 56.283810999993875,
+        "totalP50Ms": 419.26322999999684,
+        "totalP95Ms": 454.9196770000017,
+        "medianOutputTokensPerSecond": 63.14205865073656,
+        "outputTokens": 69
+      },
+      "output-limit": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 200.81594899999618,
+        "ttftP95Ms": 200.81594899999618,
+        "totalP50Ms": 17362.758976999998,
+        "totalP95Ms": 17362.758976999998,
+        "medianOutputTokensPerSecond": 59.66572162922614,
+        "outputTokens": 1024
+      },
+      "saturation-recovery": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 67.44653100000141,
+        "ttftP95Ms": 67.44653100000141,
+        "totalP50Ms": 96.1464580000029,
+        "totalP95Ms": 96.1464580000029,
+        "medianOutputTokensPerSecond": 104.7376322312607,
+        "outputTokens": 3
+      },
+      "structured-json": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 46.287562000001344,
+        "ttftP95Ms": 60.7070440000025,
+        "totalP50Ms": 467.31640000000334,
+        "totalP95Ms": 470.21466599999985,
+        "medianOutputTokensPerSecond": 54.112554112554115,
+        "outputTokens": 66
+      },
+      "tool-call": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 430.2750679999954,
+        "ttftP95Ms": 529.2235379999984,
+        "totalP50Ms": 469.8790949999966,
+        "totalP95Ms": 571.5595079999985,
+        "medianOutputTokensPerSecond": 58.65790708587518,
+        "outputTokens": 78
+      },
+      "tool-followup": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 29.56824400000187,
+        "ttftP95Ms": 30.923274999993737,
+        "totalP50Ms": 326.61421999999584,
+        "totalP95Ms": 330.06423100000393,
+        "medianOutputTokensPerSecond": 60.790889472031125,
+        "outputTokens": 54
+      },
+      "tool-negative": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 24.848479000000225,
+        "ttftP95Ms": 24.848479000000225,
+        "totalP50Ms": 229.22525999999925,
+        "totalP95Ms": 229.22525999999925,
+        "medianOutputTokensPerSecond": 63.56129019640439,
+        "outputTokens": 13
+      },
+      "warm-short": {
+        "requests": 30,
+        "successful": 30,
+        "qualityPassed": 30,
+        "ttftMedianMs": 36.24919850000151,
+        "ttftP95Ms": 67.93204999999944,
+        "totalP50Ms": 854.3384319999986,
+        "totalP95Ms": 971.1599640000022,
+        "medianOutputTokensPerSecond": 60.240651557277516,
+        "outputTokens": 1457
+      }
+    },
+    "normal": {
+      "requests": 52,
+      "successful": 52,
+      "qualityPassed": 52,
+      "ttftMedianMs": 38.737802000002375,
+      "ttftP95Ms": 440.5118969999967,
+      "totalP50Ms": 799.6536869999982,
+      "totalP95Ms": 1233.1448819999969,
+      "medianOutputTokensPerSecond": 60.13943339677526,
+      "outputTokens": 3071
+    },
+    "gates": {
+      "warmShortTtft": true,
+      "outputThroughput": true,
+      "gpuOffload": true,
+      "noMemoryFailures": true,
+      "cancellation": true,
+      "existingReadiness": true,
+      "runComplete": true
+    },
+    "memory": {
+      "sampleCount": 108,
+      "devicePeakUsedMiB": 7642.0,
+      "deviceBaselineUsedMiB": 7632.0,
+      "containerPeakSampleBytes": 2757795840,
+      "containerCgroupPeakBytes": 2778419200,
+      "oomMax": 0,
+      "oomKillMax": 0,
+      "hostMinimumAvailableKiB": 16812552
+    },
+    "offloadLayers": [
+      [
+        37,
+        37
+      ],
+      [
+        37,
+        37
+      ],
+      [
+        37,
+        37
+      ]
+    ],
+    "loadedModelSamples": [
+      {
+        "at": "2026-09-07T05:01:02.284Z",
+        "type": "gpu-offload",
+        "ps": {
+          "models": [
+            {
+              "name": "qwen3:8b",
+              "model": "qwen3:8b",
+              "size": 5578204118,
+              "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+              "details": {
+                "parent_model": "",
+                "format": "gguf",
+                "family": "qwen3",
+                "families": [
+                  "qwen3"
+                ],
+                "parameter_size": "8.2B",
+                "quantization_level": "Q4_K_M"
+              },
+              "expires_at": "2026-09-07T05:06:02.282608641Z",
+              "size_vram": 5578204118,
+              "context_length": 4096
+            }
+          ]
+        }
+      },
+      {
+        "at": "2026-09-07T05:01:22.201Z",
+        "type": "complete",
+        "ps": {
+          "models": [
+            {
+              "name": "qwen3:8b",
+              "model": "qwen3:8b",
+              "size": 5578204118,
+              "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+              "details": {
+                "parent_model": "",
+                "format": "gguf",
+                "family": "qwen3",
+                "families": [
+                  "qwen3"
+                ],
+                "parameter_size": "8.2B",
+                "quantization_level": "Q4_K_M"
+              },
+              "expires_at": "2026-09-07T05:06:22.20038868Z",
+              "size_vram": 5578204118,
+              "context_length": 4096
+            }
+          ]
+        }
+      }
+    ],
+    "readiness": {
+      "dev-api": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 100.924723,
+        "activeP95Ms": 91.54545999999999,
+        "postP95Ms": 82.90994400000001
+      },
+      "dev-neon": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 11.706,
+        "activeP95Ms": 20.497,
+        "postP95Ms": 12.326
+      },
+      "dev-mesh": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 13.231,
+        "activeP95Ms": 23.253,
+        "postP95Ms": 12.055
+      },
+      "dev-studio": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 12.336,
+        "activeP95Ms": 20.434,
+        "postP95Ms": 11.833
+      },
+      "qa-api": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 59.10851,
+        "activeP95Ms": 68.79961999999999,
+        "postP95Ms": 52.915977000000005
+      },
+      "qa-neon": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 28.665,
+        "activeP95Ms": 16.901,
+        "postP95Ms": 10.609
+      },
+      "qa-mesh": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 32.293,
+        "activeP95Ms": 17.816,
+        "postP95Ms": 10.152
+      },
+      "qa-studio": {
+        "samples": 54,
+        "non200": 0,
+        "baselineNon200": 0,
+        "baselineP95Ms": 10.777999999999999,
+        "activeP95Ms": 18.388,
+        "postP95Ms": 10.788
+      }
+    },
+    "otherContainerChanges": [],
+    "cancellation": [
+      {
+        "at": "2026-09-07T05:01:05.278Z",
+        "type": "cancellation",
+        "trial": 0,
+        "active": {
+          "id": "cancel-active-0",
+          "category": "cancellation",
+          "status": 200,
+          "ok": false,
+          "aborted": true,
+          "error": "benchmark cancellation",
+          "ttftMs": 78.79831099999865,
+          "totalMs": 180.62536900000123,
+          "content": "**Training Guide: Managing Fiction",
+          "thinking": "",
+          "toolCalls": [],
+          "inputChars": 224
+        },
+        "successorId": "cancel-successor-0",
+        "releaseUpperBoundMs": 83.01618199999939,
+        "elapsedToSuccessorDoneMs": 102.1769759999952,
+        "passed": true
+      },
+      {
+        "at": "2026-09-07T05:01:05.495Z",
+        "type": "cancellation",
+        "trial": 1,
+        "active": {
+          "id": "cancel-active-1",
+          "category": "cancellation",
+          "status": 200,
+          "ok": false,
+          "aborted": true,
+          "error": "benchmark cancellation",
+          "ttftMs": 35.00285299999814,
+          "totalMs": 136.26533099999506,
+          "content": "**Training Guide: Managing",
+          "thinking": "",
+          "toolCalls": [],
+          "inputChars": 224
+        },
+        "successorId": "cancel-successor-1",
+        "releaseUpperBoundMs": 65.25343299999804,
+        "elapsedToSuccessorDoneMs": 81.73254400000587,
+        "passed": true
+      },
+      {
+        "at": "2026-09-07T05:01:05.756Z",
+        "type": "cancellation",
+        "trial": 2,
+        "active": {
+          "id": "cancel-active-2",
+          "category": "cancellation",
+          "status": 200,
+          "ok": false,
+          "aborted": true,
+          "error": "benchmark cancellation",
+          "ttftMs": 43.782720999995945,
+          "totalMs": 143.92286800000147,
+          "content": "**Training Guide: Managing Fictional",
+          "thinking": "",
+          "toolCalls": [],
+          "inputChars": 224
+        },
+        "successorId": "cancel-successor-2",
+        "releaseUpperBoundMs": 61.22811399999773,
+        "elapsedToSuccessorDoneMs": 117.41114099999686,
+        "passed": true
+      }
+    ],
+    "faultTests": [
+      {
+        "at": "2026-09-07T05:01:06.374Z",
+        "type": "queued-cancellation",
+        "canceled": {
+          "id": "cancel-queued",
+          "category": "queued-cancellation",
+          "status": null,
+          "ok": false,
+          "aborted": true,
+          "error": "cancel while queued",
+          "ttftMs": null,
+          "totalMs": 501.5132389999999,
+          "content": "",
+          "thinking": "",
+          "toolCalls": [],
+          "inputChars": 228
+        },
+        "clientAbortMs": 1.3509980000017094,
+        "recoveryId": "queued-cancel-recovery",
+        "passed": true
+      },
+      {
+        "at": "2026-09-07T05:01:08.013Z",
+        "type": "saturation",
+        "submitted": 15,
+        "active": {
+          "id": "saturation-blocker",
+          "category": "saturation",
+          "status": 200,
+          "ok": false,
+          "aborted": true,
+          "error": "end saturation test",
+          "ttftMs": 34.42534699999669,
+          "totalMs": 1542.1852979999967,
+          "content": "**Training Guide: Managing Fictional Warehouse Inventory \u2013 Synthetic Test Saturation-Blocker**\n\nWelcome to the **Synthetic Test Saturation-Blocker (STSB)** training guide. This guide is designed to simulate a real-world warehouse inventory management system, complete with detailed steps, best practices, and operational procedures. The goal is to provide a comprehensive, step-by-step approach to managing a fictional warehouse inventory, ensuring that all aspects of inventory control, tracking",
+          "thinking": "",
+          "toolCalls": [],
+          "inputChars": 227
+        },
+        "results": [
+          {
+            "id": "saturation-0",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1507.6095169999971,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-1",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1507.2154690000025,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-2",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1506.9661590000032,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-3",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1506.8256779999938,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-4",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1506.715710999997,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-5",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1506.6212500000038,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-6",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1506.4832519999982,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-7",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.9572100000005,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-8",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.626765000001,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-9",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.4192200000034,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 216
+          },
+          {
+            "id": "saturation-10",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.3246700000018,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 217
+          },
+          {
+            "id": "saturation-11",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.2551319999984,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 217
+          },
+          {
+            "id": "saturation-12",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.1142950000067,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 217
+          },
+          {
+            "id": "saturation-13",
+            "category": "saturation",
+            "status": null,
+            "ok": false,
+            "aborted": true,
+            "error": "end saturation test",
+            "ttftMs": null,
+            "totalMs": 1503.0183550000002,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 217
+          }
+        ],
+        "rejected": 0,
+        "recoveryId": "saturation-recovery"
+      },
+      {
+        "at": "2026-09-07T05:01:11.602Z",
+        "type": "cold-saturation",
+        "submitted": 18,
+        "results": [
+          {
+            "id": "cold-queue-0",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3051.0627109999987,
+            "firstEventMs": 3051.0613120000053,
+            "totalMs": 3084.3934240000017,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.099450051Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3079728016,
+              "load_duration": 2841066574,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 21888000,
+              "eval_count": 3,
+              "eval_duration": 33356000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 89.93884158772036
+          },
+          {
+            "id": "cold-queue-1",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3146.3675460000013,
+            "firstEventMs": 3146.366176000003,
+            "totalMs": 3179.721872000002,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.195118712Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3175274669,
+              "load_duration": 2841634238,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 21076000,
+              "eval_count": 3,
+              "eval_duration": 33314999
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 90.04952994295454
+          },
+          {
+            "id": "cold-queue-2",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 2942.2670670000007,
+            "firstEventMs": 2942.265696000002,
+            "totalMs": 3022.4200629999978,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.038179789Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3018345017,
+              "load_duration": 2841344220,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 0,
+              "prompt_eval_duration": 94683000,
+              "eval_count": 3,
+              "eval_duration": 80372000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 37.326432090777885
+          },
+          {
+            "id": "cold-queue-3",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3223.067805999999,
+            "firstEventMs": 3223.066371000001,
+            "totalMs": 3255.9988479999956,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.271887048Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3251880761,
+              "load_duration": 2841909325,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 37770000,
+              "eval_count": 3,
+              "eval_duration": 33265000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 90.184879001954
+          },
+          {
+            "id": "cold-queue-4",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3286.048397999999,
+            "firstEventMs": 3286.045956999995,
+            "totalMs": 3322.3102599999984,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.338347089Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3318389386,
+              "load_duration": 2842154639,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 20757000,
+              "eval_count": 3,
+              "eval_duration": 36417000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 82.37910865804433
+          },
+          {
+            "id": "cold-queue-5",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3349.8266689999946,
+            "firstEventMs": 3349.8250069999995,
+            "totalMs": 3365.5942399999985,
+            "content": "OK",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.381852255Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3361542919,
+              "load_duration": 2842265910,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 22644000,
+              "eval_count": 2,
+              "eval_duration": 15877000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 125.96838193613404
+          },
+          {
+            "id": "cold-queue-6",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3422.094954999993,
+            "firstEventMs": 3422.0934750000015,
+            "totalMs": 3455.1058829999965,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.471317053Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3450691875,
+              "load_duration": 2842429385,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 51363000,
+              "eval_count": 3,
+              "eval_duration": 32817999
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 91.41325161232407
+          },
+          {
+            "id": "cold-queue-7",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3488.921414999997,
+            "firstEventMs": 3488.9198410000026,
+            "totalMs": 3522.4677569999985,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.538935856Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3518221282,
+              "load_duration": 2842785381,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 23176000,
+              "eval_count": 3,
+              "eval_duration": 33620000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 89.2325996430696
+          },
+          {
+            "id": "cold-queue-8",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 132.66721999999572,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 59
+          },
+          {
+            "id": "cold-queue-9",
+            "category": "cold-saturation",
+            "status": 200,
+            "ok": true,
+            "ttftMs": 3551.4632800000036,
+            "firstEventMs": 3551.4596910000037,
+            "totalMs": 3585.3392099999983,
+            "content": "OK.",
+            "thinking": "",
+            "toolCalls": [],
+            "terminal": {
+              "model": "qwen3:8b",
+              "created_at": "2026-09-07T05:01:11.601957861Z",
+              "message": {
+                "role": "assistant",
+                "content": ""
+              },
+              "done": true,
+              "done_reason": "stop",
+              "total_duration": 3580856784,
+              "load_duration": 2842571396,
+              "prompt_eval_count": 25,
+              "prompt_eval_cached_count": 6,
+              "prompt_eval_duration": 22323000,
+              "eval_count": 3,
+              "eval_duration": 34151000
+            },
+            "inputChars": 59,
+            "outputLimit": 16,
+            "throughput": 87.84515826769348
+          },
+          {
+            "id": "cold-queue-10",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 132.95040300000255,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-11",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 133.37189199999557,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-12",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 133.05315900000278,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-13",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 133.781458999998,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-14",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 134.28476000000228,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-15",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 134.34264699999767,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-16",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 133.77708600000187,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          },
+          {
+            "id": "cold-queue-17",
+            "category": "cold-saturation",
+            "status": 503,
+            "ok": false,
+            "aborted": false,
+            "error": "Error: HTTP 503: {\"error\":\"server busy, please try again.  maximum pending requests exceeded\"}",
+            "ttftMs": null,
+            "totalMs": 133.88482900000236,
+            "content": "",
+            "thinking": "",
+            "toolCalls": [],
+            "inputChars": 60
+          }
+        ],
+        "rejected": 9,
+        "completed": 9
+      },
+      {
+        "at": "2026-09-07T05:01:11.751Z",
+        "type": "interrupted-stream",
+        "id": "interrupted-request",
+        "category": "interruption",
+        "status": 200,
+        "ok": false,
+        "aborted": false,
+        "error": "TypeError: terminated",
+        "ttftMs": 78.15464199999406,
+        "totalMs": 148.62900499999523,
+        "content": "**Training Guide: Managing",
+        "thinking": "",
+        "toolCalls": [],
+        "inputChars": 228
+      },
+      {
+        "at": "2026-09-07T05:01:17.397Z",
+        "type": "interruption-process-recovery",
+        "processReady": true,
+        "elapsedMs": 5716.232191000003
+      }
+    ],
+    "inputScaling": [
+      {
+        "id": "input-8",
+        "inputChars": 491,
+        "ttftMs": 52.38442599999689,
+        "totalMs": 313.2858449999985,
+        "terminal": {
+          "model": "qwen3:8b",
+          "created_at": "2026-09-07T05:00:39.474643491Z",
+          "message": {
+            "role": "assistant",
+            "content": ""
+          },
+          "done": true,
+          "done_reason": "stop",
+          "total_duration": 311015788,
+          "load_duration": 609168,
+          "prompt_eval_count": 156,
+          "prompt_eval_cached_count": 3,
+          "prompt_eval_duration": 42796000,
+          "eval_count": 15,
+          "eval_duration": 260740000
+        }
+      },
+      {
+        "id": "input-32",
+        "inputChars": 1593,
+        "ttftMs": 99.63642299999628,
+        "totalMs": 445.64373599999817,
+        "terminal": {
+          "model": "qwen3:8b",
+          "created_at": "2026-09-07T05:00:39.920515497Z",
+          "message": {
+            "role": "assistant",
+            "content": ""
+          },
+          "done": true,
+          "done_reason": "stop",
+          "total_duration": 444656087,
+          "load_duration": 665364,
+          "prompt_eval_count": 538,
+          "prompt_eval_cached_count": 127,
+          "prompt_eval_duration": 95186000,
+          "eval_count": 21,
+          "eval_duration": 346210000
+        }
+      },
+      {
+        "id": "input-96",
+        "inputChars": 4537,
+        "ttftMs": 276.0822709999993,
+        "totalMs": 654.4196779999984,
+        "terminal": {
+          "model": "qwen3:8b",
+          "created_at": "2026-09-07T05:00:40.574795466Z",
+          "message": {
+            "role": "assistant",
+            "content": ""
+          },
+          "done": true,
+          "done_reason": "stop",
+          "total_duration": 652144807,
+          "load_duration": 565659,
+          "prompt_eval_count": 1562,
+          "prompt_eval_cached_count": 509,
+          "prompt_eval_duration": 268653000,
+          "eval_count": 21,
+          "eval_duration": 377637000
+        }
+      },
+      {
+        "id": "input-192",
+        "inputChars": 9045,
+        "ttftMs": 440.5118969999967,
+        "totalMs": 799.6536869999982,
+        "terminal": {
+          "model": "qwen3:8b",
+          "created_at": "2026-09-07T05:00:41.374798015Z",
+          "message": {
+            "role": "assistant",
+            "content": ""
+          },
+          "done": true,
+          "done_reason": "stop",
+          "total_duration": 796789176,
+          "load_duration": 1078023,
+          "prompt_eval_count": 3190,
+          "prompt_eval_cached_count": 1533,
+          "prompt_eval_duration": 424924000,
+          "eval_count": 21,
+          "eval_duration": 359063000
+        }
+      },
+      {
+        "id": "input-384",
+        "inputChars": 18069,
+        "ttftMs": 956.2134289999958,
+        "totalMs": 1380.0818040000013,
+        "terminal": {
+          "model": "qwen3:8b",
+          "created_at": "2026-09-07T05:00:42.755409714Z",
+          "message": {
+            "role": "assistant",
+            "content": ""
+          },
+          "done": true,
+          "done_reason": "stop",
+          "total_duration": 1377641343,
+          "load_duration": 1342049,
+          "prompt_eval_count": 2050,
+          "prompt_eval_cached_count": 4,
+          "prompt_eval_duration": 465741000,
+          "eval_count": 25,
+          "eval_duration": 424286000
+        }
+      }
+    ],
+    "truncationLogLines": [
+      "time=2026-09-07T05:00:41.391Z level=WARN source=llama_server.go:317 msg=\"truncating input prompt\" limit=2050 prompt=6454 keep=4 new=2050"
+    ],
+    "unexpectedRequestFailures": [],
+    "qualityFailures": [],
+    "qualification": "Conditional: suitable for local integration development only; enforce application queue admission and context budgets before enabling shared chat."
+  },
+  "corroboratingRun": {
+    "sourceDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/receipts/atlas-benchmark/20260907T045708Z",
+    "startedAt": "2026-09-07T04:57:08.433160+00:00",
+    "endedAt": "2026-09-07T04:59:08.223070+00:00",
+    "groups": {
+      "business-summary": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 36.45805400000245,
+        "ttftP95Ms": 80.6573470000003,
+        "totalP50Ms": 1157.550341000002,
+        "totalP95Ms": 1256.5682749999978,
+        "medianOutputTokensPerSecond": 61.15588269388925,
+        "outputTokens": 207
+      },
+      "cancellation-recovery": {
+        "requests": 4,
+        "successful": 4,
+        "qualityPassed": 4,
+        "ttftMedianMs": 75.933122500006,
+        "ttftP95Ms": 82.29893500001344,
+        "totalP50Ms": 98.53307300001325,
+        "totalP95Ms": 109.74543399999675,
+        "medianOutputTokensPerSecond": 97.23054457899988,
+        "outputTokens": 10
+      },
+      "cold": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 2982.027238,
+        "ttftP95Ms": 2982.027238,
+        "totalP50Ms": 11444.446348,
+        "totalP95Ms": 11444.446348,
+        "medianOutputTokensPerSecond": 9.453233259830505,
+        "outputTokens": 80
+      },
+      "input-scaling": {
+        "requests": 5,
+        "successful": 5,
+        "qualityPassed": 5,
+        "ttftMedianMs": 283.6479360000012,
+        "ttftP95Ms": 713.1424069999994,
+        "totalP50Ms": 607.8847470000037,
+        "totalP95Ms": 1103.454436,
+        "medianOutputTokensPerSecond": 63.31804654780965,
+        "outputTokens": 103
+      },
+      "interruption-recovery": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 2838.9226740000013,
+        "ttftP95Ms": 2838.9226740000013,
+        "totalP50Ms": 2906.510687000002,
+        "totalP95Ms": 2906.510687000002,
+        "medianOutputTokensPerSecond": 44.039929536112744,
+        "outputTokens": 3
+      },
+      "multi-turn": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 47.117748999997275,
+        "ttftP95Ms": 49.8743089999989,
+        "totalP50Ms": 427.76630399999704,
+        "totalP95Ms": 431.3500700000004,
+        "medianOutputTokensPerSecond": 60.27680155566563,
+        "outputTokens": 69
+      },
+      "output-limit": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 168.19019999999728,
+        "ttftP95Ms": 168.19019999999728,
+        "totalP50Ms": 17257.851391999997,
+        "totalP95Ms": 17257.851391999997,
+        "medianOutputTokensPerSecond": 59.91909050310503,
+        "outputTokens": 1024
+      },
+      "saturation-recovery": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 64.52804699999979,
+        "ttftP95Ms": 64.52804699999979,
+        "totalP50Ms": 91.411912999989,
+        "totalP95Ms": 91.411912999989,
+        "medianOutputTokensPerSecond": 109.88608475880005,
+        "outputTokens": 3
+      },
+      "structured-json": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 39.827228999994986,
+        "ttftP95Ms": 65.02047799999855,
+        "totalP50Ms": 414.689065999999,
+        "totalP95Ms": 421.89069699999527,
+        "medianOutputTokensPerSecond": 60.896282558751075,
+        "outputTokens": 66
+      },
+      "tool-call": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 486.7202890000044,
+        "ttftP95Ms": 541.0931459999993,
+        "totalP50Ms": 517.8111229999922,
+        "totalP95Ms": 575.3421089999974,
+        "medianOutputTokensPerSecond": 57.538417959068056,
+        "outputTokens": 78
+      },
+      "tool-followup": {
+        "requests": 3,
+        "successful": 3,
+        "qualityPassed": 3,
+        "ttftMedianMs": 40.25145899999188,
+        "ttftP95Ms": 45.331521000000066,
+        "totalP50Ms": 330.81852900000376,
+        "totalP95Ms": 377.4933420000016,
+        "medianOutputTokensPerSecond": 60.42072968101212,
+        "outputTokens": 54
+      },
+      "tool-negative": {
+        "requests": 1,
+        "successful": 1,
+        "qualityPassed": 1,
+        "ttftMedianMs": 44.63693600000988,
+        "ttftP95Ms": 44.63693600000988,
+        "totalP50Ms": 261.7029540000076,
+        "totalP95Ms": 261.7029540000076,
+        "medianOutputTokensPerSecond": 59.96586558420591,
+        "outputTokens": 13
+      },
+      "warm-short": {
+        "requests": 30,
+        "successful": 30,
+        "qualityPassed": 30,
+        "ttftMedianMs": 34.20226200000161,
+        "ttftP95Ms": 62.984066999997594,
+        "totalP50Ms": 841.245875999999,
+        "totalP95Ms": 984.9976320000023,
+        "medianOutputTokensPerSecond": 60.32128594066955,
+        "outputTokens": 1457
+      }
+    },
+    "memory": {
+      "sampleCount": 111,
+      "devicePeakUsedMiB": 7657.0,
+      "deviceBaselineUsedMiB": 2011.0,
+      "containerPeakSampleBytes": 4023599104,
+      "containerCgroupPeakBytes": 5136039936,
+      "oomMax": 0,
+      "oomKillMax": 0,
+      "hostMinimumAvailableKiB": 16832108
+    },
+    "offloadLayers": [
+      [
+        37,
+        37
+      ],
+      [
+        37,
+        37
+      ]
+    ],
+    "unexpectedRequestFailures": [],
+    "qualityFailures": []
+  },
+  "limitations": [
+    "Primary run has 30 sequential warm short-chat requests; two runs total 60. These are local synthetic timings, not concurrent multi-user service-level guarantees.",
+    "First run QA public probes failed because the host aliases were absent. The repeat pins QA DNS to the existing localhost ingress and passes all eight readiness endpoints.",
+    "Cold means restarted inference process and unloaded weights; Windows driver and filesystem caches were retained.",
+    "RAM uses cgroup accounting including cache, not process RSS. GPU memory is total device use including the Windows desktop; model allocation is separately recorded.",
+    "Readiness monitoring does not test authenticated application workflows. Tool calls use a synthetic read-only function and canned results, never real tools.",
+    "Native warm-model requests bypass the scheduler queue cap; an application admission queue is required.",
+    "Oversized input was silently truncated. The adapter must reserve output tokens and reject or deliberately trim context before dispatch."
+  ],
+  "requiredBeforeSharedChat": [
+    "One active generation and an explicitly bounded application queue with overload errors, queue deadlines and cancellation removal.",
+    "4096-token complete-context budget including templates/history/tool schemas and up to 1024 reserved output tokens.",
+    "Propagate cancellation, record interrupted runs as incomplete, and avoid replaying mutations after interrupted streams.",
+    "Enforce pinned model identity and GPU-ready warm-up before admitting application generations.",
+    "Complete provider/runtime integration and authenticated Neon/Mesh/Studio persistence tests; keep real tools disabled until governed execution tests pass."
+  ]
+}

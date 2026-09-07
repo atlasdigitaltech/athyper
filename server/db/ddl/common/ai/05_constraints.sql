@@ -834,3 +834,18 @@ ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
   ADD CONSTRAINT "atlas_tenant_quota_reservation_created_by_fk" FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
 ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
   ADD CONSTRAINT "atlas_tenant_quota_reservation_updated_by_fk" FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_pkey" PRIMARY KEY (provider_call_id);
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_provider_id_check" CHECK (provider_id IN ('openai', 'anthropic', 'gemini', 'ollama'));
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_entry_check" CHECK (jsonb_typeof(entry) = 'object');
+
+ALTER TABLE ONLY "ai"."atlas_provider_usage"
+  ADD CONSTRAINT "atlas_provider_usage_tenant_id_run_id_fkey" FOREIGN KEY (tenant_id, run_id) REFERENCES ai.atlas_run(tenant_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY "ai"."atlas_tenant_quota_reservation"
+  ADD CONSTRAINT "atlas_tenant_quota_reservation_usage_source_check" CHECK (usage_source IN ('provider_final', 'estimated'));

@@ -65,7 +65,7 @@ export function createAtlasAnswerClient(options: AtlasAnswerClientOptions = {}):
     admission: (signal?: AbortSignal) => client.request(admissionOperation, { signal }),
     experience: (signal?: AbortSignal) => client.request(experienceOperation, { signal }),
     threads:(status="active",signal?:AbortSignal)=>client.request(listThreadsOperation,{query:{status,limit:50},signal}),
-    messages:(threadId:string,signal?:AbortSignal)=>client.request(listMessagesOperation,{params:{threadId},query:{limit:100},signal}),
+    messages:async(threadId:string,signal?:AbortSignal)=>{const page=await client.request(listMessagesOperation,{params:{threadId},query:{limit:100},signal});return Object.freeze({...page,items:Object.freeze([...page.items].sort((left,right)=>left.sequence-right.sequence))});},
     renameThread:(thread:Pick<AtlasThreadSummary,"threadId"|"rowVersion">,title:string,signal?:AbortSignal)=>client.request(renameThreadOperation,{params:{threadId:thread.threadId},body:{title:title.trim().slice(0,200),expectedRowVersion:thread.rowVersion},idempotencyKey:`atlas-rename-${thread.threadId}-${thread.rowVersion}`,signal}),
     archiveThread:(thread:Pick<AtlasThreadSummary,"threadId"|"rowVersion">,signal?:AbortSignal)=>client.request(archiveThreadOperation,{params:{threadId:thread.threadId},body:{expectedRowVersion:thread.rowVersion},idempotencyKey:`atlas-archive-${thread.threadId}-${thread.rowVersion}`,signal}),
     async answer(question: string, answerOptions: AtlasAnswerOptions = {}) {

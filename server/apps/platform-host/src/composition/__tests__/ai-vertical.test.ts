@@ -41,9 +41,9 @@ describe("Atlas host composition", () => {
     expect(container.platform.httpRegistrars).toHaveLength(2);
     expect(container.runtimes.health.list()).toContain("atlas.conversation-persistence");
   });
-  it("fails closed when tools are enabled without provider and command dependencies", () => {
+  it("fails closed when tools are enabled without a local runtime or full provider composition", () => {
     const container = createContainer(); const config = loadConfig();
-    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow(/full provider and command/);
+    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow("Atlas tools require a configured local runtime or full provider composition.");
   });
   it("composes repositories, provider registry, runtime, tools, routes, and readiness together", () => {
     const container = createContainer(); const config = loadConfig();

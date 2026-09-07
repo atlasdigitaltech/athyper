@@ -1,0 +1,21 @@
+{
+  "schema": "atlas-local-inference/1",
+  "engine": {
+    "version": "0.33.3",
+    "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+    "sourceTag": "ollama/ollama:0.33.3"
+  },
+  "endpoint": "http://atlas-inference:11434",
+  "model": {
+    "upstream": "qwen3:8b",
+    "digest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "displayName": "Atlas RE 1.0 Local",
+    "publicId": "atlas-re-1.0-local"
+  },
+  "request": {
+    "num_ctx": 4096,
+    "num_predict": 1024,
+    "think": false
+  },
+  "cloudEnabled": false
+}

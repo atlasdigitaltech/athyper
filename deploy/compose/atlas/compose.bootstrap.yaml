@@ -1,0 +1,8 @@
+# Temporary artifact-download connectivity. Never include in normal serving.
+services:
+  atlas-inference:
+    networks:
+      inference: {}
+      bootstrap: {}
+networks:
+  bootstrap: {}

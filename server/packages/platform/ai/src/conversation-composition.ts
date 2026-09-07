@@ -30,8 +30,7 @@ export function createAtlasConversationServices(
       );
       return (
         !!participant &&
-        (operation === "read" ||
-          (operation === "run" && participant.role === "member"))
+        operation === "read"
       );
     },
   };

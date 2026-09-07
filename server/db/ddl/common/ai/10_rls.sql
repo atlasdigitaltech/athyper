@@ -647,3 +647,22 @@ CREATE POLICY "tenant_update" ON "ai"."atlas_thread"
   WITH CHECK (ai.fn_atlas_conversation_access(tenant_id, conversation_id, true));
 ALTER TABLE ai.ai_call_transcript_default ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai.ai_call_transcript_default FORCE ROW LEVEL SECURITY;
+
+ALTER TABLE ai.atlas_provider_usage ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai.atlas_provider_usage FORCE ROW LEVEL SECURITY;
+CREATE POLICY actor_access ON ai.atlas_provider_usage
+  FOR ALL TO PUBLIC
+  USING (EXISTS (
+    SELECT 1 FROM ai.atlas_run r
+    WHERE r.id = run_id
+      AND r.tenant_id = atlas_provider_usage.tenant_id
+      AND r.principal_id = NULLIF(current_setting('app.current_principal_id', true), '')::uuid
+      AND r.plane = NULLIF(current_setting('app.current_atlas_plane', true), '')
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM ai.atlas_run r
+    WHERE r.id = run_id
+      AND r.tenant_id = atlas_provider_usage.tenant_id
+      AND r.principal_id = NULLIF(current_setting('app.current_principal_id', true), '')::uuid
+      AND r.plane = NULLIF(current_setting('app.current_atlas_plane', true), '')
+  ));

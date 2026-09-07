@@ -65,3 +65,12 @@ test("Studio experience releases configure agents, prompts, sources, and widgets
 
 function event(type: string, value: Readonly<Record<string, unknown>>): string { return `event: ${type}\ndata: ${JSON.stringify({ protocol: "atlas.sse/1", sequence: 1, runId: "run-1", threadId: "thread-1", emittedAt: "2026-08-29T00:00:00Z", event: { type, ...value } })}\n\n`; }
 function stream(frames: readonly string[]): ReadableStream<Uint8Array> { const bytes = new TextEncoder().encode(frames.join("")); return new ReadableStream({ start(controller) { controller.enqueue(bytes); controller.close(); } }); }
+
+test("Atlas history renders in chronological sequence without mutating newest-first API pages", async () => {
+  const newestFirst = Object.freeze([{messageId:"answer",sequence:2,role:"assistant"},{messageId:"question",sequence:1,role:"user"}]);
+  const client={async request(){return Object.freeze({items:newestFirst,nextCursor:"older-page"});}} as unknown as HttpClient;
+  const page=await createAtlasAnswerClient({client}).messages("thread-1");
+  assert.deepEqual(page.items.map(item=>item.messageId),["question","answer"]);
+  assert.deepEqual(newestFirst.map(item=>item.messageId),["answer","question"]);
+  assert.equal(page.nextCursor,"older-page");
+});

@@ -19,6 +19,7 @@ export interface AtlasRun {
   readonly promptRevision: string;
   readonly startedAt: string;
   readonly terminalAt: string | null;
+  readonly finishReason?: AtlasFinishReason;
   readonly terminalErrorClass: AtlasProviderErrorClass | null;
 }
 
@@ -36,6 +37,8 @@ export interface AtlasBeginRunInput {
   readonly policyRevision: string;
   readonly promptRevision: string;
   readonly startedAt: string;
+  readonly expectedLastMessageSequence?: number;
+  readonly requestFingerprint?: string;
 }
 export interface AtlasBeginRunResult { readonly replayed: boolean; readonly run: AtlasRun; readonly replayedOutput?: readonly AtlasContentBlock[] }
 
@@ -57,8 +60,8 @@ export interface AtlasUsageLedgerEntry {
   readonly principalHash: string;
   readonly providerId: AtlasProviderId;
   readonly providerRequestId: string | null;
-  readonly credentialId: string;
-  readonly credentialRevision: string;
+  readonly credentialId: string | null;
+  readonly credentialRevision: string | null;
   readonly credentialOwnerId: string;
   readonly providerRegion: string;
   readonly publicModelId: AtlasPublicModelId;
@@ -79,4 +82,4 @@ export interface AtlasUsageLedgerEntry {
   readonly durationMs: number;
   readonly recordedAt: string;
 }
-export interface AtlasUsageLedger { append(entry: AtlasUsageLedgerEntry): Promise<void> }
+export interface AtlasUsageLedger { append(entry: AtlasUsageLedgerEntry, context?: VerifiedRequestContext): Promise<void> }

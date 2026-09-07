@@ -127,7 +127,7 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
       await writeAtlasSse(response, options.runtime.run({
         context,
         threadId: readUuid(request.params.id),
-        clientRequestId: requiredText(body, "clientRequestId"),
+        clientRequestId: readUuid(requiredText(body, "clientRequestId")),
         publicModelId: requiredText(body, "publicModelId") as AtlasPublicModelId,
         dataClass: requiredText(body, "dataClass") as AtlasDataClass,
         userText: requiredText(body, "userText"),

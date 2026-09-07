@@ -1,5 +1,5 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type { RecordFilter, RecordSort } from "@athyper/server-contract-records";
+import type { ListRecordsQuery, RecordFilter, RecordSort } from "@athyper/server-contract-records";
 
 export interface AtlasRecordSourceCoordinate {
   readonly entityCode: string;
@@ -13,6 +13,7 @@ export interface AtlasRecordQuery {
   readonly filters?: readonly RecordFilter[];
   readonly sort?: readonly RecordSort[];
   readonly limit: number;
+  readonly scopeCoordinate?: ListRecordsQuery["scopeCoordinate"];
 }
 export interface AtlasRecordResult {
   readonly rows: readonly Readonly<Record<string, unknown>>[];

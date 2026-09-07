@@ -78,3 +78,7 @@ FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_participant_insert();
 CREATE TRIGGER trg_conversation_participant_atlas_mutation_guard
 BEFORE UPDATE ON document.conversation_participant
 FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_participant_mutation();
+
+CREATE TRIGGER atlas_provider_usage_immutable BEFORE UPDATE ON ai.atlas_provider_usage FOR EACH ROW EXECUTE FUNCTION ai.trg_prevent_mutation();
+
+CREATE TRIGGER atlas_generation_metadata_immutable BEFORE UPDATE ON ai.atlas_run FOR EACH ROW EXECUTE FUNCTION ai.trg_guard_atlas_generation_metadata();

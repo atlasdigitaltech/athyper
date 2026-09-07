@@ -604,39 +604,59 @@ model atlas_message {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model atlas_provider_usage {
+  provider_call_id String    @id @db.Uuid
+  tenant_id        String    @db.Uuid
+  run_id           String    @db.Uuid
+  provider_id      String
+  entry            Json
+  created_at       DateTime  @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  atlas_run        atlas_run @relation(fields: [tenant_id, run_id], references: [tenant_id, id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("ai")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model atlas_run {
-  id                                                                                       String               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                                String               @db.Uuid
-  conversation_id                                                                          String               @db.Uuid
+  id                                                                                       String                 @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                                String                 @db.Uuid
+  conversation_id                                                                          String                 @db.Uuid
   plane                                                                                    String
-  principal_id                                                                             String               @db.Uuid
-  client_request_id                                                                        String               @db.Uuid
-  input_message_id                                                                         String               @db.Uuid
-  output_message_id                                                                        String               @db.Uuid
-  status                                                                                   String               @default("started")
-  cancellation_requested_at                                                                DateTime?            @db.Timestamptz(6)
-  cancellation_requested_by                                                                String?              @db.Uuid
-  terminal_at                                                                              DateTime?            @db.Timestamptz(6)
+  principal_id                                                                             String                 @db.Uuid
+  client_request_id                                                                        String                 @db.Uuid
+  input_message_id                                                                         String                 @db.Uuid
+  output_message_id                                                                        String                 @db.Uuid
+  status                                                                                   String                 @default("started")
+  cancellation_requested_at                                                                DateTime?              @db.Timestamptz(6)
+  cancellation_requested_by                                                                String?                @db.Uuid
+  terminal_at                                                                              DateTime?              @db.Timestamptz(6)
   terminal_error_class                                                                     String?
-  metering_run_id                                                                          String?              @db.Uuid
-  started_at                                                                               DateTime             @default(now()) @db.Timestamptz(6)
-  created_at                                                                               DateTime             @default(now()) @db.Timestamptz(6)
-  created_by                                                                               String               @db.Uuid
-  updated_at                                                                               DateTime?            @db.Timestamptz(6)
-  updated_by                                                                               String?              @db.Uuid
+  metering_run_id                                                                          String?                @db.Uuid
+  started_at                                                                               DateTime               @default(now()) @db.Timestamptz(6)
+  created_at                                                                               DateTime               @default(now()) @db.Timestamptz(6)
+  created_by                                                                               String                 @db.Uuid
+  updated_at                                                                               DateTime?              @db.Timestamptz(6)
+  updated_by                                                                               String?                @db.Uuid
+  generation_config                                                                        Json                   @default("{}")
+  request_digest                                                                           String                 @default("")
+  lease_expires_at                                                                         DateTime               @default(dbgenerated("(clock_timestamp() + '00:05:00'::interval)")) @db.Timestamptz(6)
+  finish_reason                                                                            String?
   ai_tool_invocation                                                                       ai_tool_invocation[]
-  atlas_message_atlas_message_tenant_id_conversation_id_plane_run_idToatlas_run            atlas_message[]      @relation("atlas_message_tenant_id_conversation_id_plane_run_idToatlas_run")
-  principal_atlas_run_tenant_id_cancellation_requested_byToprincipal                       principal?           @relation("atlas_run_tenant_id_cancellation_requested_byToprincipal", fields: [tenant_id, cancellation_requested_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_cancelled_by_fk")
-  principal_atlas_run_tenant_id_created_byToprincipal                                      principal            @relation("atlas_run_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_created_by_fk")
-  atlas_message_atlas_run_tenant_id_conversation_id_plane_input_message_idToatlas_message  atlas_message        @relation("atlas_run_tenant_id_conversation_id_plane_input_message_idToatlas_message", fields: [tenant_id, conversation_id, plane, input_message_id], references: [tenant_id, conversation_id, plane, id], onDelete: NoAction, onUpdate: NoAction, map: "atlas_run_input_message_fk")
-  ai_agent_run                                                                             ai_agent_run?        @relation(fields: [tenant_id, metering_run_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_metering_fk")
-  atlas_message_atlas_run_tenant_id_conversation_id_plane_output_message_idToatlas_message atlas_message        @relation("atlas_run_tenant_id_conversation_id_plane_output_message_idToatlas_message", fields: [tenant_id, conversation_id, plane, output_message_id], references: [tenant_id, conversation_id, plane, id], onDelete: NoAction, onUpdate: NoAction, map: "atlas_run_output_message_fk")
-  principal_atlas_run_tenant_id_principal_idToprincipal                                    principal            @relation("atlas_run_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_principal_fk")
-  tenant                                                                                   tenant               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "atlas_run_tenant_fk")
-  atlas_thread                                                                             atlas_thread         @relation(fields: [tenant_id, conversation_id, plane], references: [tenant_id, conversation_id, plane], onDelete: Cascade, onUpdate: NoAction, map: "atlas_run_thread_fk")
-  principal_atlas_run_tenant_id_updated_byToprincipal                                      principal?           @relation("atlas_run_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_updated_by_fk")
+  atlas_message_atlas_message_tenant_id_conversation_id_plane_run_idToatlas_run            atlas_message[]        @relation("atlas_message_tenant_id_conversation_id_plane_run_idToatlas_run")
+  atlas_provider_usage                                                                     atlas_provider_usage[]
+  principal_atlas_run_tenant_id_cancellation_requested_byToprincipal                       principal?             @relation("atlas_run_tenant_id_cancellation_requested_byToprincipal", fields: [tenant_id, cancellation_requested_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_cancelled_by_fk")
+  principal_atlas_run_tenant_id_created_byToprincipal                                      principal              @relation("atlas_run_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_created_by_fk")
+  atlas_message_atlas_run_tenant_id_conversation_id_plane_input_message_idToatlas_message  atlas_message          @relation("atlas_run_tenant_id_conversation_id_plane_input_message_idToatlas_message", fields: [tenant_id, conversation_id, plane, input_message_id], references: [tenant_id, conversation_id, plane, id], onDelete: NoAction, onUpdate: NoAction, map: "atlas_run_input_message_fk")
+  ai_agent_run                                                                             ai_agent_run?          @relation(fields: [tenant_id, metering_run_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_metering_fk")
+  atlas_message_atlas_run_tenant_id_conversation_id_plane_output_message_idToatlas_message atlas_message          @relation("atlas_run_tenant_id_conversation_id_plane_output_message_idToatlas_message", fields: [tenant_id, conversation_id, plane, output_message_id], references: [tenant_id, conversation_id, plane, id], onDelete: NoAction, onUpdate: NoAction, map: "atlas_run_output_message_fk")
+  principal_atlas_run_tenant_id_principal_idToprincipal                                    principal              @relation("atlas_run_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_principal_fk")
+  tenant                                                                                   tenant                 @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "atlas_run_tenant_fk")
+  atlas_thread                                                                             atlas_thread           @relation(fields: [tenant_id, conversation_id, plane], references: [tenant_id, conversation_id, plane], onDelete: Cascade, onUpdate: NoAction, map: "atlas_run_thread_fk")
+  principal_atlas_run_tenant_id_updated_byToprincipal                                      principal?             @relation("atlas_run_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_run_updated_by_fk")
 
   @@unique([tenant_id, client_request_id], map: "atlas_run_client_request_uq")
   @@unique([tenant_id, conversation_id, plane, input_message_id], map: "atlas_run_input_uq")
@@ -733,6 +753,7 @@ model atlas_tenant_quota_reservation {
   created_by                                                                 String                    @db.Uuid
   updated_at                                                                 DateTime?                 @db.Timestamptz(6)
   updated_by                                                                 String?                   @db.Uuid
+  usage_source                                                               String?
   principal_atlas_tenant_quota_reservation_tenant_id_created_byToprincipal   principal                 @relation("atlas_tenant_quota_reservation_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_created_by_fk")
   principal_atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal principal                 @relation("atlas_tenant_quota_reservation_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_principal_fk")
   principal_atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal   principal?                @relation("atlas_tenant_quota_reservation_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "atlas_tenant_quota_reservation_updated_by_fk")
@@ -1168,6 +1189,7 @@ model delegation {
   created_by                                             String             @db.Uuid
   updated_at                                             DateTime?          @db.Timestamptz(6)
   updated_by                                             String?            @db.Uuid
+  version                                                Int                @default(1)
   principal_delegation_tenant_id_approved_byToprincipal  principal?         @relation("delegation_tenant_id_approved_byToprincipal", fields: [tenant_id, approved_by], references: [tenant_id, id], onUpdate: NoAction, map: "delegation_approved_by_fk")
   principal_delegation_tenant_id_delegate_idToprincipal  principal          @relation("delegation_tenant_id_delegate_idToprincipal", fields: [tenant_id, delegate_id], references: [tenant_id, id], onUpdate: NoAction, map: "delegation_delegate_fk")
   principal_delegation_tenant_id_delegator_idToprincipal principal          @relation("delegation_tenant_id_delegator_idToprincipal", fields: [tenant_id, delegator_id], references: [tenant_id, id], onUpdate: NoAction, map: "delegation_delegator_fk")
@@ -1183,6 +1205,7 @@ model delegation {
   @@schema("authz")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model delegation_grant {
@@ -1193,6 +1216,7 @@ model delegation_grant {
   scope_target_id String       @db.Uuid
   created_at      DateTime     @default(now()) @db.Timestamptz(6)
   created_by      String       @db.Uuid
+  version         Int          @default(1)
   delegation      delegation   @relation(fields: [tenant_id, delegation_id], references: [tenant_id, id], onUpdate: NoAction, map: "delegation_grant_delegation_fk")
   permission      permission   @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "delegation_grant_permission_fk")
   scope_target    scope_target @relation(fields: [tenant_id, scope_target_id], references: [tenant_id, id], onUpdate: NoAction, map: "delegation_grant_scope_fk")
@@ -1228,6 +1252,7 @@ model deny_rule {
   created_by        String           @db.Uuid
   updated_at        DateTime?        @db.Timestamptz(6)
   updated_by        String?          @db.Uuid
+  version           Int              @default(1)
   principal_group   principal_group? @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onUpdate: NoAction, map: "deny_rule_group_fk")
   permission        permission       @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "deny_rule_permission_fk")
   principal         principal?       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "deny_rule_principal_fk")
@@ -1323,6 +1348,7 @@ model group_member {
   created_by        String          @db.Uuid
   updated_at        DateTime?       @db.Timestamptz(6)
   updated_by        String?         @db.Uuid
+  version           Int             @default(1)
   principal_group   principal_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_member_group_fk")
   principal         principal       @relation(fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_member_principal_fk")
   tenant            tenant          @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "group_member_tenant_fk")
@@ -1355,6 +1381,7 @@ model group_role {
   created_by        String          @db.Uuid
   updated_at        DateTime?       @db.Timestamptz(6)
   updated_by        String?         @db.Uuid
+  version           Int             @default(1)
   principal_group   principal_group @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_role_group_fk")
   role              role            @relation(fields: [tenant_id, role_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_role_role_fk")
   scope_target      scope_target    @relation(fields: [tenant_id, scope_target_id], references: [tenant_id, id], onUpdate: NoAction, map: "group_role_scope_fk")
@@ -1364,6 +1391,24 @@ model group_role {
   @@index([tenant_id, group_id, role_id, scope_target_id, effective_from, effective_until], map: "group_role_current_idx", where: raw("((status)::text = 'active'::text)"))
   @@index([tenant_id, role_id], map: "group_role_role_fk_idx")
   @@index([tenant_id, scope_target_id, role_id], map: "group_role_scope_idx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("authz")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model management_receipt {
+  tenant_id        String   @db.Uuid
+  idempotency_key  String
+  command_id       String
+  principal_id     String   @db.Uuid
+  fingerprint      String
+  resource_id      String   @db.Uuid
+  resource_version Int
+  mutation_kind    String
+  created_at       DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+
+  @@id([tenant_id, idempotency_key])
+  @@unique([tenant_id, command_id])
   @@schema("authz")
 }
 
@@ -1393,6 +1438,7 @@ model override {
   created_by                                           String       @db.Uuid
   updated_at                                           DateTime?    @db.Timestamptz(6)
   updated_by                                           String?      @db.Uuid
+  version                                              Int          @default(1)
   principal_override_tenant_id_approved_byToprincipal  principal?   @relation("override_tenant_id_approved_byToprincipal", fields: [tenant_id, approved_by], references: [tenant_id, id], onUpdate: NoAction, map: "override_approved_by_fk")
   permission                                           permission   @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "override_permission_fk")
   principal_override_tenant_id_principal_idToprincipal principal    @relation("override_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "override_principal_fk")
@@ -1515,6 +1561,7 @@ model principal_group {
   created_by        String         @db.Uuid
   updated_at        DateTime?      @db.Timestamptz(6)
   updated_by        String?        @db.Uuid
+  version           Int            @default(1)
   deny_rule         deny_rule[]
   group_member      group_member[]
   group_role        group_role[]
@@ -1602,6 +1649,7 @@ model record_acl {
   created_by                                             String           @db.Uuid
   updated_at                                             DateTime?        @db.Timestamptz(6)
   updated_by                                             String?          @db.Uuid
+  version                                                Int              @default(1)
   principal_record_acl_tenant_id_granted_byToprincipal   principal        @relation("record_acl_tenant_id_granted_byToprincipal", fields: [tenant_id, granted_by], references: [tenant_id, id], onUpdate: NoAction, map: "record_acl_granted_by_fk")
   principal_group                                        principal_group? @relation(fields: [tenant_id, group_id], references: [tenant_id, id], onUpdate: NoAction, map: "record_acl_group_fk")
   permission                                             permission       @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "record_acl_permission_fk")
@@ -1638,6 +1686,7 @@ model role {
   created_by        String            @db.Uuid
   updated_at        DateTime?         @db.Timestamptz(6)
   updated_by        String?           @db.Uuid
+  version           Int               @default(1)
   group_role        group_role[]
   tenant            tenant            @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "role_tenant_fk")
   role_permission   role_permission[]
@@ -1659,6 +1708,7 @@ model role_permission {
   created_by    String     @db.Uuid
   updated_at    DateTime?  @db.Timestamptz(6)
   updated_by    String?    @db.Uuid
+  version       Int        @default(1)
   permission    permission @relation(fields: [permission_id], references: [id], onUpdate: NoAction, map: "role_permission_permission_fk")
   role          role       @relation(fields: [tenant_id, role_id], references: [tenant_id, id], onUpdate: NoAction, map: "role_permission_role_fk")
   tenant        tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "role_permission_tenant_fk")
@@ -1688,6 +1738,7 @@ model scope_target {
   created_by             String             @db.Uuid
   updated_at             DateTime?          @db.Timestamptz(6)
   updated_by             String?            @db.Uuid
+  version                Int                @default(1)
   delegation_grant       delegation_grant[]
   deny_rule              deny_rule[]
   group_role             group_role[]
@@ -1724,6 +1775,7 @@ model trusted_device {
   revocation_reason                                          String?
   created_at                                                 DateTime   @default(now()) @db.Timestamptz(6)
   created_by                                                 String     @db.Uuid
+  version                                                    Int        @default(1)
   principal_trusted_device_tenant_id_created_byToprincipal   principal  @relation("trusted_device_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "trusted_device_created_by_fk")
   principal_trusted_device_tenant_id_principal_idToprincipal principal  @relation("trusted_device_tenant_id_principal_idToprincipal", fields: [tenant_id, principal_id], references: [tenant_id, id], onUpdate: NoAction, map: "trusted_device_principal_fk")
   principal_trusted_device_tenant_id_revoked_byToprincipal   principal? @relation("trusted_device_tenant_id_revoked_byToprincipal", fields: [tenant_id, revoked_by], references: [tenant_id, id], onUpdate: NoAction, map: "trusted_device_revoked_by_fk")
@@ -1771,10 +1823,30 @@ model bank_account_validation_rule {
   created_by                     String    @db.Uuid
   updated_at                     DateTime? @db.Timestamptz(6)
   updated_by                     String?   @db.Uuid
+  version                        Int       @default(1)
+  test_fixtures                  Json      @default("[]")
   country                        country   @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "bank_account_validation_rule_country_fk")
   currency                       currency? @relation(fields: [currency_code], references: [code], onDelete: NoAction, onUpdate: NoAction, map: "bank_account_validation_rule_currency_fk")
 
   @@index([country_code, payment_rail_code, direction, priority(sort: Desc)], map: "bank_account_validation_rule_resolve_idx", where: raw("((status)::text = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model connector_health_job {
+  id                 String             @id @db.Uuid
+  tenant_id          String             @db.Uuid
+  connector_id       String             @db.Uuid
+  requested_by       String             @db.Uuid
+  status             String             @default("pending")
+  lease_until        DateTime?          @db.Timestamptz(6)
+  attempts           Int                @default(0)
+  result_code        String?
+  created_at         DateTime           @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  completed_at       DateTime?          @db.Timestamptz(6)
+  connector_instance connector_instance @relation(fields: [tenant_id, connector_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+
   @@schema("control")
 }
 
@@ -1804,6 +1876,8 @@ model connector_instance {
   created_by                                                          String                 @db.Uuid
   updated_at                                                          DateTime?              @db.Timestamptz(6)
   updated_by                                                          String?                @db.Uuid
+  version                                                             Int                    @default(1)
+  connector_health_job                                                connector_health_job[]
   principal_connector_instance_tenant_id_created_byToprincipal        principal              @relation("connector_instance_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "connector_instance_created_by_fk")
   principal_connector_instance_tenant_id_status_changed_byToprincipal principal?             @relation("connector_instance_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "connector_instance_status_changed_by_fk")
   tenant                                                              tenant                 @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "connector_instance_tenant_fk")
@@ -2273,6 +2347,8 @@ model feature_flag_catalog {
   created_by            String                  @db.Uuid
   updated_at            DateTime?               @db.Timestamptz(6)
   updated_by            String?                 @db.Uuid
+  cohort_strategy       String                  @default("principal_fnv1a_v2")
+  cohort_revision       Int                     @default(1)
   module                control_module?         @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "feature_flag_catalog_module_fk")
   feature_flag_override feature_flag_override[]
 
@@ -2301,6 +2377,7 @@ model feature_flag_override {
   created_by           String               @db.Uuid
   updated_at           DateTime?            @db.Timestamptz(6)
   updated_by           String?              @db.Uuid
+  version              Int                  @default(1)
   feature_flag_catalog feature_flag_catalog @relation(fields: [feature_flag_id], references: [id], onUpdate: NoAction, map: "feature_flag_override_feature_flag_fk")
   tenant               tenant               @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "feature_flag_override_tenant_fk")
 
@@ -2359,24 +2436,66 @@ model integration_endpoint {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model lookup_domain {
-  id                String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code              String         @unique(map: "lookup_domain_code_uq")
-  name              String
-  description       String?
-  source_schema     String
-  is_extensible     Boolean        @default(false)
-  metadata          Json           @default("{}")
-  status            String         @default("active")
-  is_active         Boolean?       @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at DateTime?      @db.Timestamptz(6)
-  status_changed_by String?        @db.Uuid
-  created_at        DateTime       @default(now()) @db.Timestamptz(6)
-  created_by        String         @db.Uuid
-  updated_at        DateTime?      @db.Timestamptz(6)
-  updated_by        String?        @db.Uuid
-  lookup_value      lookup_value[]
+  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                   String                   @unique(map: "lookup_domain_code_uq")
+  name                   String
+  description            String?
+  source_schema          String
+  is_extensible          Boolean                  @default(false)
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  is_active              Boolean?                 @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at      DateTime?                @db.Timestamptz(6)
+  status_changed_by      String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  version                Int                      @default(1)
+  source_revision        Int                      @default(0)
+  lookup_revision        lookup_revision[]
+  lookup_tenant_revision lookup_tenant_revision[]
+  lookup_value           lookup_value[]
 
   @@index([code], map: "lookup_domain_active_idx", where: raw("(status = 'active'::text)"))
+  @@schema("control")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model lookup_publication_receipt {
+  desired_state_id String          @id
+  fingerprint      String
+  domain_code      String
+  version          Int
+  lookup_revision  lookup_revision @relation(fields: [domain_code, version], references: [domain_code, version], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model lookup_revision {
+  domain_code                String
+  version                    Int
+  definition                 Json
+  created_at                 DateTime                     @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  lookup_publication_receipt lookup_publication_receipt[]
+  lookup_domain              lookup_domain                @relation(fields: [domain_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([domain_code, version])
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model lookup_tenant_revision {
+  tenant_id     String        @db.Uuid
+  domain_code   String
+  version       Int
+  values_json   Json
+  lookup_domain lookup_domain @relation(fields: [domain_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([tenant_id, domain_code, version])
   @@schema("control")
 }
 
@@ -2384,26 +2503,27 @@ model lookup_domain {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model lookup_value {
-  id                String        @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id         String?       @db.Uuid
-  code              String
-  name              String
-  domain_code       String
-  description       String?
-  category          String?
-  sort_order        Int           @default(0) @db.SmallInt
-  is_system         Boolean       @default(true)
-  metadata          Json          @default("{}")
-  status            String        @default("active")
-  is_active         Boolean?      @default(dbgenerated("(status = 'active'::text)"))
-  status_changed_at DateTime?     @db.Timestamptz(6)
-  status_changed_by String?       @db.Uuid
-  created_at        DateTime      @default(now()) @db.Timestamptz(6)
-  created_by        String        @db.Uuid
-  updated_at        DateTime?     @db.Timestamptz(6)
-  updated_by        String?       @db.Uuid
-  lookup_domain     lookup_domain @relation(fields: [domain_code], references: [code], onUpdate: NoAction, map: "lookup_value_domain_fk")
-  tenant            tenant?       @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "lookup_value_tenant_fk")
+  id                     String                   @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id              String?                  @db.Uuid
+  code                   String
+  name                   String
+  domain_code            String
+  description            String?
+  category               String?
+  sort_order             Int                      @default(0) @db.SmallInt
+  is_system              Boolean                  @default(true)
+  metadata               Json                     @default("{}")
+  status                 String                   @default("active")
+  is_active              Boolean?                 @default(dbgenerated("(status = 'active'::text)"))
+  status_changed_at      DateTime?                @db.Timestamptz(6)
+  status_changed_by      String?                  @db.Uuid
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  created_by             String                   @db.Uuid
+  updated_at             DateTime?                @db.Timestamptz(6)
+  updated_by             String?                  @db.Uuid
+  lookup_domain          lookup_domain            @relation(fields: [domain_code], references: [code], onUpdate: NoAction, map: "lookup_value_domain_fk")
+  tenant                 tenant?                  @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "lookup_value_tenant_fk")
+  lookup_value_reference lookup_value_reference[]
 
   @@unique([domain_code, code], map: "lookup_value_global_uq", where: raw("(tenant_id IS NULL)"))
   @@unique([tenant_id, domain_code, code], map: "lookup_value_tenant_uq", where: raw("(tenant_id IS NOT NULL)"))
@@ -2412,33 +2532,46 @@ model lookup_value {
   @@schema("control")
 }
 
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model lookup_value_reference {
+  tenant_id    String       @db.Uuid
+  value_id     String       @db.Uuid
+  owner_type   String
+  owner_id     String       @db.Uuid
+  lookup_value lookup_value @relation(fields: [value_id], references: [id], onUpdate: NoAction)
+
+  @@id([tenant_id, value_id, owner_type, owner_id])
+  @@schema("control")
+}
+
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model control_module {
-  id                                            String                     @id(map: "control_module_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                                          String                     @unique(map: "control_module_code_uq")
+  id                                            String                               @id(map: "control_module_pkey") @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                                          String                               @unique(map: "control_module_code_uq")
   name                                          String
   description                                   String?
   icon_key                                      String?
-  config                                        Json                       @default("{}")
-  metadata                                      Json                       @default("{}")
-  status                                        String                     @default("active")
-  is_active                                     Boolean?                   @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                             DateTime?                  @db.Timestamptz(6)
-  status_changed_by                             String?                    @db.Uuid
-  created_at                                    DateTime                   @default(now()) @db.Timestamptz(6)
-  created_by                                    String                     @db.Uuid
-  updated_at                                    DateTime?                  @db.Timestamptz(6)
-  updated_by                                    String?                    @db.Uuid
+  config                                        Json                                 @default("{}")
+  metadata                                      Json                                 @default("{}")
+  status                                        String                               @default("active")
+  is_active                                     Boolean?                             @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                             DateTime?                            @db.Timestamptz(6)
+  status_changed_by                             String?                              @db.Uuid
+  created_at                                    DateTime                             @default(now()) @db.Timestamptz(6)
+  created_by                                    String                               @db.Uuid
+  updated_at                                    DateTime?                            @db.Timestamptz(6)
+  updated_by                                    String?                              @db.Uuid
   permission                                    permission[]
   feature_flag_catalog                          feature_flag_catalog[]
-  principal_module_created_byToprincipal        principal                  @relation("module_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "control_module_created_by_fk")
-  principal_module_status_changed_byToprincipal principal?                 @relation("module_status_changed_byToprincipal", fields: [status_changed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "control_module_status_changed_by_fk")
-  principal_module_updated_byToprincipal        principal?                 @relation("module_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "control_module_updated_by_fk")
+  principal_module_created_byToprincipal        principal                            @relation("module_created_byToprincipal", fields: [created_by], references: [id], onUpdate: NoAction, map: "control_module_created_by_fk")
+  principal_module_status_changed_byToprincipal principal?                           @relation("module_status_changed_byToprincipal", fields: [status_changed_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "control_module_status_changed_by_fk")
+  principal_module_updated_byToprincipal        principal?                           @relation("module_updated_byToprincipal", fields: [updated_by], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "control_module_updated_by_fk")
   parameter_definition                          parameter_definition[]
   policy_definition                             policy_definition[]
   subscription_plan_module                      subscription_plan_module[]
+  tenant_module_entitlement_override            tenant_module_entitlement_override[]
   usage_metric_catalog                          usage_metric_catalog[]
   workspace_module                              workspace_module?
 
@@ -2699,6 +2832,7 @@ model parameter_definition {
   created_by             String                   @db.Uuid
   updated_at             DateTime?                @db.Timestamptz(6)
   updated_by             String?                  @db.Uuid
+  revision               Int                      @default(1)
   module                 control_module?          @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "parameter_definition_module_fk")
   tenant_parameter_value tenant_parameter_value[]
 
@@ -2998,6 +3132,8 @@ model rounding_rule {
   created_by                                                     String             @db.Uuid
   updated_at                                                     DateTime?          @db.Timestamptz(6)
   updated_by                                                     String?            @db.Uuid
+  version                                                        Int                @default(1)
+  configured_contexts                                            Json               @default("[]")
   rounding_context                                               rounding_context[]
   principal_rounding_rule_tenant_id_created_byToprincipal        principal          @relation("rounding_rule_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "rounding_rule_created_by_fk")
   principal_rounding_rule_tenant_id_status_changed_byToprincipal principal?         @relation("rounding_rule_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "rounding_rule_status_changed_by_fk")
@@ -3086,23 +3222,28 @@ model routing_rule {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model subscription_plan {
-  id                            String                          @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  code                          String                          @unique(map: "subscription_plan_code_uq")
-  name                          String
-  max_users                     Int?
-  sort_order                    Int                             @default(0) @db.SmallInt
-  metadata                      Json                            @default("{}")
-  status                        String                          @default("active")
-  is_active                     Boolean?                        @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at             DateTime?                       @db.Timestamptz(6)
-  status_changed_by             String?                         @db.Uuid
-  created_at                    DateTime                        @default(now()) @db.Timestamptz(6)
-  created_by                    String                          @db.Uuid
-  updated_at                    DateTime?                       @db.Timestamptz(6)
-  updated_by                    String?                         @db.Uuid
-  subscription_plan_module      subscription_plan_module[]
-  subscription_plan_usage_limit subscription_plan_usage_limit[]
-  tenant                        tenant[]
+  id                                 String                               @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  code                               String                               @unique(map: "subscription_plan_code_uq")
+  name                               String
+  max_users                          Int?
+  sort_order                         Int                                  @default(0) @db.SmallInt
+  metadata                           Json                                 @default("{}")
+  status                             String                               @default("active")
+  is_active                          Boolean?                             @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                  DateTime?                            @db.Timestamptz(6)
+  status_changed_by                  String?                              @db.Uuid
+  created_at                         DateTime                             @default(now()) @db.Timestamptz(6)
+  created_by                         String                               @db.Uuid
+  updated_at                         DateTime?                            @db.Timestamptz(6)
+  updated_by                         String?                              @db.Uuid
+  entitlement_version                Int                                  @default(1)
+  entitlement_effective_from         DateTime                             @default(dbgenerated("date_trunc('milliseconds'::text, now())")) @db.Timestamptz(6)
+  subscription_plan_module           subscription_plan_module[]
+  subscription_plan_usage_limit      subscription_plan_usage_limit[]
+  tenant_module_entitlement_override tenant_module_entitlement_override[]
+  tenant_usage_limit_override        tenant_usage_limit_override[]
+  tenant                             tenant[]
+  subscription_plan_entitlement      subscription_plan_entitlement[]
 
   @@index([sort_order, code], map: "subscription_plan_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("control")
@@ -3165,6 +3306,35 @@ model subscription_plan_usage_limit {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model tenant_module_entitlement_override {
+  id                                                                           String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                    String            @db.Uuid
+  subscription_plan_id                                                         String            @db.Uuid
+  module_id                                                                    String            @db.Uuid
+  version                                                                      Int               @default(1)
+  reason                                                                       String
+  effective_from                                                               DateTime          @db.Timestamptz(6)
+  effective_until                                                              DateTime?         @db.Timestamptz(6)
+  status                                                                       String            @default("active")
+  created_at                                                                   DateTime          @default(now()) @db.Timestamptz(6)
+  created_by                                                                   String            @db.Uuid
+  updated_at                                                                   DateTime?         @db.Timestamptz(6)
+  updated_by                                                                   String?           @db.Uuid
+  status_changed_at                                                            DateTime?         @db.Timestamptz(6)
+  status_changed_by                                                            String?           @db.Uuid
+  principal_tenant_module_entitlement_override_tenant_id_created_byToprincipal principal         @relation("tenant_module_entitlement_override_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "tenant_module_entitlement_override_actor_fk")
+  module                                                                       control_module    @relation(fields: [module_id], references: [id], onUpdate: NoAction, map: "tenant_module_entitlement_override_module_fk")
+  subscription_plan                                                            subscription_plan @relation(fields: [subscription_plan_id], references: [id], onUpdate: NoAction, map: "tenant_module_entitlement_override_plan_fk")
+  tenant                                                                       tenant            @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "tenant_module_entitlement_override_tenant_fk")
+  principal_tenant_module_entitlement_override_tenant_id_updated_byToprincipal principal?        @relation("tenant_module_entitlement_override_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "tenant_module_entitlement_override_updated_actor_fk")
+
+  @@unique([tenant_id, id], map: "tenant_module_entitlement_override_tenant_uq")
+  @@schema("control")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This table contains exclusion constraints and requires additional setup for migrations. Visit https://pris.ly/d/exclusion-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model tenant_parameter_value {
@@ -3183,6 +3353,7 @@ model tenant_parameter_value {
   created_by              String               @db.Uuid
   updated_at              DateTime?            @db.Timestamptz(6)
   updated_by              String?              @db.Uuid
+  version                 Int                  @default(1)
   parameter_definition    parameter_definition @relation(fields: [parameter_definition_id], references: [id], onUpdate: NoAction, map: "tenant_parameter_value_definition_fk")
   tenant                  tenant               @relation(fields: [tenant_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "tenant_parameter_value_tenant_fk")
 
@@ -3212,7 +3383,10 @@ model tenant_usage_limit_override {
   created_by           String               @db.Uuid
   updated_at           DateTime?            @db.Timestamptz(6)
   updated_by           String?              @db.Uuid
+  subscription_plan_id String?              @db.Uuid
+  version              Int                  @default(1)
   usage_metric_catalog usage_metric_catalog @relation(fields: [usage_metric_id], references: [id], onUpdate: NoAction, map: "tenant_usage_limit_override_metric_fk")
+  subscription_plan    subscription_plan?   @relation(fields: [subscription_plan_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "tenant_usage_limit_override_plan_fk")
   tenant               tenant               @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "tenant_usage_limit_override_tenant_fk")
 
   @@unique([tenant_id, id], map: "tenant_usage_limit_override_tenant_id_uq")
@@ -5470,8 +5644,8 @@ model address_link {
   tenant                   tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
   principal                principal? @relation(fields: [tenant_id, usage_denied_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_usage_denied_by_fk")
 
-  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_current_primary_uq", where: raw("(is_primary AND (effective_until IS NULL) AND (usage_status <> 'cancelled'::text))"))
-  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id], map: "address_link_owner_purpose_address_uq", where: raw("(usage_status <> 'cancelled'::text)"))
+  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_current_primary_uq", where: raw("(is_primary AND (effective_until IS NULL))"))
+  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id], map: "address_link_owner_purpose_address_uq")
   @@unique([tenant_id, id], map: "address_link_tenant_id_uq")
   @@index([tenant_id, address_id], map: "address_link_address_idx")
   @@index([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_owner_idx")
@@ -5950,6 +6124,8 @@ model principal {
   subscription_plan_module_subscription_plan_module_created_byToprincipal                                 subscription_plan_module[]                     @relation("subscription_plan_module_created_byToprincipal")
   subscription_plan_module_subscription_plan_module_status_changed_byToprincipal                          subscription_plan_module[]                     @relation("subscription_plan_module_status_changed_byToprincipal")
   subscription_plan_module_subscription_plan_module_updated_byToprincipal                                 subscription_plan_module[]                     @relation("subscription_plan_module_updated_byToprincipal")
+  tenant_module_entitlement_override_tenant_module_entitlement_override_tenant_id_created_byToprincipal   tenant_module_entitlement_override[]           @relation("tenant_module_entitlement_override_tenant_id_created_byToprincipal")
+  tenant_module_entitlement_override_tenant_module_entitlement_override_tenant_id_updated_byToprincipal   tenant_module_entitlement_override[]           @relation("tenant_module_entitlement_override_tenant_id_updated_byToprincipal")
   webhook_subscription_webhook_subscription_tenant_id_created_byToprincipal                               control_webhook_subscription[]                 @relation("webhook_subscription_tenant_id_created_byToprincipal")
   webhook_subscription_webhook_subscription_tenant_id_status_changed_byToprincipal                        control_webhook_subscription[]                 @relation("webhook_subscription_tenant_id_status_changed_byToprincipal")
   webhook_subscription_webhook_subscription_tenant_id_updated_byToprincipal                               control_webhook_subscription[]                 @relation("webhook_subscription_tenant_id_updated_byToprincipal")
@@ -6643,6 +6819,7 @@ model tenant {
   rounding_context                                                                               rounding_context[]
   rounding_rule                                                                                  rounding_rule[]
   routing_rule                                                                                   routing_rule[]
+  tenant_module_entitlement_override                                                             tenant_module_entitlement_override[]
   tenant_parameter_value                                                                         tenant_parameter_value[]
   tenant_usage_limit_override                                                                    tenant_usage_limit_override[]
   control_webhook_subscription                                                                           control_webhook_subscription[]
@@ -8359,6 +8536,7 @@ model control_runtime_command_approval_request {
   command_fingerprint                       String
   requested_by                              String                                     @db.Uuid
   requested_at                              DateTime                                   @db.Timestamptz(6)
+  preview_fingerprint                       String?
   control_runtime_command_approval_decision control_runtime_command_approval_decision?
 
   @@index([tenant_id, requested_at(sort: Desc)], map: "control_runtime_command_approval_request_tenant_idx")
@@ -8546,6 +8724,23 @@ model job_execution_command {
 
   @@index([tenant_id, requested_by, requested_at(sort: Desc)], map: "job_execution_command_actor_idx")
   @@index([execution_id, requested_at(sort: Desc)], map: "job_execution_command_execution_idx")
+  @@schema("ops")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model job_execution_duplicate_archive {
+  execution_id           String   @id @db.Uuid
+  canonical_execution_id String   @db.Uuid
+  repair_id              String
+  source_database        String
+  archived_at            DateTime @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  archived_by            String   @default(dbgenerated("SESSION_USER"))
+  original_row           Json
+  canonical_row          Json
+  reason                 String
+
   @@schema("ops")
 }
 
@@ -9665,6 +9860,26 @@ model snapshot_network_account_profile_publication {
   @@unique([owner_tenant_id, id], map: "network_account_profile_publication_snapshot_owner_id_uq")
   @@index([recipient_tenant_id, network_relationship_id, captured_at(sort: Desc)], map: "network_account_profile_publication_snapshot_recipient_idx")
   @@map("network_account_profile_publication")
+  @@schema("snapshot")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model subscription_plan_entitlement {
+  subscription_plan_id String            @db.Uuid
+  version              Int
+  code                 String
+  effective_from       DateTime          @db.Timestamptz(6)
+  status               String
+  modules              Json
+  limits               Json
+  dimensions           Json
+  captured_at          DateTime          @default(dbgenerated("clock_timestamp()")) @db.Timestamptz(6)
+  captured_by          String            @db.Uuid
+  subscription_plan    subscription_plan @relation(fields: [subscription_plan_id], references: [id], onUpdate: NoAction, map: "subscription_plan_entitlement_plan_fk")
+
+  @@id([subscription_plan_id, version])
+  @@index([code, effective_from(sort: Desc), version(sort: Desc)], map: "subscription_plan_entitlement_effective_idx")
   @@schema("snapshot")
 }
 

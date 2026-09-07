@@ -55,7 +55,7 @@ export const atlasRequests: Readonly<Record<string, RouteContract["request"]>> =
     "atlas.revokeThreadParticipant": { body: version },
     "atlas.runThread": body(
       {
-        clientRequestId: text,
+        clientRequestId: uuid,
         publicModelId: text,
         dataClass: text,
         userText: text,

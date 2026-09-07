@@ -221,7 +221,10 @@ export interface HostConfig {
   atlas: {
     enabled: boolean;
     toolsEnabled: boolean;
+    mutationsEnabled?: boolean;
+    generationEnabled?: boolean;
     persistenceEnabled: boolean;
+    localInferenceConfigPath?: string;
   };
 }
 
@@ -1006,8 +1009,11 @@ export function loadConfig(): HostConfig {
       ),
     },
     atlas: {
+      localInferenceConfigPath: process.env["ATLAS_LOCAL_INFERENCE_CONFIG_PATH"]?.trim() || undefined,
       enabled: readBoolean("ATLAS_AGENT_ENABLED", false),
       toolsEnabled: readBoolean("ATLAS_AGENT_TOOLS_ENABLED", false),
+      mutationsEnabled: readBoolean("ATLAS_AGENT_MUTATIONS_ENABLED", false),
+      generationEnabled: readBoolean("ATLAS_AGENT_GENERATION_ENABLED", true),
       persistenceEnabled: readBoolean(
         "ATLAS_CONVERSATION_PERSISTENCE_ENABLED",
         false,

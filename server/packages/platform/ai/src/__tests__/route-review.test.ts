@@ -169,7 +169,7 @@ const routes: [string, string, unknown?, number?][] = [
     "POST",
     `/api/atlas/threads/${id}/runs`,
     {
-      clientRequestId: "r",
+      clientRequestId: "10000000-0000-4000-8000-000000000099",
       publicModelId: "atlas-fast",
       dataClass: "internal",
       userText: "Hello",
@@ -322,7 +322,7 @@ it("keeps history available and returns an explicit 503 when inference is not co
   expect(history.status).toBe(200);
   expect(await history.json()).toEqual({ items: [], nextCursor: null });
   const run = await h.request("POST", `/api/atlas/threads/${id}/runs`, {
-    clientRequestId: "r", publicModelId: "atlas-fast", dataClass: "internal", userText: "hello", catalogPolicyRevision: "1",
+    clientRequestId: "10000000-0000-4000-8000-000000000099", publicModelId: "atlas-fast", dataClass: "internal", userText: "hello", catalogPolicyRevision: "1",
   });
   expect(run.status).toBe(503);
   expect(await run.json()).toMatchObject({ code: "PROVIDER_UNAVAILABLE" });

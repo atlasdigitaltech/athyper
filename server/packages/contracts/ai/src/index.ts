@@ -10,3 +10,5 @@ export * from "./tools.js";
 export * from "./runtime-schemas.js";
 export * from "./quota.js";
 export * from "./experience-configuration.js";
+
+export * from "./local-context.js";

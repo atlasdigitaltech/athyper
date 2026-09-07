@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { OllamaModelProvider } from "@athyper/server-adapter-ai-ollama";
+import { createAtlasLocalGenerationServices, parseAtlasLocalConfiguration } from "@athyper/server-platform-ai";
 import { queueLocalVerificationEmail, localVerificationEmailHandler } from "./local-verification-delivery.js";
 import { KyselyContactChallengeRepository, createContactVerificationAuthority, createMasterDataAuthority } from "@athyper/server-service-master-data";
 import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
@@ -206,6 +209,7 @@ import {
   AtlasSurfaceDraftGenerator,
   AtlasThreadService,
   AtlasToolRegistry,
+  createAtlasRecordDataGateway,
   createBusinessPartnerAtlasTools,
   createBusinessPartnerAtlasCommandBus,
   AtlasToolService,
@@ -4493,7 +4497,7 @@ export function registerAtlas(
   const routesEnabled = Boolean(
     config?.atlas.enabled && config.atlas.persistenceEnabled,
   );
-  const toolsEnabled = Boolean(routesEnabled && config?.atlas.toolsEnabled);
+  const toolsEnabled = Boolean(routesEnabled && config?.atlas.toolsEnabled && config.atlas.generationEnabled !== false);
   if (!routesEnabled) {
     if (container.platform.experience)
       container.platform.httpRegistrars.push((application) =>
@@ -4509,12 +4513,52 @@ export function registerAtlas(
     };
     return;
   }
-  if (!dependencies) {
-    if (toolsEnabled) throw new Error("Atlas tools require the full provider and command-boundary composition.");
-    const { threads, admission } = createAtlasConversationServices(transactions);
-    container.platform.ai = { ledger, threads, routesEnabled: true, toolsEnabled: false };
+  if (!dependencies || config?.atlas.generationEnabled === false) {
+    if (toolsEnabled && !config?.atlas.localInferenceConfigPath) throw new Error("Atlas tools require a configured local runtime or full provider composition.");
+    const localRegistry = new AtlasToolRegistry(createBusinessPartnerAtlasTools());
+    const localAvailable = (access: "read" | "mutation" = "read") => Boolean(container.platform.metadata && container.services.records && (access === "read" || container.services.businessPartnerRequests));
+    const localTools = toolsEnabled ? new AtlasToolService({
+      registry: localRegistry, proposals: ledger,
+      authority: { async authorize({context,manifest}) {
+        const allowed = context.planeKey === "neon" && localAvailable(manifest.access) &&
+          context.permissions.allowed.includes("neon.ai.agent.use") &&
+          !context.permissions.denied.includes("neon.ai.agent.use") &&
+          !context.permissions.planLocked.includes("neon.ai.agent.use") &&
+          !context.permissions.planeExcluded.includes("neon.ai.agent.use") &&
+          (manifest.access === "read" || Boolean(config?.atlas.mutationsEnabled));
+        return {allowed,policyRevision:`atlas-local-tools-v1:mutations-${Boolean(config?.atlas.mutationsEnabled)}`};
+      }},
+      records: { async query(input) {
+        const metadata = container.platform.metadata, records = container.services.records;
+        if (!metadata || !records) throw new Error("Authorized Records runtime is unavailable.");
+        return createAtlasRecordDataGateway({metadata,records:records.queries,maxRows:1,maxResponseBytes:2048,allowProjectedContentRevision:true,
+          // Records already enforces field permissions and collection scope. This only narrows its projection.
+          fieldSecurity:{async project({context,entityCode,descriptorHash,rows,requestedFields}){
+            const descriptor=await metadata.getEntityDescriptor(context,entityCode);
+            if(!descriptor || descriptor.compiledHash!==descriptorHash || !container.platform.authorizer)throw new Error("Atlas descriptor authorization changed.");
+            const permitted:string[]=[];
+            for(const key of requestedFields){const field=descriptor.fields.find(f=>f.key===key);if(!field)continue;
+              if(field.readPermissionCode && !(await container.platform.authorizer.authorize({context,permissionCode:field.readPermissionCode,resource:{tenantId:context.tenantId,entityCode,operationKey:"read",resourceCode:entityCode,field:key}})).allowed)continue;
+              permitted.push(key);
+            }
+            return rows.map(row=>Object.fromEntries(permitted.filter(key=>Object.hasOwn(row,key)).map(key=>[key,row[key]])));
+          }}
+        }).query(input);
+      }},
+      confirmations: { async verify({context,proposal}) {return proposal.tenantId===context.tenantId && proposal.planeKey===context.planeKey && proposal.principalId===context.principalId && proposal.authorizationEpoch===context.authEpoch && proposal.authorizationProfileHash===context.profileHash;} },
+      commands: createBusinessPartnerAtlasCommandBus({fallback:{async execute(){throw new Error("Unregistered local Atlas command.");}},submit:async command=>{
+        if(!config?.atlas.mutationsEnabled || !container.services.businessPartnerRequests)throw new Error("Atlas mutations are disabled.");
+        return container.services.businessPartnerRequests.submit(command);
+      }}),
+    }) : undefined;
+    const localCoordinator = localTools ? new AtlasRegisteredToolCoordinator(localRegistry,localTools) : undefined;
+    const localConfig = config?.atlas.generationEnabled !== false && config?.atlas.localInferenceConfigPath ? parseAtlasLocalConfiguration(JSON.parse(readFileSync(config.atlas.localInferenceConfigPath,"utf8"))) : undefined;
+    const localServices = localConfig ? createAtlasLocalGenerationServices({transactions,config:localConfig,provider:new OllamaModelProvider({modelDigest:localConfig.model.digest,engineVersion:localConfig.engine.version}),...(localCoordinator?{tools:{coordinator:localCoordinator,readEnabled:toolsEnabled,mutationsEnabled:Boolean(config?.atlas.mutationsEnabled),available:localAvailable}}:{})}) : undefined;
+    const { threads, admission } = localServices ?? createAtlasConversationServices(transactions);
+    const runtime = localServices?.runtime;
+    container.platform.ai = { ledger, threads, ...(runtime ? {runtime} : {}), ...(localTools?{tools:localTools}:{}), routesEnabled: true, toolsEnabled };
     container.platform.httpRegistrars.push(application => registerAtlasRoutes(application as never, {
-      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, threads, admission,
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, threads, admission, ...(runtime ? {runtime} : {}), ...(localTools&&localServices?{tools:localTools,runs:localServices.runs}:{}),
     }));
     container.runtimes.health.register("atlas.conversation-persistence", async () => {
       await Promise.all(Object.values(databases).map(database => sql`SELECT conversation_id FROM ai.atlas_thread LIMIT 0`.execute(database!)));

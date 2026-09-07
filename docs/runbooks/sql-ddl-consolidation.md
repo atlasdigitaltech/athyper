@@ -1,11 +1,12 @@
 # Local-development SQL DDL consolidation
 
-The following 16 development migrations are consolidated into the canonical DDL. Their SQL files and entries in the Studio, Neon and Mesh forward-migration manifests have been removed. The foundation runner loads the definitions through `server/db/ddl/planes/<plane>/_manifest.txt`.
+The following 17 development migrations are consolidated into the canonical DDL. Their SQL files and entries in the Studio, Neon and Mesh forward-migration manifests have been removed. The foundation runner loads the definitions through `server/db/ddl/planes/<plane>/_manifest.txt`.
 
 All paths below are relative to `server/db/ddl/`.
 
 | Retired script | Canonical definitions |
 | --- | --- |
+| `20260907_atlas_local_generation.sql` | `common/ai/{03_tables,05_constraints,07_functions,08_triggers,10_rls,11_grants}.sql` |
 | `20260906_governance_deviation_idempotency.sql` | `common/governance/03_tables.sql` |
 | `20260907_entitlement_repository.sql` | `common/control/{03_tables,05_constraints,07_functions,08_triggers,10_rls,11_grants}.sql`, each plane's `control/03_tables.sql`, `common/audit/12_reference_seed.sql` |
 | `20260907_mesh_api_review.sql` | `planes/mesh/mesh/11_grants.sql` |

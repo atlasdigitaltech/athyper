@@ -97,7 +97,7 @@ describe("BP-X-011 / R9 deterministic Business Partner evaluations", () => {
     expect(h.submit).not.toHaveBeenCalled();
   });
   it.each(["stale_version", "failed_validation", "wrong_scope", "maker_checker"])("BP-EVAL-008: propagates owner %s denial and retains failure evidence", async reason => {
-    const h = harness(); h.submit.mockRejectedValue(new Error(reason)); const { preview } = await h.preview();
+    const h = harness(); h.submit.mockRejectedValue(Object.assign(new Error(reason),{status:409})); const { preview } = await h.preview();
     await expect(h.service.run({ context, proposalId: preview.proposalId, arguments: args, confirmationToken: preview.confirmationToken })).rejects.toThrow(reason);
     expect(h.store.rows.get(preview.proposalId)?.status).toBe("failed"); expect(h.fallback).not.toHaveBeenCalled();
   });
@@ -139,4 +139,51 @@ describe("BP-X-011 / R9 deterministic Business Partner evaluations", () => {
     expect(h.store.rows.get(preview.proposalId)?.status).toBe("proposed");
   });
 
+});
+
+it('rejects unauthorized completed-result replay after permission revocation',async()=>{
+ const h=harness(),{preview}=await h.preview();const input={context,proposalId:preview.proposalId,arguments:args,confirmationToken:preview.confirmationToken};await h.service.run(input);
+ await expect(h.service.run({...input,context:{...context,permissions:{...context.permissions,allowed:[]}}})).rejects.toMatchObject({code:'TOOL_DENIED'});expect(h.submit).toHaveBeenCalledOnce();
+});
+it('rejects an active duplicate while the domain service owns execution',async()=>{
+ const h=harness();let release!:()=>void;const pending=new Promise<void>(r=>release=r),original=h.submit.getMockImplementation()!;
+ h.submit.mockImplementation(async()=>{await pending;return original();});
+ const {preview}=await h.preview(),input={context,proposalId:preview.proposalId,arguments:args,confirmationToken:preview.confirmationToken};const first=h.service.run(input);
+ await vi.waitFor(()=>expect(h.submit).toHaveBeenCalledOnce());await expect(h.service.run(input)).rejects.toMatchObject({code:'TOOL_IN_PROGRESS'});release();await first;await h.service.run(input);expect(h.submit).toHaveBeenCalledOnce();
+});
+it('does not repeat a domain side effect when receipt persistence is interrupted',async()=>{
+ const h=harness(),{preview}=await h.preview();vi.spyOn(h.store,'complete').mockRejectedValueOnce(new Error('receipt interrupted'));
+ const input={context,proposalId:preview.proposalId,arguments:args,confirmationToken:preview.confirmationToken};await expect(h.service.run(input)).rejects.toMatchObject({code:'TOOL_IN_PROGRESS'});expect(h.store.rows.get(preview.proposalId)?.status).toBe('executing');await expect(h.service.run(input)).rejects.toMatchObject({code:'TOOL_IN_PROGRESS'});expect(h.submit).toHaveBeenCalledOnce();
+});
+it.each([{display_name:{injection:'object'}},{code:'x'.repeat(4097)}])('rejects a summary outside its registered field schema',async row=>{
+ const h=harness();h.query.mockResolvedValue({rows:[row],sources:[source],responseBytes:10,authorizationProfileHash:context.profileHash});await expect(h.coordinator.handle({context,runId:id,threadId:id,callId:'invalid-result',toolCode:'bp_read_summary',arguments:{recordId:id},mutationToolsAllowed:false})).rejects.toMatchObject({code:'TOOL_INVALID'});
+});
+it('passes only a validated operating-organization coordinate to Records',async()=>{
+ const h=harness();await h.coordinator.handle({context,runId:id,threadId:id,callId:'scope',toolCode:'bp_read_summary',arguments:{recordId:id,operatingOrganizationId:other},mutationToolsAllowed:false});expect(h.query).toHaveBeenCalledWith({context,request:expect.objectContaining({limit:1,scopeCoordinate:{operatingOrganizationId:other}})});
+ await expect(h.coordinator.handle({context,runId:id,threadId:id,callId:'bad-scope',toolCode:'bp_read_summary',arguments:{recordId:id,operatingOrganizationId:'untrusted'},mutationToolsAllowed:false})).rejects.toMatchObject({code:'TOOL_INVALID'});
+});
+
+it("cancels a read even when the underlying query ignores its abort signal", async () => {
+  const h = harness();
+  h.query.mockImplementation(() => new Promise(() => {}));
+  const controller = new AbortController();
+  const pending = h.coordinator.handle({ context, runId: id, threadId: id, callId: "cancel-read", toolCode: "bp_read_summary", arguments: { recordId: id }, mutationToolsAllowed: false, signal: controller.signal });
+  await vi.waitFor(() => expect(h.query).toHaveBeenCalledOnce());
+  controller.abort();
+  const result = await pending;
+  expect(result.result?.outcome).toBe("cancelled");
+  expect(h.submit).not.toHaveBeenCalled();
+});
+
+it("times out a read that never settles without invoking a mutation", async () => {
+  vi.useFakeTimers();
+  try {
+    const h = harness();
+    h.query.mockImplementation(() => new Promise(() => {}));
+    const pending = h.coordinator.handle({ context, runId: id, threadId: id, callId: "timeout-read", toolCode: "bp_read_summary", arguments: { recordId: id }, mutationToolsAllowed: false });
+    const rejected = expect(pending).rejects.toMatchObject({ code: "TOOL_CANCELLED" });
+    await vi.advanceTimersByTimeAsync(5_001);
+    await rejected;
+    expect(h.submit).not.toHaveBeenCalled();
+  } finally { vi.useRealTimers(); }
 });

@@ -782,3 +782,19 @@ BEGIN
     RETURN NEW;
 END;
 $function$;
+
+CREATE OR REPLACE FUNCTION ai.trg_guard_atlas_generation_metadata()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $function$
+BEGIN
+    IF OLD.generation_config IS DISTINCT FROM NEW.generation_config
+       OR OLD.request_digest IS DISTINCT FROM NEW.request_digest
+       OR OLD.lease_expires_at IS DISTINCT FROM NEW.lease_expires_at
+    THEN
+        RAISE EXCEPTION 'Atlas generation identity is immutable'
+            USING ERRCODE = 'object_not_in_prerequisite_state';
+    END IF;
+    RETURN NEW;
+END;
+$function$;

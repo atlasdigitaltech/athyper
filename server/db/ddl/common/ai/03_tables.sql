@@ -161,6 +161,7 @@ CREATE TABLE "ai"."atlas_tenant_quota_reservation" (
   "reserved_output_tokens" bigint NOT NULL,
   "actual_input_tokens" bigint,
   "actual_output_tokens" bigint,
+  "usage_source" text,
   "status" text DEFAULT 'reserved' NOT NULL,
   "expires_at" timestamp with time zone NOT NULL,
   "settled_at" timestamp with time zone,
@@ -248,6 +249,10 @@ CREATE TABLE "ai"."atlas_run" (
   "plane" text NOT NULL,
   "principal_id" uuid NOT NULL,
   "client_request_id" uuid NOT NULL,
+  "generation_config" jsonb DEFAULT '{}'::jsonb NOT NULL,
+  "request_digest" text DEFAULT ''::text NOT NULL,
+  "lease_expires_at" timestamp with time zone DEFAULT (clock_timestamp() + interval '5 minutes') NOT NULL,
+  "finish_reason" text,
   "input_message_id" uuid NOT NULL,
   "output_message_id" uuid NOT NULL,
   "status" text DEFAULT 'started'::text NOT NULL,
@@ -617,3 +622,16 @@ COMMENT ON COLUMN "ai"."atlas_thread"."retention_policy_id" IS 'Stable, versione
 COMMENT ON COLUMN "ai"."atlas_thread"."protected_summary_ref" IS 'Opaque reference to protected summary content. Never a provider conversation identifier.';
 
 COMMENT ON COLUMN "ai"."atlas_thread"."row_version" IS 'Optimistic concurrency token incremented by a database trigger on every update.';
+
+CREATE TABLE "ai"."atlas_provider_usage" (
+  "provider_call_id" uuid NOT NULL,
+  "tenant_id" uuid NOT NULL,
+  "run_id" uuid NOT NULL,
+  "provider_id" text NOT NULL,
+  "entry" jsonb NOT NULL,
+  "created_at" timestamp with time zone DEFAULT clock_timestamp() NOT NULL
+);
+
+COMMENT ON TABLE ai.atlas_provider_usage IS 'Content-free, idempotent provider usage receipts staged durably before atomic transcript/run finalization and append-only canonical metering.';
+
+COMMENT ON COLUMN ai.atlas_tenant_quota_reservation.usage_source IS 'Distinguishes final provider counters from conservative quota charges after missing final usage; estimates are never represented as provider-reported usage.';

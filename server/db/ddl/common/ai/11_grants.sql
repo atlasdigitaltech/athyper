@@ -386,3 +386,9 @@ GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_window" TO athyperadmin;
 GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_window" TO athyperapp;
 GRANT ALL PRIVILEGES ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperadmin;
 GRANT SELECT, INSERT, UPDATE ON TABLE "ai"."atlas_tenant_quota_reservation" TO athyperapp;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+   GRANT SELECT,INSERT ON ai.atlas_provider_usage TO athyper_runtime;
+ END IF;
+END $$;
