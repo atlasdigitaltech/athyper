@@ -1,10 +1,16 @@
+import { parseProviderVerificationKeys, type ProviderVerificationKey } from "@athyper/server-service-master-data";
 import { parseBusinessPartnerMetricsTargets, type BusinessPartnerMetricsTarget } from "../monitoring/business-partner-metrics.js";
 
 export interface HostConfig {
+  localContactDeliveryKey?: string;
+  localContactChallenge?: import("@athyper/server-service-master-data").LocalChallengeConfiguration;
+  masterDataVerificationKeys?: readonly ProviderVerificationKey[];
   port: number;
   logLevel: string;
   shutdownTimeoutMs: number;
   env: "local" | "staging" | "production";
+  /** Explicit local/QA transport simulation; never use as delivery evidence. */
+  notificationCapture?: boolean;
   mode: string;
   database: {
     connectionString: string | undefined;
@@ -198,6 +204,7 @@ export interface HostConfig {
     controlAdminConnectorLifecycleEnabled: boolean;
     controlAdminCycleConfigEnabled: boolean;
     controlAdminLocalCatalogReadsEnabled: boolean;
+    controlAdminParametersEnabled: boolean;
     controlAdminCatalogAuthoringEnabled: boolean;
     controlAdminRuntimeCommandsEnabled: boolean;
     recordSnapshotRoutesEnabled: boolean;
@@ -219,6 +226,12 @@ export interface HostConfig {
 }
 
 export function loadConfig(): HostConfig {
+  const verificationKeyJson = process.env["MASTER_DATA_VERIFICATION_KEYS_JSON"];
+  let masterDataVerificationKeys: readonly ProviderVerificationKey[] = [];
+  if (verificationKeyJson !== undefined) {
+    try { masterDataVerificationKeys = parseProviderVerificationKeys(JSON.parse(verificationKeyJson)); }
+    catch { throw new Error("Invalid MASTER_DATA_VERIFICATION_KEYS_JSON: configure scoped Ed25519 public keys with valid UTC key windows"); }
+  }
   const rawEnv = process.env["ATHYPER_ENV"] ?? process.env["ENVIRONMENT"];
   const env = (["local", "staging", "production"] as const).includes(
     rawEnv as "local" | "staging" | "production",
@@ -227,6 +240,23 @@ export function loadConfig(): HostConfig {
     : process.env["NODE_ENV"] === "production"
       ? "production"
       : "local";
+  const notificationCapture = readBoolean("NOTIFICATION_CAPTURE", false);
+  if (notificationCapture && (env !== "local" || (rawEnv !== "local"))) {
+    throw new Error("NOTIFICATION_CAPTURE requires explicit ATHYPER_ENV=local (including isolated QA)");
+  }
+  const localContactDeliveryKey = process.env["LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY"]?.trim();
+  if (localContactDeliveryKey && (env !== "local" || !notificationCapture || Buffer.from(localContactDeliveryKey,"base64").length !== 32)) throw new Error("Local delivery key requires local capture and 32 bytes");
+  const localChallengeEnabled = readBoolean("LOCAL_CONTACT_CHALLENGE_ENABLED", false);
+  const localContactChallenge = localChallengeEnabled ? {
+    environment: env, capture: notificationCapture,
+    tenantId: "44444444-4444-4444-8444-444444444444",
+    privateKeyPem: process.env["LOCAL_CONTACT_CHALLENGE_PRIVATE_KEY"] ?? "",
+    keyId: process.env["LOCAL_CONTACT_CHALLENGE_KEY_ID"] ?? "local-contact-challenge-v1",
+    pageUrl: "https://neon.dev.athyper.test/contact-verification.html",
+  } : undefined;
+  if (localContactChallenge && (env !== "local" || !notificationCapture || !localContactChallenge.privateKeyPem || !masterDataVerificationKeys.length || !localContactDeliveryKey)) {
+    throw new Error("Local contact challenges require local capture, private key and verifier trust");
+  }
   const mode = process.env["MODE"] ?? "api";
 
   const port = Number(process.env["PORT"] ?? 4000);
@@ -480,6 +510,9 @@ export function loadConfig(): HostConfig {
       "SMTP configuration requires SMTP_HOST, SMTP_FROM, and both or neither of SMTP_USER and SMTP_PASS",
     );
   }
+  if (notificationCapture && (emailProvider !== "smtp" || !smtpHost || !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(smtpHost) || smtpUser || smtpPassword)) {
+    throw new Error("NOTIFICATION_CAPTURE requires unauthenticated local Mailpit SMTP and EMAIL_PROVIDER=smtp");
+  }
   if (emailProvider === "smtp" && (!smtpHost || !smtpFromAddress)) {
     throw new Error("EMAIL_PROVIDER=smtp requires SMTP_HOST and SMTP_FROM");
   }
@@ -697,11 +730,15 @@ export function loadConfig(): HostConfig {
   }
 
   const config: HostConfig = {
+    masterDataVerificationKeys,
+    ...(localContactDeliveryKey ? {localContactDeliveryKey} : {}),
+    ...(localContactChallenge ? { localContactChallenge } : {}),
     businessPartnerMetricsTargets: parseBusinessPartnerMetricsTargets(process.env["BUSINESS_PARTNER_METRICS_TARGETS"]),
     port,
     logLevel: process.env["LOG_LEVEL"] ?? "info",
     shutdownTimeoutMs,
     env,
+    notificationCapture,
     mode,
     database: {
       connectionString: rawDatabaseUrl || undefined,
@@ -913,6 +950,7 @@ export function loadConfig(): HostConfig {
         "WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",
         false,
       ),
+      controlAdminParametersEnabled: readBoolean("WAVE0_CONTROL_ADMIN_PARAMETERS_ENABLED", false),
       controlAdminLocalCatalogReadsEnabled: readBoolean(
         "WAVE0_CONTROL_ADMIN_LOCAL_CATALOG_READS_ENABLED",
         false,

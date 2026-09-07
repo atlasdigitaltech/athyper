@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   parseExperienceSurface,
   type ExperienceBlock,
@@ -109,15 +109,33 @@ export function ExperienceComposer({
 }: {
   readonly initialDefinition: unknown;
 }) {
-  const client = useApiClient();
+  return (
+    <ExperienceComposerEditor
+      client={useApiClient()}
+      initialDefinition={initialDefinition}
+    />
+  );
+}
+
+export function ExperienceComposerEditor({
+  client,
+  initialDefinition,
+}: {
+  readonly client: ReturnType<typeof useApiClient>;
+  readonly initialDefinition: unknown;
+}) {
   const [source, setSource] = useState(() =>
     JSON.stringify(initialDefinition, null, 2),
   );
   const [saved, setSaved] = useState<SurfaceRelease>();
+  const [dirty, setDirty] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyFailed, setHistoryFailed] = useState(false);
+  const [historyAttempt, setHistoryAttempt] = useState(0);
   const [releases, setReleases] = useState<readonly SurfaceRelease[]>([]);
   const [atlasInstruction, setAtlasInstruction] = useState("");
   const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState<"save" | "publish" | "atlas">();
+  const [busy, setBusy] = useState<"save" | "publish" | "atlas" | "rollback">();
   const validation = useMemo(() => {
     try {
       return { surface: parseExperienceSurface(JSON.parse(source), policy) };
@@ -142,23 +160,36 @@ export function ExperienceComposer({
   // A single logical attempt keeps its idempotency key across retries; a manual edit rotates it.
   const attemptKeys = useRef<Record<string, string>>({});
   const dirtyRef = useRef(false);
+  const historyTargetRef = useRef<string | undefined>(undefined);
   const attemptKey = (scope: string) =>
     (attemptKeys.current[scope] ??= `surface-${scope}-${crypto.randomUUID()}`);
   const settleAttempt = (scope: string) => {
     delete attemptKeys.current[scope];
   };
   const adoptServerSource = (definition: unknown) => {
+    attemptKeys.current = {};
     dirtyRef.current = false;
+    setDirty(false);
     setSource(JSON.stringify(definition, null, 2));
   };
   const markEdited = () => {
     dirtyRef.current = true;
+    setDirty(true);
     settleAttempt("save");
     settleAttempt("atlas");
-    setSaved(undefined);
   };
   useEffect(() => {
-    if (!targetPlane || !targetSurfaceKey) return;
+    if (!targetPlane || !targetSurfaceKey) {
+      setHistoryLoading(false);
+      return;
+    }
+    const historyTarget = `${targetPlane}:${targetSurfaceKey}`;
+    if (historyTargetRef.current !== historyTarget) {
+      historyTargetRef.current = historyTarget;
+      setSaved(undefined);
+    }
+    setHistoryLoading(true);
+    setHistoryFailed(false);
     let active = true;
     const controller = new AbortController();
     setReleases([]);
@@ -171,19 +202,29 @@ export function ExperienceComposer({
         if (!active) return;
         setReleases(releases);
         const draft = releases.find((item) => item.status === "draft");
-        if (draft && !dirtyRef.current) {
-          setSaved(draft);
-          adoptServerSource(draft.definition);
+        if (draft) {
+          // Temporary JSON syntax errors must not replace the revision the
+          // administrator originally edited with a newer concurrency hash.
+          setSaved((current) =>
+            dirtyRef.current && current ? current : draft,
+          );
+          if (!dirtyRef.current) adoptServerSource(draft.definition);
         }
       })
       .catch((error) => {
-        if (active && !controller.signal.aborted) setStatus(message(error));
+        if (active && !controller.signal.aborted) {
+          setHistoryFailed(true);
+          setStatus(message(error));
+        }
+      })
+      .finally(() => {
+        if (active) setHistoryLoading(false);
       });
     return () => {
       active = false;
       controller.abort();
     };
-  }, [client, targetPlane, targetSurfaceKey]);
+  }, [client, targetPlane, targetSurfaceKey, historyAttempt]);
   const add = (type: ExperienceBlock["type"]) => {
     if (!("surface" in validation) || !validation.surface) return;
     const block = template(type, validation.surface.blocks.length + 1);
@@ -230,7 +271,7 @@ export function ExperienceComposer({
     }
   };
   const publishSaved = async () => {
-    if (!saved) return;
+    if (!saved || dirty || saved.status !== "draft" || busy) return;
     setBusy("publish");
     setStatus("");
     try {
@@ -239,6 +280,15 @@ export function ExperienceComposer({
         idempotencyKey: `surface-publish-${saved.id}`,
       });
       setSaved(result);
+      setReleases((items) =>
+        items.map((item) =>
+          item.id === result.id
+            ? result
+            : item.status === "published"
+              ? { ...item, status: "retired" }
+              : item,
+        ),
+      );
       setStatus(
         `Revision ${result.revision} published to ${result.targetPlane}.`,
       );
@@ -288,6 +338,8 @@ export function ExperienceComposer({
     }
   };
   const rollback = async (item: SurfaceRelease) => {
+    if (busy) return;
+    setBusy("rollback");
     setStatus("");
     try {
       const draft = await client.request(rollbackOperation, {
@@ -306,10 +358,16 @@ export function ExperienceComposer({
       );
     } catch (error) {
       setStatus(message(error));
+    } finally {
+      setBusy(undefined);
     }
   };
   return (
-    <div className="athyper-landing__grid">
+    <fieldset
+      disabled={Boolean(busy)}
+      className="athyper-landing__grid"
+      style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+    >
       <aside>
         <p>Templates</p>
         {templates.map((type) => (
@@ -351,13 +409,21 @@ export function ExperienceComposer({
           maxLength={4000}
           placeholder="Describe the governed layout you want Atlas to propose…"
           value={atlasInstruction}
-          onChange={(event) => setAtlasInstruction(event.target.value)}
+          onChange={(event) => {
+            setAtlasInstruction(event.target.value);
+            settleAttempt("atlas");
+          }}
         />
         <div>
           <button
             className="a-button a-button--secondary"
             type="button"
-            disabled={!("surface" in validation) || Boolean(busy)}
+            disabled={
+              !("surface" in validation) ||
+              historyLoading ||
+              historyFailed ||
+              Boolean(busy)
+            }
             onClick={() => void save()}
           >
             {busy === "save" ? "Saving…" : "Save draft"}
@@ -368,6 +434,8 @@ export function ExperienceComposer({
             disabled={
               !("surface" in validation) ||
               !atlasInstruction.trim() ||
+              historyLoading ||
+              historyFailed ||
               Boolean(busy)
             }
             onClick={() => void generate()}
@@ -377,7 +445,9 @@ export function ExperienceComposer({
           <button
             className="a-button a-button--primary"
             type="button"
-            disabled={!saved || saved.status !== "draft" || Boolean(busy)}
+            disabled={
+              !saved || dirty || saved.status !== "draft" || Boolean(busy)
+            }
             onClick={() => void publishSaved()}
           >
             {busy === "publish" ? "Publishing…" : "Publish"}
@@ -388,6 +458,14 @@ export function ExperienceComposer({
           separate human action.
         </p>
         <p role="status">{status}</p>
+        {historyFailed ? (
+          <button
+            type="button"
+            onClick={() => setHistoryAttempt((value) => value + 1)}
+          >
+            Retry loading history
+          </button>
+        ) : null}
       </section>
       <section>
         <h2>Validated preview</h2>
@@ -420,7 +498,7 @@ export function ExperienceComposer({
           <p>No persisted releases yet.</p>
         )}
       </section>
-    </div>
+    </fieldset>
   );
 }
 

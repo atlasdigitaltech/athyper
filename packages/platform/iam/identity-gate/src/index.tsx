@@ -50,6 +50,15 @@ export function LoginGatePage({ plane, reason, returnTo = "/", requestId }: Logi
   </AuthShell>;
 }
 
+export function RequiredActionGatePage({ plane, returnTo = "/" }: { readonly plane: BrandPlane; readonly returnTo?: string }) {
+  return <AuthShell plane={plane}><div className="a-identity-panel">
+    <Heading id="identity-title">Complete your account setup</Heading>
+    <SupportingText>Your identity provider requires an account update before you can continue. Return to Athyper Identity to complete the pending steps.</SupportingText>
+    <ActionLink variant="primary" href={loginHref(returnTo, "retry")}>Continue account setup</ActionLink>
+    <ActionLink variant="ghost" href="/logout">Sign out securely</ActionLink>
+  </div></AuthShell>;
+}
+
 export function ContextGatePage({ plane, returnTo = "/", contexts = [] }: { readonly plane: BrandPlane; readonly returnTo?: string; readonly contexts?: readonly IdentityContextOption[] }) {
   const brand = getPlaneBrand(plane);
   const noun = plane === "mesh" ? "network workspace" : plane === "studio" ? "administration context" : "business context";

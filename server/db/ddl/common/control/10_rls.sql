@@ -320,3 +320,19 @@ CREATE POLICY tenant_locale_activation_write ON master.tenant_locale_activation
     WITH CHECK (tenant_id = shared.current_tenant_id());
 CREATE POLICY tenant_locale_activation_seed_write ON master.tenant_locale_activation
     FOR ALL TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE control.tenant_module_entitlement_override ENABLE ROW LEVEL SECURITY;
+ALTER TABLE control.tenant_module_entitlement_override FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_module_entitlement_override_access ON control.tenant_module_entitlement_override
+    FOR ALL USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_usage_limit_override_insert ON control.tenant_usage_limit_override
+    FOR INSERT TO athyperapp WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+CREATE POLICY tenant_usage_limit_override_update ON control.tenant_usage_limit_override
+    FOR UPDATE TO athyperapp USING (tenant_id = shared.current_tenant_id_soft())
+    WITH CHECK (tenant_id = shared.current_tenant_id_soft());
+
+CREATE POLICY feature_flag_override_insert ON control.feature_flag_override FOR INSERT TO athyperapp
+WITH CHECK(tenant_id=shared.current_tenant_id_soft());
+CREATE POLICY feature_flag_override_update ON control.feature_flag_override FOR UPDATE TO athyperapp
+USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id_soft());

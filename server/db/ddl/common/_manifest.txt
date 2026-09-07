@@ -102,3 +102,9 @@ common/control/12_collaboration_lookup_seed.sql
 common/control/12_operational_governance_reference_seed.sql
 common/control/12_banking_reference_seed.sql
 common/control/12_usage_metric_catalog_seed.sql
+common/control/12_parameter_runtime_seed.sql
+
+common/authz/13_management.sql
+
+common/control/14_admin_integrations.sql
+common/control/15_lookup_reference_governance.sql

@@ -5,7 +5,7 @@ import { createEffectiveLocalization, createIntlRuntime, localeDefinition, type 
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { canAccessRoute, deriveBreadcrumbs, type DerivedShellNavigation } from "./core";
+import { canAccessRoute, deriveBreadcrumbs, isShellActivityRoute, type DerivedShellNavigation } from "./core";
 import { ShellActivityCenter, type ShellActivityDataSource, type ShellActivityTab } from "./activity-center";
 import { ShellQuickAccess, type ShellQuickAccessDataSource, type ShellQuickAccessTab } from "./quick-access";
 import { shellEnglishMessages } from "./messages";
@@ -39,7 +39,7 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
   const openNavigation = () => { setQuickAccessTab(undefined); setHeaderAction(undefined); setDrawerOpen(true); };
   const crumbs = deriveBreadcrumbs(navigation, path);
   const homeRoute = path === "/" || path === homeHref,atlasRoute=path==="/atlas"||path.startsWith("/atlas/");
-  const systemRoute = homeRoute || atlasRoute || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
+  const systemRoute = homeRoute || atlasRoute || isShellActivityRoute(path) || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
   const changeAtlasPin=(next:boolean)=>{setAtlasPinned(next);localStorage.setItem("athyper.atlas.pinned",String(next));};
   const atlasVisible=atlasOpen&&!path.startsWith("/atlas");
   return <div className="athyper-shell" data-collapsed={collapsed} data-desktop-brand={persistentDesktopBrand} data-home-route={homeRoute} data-drawer-open={drawerOpen} data-quick-access-open={Boolean(quickAccessTab)} data-activity-open={headerAction === "notifications" || headerAction === "inbox"} data-atlas-open={atlasVisible} data-atlas-pinned={atlasVisible&&atlasPinned}>

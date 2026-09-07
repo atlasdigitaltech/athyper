@@ -33,7 +33,7 @@ export interface AtlasKnowledgeRepository {
   beginRevision(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly revisionId: string; readonly sourceVersionId: string; readonly contentHash: string; readonly chunks: readonly Omit<AtlasKnowledgeChunkInput, "text">[]; readonly at: string }): Promise<{ readonly revisionId: string; readonly replayed: boolean; readonly source: AtlasKnowledgeSource }>;
   markReady(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly revisionId: string; readonly indexed: readonly { readonly ordinal: number; readonly indexReference: string; readonly embeddingModel: string }[]; readonly at: string }): Promise<void>;
   markFailed(input: { readonly context: VerifiedRequestContext; readonly revisionId: string; readonly at: string }): Promise<void>;
-  retract(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly delete: boolean; readonly at: string }): Promise<readonly string[]>;
+  retract(input: { readonly context: VerifiedRequestContext; readonly sourceId: string; readonly sourceKind?: string; readonly delete: boolean; readonly at: string }): Promise<readonly string[]>;
   health(): Promise<{ readonly healthy: boolean; readonly message?: string }>;
 }
 

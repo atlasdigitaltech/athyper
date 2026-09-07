@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {generateKeyPairSync,createPublicKey,sign,verify} from 'node:crypto';
+import {spawnSync} from 'node:child_process';
+import {writeLocalMasterData} from '../../../deploy/stackctl/src/local-master-data.mjs';
+import {rotateSigning,inspectLocalKeys} from './local-master-data-keys.mjs';
+import {retentionSql,PILOT_TENANT,queueAlerts,queueHealthSql} from './local-master-data-retention.mjs';
+test('signing rotation retains old proofs, requires stopped API and observes retirement grace',()=>{
+ const root=mkdtempSync(join(tmpdir(),'local-rotation-')),secrets=join(root,'instances/dev/secrets');mkdirSync(secrets,{recursive:true});
+ const pair=generateKeyPairSync('ed25519'),now=Date.now(),trust=[{provider:'athyper-local-challenge',keyId:'v1',publicKeyPem:pair.publicKey.export({type:'spki',format:'pem'}).toString(),tenantIds:[PILOT_TENANT],planeKeys:['neon'],notBefore:new Date(now-1000).toISOString(),notAfter:new Date(now+86400000).toISOString()}];
+ writeFileSync(join(secrets,'local-contact-challenge-private-key'),pair.privateKey.export({type:'pkcs8',format:'pem'}),{mode:0o600});writeFileSync(join(secrets,'local-contact-challenge-trust'),JSON.stringify(trust),{mode:0o600});
+ writeLocalMasterData(root,{runtimeImage:'sha256:'+'a'.repeat(64),neonImage:'sha256:'+'b'.repeat(64),keyId:'v1'});
+ const bytes=Buffer.from('test-proof'),oldProof=sign(null,bytes,pair.privateKey);
+ rotateSigning(root,'prepare',{now});assert.equal(inspectLocalKeys(root,now).keyId,'v1');
+ assert.throws(()=>rotateSigning(root,'activate',{now}),/Stop/);
+ const activated=rotateSigning(root,'activate',{now,apiStopped:true});assert.equal(inspectLocalKeys(root,now).keyId,activated.nextKeyId);
+ const keys=JSON.parse(readFileSync(join(secrets,'local-contact-challenge-trust')));assert.equal(keys.length,2);assert.ok(keys.some(k=>verify(null,bytes,createPublicKey(k.publicKeyPem),oldProof)));
+ assert.throws(()=>rotateSigning(root,'retire',{now:now+659999}),/eleven/);
+ rotateSigning(root,'rollback',{now:now+1000,apiStopped:true});assert.equal(inspectLocalKeys(root,now+1000).keyId,'v1');assert.equal(inspectLocalKeys(root,now+1000).trustKeyIds.length,2);
+ rotateSigning(root,'retire',{now:now+662000});assert.deepEqual(inspectLocalKeys(root,now+662000).trustKeyIds,['v1']);assert.equal(existsSync(join(secrets,'local-contact-signing-rotation')),false);
+});
+test('health reports backlog, expired proofs, exhausted delivery and worker leases',()=>{
+ assert.deepEqual(queueAlerts({oldestPendingSeconds:0}),[]);
+ assert.equal(queueAlerts({oldestPendingSeconds:121,expiredPending:1,terminalFailuresLastDay:1,expiredLeases:1}).length,4);
+});
+test('PostgreSQL retention preserves live proofs, leases, foreign tenants and audit/outbox',{skip:process.env.ATHYPER_LOCAL_MAINTENANCE_DB_TESTS!=='true'},()=>{
+ const run=input=>{const r=spawnSync('docker',['exec','-i','athyper-local-maintenance-tests','psql','-U','postgres','-d','ops_test','-X','-At','-v','ON_ERROR_STOP=1'],{input,encoding:'utf8'});assert.equal(r.status,0,r.stderr);return r.stdout.trim();};
+ const other='11111111-1111-4111-8111-111111111111';
+ run(`CREATE SCHEMA master; CREATE SCHEMA event; CREATE SCHEMA audit;
+ CREATE TABLE master.local_contact_challenge(id integer PRIMARY KEY,tenant_id uuid,expires_at timestamptz);
+ CREATE TABLE master.local_contact_challenge_limit(tenant_id uuid,principal_id integer,operation text,window_start timestamptz);
+ CREATE TABLE event.notification_message(id integer PRIMARY KEY,tenant_id uuid,entity_id integer,template_key text,created_at timestamptz,payload jsonb,updated_at timestamptz,updated_by integer,created_by integer);
+ CREATE TABLE event.notification_delivery(id integer PRIMARY KEY,tenant_id uuid,message_id integer,status text,attempt_count int,max_attempts int,error_category text,created_at timestamptz,updated_at timestamptz,updated_by integer,created_by integer,locked_until timestamptz,channel_detail jsonb);
+ CREATE TABLE event.outbox(id int);INSERT INTO event.outbox VALUES(1);CREATE TABLE audit.audit_log(id int);INSERT INTO audit.audit_log VALUES(1);
+ INSERT INTO master.local_contact_challenge SELECT i,CASE WHEN i=4 THEN '${other}'::uuid ELSE '${PILOT_TENANT}'::uuid END,now()-CASE WHEN i=3 THEN interval '1 hour' ELSE interval '8 days' END FROM generate_series(1,6)i;
+ INSERT INTO event.notification_message SELECT i,CASE WHEN i=4 THEN '${other}'::uuid ELSE '${PILOT_TENANT}'::uuid END,i,'master.contact.local-verification',now()-CASE WHEN i=3 THEN interval '1 hour' ELSE interval '8 days' END,'{"localVerification":{"ciphertext":"test"}}',NULL,NULL,1 FROM generate_series(1,5)i;
+ INSERT INTO event.notification_delivery SELECT i,CASE WHEN i=4 THEN '${other}'::uuid ELSE '${PILOT_TENANT}'::uuid END,i,CASE WHEN i=2 THEN 'pending' ELSE 'delivered' END,1,5,NULL,now()-interval '8 days',NULL,NULL,1,CASE WHEN i=5 THEN now()+interval '1 hour' ELSE NULL END,'{"localVerification":{"ciphertext":"test"}}' FROM generate_series(1,5)i;
+ INSERT INTO master.local_contact_challenge_limit VALUES('${PILOT_TENANT}',1,'request',now()),('${PILOT_TENANT}',2,'request',now()-interval '2 days'),('${other}',3,'request',now()-interval '2 days');`);
+ const result=JSON.parse(run(retentionSql()));assert.deepEqual(result,{challengeRowsDeleted:2,encryptedMessagesScrubbed:1,encryptedDeliveriesScrubbed:1,oldRateWindowsDeleted:1});
+ assert.equal(run('SELECT string_agg(id::text,\',\' ORDER BY id) FROM master.local_contact_challenge'),'2,3,4,5');
+ assert.equal(run("SELECT count(*) FROM event.notification_message WHERE payload ? 'localVerification'"),'4');assert.equal(run('SELECT count(*) FROM master.local_contact_challenge_limit'),'2');
+ assert.equal(run('SELECT (SELECT count(*) FROM event.outbox)+(SELECT count(*) FROM audit.audit_log)'),'2');
+ const health=JSON.parse(run(queueHealthSql()));assert.equal(health.pending,1);assert.equal(health.expiredPending,1);
+ assert.equal(JSON.parse(run(retentionSql())).challengeRowsDeleted,0);
+});

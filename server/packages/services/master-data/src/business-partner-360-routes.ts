@@ -1,4 +1,4 @@
-import { parseInstant } from "@athyper/platform-temporal";
+import { parseBusinessDate, parseInstant } from "@athyper/platform-temporal";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
   BUSINESS_PARTNER_360_SECTION_CODES,
@@ -228,7 +228,7 @@ function role(value: unknown): BusinessPartner360RoleLens {
 }
 function date(value: unknown) {
   const result = text(value, "asOf");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(result))
+  if (!Number.isFinite(parseBusinessDate(result)))
     throw invalid("asOf must be an ISO date");
   return result;
 }

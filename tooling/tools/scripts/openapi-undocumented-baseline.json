@@ -83,17 +83,6 @@
       ]
     },
     {
-      "source": "server/packages/platform/policy/src/policy-routes.ts",
-      "owner": "server/packages/platform/policy",
-      "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
-      "expiresOn": "2026-10-06",
-      "reason": "Legacy raw Express adapter retained during contract-route migration; tracked as OpenAPI debt and not treated as documented.",
-      "operations": [
-        "POST /api/policy/evaluate",
-        "POST /api/policy/simulate"
-      ]
-    },
-    {
       "source": "server/packages/platform/preferences/src/saved-view-routes.ts",
       "owner": "server/packages/platform/preferences",
       "trackingIssue": "docs/runbooks/openapi-contract-migration.md#existing-exceptions",
@@ -105,22 +94,18 @@
         "DELETE /api/platform/preferences/saved-views/:id/actions/:action",
         "DELETE /api/platform/saved-views/:entity/:viewId",
         "DELETE /api/platform/saved-views/:entity/default",
-        "DELETE /api/user/saved-views/:viewId/:action",
         "GET /api/me/saved-views",
         "GET /api/platform/preferences/saved-views",
         "GET /api/platform/saved-views/:entity",
-        "GET /api/user/saved-views",
         "PATCH /api/me/saved-views/:viewId/:action",
         "PATCH /api/platform/preferences/saved-views/:id/actions/:action",
         "PATCH /api/platform/saved-views/:entity/:viewId",
         "PATCH /api/platform/saved-views/:entity/:viewId/default",
-        "PATCH /api/user/saved-views/:viewId/:action",
         "POST /api/me/saved-views/:viewId/clone",
         "POST /api/platform/preferences/saved-views",
         "POST /api/platform/preferences/saved-views/:id/clone",
         "POST /api/platform/saved-views",
         "POST /api/platform/saved-views/:entity",
-        "POST /api/user/saved-views/:viewId/clone",
         "PUT /api/platform/preferences/saved-views/:id"
       ]
     },

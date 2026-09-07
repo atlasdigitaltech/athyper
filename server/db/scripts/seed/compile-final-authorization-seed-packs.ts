@@ -295,6 +295,7 @@ function compileAdmissions(
 function moduleCode(plane: "studio" | "neon" | "mesh", domain: string): string {
   if (plane !== "studio") return "fnd";
   const moduleByDomain: Readonly<Record<string, string>> = {
+    ai: "aig",
     iam: "iam",
     jobs: "job",
     metadata: "meta",

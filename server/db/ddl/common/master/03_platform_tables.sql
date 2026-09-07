@@ -411,21 +411,21 @@ CREATE TABLE master.address_link (
     CONSTRAINT address_link_role_qualifier_chk
         CHECK (role_qualifier IS NULL OR btrim(role_qualifier) <> ''),
     CONSTRAINT address_link_usage_status_chk
-        CHECK (usage_status IN ('active', 'suspended', 'prohibited')),
+        CHECK (usage_status IN ('active', 'suspended', 'prohibited', 'cancelled')),
     CONSTRAINT address_link_usage_denied_reason_chk
         CHECK (
             (usage_status = 'active' AND usage_denied_reason_code IS NULL)
-            OR usage_status IN ('suspended', 'prohibited')
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
         ),
     CONSTRAINT address_link_usage_denied_at_chk
         CHECK (
             (usage_status = 'active' AND usage_denied_at IS NULL)
-            OR usage_status IN ('suspended', 'prohibited')
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
         ),
     CONSTRAINT address_link_usage_denied_by_chk
         CHECK (
             (usage_status = 'active' AND usage_denied_by IS NULL)
-            OR usage_status IN ('suspended', 'prohibited')
+            OR usage_status IN ('suspended', 'prohibited', 'cancelled')
         ),
     CONSTRAINT address_link_attention_line_chk
         CHECK (attention_line IS NULL OR btrim(attention_line) <> ''),

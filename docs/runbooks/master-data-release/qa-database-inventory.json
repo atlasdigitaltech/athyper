@@ -1,0 +1,2093 @@
+{
+  "schema": "athyper.master-data.environment-inventory.v1",
+  "environment": "qa",
+  "container": "athyper-qa-db-1",
+  "database": "athyper_neon",
+  "observedAt": "2026-09-06T21:32:15.409Z",
+  "method": "local Docker administrator connection with SET LOCAL ROLE; not application authentication or pooler qualification",
+  "summary": {
+    "role": "athyper_runtime",
+    "readOnly": true,
+    "roleBypassesRls": false,
+    "missingObjects": [],
+    "columnMismatches": [
+      "master.address.country_code"
+    ],
+    "masterTableIsolation": [
+      {
+        "name": "master.address",
+        "rlsEnabled": true,
+        "rlsForced": true,
+        "ownedByRole": false,
+        "select": true,
+        "insert": true,
+        "update": true
+      },
+      {
+        "name": "master.address_link",
+        "rlsEnabled": true,
+        "rlsForced": true,
+        "ownedByRole": false,
+        "select": true,
+        "insert": true,
+        "update": true
+      },
+      {
+        "name": "master.contact_link",
+        "rlsEnabled": true,
+        "rlsForced": true,
+        "ownedByRole": false,
+        "select": true,
+        "insert": true,
+        "update": true
+      }
+    ],
+    "functionalAcceptance": "not_run",
+    "qualified": false
+  },
+  "inventory": {
+    "role": "athyper_runtime",
+    "schema": "athyper.master-data.database-inventory.v1",
+    "objects": [
+      {
+        "name": "authz.entity_operation_binding",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX entity_operation_binding_pkey ON authz.entity_operation_binding USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX entity_operation_binding_tenant_id_uq ON authz.entity_operation_binding USING btree (tenant_id, id) NULLS NOT DISTINCT"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX entity_operation_binding_coordinate_uq ON authz.entity_operation_binding USING btree (tenant_id, applied_release_id, source_entity_operation_id) NULLS NOT DISTINCT"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX entity_operation_binding_runtime_ix ON authz.entity_operation_binding USING btree (tenant_id, plane_code, source_entity_operation_id, decision_mode) WHERE ((status)::text = 'published'::text)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX entity_operation_binding_release_ix ON authz.entity_operation_binding USING btree (applied_release_id, status)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX entity_operation_binding_permission_ix ON authz.entity_operation_binding USING btree (permission_id) WHERE ((status)::text = 'published'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "entity_operation_binding_breakglass_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "entity_operation_binding_owner_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "entity_operation_binding_published_read",
+            "check": null,
+            "using": "(((status)::text = 'published'::text) AND (effective_from <= now()) AND ((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft())))",
+            "command": "r"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "entity_operation_binding_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_binding_10_normalize BEFORE INSERT OR UPDATE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_normalize_entity_operation_binding()"
+          },
+          {
+            "name": "entity_operation_binding_20_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_binding_20_guard BEFORE UPDATE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_entity_operation_binding()"
+          },
+          {
+            "name": "entity_operation_binding_30_validate",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_binding_30_validate BEFORE INSERT OR UPDATE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_validate_entity_operation_binding()"
+          },
+          {
+            "name": "entity_operation_binding_90_delete_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_binding_90_delete_guard BEFORE DELETE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_entity_operation_binding_delete()"
+          },
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON authz.entity_operation_binding FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "entity_operation_binding_applied_release_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "entity_operation_binding_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "entity_operation_binding_compiled_hash_chk",
+            "validated": true,
+            "definition": "CHECK ((source_compiled_hash ~ '^[a-f0-9]{64}$'::text))"
+          },
+          {
+            "name": "entity_operation_binding_coordinate_uq",
+            "validated": true,
+            "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, applied_release_id, source_entity_operation_id)"
+          },
+          {
+            "name": "entity_operation_binding_entity_code_chk",
+            "validated": true,
+            "definition": "CHECK ((entity_code ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+          },
+          {
+            "name": "entity_operation_binding_operation_key_chk",
+            "validated": true,
+            "definition": "CHECK ((operation_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+          },
+          {
+            "name": "entity_operation_binding_permission_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (permission_id) REFERENCES authz.permission(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "entity_operation_binding_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "entity_operation_binding_plane_chk",
+            "validated": true,
+            "definition": "CHECK ((plane_code = ANY (ARRAY['studio'::text, 'neon'::text, 'mesh'::text])))"
+          },
+          {
+            "name": "entity_operation_binding_publication_chk",
+            "validated": true,
+            "definition": "CHECK (((((status)::text = 'draft'::text) AND (effective_from IS NULL) AND (effective_until IS NULL) AND (published_at IS NULL) AND (published_by IS NULL) AND (retired_at IS NULL) AND (retired_by IS NULL)) OR (((status)::text = 'published'::text) AND (effective_from IS NOT NULL) AND (effective_until IS NULL) AND (published_at IS NOT NULL) AND (published_by IS NOT NULL) AND (retired_at IS NULL) AND (retired_by IS NULL)) OR (((status)::text = 'retired'::text) AND (effective_from IS NOT NULL) AND (effective_until IS NOT NULL) AND (published_at IS NOT NULL) AND (published_by IS NOT NULL) AND (retired_at IS NOT NULL) AND (retired_by IS NOT NULL))))"
+          },
+          {
+            "name": "entity_operation_binding_release_hash_chk",
+            "validated": true,
+            "definition": "CHECK ((source_release_hash ~ '^[a-f0-9]{64}$'::text))"
+          },
+          {
+            "name": "entity_operation_binding_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "entity_operation_binding_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+          },
+          {
+            "name": "entity_operation_binding_time_chk",
+            "validated": true,
+            "definition": "CHECK ((((effective_until IS NULL) OR (effective_until >= effective_from)) AND ((published_at IS NULL) OR (published_at >= created_at)) AND ((retired_at IS NULL) OR (retired_at >= published_at))))"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.entity_operation_scope_binding",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX entity_operation_scope_binding_pkey ON authz.entity_operation_scope_binding USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX entity_operation_scope_binding_coordinate_uq ON authz.entity_operation_scope_binding USING btree (entity_operation_binding_id, scope_kind)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX entity_operation_scope_binding_runtime_ix ON authz.entity_operation_scope_binding USING btree (entity_operation_binding_id, scope_kind)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "entity_operation_scope_binding_breakglass_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "entity_operation_scope_binding_owner_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "entity_operation_scope_binding_published_read",
+            "check": null,
+            "using": "(EXISTS ( SELECT 1\n   FROM authz.entity_operation_binding b\n  WHERE ((b.id = entity_operation_scope_binding.entity_operation_binding_id) AND ((b.status)::text = 'published'::text) AND (b.effective_from <= now()) AND ((b.tenant_id IS NULL) OR (b.tenant_id = shared.current_tenant_id_soft())))))",
+            "command": "r"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "entity_operation_scope_binding_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_scope_binding_10_normalize BEFORE INSERT OR UPDATE ON authz.entity_operation_scope_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_normalize_entity_operation_scope_binding()"
+          },
+          {
+            "name": "entity_operation_scope_binding_20_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER entity_operation_scope_binding_20_guard BEFORE DELETE OR UPDATE ON authz.entity_operation_scope_binding FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_entity_operation_scope_binding()"
+          },
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.entity_operation_scope_binding FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "entity_operation_scope_binding_coordinate_key_chk",
+            "validated": true,
+            "definition": "CHECK (((coordinate_key IS NULL) OR (coordinate_key ~ '^[a-z][a-z0-9_]{0,126}$'::text)))"
+          },
+          {
+            "name": "entity_operation_scope_binding_coordinate_uq",
+            "validated": true,
+            "definition": "UNIQUE (entity_operation_binding_id, scope_kind)"
+          },
+          {
+            "name": "entity_operation_scope_binding_operation_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (entity_operation_binding_id) REFERENCES authz.entity_operation_binding(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "entity_operation_scope_binding_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "entity_operation_scope_binding_resolver_key_chk",
+            "validated": true,
+            "definition": "CHECK (((resolver_key IS NULL) OR (resolver_key ~ '^[a-z][a-z0-9_.:-]{1,126}$'::text)))"
+          },
+          {
+            "name": "entity_operation_scope_binding_scope_source_chk",
+            "validated": true,
+            "definition": "CHECK (((((scope_kind)::text = 'tenant'::text) AND ((coordinate_source)::text = 'tenant_context'::text)) OR (((scope_kind)::text <> 'tenant'::text) AND ((coordinate_source)::text <> 'tenant_context'::text))))"
+          },
+          {
+            "name": "entity_operation_scope_binding_source_shape_chk",
+            "validated": true,
+            "definition": "CHECK (((((coordinate_source)::text = ANY (ARRAY['request_field'::text, 'record_field'::text, 'collection_field'::text])) AND (coordinate_key IS NOT NULL) AND (resolver_key IS NULL)) OR (((coordinate_source)::text = 'relation_resolver'::text) AND (coordinate_key IS NULL) AND (resolver_key IS NOT NULL)) OR (((coordinate_source)::text = 'tenant_context'::text) AND (coordinate_key IS NULL) AND (resolver_key IS NULL))))"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.permission",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX permission_pkey ON authz.permission USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX permission_code_uq ON authz.permission USING btree (canonical_code)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX permission_published_idx ON authz.permission USING btree (canonical_code) WHERE ((status)::text = 'published'::text)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX permission_module_idx ON authz.permission USING btree (module_id, status) WHERE (module_id IS NOT NULL)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "admin_access",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "published_read",
+            "check": null,
+            "using": "((status)::text = 'published'::text)",
+            "command": "r"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.permission FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_permission_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_10_normalize BEFORE INSERT OR UPDATE OF canonical_code ON authz.permission FOR EACH ROW EXECUTE FUNCTION authz.trg_normalize_codes()"
+          },
+          {
+            "name": "trg_permission_20_definition_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_20_definition_guard BEFORE UPDATE ON authz.permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_permission_definition()"
+          },
+          {
+            "name": "trg_permission_30_status_transition",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_30_status_transition BEFORE UPDATE OF status ON authz.permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_status_transition('catalog')"
+          },
+          {
+            "name": "trg_permission_35_audit_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_35_audit_evidence BEFORE UPDATE ON authz.permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_audit_evidence()"
+          },
+          {
+            "name": "trg_permission_40_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_40_status_changed BEFORE UPDATE OF status ON authz.permission FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_permission_50_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_50_updated_at BEFORE UPDATE ON authz.permission FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_permission_90_delete_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_90_delete_guard BEFORE DELETE ON authz.permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_authority_delete()"
+          },
+          {
+            "name": "trg_permission_publish_valid",
+            "enabled": "O",
+            "definition": "CREATE CONSTRAINT TRIGGER trg_permission_publish_valid AFTER INSERT OR UPDATE OF status ON authz.permission DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION authz.trg_validate_permission_publish()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "permission_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "permission_code_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((canonical_code ~ '^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*){2,}$'::text))"
+          },
+          {
+            "name": "permission_code_uq",
+            "validated": true,
+            "definition": "UNIQUE (canonical_code)"
+          },
+          {
+            "name": "permission_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "permission_module_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (module_id) REFERENCES control.module(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "permission_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "permission_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "trg_permission_publish_valid",
+            "validated": true,
+            "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.permission_scope_kind",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX permission_scope_kind_pkey ON authz.permission_scope_kind USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX permission_scope_kind_uq ON authz.permission_scope_kind USING btree (permission_id, scope_kind, propagation_mode)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "active_read",
+            "check": null,
+            "using": "((status)::text = 'active'::text)",
+            "command": "r"
+          },
+          {
+            "name": "admin_access",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.permission_scope_kind FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_permission_scope_kind_50_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_permission_scope_kind_50_updated_at BEFORE UPDATE ON authz.permission_scope_kind FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "permission_scope_kind_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "permission_scope_kind_permission_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (permission_id) REFERENCES authz.permission(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "permission_scope_kind_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "permission_scope_kind_uq",
+            "validated": true,
+            "definition": "UNIQUE (permission_id, scope_kind, propagation_mode)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.role",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_pkey ON authz.role USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_tenant_id_uq ON authz.role USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_code_uq ON authz.role USING btree (tenant_id, code)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "admin_access",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_read",
+            "check": null,
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "r"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_role_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_10_normalize BEFORE INSERT OR UPDATE OF code, name, description, source_ref ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_normalize_codes()"
+          },
+          {
+            "name": "trg_role_20_identity_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_20_identity_guard BEFORE UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_tenant_row_identity()"
+          },
+          {
+            "name": "trg_role_21_natural_key_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_21_natural_key_guard BEFORE UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_authority_natural_key()"
+          },
+          {
+            "name": "trg_role_30_status_transition",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_30_status_transition BEFORE UPDATE OF status ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_status_transition('definition')"
+          },
+          {
+            "name": "trg_role_35_audit_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_35_audit_evidence BEFORE UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_audit_evidence()"
+          },
+          {
+            "name": "trg_role_40_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_40_status_changed BEFORE UPDATE OF status ON authz.role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_role_50_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_50_updated_at BEFORE UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_role_90_delete_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_90_delete_guard BEFORE DELETE ON authz.role FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_authority_delete()"
+          },
+          {
+            "name": "trg_role_activation_valid",
+            "enabled": "O",
+            "definition": "CREATE CONSTRAINT TRIGGER trg_role_activation_valid AFTER INSERT OR UPDATE OF status ON authz.role DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION authz.trg_validate_role_activation()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON authz.role FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "role_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "role_code_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((code ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+          },
+          {
+            "name": "role_code_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, code)"
+          },
+          {
+            "name": "role_description_chk",
+            "validated": true,
+            "definition": "CHECK (((description IS NULL) OR (btrim(description) <> ''::text)))"
+          },
+          {
+            "name": "role_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "role_name_chk",
+            "validated": true,
+            "definition": "CHECK (((btrim(name) <> ''::text) AND (length(name) <= 256)))"
+          },
+          {
+            "name": "role_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "role_source_consistency_chk",
+            "validated": true,
+            "definition": "CHECK (((((role_kind)::text = ANY (ARRAY['system'::text, 'managed'::text])) AND ((source_type)::text = 'seed'::text) AND (source_ref IS NOT NULL)) OR (((role_kind)::text = 'custom'::text) AND ((source_type)::text = ANY (ARRAY['manual'::text, 'api'::text, 'import'::text])))))"
+          },
+          {
+            "name": "role_source_ref_chk",
+            "validated": true,
+            "definition": "CHECK (((source_ref IS NULL) OR (btrim(source_ref) <> ''::text)))"
+          },
+          {
+            "name": "role_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "role_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "role_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          },
+          {
+            "name": "trg_role_activation_valid",
+            "validated": true,
+            "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.role_permission",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_permission_pkey ON authz.role_permission USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_permission_tenant_id_uq ON authz.role_permission USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX role_permission_uq ON authz.role_permission USING btree (tenant_id, role_id, permission_id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX role_permission_permission_idx ON authz.role_permission USING btree (permission_id, tenant_id, role_id)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "admin_access",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_read",
+            "check": null,
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "r"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.role_permission FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_role_permission_10_identity_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_permission_10_identity_guard BEFORE UPDATE ON authz.role_permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_tenant_row_identity()"
+          },
+          {
+            "name": "trg_role_permission_20_parent_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_permission_20_parent_guard BEFORE INSERT OR DELETE OR UPDATE ON authz.role_permission FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_role_permission()"
+          },
+          {
+            "name": "trg_role_permission_50_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_role_permission_50_updated_at BEFORE UPDATE ON authz.role_permission FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON authz.role_permission FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "role_permission_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "role_permission_permission_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (permission_id) REFERENCES authz.permission(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "role_permission_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "role_permission_role_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id, role_id) REFERENCES authz.role(tenant_id, id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "role_permission_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "role_permission_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          },
+          {
+            "name": "role_permission_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, role_id, permission_id)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "authz.scope_target",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX scope_target_pkey ON authz.scope_target USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX scope_target_tenant_id_uq ON authz.scope_target USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX scope_target_key_uq ON authz.scope_target USING btree (tenant_id, scope_kind, scope_key)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX scope_target_resource_uq ON authz.scope_target USING btree (tenant_id, scope_kind, target_id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX scope_target_parent_idx ON authz.scope_target USING btree (tenant_id, parent_scope_target_id) WHERE (parent_scope_target_id IS NOT NULL)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX scope_target_active_kind_idx ON authz.scope_target USING btree (tenant_id, scope_kind, scope_key) WHERE ((status)::text = 'active'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "admin_access",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_read",
+            "check": null,
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "r"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_authorization_invalidation_capture",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_authorization_invalidation_capture AFTER INSERT OR DELETE OR UPDATE ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION event.trg_capture_authorization_invalidation()"
+          },
+          {
+            "name": "trg_scope_target_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_10_normalize BEFORE INSERT OR UPDATE OF scope_key, display_name ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION authz.trg_normalize_codes()"
+          },
+          {
+            "name": "trg_scope_target_20_identity_cycle_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_20_identity_cycle_guard BEFORE INSERT OR UPDATE OF id, tenant_id, scope_kind, scope_key, target_id, parent_scope_target_id, status ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_scope_target()"
+          },
+          {
+            "name": "trg_scope_target_30_status_transition",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_30_status_transition BEFORE UPDATE OF status ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_status_transition('scope')"
+          },
+          {
+            "name": "trg_scope_target_35_audit_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_35_audit_evidence BEFORE UPDATE ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_audit_evidence()"
+          },
+          {
+            "name": "trg_scope_target_40_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_40_status_changed BEFORE UPDATE OF status ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_scope_target_50_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_50_updated_at BEFORE UPDATE ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_scope_target_90_delete_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_scope_target_90_delete_guard BEFORE DELETE ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION authz.trg_guard_authority_delete()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON authz.scope_target FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "scope_target_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "scope_target_display_name_chk",
+            "validated": true,
+            "definition": "CHECK (((btrim(display_name) <> ''::text) AND (length(display_name) <= 256)))"
+          },
+          {
+            "name": "scope_target_key_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((scope_key ~ '^[a-zA-Z0-9][a-zA-Z0-9_.:@/-]{0,255}$'::text))"
+          },
+          {
+            "name": "scope_target_key_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, scope_kind, scope_key)"
+          },
+          {
+            "name": "scope_target_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "scope_target_not_self_parent_chk",
+            "validated": true,
+            "definition": "CHECK (((parent_scope_target_id IS NULL) OR (parent_scope_target_id <> id)))"
+          },
+          {
+            "name": "scope_target_parent_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id, parent_scope_target_id) REFERENCES authz.scope_target(tenant_id, id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "scope_target_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "scope_target_resource_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, scope_kind, target_id)"
+          },
+          {
+            "name": "scope_target_root_chk",
+            "validated": true,
+            "definition": "CHECK (((((scope_kind)::text = 'tenant'::text) AND (target_id = tenant_id) AND (parent_scope_target_id IS NULL)) OR (((scope_kind)::text <> 'tenant'::text) AND (parent_scope_target_id IS NOT NULL))))"
+          },
+          {
+            "name": "scope_target_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "scope_target_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "scope_target_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "control.owner_type",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX owner_type_pkey ON control.owner_type USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX owner_type_platform_code_uq ON control.owner_type USING btree (code) WHERE (tenant_id IS NULL)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX owner_type_tenant_code_uq ON control.owner_type USING btree (tenant_id, code) WHERE (tenant_id IS NOT NULL)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX owner_type_active_capability_idx ON control.owner_type USING btree (tenant_id, supports_address, supports_contact, sort_order, code) WHERE (status = 'active'::text)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX owner_type_target_idx ON control.owner_type USING btree (target_schema, target_table) WHERE (status <> 'deprecated'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "accessible_read",
+            "check": null,
+            "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+            "command": "r"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_owner_type_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_guard BEFORE DELETE OR UPDATE ON control.owner_type FOR EACH ROW EXECUTE FUNCTION control.trg_owner_type_guard()"
+          },
+          {
+            "name": "trg_owner_type_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_status_changed BEFORE UPDATE OF status ON control.owner_type FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_owner_type_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_updated_at BEFORE UPDATE ON control.owner_type FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_owner_type_validate_target",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_validate_target BEFORE INSERT OR UPDATE OF source_type, target_schema, target_table, pk_column, is_tenant_scoped, tenant_column ON control.owner_type FOR EACH ROW EXECUTE FUNCTION control.trg_owner_type_validate_target()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "owner_type_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "owner_type_capability_chk",
+            "validated": true,
+            "definition": "CHECK ((supports_address OR supports_contact OR supports_external_reference OR supports_bank_account))"
+          },
+          {
+            "name": "owner_type_category_chk",
+            "validated": true,
+            "definition": "CHECK ((category = ANY (ARRAY['identity'::text, 'party'::text, 'structure'::text, 'organization'::text, 'asset'::text, 'custom'::text])))"
+          },
+          {
+            "name": "owner_type_code_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((code ~ '^[a-z][a-z0-9_]{1,62}$'::text))"
+          },
+          {
+            "name": "owner_type_customer_scope_chk",
+            "validated": true,
+            "definition": "CHECK (((source_type <> 'customer'::text) OR (is_tenant_scoped AND (tenant_column = 'tenant_id'::text))))"
+          },
+          {
+            "name": "owner_type_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "owner_type_name_nonempty_chk",
+            "validated": true,
+            "definition": "CHECK ((btrim(name) <> ''::text))"
+          },
+          {
+            "name": "owner_type_pk_column_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((pk_column ~ '^[a-z][a-z0-9_]*$'::text))"
+          },
+          {
+            "name": "owner_type_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "owner_type_source_scope_chk",
+            "validated": true,
+            "definition": "CHECK ((((source_type = 'platform'::text) AND (tenant_id IS NULL)) OR ((source_type = 'customer'::text) AND (tenant_id IS NOT NULL))))"
+          },
+          {
+            "name": "owner_type_source_type_chk",
+            "validated": true,
+            "definition": "CHECK ((source_type = ANY (ARRAY['platform'::text, 'customer'::text])))"
+          },
+          {
+            "name": "owner_type_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "owner_type_status_chk",
+            "validated": true,
+            "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'active'::text, 'deprecated'::text])))"
+          },
+          {
+            "name": "owner_type_target_schema_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((target_schema ~ '^[a-z][a-z0-9_]*$'::text))"
+          },
+          {
+            "name": "owner_type_target_table_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((target_table ~ '^[a-z][a-z0-9_]*$'::text))"
+          },
+          {
+            "name": "owner_type_tenant_column_chk",
+            "validated": true,
+            "definition": "CHECK (((is_tenant_scoped AND (tenant_column IS NOT NULL) AND (tenant_column ~ '^[a-z][a-z0-9_]*$'::text)) OR ((NOT is_tenant_scoped) AND (tenant_column IS NULL))))"
+          },
+          {
+            "name": "owner_type_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "control.owner_type_purpose",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX owner_type_purpose_pkey ON control.owner_type_purpose USING btree (owner_type_id, capability, purpose_code)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX owner_type_purpose_lookup_idx ON control.owner_type_purpose USING btree (capability, purpose_code, owner_type_id)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "accessible_read",
+            "check": null,
+            "using": "(EXISTS ( SELECT 1\n   FROM control.owner_type ot\n  WHERE ((ot.id = owner_type_purpose.owner_type_id) AND ((ot.tenant_id IS NULL) OR (ot.tenant_id = shared.current_tenant_id_soft())))))",
+            "command": "r"
+          },
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_owner_type_purpose_guard",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_purpose_guard BEFORE DELETE OR UPDATE ON control.owner_type_purpose FOR EACH ROW EXECUTE FUNCTION control.trg_owner_type_purpose_guard()"
+          },
+          {
+            "name": "trg_owner_type_purpose_validate",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_owner_type_purpose_validate BEFORE INSERT OR UPDATE OF owner_type_id, capability, purpose_code ON control.owner_type_purpose FOR EACH ROW EXECUTE FUNCTION control.trg_owner_type_purpose_validate()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "owner_type_purpose_capability_chk",
+            "validated": true,
+            "definition": "CHECK ((capability = ANY (ARRAY['address'::text, 'contact'::text, 'bank_account'::text])))"
+          },
+          {
+            "name": "owner_type_purpose_code_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((purpose_code ~ '^[a-z][a-z0-9_]{1,62}$'::text))"
+          },
+          {
+            "name": "owner_type_purpose_owner_type_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (owner_type_id) REFERENCES control.owner_type(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "owner_type_purpose_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (owner_type_id, capability, purpose_code)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "event.outbox",
+        "exists": true,
+        "insert": true,
+        "select": true,
+        "update": true,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX outbox_pkey ON event.outbox USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX outbox_tenant_id_uq ON event.outbox USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX outbox_dispatch_idx ON event.outbox USING btree (topic, available_at, created_at) WHERE ((status)::text = ANY (ARRAY['pending'::text, 'failed'::text]))"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX outbox_event_key_uq ON event.outbox USING btree (tenant_id, event_key) WHERE (event_key IS NOT NULL)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX outbox_aggregate_idx ON event.outbox USING btree (tenant_id, aggregate_type, aggregate_id, created_at)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX outbox_locked_idx ON event.outbox USING btree (locked_until) WHERE ((status)::text = 'processing'::text)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX outbox_completed_purge_idx ON event.outbox USING btree (processed_at) WHERE ((status)::text = 'completed'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_access",
+            "check": "(tenant_id = shared.current_tenant_id())",
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "*"
+          }
+        ],
+        "triggers": [],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "outbox_attempt_chk",
+            "validated": true,
+            "definition": "CHECK (((attempts >= 0) AND (max_attempts > 0) AND (attempts <= max_attempts)))"
+          },
+          {
+            "name": "outbox_event_chk",
+            "validated": true,
+            "definition": "CHECK (((topic ~ '^[a-z][a-z0-9_.:-]{0,126}$'::text) AND ((event_type IS NULL) OR (event_type ~ '^[a-z][a-z0-9_.:-]{1,126}$'::text)) AND ((aggregate_type IS NULL) OR (aggregate_type ~ '^[a-z][a-z0-9_.:-]{1,126}$'::text)) AND (event_version > 0)))"
+          },
+          {
+            "name": "outbox_json_chk",
+            "validated": true,
+            "definition": "CHECK (((jsonb_typeof(payload) = 'object'::text) AND (jsonb_typeof(headers) = 'object'::text)))"
+          },
+          {
+            "name": "outbox_lock_chk",
+            "validated": true,
+            "definition": "CHECK ((((locked_at IS NULL) AND (locked_by IS NULL) AND (locked_until IS NULL)) OR ((locked_at IS NOT NULL) AND (locked_by IS NOT NULL) AND (locked_until > locked_at))))"
+          },
+          {
+            "name": "outbox_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "outbox_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id)"
+          },
+          {
+            "name": "outbox_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "master.address",
+        "exists": true,
+        "insert": true,
+        "select": true,
+        "update": true,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_pkey ON master.address USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_tenant_id_uq ON master.address USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_tenant_status_idx ON master.address USING btree (tenant_id, status)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_country_idx ON master.address USING btree (tenant_id, country_code) WHERE (country_code IS NOT NULL)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_duplicate_candidate_idx ON master.address USING btree (tenant_id, country_code, postal_code, lower(line1), lower(city)) WHERE ((status = 'active'::text) AND (line1 IS NOT NULL))"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_normalized_hash_uq ON master.address USING btree (tenant_id, normalized_hash) WHERE (status = 'active'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_access",
+            "check": "(tenant_id = shared.current_tenant_id())",
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_address_00_created_by",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_00_created_by BEFORE INSERT ON master.address FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by()"
+          },
+          {
+            "name": "trg_address_00_creation_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_00_creation_evidence BEFORE UPDATE ON master.address FOR EACH ROW EXECUTE FUNCTION master.trg_guard_master_evidence()"
+          },
+          {
+            "name": "trg_address_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_status_changed BEFORE UPDATE OF status ON master.address FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_address_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_updated_at BEFORE UPDATE ON master.address FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON master.address FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "address_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "address_content_chk",
+            "validated": true,
+            "definition": "CHECK (((status <> 'active'::text) OR (country_code IS NOT NULL) OR (NULLIF(btrim(line1), ''::text) IS NOT NULL) OR (NULLIF(btrim(city), ''::text) IS NOT NULL) OR (NULLIF(btrim(postal_code), ''::text) IS NOT NULL)))"
+          },
+          {
+            "name": "address_coordinates_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((latitude IS NULL) = (longitude IS NULL)))"
+          },
+          {
+            "name": "address_country_code_chk",
+            "validated": true,
+            "definition": "CHECK (((country_code IS NULL) OR ((country_code)::text ~ '^[A-Z]{2}$'::text)))"
+          },
+          {
+            "name": "address_country_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (country_code) REFERENCES shared.country(code) ON DELETE RESTRICT"
+          },
+          {
+            "name": "address_latitude_chk",
+            "validated": true,
+            "definition": "CHECK (((latitude IS NULL) OR ((latitude >= ('-90'::integer)::numeric) AND (latitude <= (90)::numeric))))"
+          },
+          {
+            "name": "address_longitude_chk",
+            "validated": true,
+            "definition": "CHECK (((longitude IS NULL) OR ((longitude >= ('-180'::integer)::numeric) AND (longitude <= (180)::numeric))))"
+          },
+          {
+            "name": "address_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "address_normalized_hash_chk",
+            "validated": true,
+            "definition": "CHECK ((normalized_hash ~ '^[0-9a-f]{64}$'::text))"
+          },
+          {
+            "name": "address_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "address_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "address_status_chk",
+            "validated": true,
+            "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'deprecated'::text])))"
+          },
+          {
+            "name": "address_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "address_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          },
+          {
+            "name": "address_text_nonempty_chk",
+            "validated": true,
+            "definition": "CHECK ((((line1 IS NULL) OR (btrim(line1) <> ''::text)) AND ((line2 IS NULL) OR (btrim(line2) <> ''::text)) AND ((line3 IS NULL) OR (btrim(line3) <> ''::text)) AND ((city IS NULL) OR (btrim(city) <> ''::text)) AND ((region IS NULL) OR (btrim(region) <> ''::text)) AND ((postal_code IS NULL) OR (btrim(postal_code) <> ''::text))))"
+          },
+          {
+            "name": "address_type_nonempty_chk",
+            "validated": true,
+            "definition": "CHECK (((address_type IS NULL) OR (btrim(address_type) <> ''::text)))"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "master.address_link",
+        "exists": true,
+        "insert": true,
+        "select": true,
+        "update": true,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_link_pkey ON master.address_link USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_link_tenant_id_uq ON master.address_link USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_link_owner_purpose_address_uq ON master.address_link USING btree (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id) NULLS NOT DISTINCT"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_link_one_primary_excl ON master.address_link USING gist (tenant_id, owner_type_id, owner_id, purpose, COALESCE(role_qualifier, ''::text), daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)'::text)) WHERE is_primary"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_link_owner_idx ON master.address_link USING btree (tenant_id, owner_type_id, owner_id, purpose, role_qualifier)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_link_address_idx ON master.address_link USING btree (tenant_id, address_id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX address_link_owner_type_fk_idx ON master.address_link USING btree (owner_type_id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX address_link_current_primary_uq ON master.address_link USING btree (tenant_id, owner_type_id, owner_id, purpose, role_qualifier) NULLS NOT DISTINCT WHERE (is_primary AND (effective_until IS NULL))"
+          }
+        ],
+        "policies": [
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_access",
+            "check": "(tenant_id = shared.current_tenant_id())",
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_address_link_00_created_by",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_link_00_created_by BEFORE INSERT ON master.address_link FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by()"
+          },
+          {
+            "name": "trg_address_link_00_creation_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_link_00_creation_evidence BEFORE UPDATE ON master.address_link FOR EACH ROW EXECUTE FUNCTION master.trg_guard_master_evidence()"
+          },
+          {
+            "name": "trg_address_link_owner_reference",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_link_owner_reference BEFORE INSERT OR UPDATE OF tenant_id, owner_type_id, owner_id, purpose ON master.address_link FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_reference()"
+          },
+          {
+            "name": "trg_address_link_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_address_link_updated_at BEFORE UPDATE ON master.address_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON master.address_link FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "address_link_address_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id, address_id) REFERENCES master.address(tenant_id, id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "address_link_attention_line_chk",
+            "validated": true,
+            "definition": "CHECK (((attention_line IS NULL) OR (btrim(attention_line) <> ''::text)))"
+          },
+          {
+            "name": "address_link_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "address_link_effective_range_chk",
+            "validated": true,
+            "definition": "CHECK (((effective_until IS NULL) OR (effective_until > effective_from)))"
+          },
+          {
+            "name": "address_link_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "address_link_one_primary_excl",
+            "validated": true,
+            "definition": "EXCLUDE USING gist (tenant_id WITH =, owner_type_id WITH =, owner_id WITH =, purpose WITH =, COALESCE(role_qualifier, ''::text) WITH =, daterange(effective_from, COALESCE(effective_until, 'infinity'::date), '[)'::text) WITH &&) WHERE (is_primary)"
+          },
+          {
+            "name": "address_link_owner_purpose_address_uq",
+            "validated": true,
+            "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id)"
+          },
+          {
+            "name": "address_link_owner_type_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (owner_type_id) REFERENCES control.owner_type(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "address_link_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "address_link_purpose_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((purpose ~ '^[a-z][a-z0-9_]{1,62}$'::text))"
+          },
+          {
+            "name": "address_link_role_qualifier_chk",
+            "validated": true,
+            "definition": "CHECK (((role_qualifier IS NULL) OR (btrim(role_qualifier) <> ''::text)))"
+          },
+          {
+            "name": "address_link_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "address_link_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "master.contact_link",
+        "exists": true,
+        "insert": true,
+        "select": true,
+        "update": true,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX contact_link_pkey ON master.contact_link USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX contact_link_tenant_id_uq ON master.contact_link USING btree (tenant_id, id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX contact_link_value_uq ON master.contact_link USING btree (tenant_id, owner_type_id, owner_id, channel_type, value, purpose, role_qualifier) NULLS NOT DISTINCT WHERE ((status = 'active'::text) AND (effective_until IS NULL))"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX contact_link_one_primary_uq ON master.contact_link USING btree (tenant_id, owner_type_id, owner_id, channel_type, purpose, role_qualifier) NULLS NOT DISTINCT WHERE (is_primary AND (status = 'active'::text) AND (effective_until IS NULL))"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX contact_link_owner_idx ON master.contact_link USING btree (tenant_id, owner_type_id, owner_id, channel_type, purpose)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX contact_link_owner_type_fk_idx ON master.contact_link USING btree (owner_type_id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX contact_link_verified_idx ON master.contact_link USING btree (tenant_id, owner_type_id, owner_id, channel_type) WHERE (is_verified AND (status = 'active'::text))"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX contact_email_domain_idx ON master.contact_link USING btree (tenant_id, lower(split_part(value, '@'::text, 2))) WHERE ((channel_type = 'email'::text) AND (status = 'active'::text))"
+          }
+        ],
+        "policies": [
+          {
+            "name": "seed_write",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "tenant_access",
+            "check": "(tenant_id = shared.current_tenant_id())",
+            "using": "(tenant_id = shared.current_tenant_id_soft())",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "trg_contact_link_00_created_by",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_00_created_by BEFORE INSERT ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_set_master_created_by()"
+          },
+          {
+            "name": "trg_contact_link_00_creation_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_00_creation_evidence BEFORE UPDATE ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_guard_master_evidence()"
+          },
+          {
+            "name": "trg_contact_link_05_identity",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_05_identity BEFORE UPDATE OF id, tenant_id, owner_type_id, owner_id, channel_type ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_guard_contact_link_identity()"
+          },
+          {
+            "name": "trg_contact_link_10_normalize",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_10_normalize BEFORE INSERT OR UPDATE OF channel_type, value, purpose, role_qualifier ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_contact_link()"
+          },
+          {
+            "name": "trg_contact_link_20_owner_reference",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_20_owner_reference BEFORE INSERT OR UPDATE OF tenant_id, owner_type_id, owner_id, purpose ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_validate_owner_reference()"
+          },
+          {
+            "name": "trg_contact_link_30_verification_evidence",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_30_verification_evidence BEFORE UPDATE OF is_verified, verification_provider, verification_evidence, verification_signature ON master.contact_link FOR EACH ROW EXECUTE FUNCTION master.trg_require_contact_verification_evidence()"
+          },
+          {
+            "name": "trg_contact_link_status_changed",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_status_changed BEFORE UPDATE OF status ON master.contact_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed()"
+          },
+          {
+            "name": "trg_contact_link_updated_at",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_contact_link_updated_at BEFORE UPDATE ON master.contact_link FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at()"
+          },
+          {
+            "name": "trg_zz_audit_row_change",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER trg_zz_audit_row_change AFTER INSERT OR DELETE OR UPDATE ON master.contact_link FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "contact_link_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((updated_at IS NULL) = (updated_by IS NULL)))"
+          },
+          {
+            "name": "contact_link_channel_type_chk",
+            "validated": true,
+            "definition": "CHECK ((channel_type = ANY (ARRAY['email'::text, 'phone'::text, 'fax'::text, 'sms'::text, 'whatsapp'::text, 'website'::text])))"
+          },
+          {
+            "name": "contact_link_effective_range_chk",
+            "validated": true,
+            "definition": "CHECK (((effective_until IS NULL) OR (effective_until > effective_from)))"
+          },
+          {
+            "name": "contact_link_metadata_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+          },
+          {
+            "name": "contact_link_owner_type_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (owner_type_id) REFERENCES control.owner_type(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "contact_link_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "contact_link_primary_active_chk",
+            "validated": true,
+            "definition": "CHECK (((NOT is_primary) OR (status = 'active'::text)))"
+          },
+          {
+            "name": "contact_link_purpose_fmt_chk",
+            "validated": true,
+            "definition": "CHECK ((purpose ~ '^[a-z][a-z0-9_]{1,62}$'::text))"
+          },
+          {
+            "name": "contact_link_role_qualifier_chk",
+            "validated": true,
+            "definition": "CHECK (((role_qualifier IS NULL) OR (btrim(role_qualifier) <> ''::text)))"
+          },
+          {
+            "name": "contact_link_status_audit_pair_chk",
+            "validated": true,
+            "definition": "CHECK (((status_changed_at IS NULL) = (status_changed_by IS NULL)))"
+          },
+          {
+            "name": "contact_link_status_chk",
+            "validated": true,
+            "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'deprecated'::text])))"
+          },
+          {
+            "name": "contact_link_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "contact_link_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE (tenant_id, id)"
+          },
+          {
+            "name": "contact_link_value_nonempty_chk",
+            "validated": true,
+            "definition": "CHECK ((btrim(value) <> ''::text))"
+          },
+          {
+            "name": "contact_link_verification_chk",
+            "validated": true,
+            "definition": "CHECK (((is_verified AND (verified_at IS NOT NULL) AND (verification_provider IS NOT NULL) AND (verification_signature IS NOT NULL) AND (verification_evidence <> '{}'::jsonb)) OR ((NOT is_verified) AND (verified_at IS NULL))))"
+          },
+          {
+            "name": "contact_link_verification_evidence_object_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(verification_evidence) = 'object'::text))"
+          }
+        ],
+        "ownedByCurrentRole": false
+      },
+      {
+        "name": "runtime_meta.entity_descriptor",
+        "exists": true,
+        "insert": false,
+        "select": true,
+        "update": false,
+        "indexes": [
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX runtime_entity_descriptor_pkey ON runtime_meta.entity_descriptor USING btree (id)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX runtime_entity_descriptor_tenant_id_uq ON runtime_meta.entity_descriptor USING btree (tenant_id, id) NULLS NOT DISTINCT"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX runtime_entity_descriptor_release_uq ON runtime_meta.entity_descriptor USING btree (tenant_id, entity_id, release_id, plane_code, descriptor_kind) NULLS NOT DISTINCT"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX runtime_entity_descriptor_contract_idx ON runtime_meta.entity_descriptor USING btree (entity_contract_id, plane_code, descriptor_kind)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE INDEX runtime_entity_descriptor_release_idx ON runtime_meta.entity_descriptor USING btree (applied_release_id, status)"
+          },
+          {
+            "valid": true,
+            "definition": "CREATE UNIQUE INDEX runtime_entity_descriptor_active_uq ON runtime_meta.entity_descriptor USING btree (tenant_id, entity_id, plane_code, descriptor_kind) NULLS NOT DISTINCT WHERE ((status)::text = 'active'::text)"
+          }
+        ],
+        "policies": [
+          {
+            "name": "runtime_entity_descriptor_applier",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          },
+          {
+            "name": "runtime_entity_descriptor_read",
+            "check": null,
+            "using": "((tenant_id IS NULL) OR (tenant_id = shared.current_tenant_id_soft()))",
+            "command": "r"
+          },
+          {
+            "name": "runtime_entity_descriptor_seed_owner",
+            "check": "true",
+            "using": "true",
+            "command": "*"
+          }
+        ],
+        "triggers": [
+          {
+            "name": "runtime_entity_descriptor_immutable",
+            "enabled": "O",
+            "definition": "CREATE TRIGGER runtime_entity_descriptor_immutable BEFORE DELETE OR UPDATE ON runtime_meta.entity_descriptor FOR EACH ROW EXECUTE FUNCTION runtime_meta.trg_guard_entity_descriptor()"
+          }
+        ],
+        "rlsForced": true,
+        "rlsEnabled": true,
+        "constraints": [
+          {
+            "name": "runtime_entity_descriptor_applied_release_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "runtime_entity_descriptor_compatibility_chk",
+            "validated": true,
+            "definition": "CHECK ((compatibility_level = ANY (ARRAY['breaking'::text, 'backward_compatible'::text, 'forward_compatible'::text, 'fully_compatible'::text])))"
+          },
+          {
+            "name": "runtime_entity_descriptor_compiled_hash_chk",
+            "validated": true,
+            "definition": "CHECK ((compiled_hash ~ '^[a-f0-9]{64}$'::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_compiler_version_chk",
+            "validated": true,
+            "definition": "CHECK ((btrim(compiler_version) <> ''::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_contract_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (entity_contract_id) REFERENCES runtime_meta.entity_contract(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "runtime_entity_descriptor_contract_hash_chk",
+            "validated": true,
+            "definition": "CHECK ((source_contract_hash ~ '^[a-f0-9]{64}$'::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_json_chk",
+            "validated": true,
+            "definition": "CHECK ((jsonb_typeof(compiled_json) = 'object'::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_kind_chk",
+            "validated": true,
+            "definition": "CHECK ((descriptor_kind ~ '^[a-z][a-z0-9_.-]{1,126}$'::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_pkey",
+            "validated": true,
+            "definition": "PRIMARY KEY (id)"
+          },
+          {
+            "name": "runtime_entity_descriptor_plane_chk",
+            "validated": true,
+            "definition": "CHECK ((plane_code = ANY (ARRAY['studio'::text, 'neon'::text, 'mesh'::text])))"
+          },
+          {
+            "name": "runtime_entity_descriptor_release_uq",
+            "validated": true,
+            "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, entity_id, release_id, plane_code, descriptor_kind)"
+          },
+          {
+            "name": "runtime_entity_descriptor_schema_version_chk",
+            "validated": true,
+            "definition": "CHECK ((descriptor_schema_version ~ '^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$'::text))"
+          },
+          {
+            "name": "runtime_entity_descriptor_status_time_chk",
+            "validated": true,
+            "definition": "CHECK (((((status)::text = 'staged'::text) AND (activated_at IS NULL) AND (retired_at IS NULL)) OR (((status)::text = 'active'::text) AND (activated_at IS NOT NULL) AND (retired_at IS NULL)) OR (((status)::text = 'retired'::text) AND (activated_at IS NOT NULL) AND (retired_at IS NOT NULL) AND (retired_at >= activated_at))))"
+          },
+          {
+            "name": "runtime_entity_descriptor_tenant_fk",
+            "validated": true,
+            "definition": "FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT"
+          },
+          {
+            "name": "runtime_entity_descriptor_tenant_id_uq",
+            "validated": true,
+            "definition": "UNIQUE NULLS NOT DISTINCT (tenant_id, id)"
+          },
+          {
+            "name": "runtime_entity_descriptor_time_chk",
+            "validated": true,
+            "definition": "CHECK ((received_at >= generated_at))"
+          }
+        ],
+        "ownedByCurrentRole": false
+      }
+    ],
+    "database": "athyper_neon",
+    "readOnly": "on",
+    "timeZone": "UTC",
+    "functions": [
+      {
+        "name": "append_event",
+        "schema": "audit",
+        "execute": true,
+        "signature": "p_event_code text, p_operation audit.operation_d, p_entity_type text, p_entity_id uuid, p_outcome audit.outcome_d, p_severity audit.event_severity_d, p_scope_type text, p_scope_id uuid, p_audit_reason_code_id uuid, p_reason_comment text, p_old_values jsonb, p_new_values jsonb, p_changed_fields text[], p_context jsonb, p_correlation_id uuid, p_request_id text, p_occurred_at timestamp with time zone",
+        "definitionMd5": "04aee09374479a93bc37586faff113c6"
+      },
+      {
+        "name": "trg_normalize_contact_link",
+        "schema": "master",
+        "execute": false,
+        "signature": "",
+        "definitionMd5": "632f965178b8ab9da74fdde8a20a467f"
+      },
+      {
+        "name": "trg_require_contact_verification_evidence",
+        "schema": "master",
+        "execute": false,
+        "signature": "",
+        "definitionMd5": "b7f3c318e91054271ae2cac09c6ebd00"
+      },
+      {
+        "name": "trg_validate_owner_reference",
+        "schema": "master",
+        "execute": false,
+        "signature": "",
+        "definitionMd5": "439c768d107010d92f09cfe526e78f65"
+      },
+      {
+        "name": "current_tenant_id",
+        "schema": "shared",
+        "execute": true,
+        "signature": "",
+        "definitionMd5": "c400d19e8fdd2d69a3505c1013f7db5d"
+      },
+      {
+        "name": "current_tenant_id_soft",
+        "schema": "shared",
+        "execute": true,
+        "signature": "",
+        "definitionMd5": "028eb8fa99b31401770af087b7903f12"
+      },
+      {
+        "name": "uuidv7",
+        "schema": "shared",
+        "execute": true,
+        "signature": "",
+        "definitionMd5": "c272c03a765cfc5591d6f33c7bfe96fd"
+      }
+    ],
+    "roleFlags": {
+      "bypassRls": false,
+      "superuser": false
+    },
+    "observedAt": "2026-09-06T21:32:15.370942+00:00",
+    "columnChecks": [
+      {
+        "table": "master.address",
+        "column": "country_code",
+        "matches": false,
+        "actualType": "character(2)",
+        "expectedType": "character(2)",
+        "actualNotNull": false,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.address",
+        "column": "normalized_hash",
+        "matches": true,
+        "actualType": "character(64)",
+        "expectedType": "character(64)",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.address",
+        "column": "tenant_id",
+        "matches": true,
+        "actualType": "uuid",
+        "expectedType": "uuid",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.address_link",
+        "column": "effective_from",
+        "matches": true,
+        "actualType": "date",
+        "expectedType": "date",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.address_link",
+        "column": "effective_until",
+        "matches": true,
+        "actualType": "date",
+        "expectedType": "date",
+        "actualNotNull": false,
+        "expectedNotNull": false
+      },
+      {
+        "table": "master.address_link",
+        "column": "tenant_id",
+        "matches": true,
+        "actualType": "uuid",
+        "expectedType": "uuid",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.contact_link",
+        "column": "effective_from",
+        "matches": true,
+        "actualType": "timestamp with time zone",
+        "expectedType": "timestamp with time zone",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.contact_link",
+        "column": "effective_until",
+        "matches": true,
+        "actualType": "timestamp with time zone",
+        "expectedType": "timestamp with time zone",
+        "actualNotNull": false,
+        "expectedNotNull": false
+      },
+      {
+        "table": "master.contact_link",
+        "column": "tenant_id",
+        "matches": true,
+        "actualType": "uuid",
+        "expectedType": "uuid",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.contact_link",
+        "column": "verification_evidence",
+        "matches": true,
+        "actualType": "jsonb",
+        "expectedType": "jsonb",
+        "actualNotNull": true,
+        "expectedNotNull": true
+      },
+      {
+        "table": "master.contact_link",
+        "column": "verification_signature",
+        "matches": true,
+        "actualType": "text",
+        "expectedType": "text",
+        "actualNotNull": false,
+        "expectedNotNull": false
+      }
+    ],
+    "serverVersion": "16.13 (Debian 16.13-1.pgdg12+1)",
+    "productionQualified": false
+  }
+}

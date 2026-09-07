@@ -75,6 +75,19 @@ describe("ReportPackService", () => {
     await handler.handle({id:"recovery",name:REPORT_PACK_RECOVERY_JOB,queue:"governance",data:{staleAfterMs:300_000},attempt:1,maxAttempts:3,execution:{planeKey:"neon",scope:"plane",principalId:"recovery"},enqueuedAt:clock().toISOString()},{signal:new AbortController().signal,attempt:1,async reportProgress(){}});
     expect(enqueue).toHaveBeenCalledOnce();expect(enqueue.mock.calls[0]?.[3]).toMatchObject({jobId:pack.jobId,execution:{planeKey:"neon",tenantId:"tenant-1"}});
   });
+  it("bounds signed download URLs by the report expiration time", async () => {
+    const repository = memoryRepository(), storage = memoryStorage(); storage.objects.set("artifact", Buffer.from("report"));
+    repository.packs.set("pack", { id:"pack",tenantId:"tenant-1",reportTypeCode:"audit.evidence",code:"PACK",name:"Pack",parameters:{},jobId:"job",status:"ready",artifactUri:"artifact",artifactHash:createHash("sha256").update("report").digest("hex"),expiresAt:"2026-08-11T12:00:10.000Z",evidence:{},createdAt:clock().toISOString(),createdBy:"principal-1" });
+    const signed = vi.spyOn(storage,"createDownloadUrl");
+    const service = createReportPackService({authorizer:allow,repositories:createExactPlaneRepositoryProvider({neon:repository}),revisions:{} as never,jobs:{} as never,storage,now:clock});
+    await expect(service.download(context,"pack")).resolves.toMatchObject({expiresInSeconds:10});
+    expect(signed).toHaveBeenCalledWith("artifact",10);
+  });
+  it("denies all report operations before repository access", async () => {
+    const service = createReportPackService({authorizer:{authorize:async()=>({allowed:false as const,reason:"denied"})},repositories:createExactPlaneRepositoryProvider({}),revisions:{} as never,jobs:{} as never,storage:memoryStorage()});
+    for (const call of [() => service.request({context,reportTypeCode:"audit.evidence",code:"PACK",name:"Pack"}), () => service.get(context,"pack"), () => service.download(context,"pack")]) await expect(call()).rejects.toMatchObject({code:"GOVERNANCE_PERMISSION_DENIED"});
+  });
+
 });
 
 function memoryRepository(): ReportPackRepository & { packs: Map<string, ReportPack> } { const packs = new Map<string, ReportPack>(); return { packs, async createGenerating(pack) { packs.set(pack.id, pack); return pack; }, async get(tenantId,id) { const pack=packs.get(id); return pack?.tenantId===tenantId?pack:undefined; }, async complete(_tenantId,id,input) { const current=packs.get(id)!; const pack:ReportPack={...current,...input,status:"ready",evidence:{...current.evidence,...input.evidence}}; packs.set(id,pack); if(current.supersedesReportPackId)packs.set(current.supersedesReportPackId,{...packs.get(current.supersedesReportPackId)!,status:"superseded"}); return pack; }, async appendEvidence(_tenantId,id,evidence) { const current=packs.get(id); if(current)packs.set(id,{...current,evidence:{...current.evidence,...evidence}}); }, async fail(_tenantId,id,evidence) { const current=packs.get(id); if(current)packs.set(id,{...current,status:"failed",evidence:{...current.evidence,...evidence}}); },async listRecoverable(before,limit){return [...packs.values()].filter(pack=>pack.status==="generating"&&pack.createdAt<=before).slice(0,limit);} }; }

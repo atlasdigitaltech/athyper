@@ -32,9 +32,18 @@ describe("Atlas host composition", () => {
     registerAtlas(container, { ...config, atlas: { enabled: false, persistenceEnabled: false, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam);
     expect(container.platform.ai).toMatchObject({ routesEnabled: false, toolsEnabled: false }); expect(container.platform.httpRegistrars).toHaveLength(1); expect(container.runtimes.health.list()).toContain("atlas.tool-invocation-ledger");
   });
-  it("fails closed when routes are enabled without the full repository/provider composition", () => {
+  it("composes durable history independently of provider readiness", () => {
     const container = createContainer(); const config = loadConfig();
-    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow(/not composed/);
+    registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: false } }, undefined, { neon: fakeDatabase }, transactions, iam);
+    expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: false });
+    expect(container.platform.ai?.threads).toBeDefined();
+    expect(container.platform.ai?.runtime).toBeUndefined();
+    expect(container.platform.httpRegistrars).toHaveLength(2);
+    expect(container.runtimes.health.list()).toContain("atlas.conversation-persistence");
+  });
+  it("fails closed when tools are enabled without provider and command dependencies", () => {
+    const container = createContainer(); const config = loadConfig();
+    expect(() => registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, undefined, { neon: fakeDatabase }, transactions, iam)).toThrow(/full provider and command/);
   });
   it("composes repositories, provider registry, runtime, tools, routes, and readiness together", () => {
     const container = createContainer(); const config = loadConfig();

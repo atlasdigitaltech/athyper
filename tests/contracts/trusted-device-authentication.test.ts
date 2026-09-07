@@ -60,9 +60,9 @@ function memoryStore(): { store: SessionStore; current: () => StoredSession } {
   const store = {
     async health() {}, async create() {},
     async read(_binding, id) { return id === activeId ? session : undefined; },
-    async rotate(_binding, oldId, newId, replacement) { assert.equal(oldId, activeId); assert.notEqual(newId, activeId); activeId = newId; session = replacement; },
+    async rotate(_binding, oldId, newId, replacement) { assert.equal(oldId, activeId); assert.notEqual(newId, activeId); activeId = newId; session = replacement; return true; },
     async revoke() { return false; }, async revokePrincipal() { return 0; }, async revokeProviderSession() { return 0; },
-    async putOneTimeState() {}, async consumeOneTimeState() { return undefined; }, async claimLogoutToken() { return false; },
+    async putOneTimeState() {}, async consumeOneTimeState() { return undefined; }, async completeBackchannelLogout() { return { replayed: false, revokedSessions: 0 }; },
     async touch() { return session; }, async acquireRefreshLock() { return false; }, async releaseRefreshLock() {}, async replaceAfterRefresh() { return false; },
   } satisfies SessionStore;
   return { store, current: () => session };

@@ -1,13 +1,318 @@
-import type{Authorizer,VerifiedRequestContext}from"@athyper/server-contract-auth";import type{ConnectorTransport,IntegrationRepository,JsonObject,SecretResolver}from"@athyper/server-contract-integration";import type{JobPublisher}from"@athyper/server-contract-jobs";import type{Application,RequestHandler,Response}from"express";import{admitInboundWebhook}from"./inbound-webhook.js";import{enqueueIntegrationDelivery}from"./delivery-jobs.js";import{IntegrationService}from"./integration-service.js";import type{InboundWebhookPolicyResolver}from"@athyper/server-contract-integration";
-export function registerIntegrationRoutes(app:Application,o:{authenticate:RequestHandler;readContext:(response:Response)=>VerifiedRequestContext;authorizer:Authorizer;repository:IntegrationRepository;service:IntegrationService;jobs:JobPublisher;transport:ConnectorTransport;secrets:SecretResolver;policies:InboundWebhookPolicyResolver}){const route=(permission:string,work:(r:any,c:VerifiedRequestContext)=>Promise<{status?:number;body?:unknown}>)=>async(r:any,s:Response,n:any)=>{try{const c=o.readContext(s);if(!(await o.authorizer.authorize({context:c,permissionCode:permission})).allowed){problem(s,403,"FORBIDDEN",`Missing permission: ${permission}`);return;}const out=await work(r,c);s.status(out.status??200).json(out.body);}catch(e){handle(e,s,n);}};
- app.get("/api/integration/connector-types",o.authenticate,route("integration.connector_type.read",async r=>({body:await o.repository.listTypes(text(r.query.categoryCode))})));
- app.get("/api/integration/connector-types/:id",o.authenticate,route("integration.connector_type.read",async r=>{const value=await o.repository.getType(uuid(r.params.id));if(!value)throw coded(404,"INTEGRATION_CONNECTOR_TYPE_NOT_FOUND");return{body:value};}));
- app.get("/api/integration/connections/:id",o.authenticate,route("integration.connection.read",async(r,c)=>{const value=await o.repository.getInstance(c.tenantId,uuid(r.params.id));if(!value)throw coded(404,"INTEGRATION_CONNECTION_NOT_FOUND");return{body:safeInstance(value)};}));
- app.get("/api/integration/endpoints/:id",o.authenticate,route("integration.endpoint.read",async(r,c)=>{const value=await o.repository.getEndpoint(c.tenantId,uuid(r.params.id));if(!value)throw coded(404,"INTEGRATION_ENDPOINT_NOT_FOUND");return{body:value};}));
- app.get("/api/integration/deliveries/:id",o.authenticate,route("integration.delivery.read",async(r,c)=>{const value=await o.repository.getDelivery(c.tenantId,uuid(r.params.id));if(!value)throw coded(404,"INTEGRATION_DELIVERY_NOT_FOUND");return{body:value};}));
- app.post("/api/integration/deliveries/:id/replay",o.authenticate,route("integration.delivery.replay",async(r,c)=>{const deliveryId=uuid(r.params.id),receipt=await o.repository.prepareDlqReplay({tenantId:c.tenantId,deliveryId,principalId:c.principalId,requestId:c.requestId,...(c.correlationId?{correlationId:c.correlationId}:{})});await enqueueIntegrationDelivery(o.jobs,{tenantId:c.tenantId,deliveryId},receipt.maxAttempts,receipt.jobId);return{status:202,body:receipt};}));
- app.post("/api/integration/endpoints/:id/deliveries",o.authenticate,route("integration.delivery.create",async(r,c)=>{const b=body(r),delivery=await o.service.enqueue({tenantId:c.tenantId,endpointId:uuid(r.params.id),payload:object(b.payload),semanticKey:req(b,"semanticKey"),actorPrincipalId:c.principalId});const jobId=await enqueueIntegrationDelivery(o.jobs,{tenantId:c.tenantId,deliveryId:delivery.id},delivery.plan.retryPolicy.maxAttempts);return{status:202,body:{delivery,jobId}};}));
- app.post("/api/integration/connections/:id/test",o.authenticate,route("integration.connection.test",async(r,c)=>{const endpointId=uuid(body(r).endpointId),endpoint=await o.repository.getEndpoint(c.tenantId,endpointId);if(!endpoint||endpoint.connectorInstanceId!==uuid(r.params.id))throw coded(404,"INTEGRATION_ENDPOINT_NOT_FOUND");const plan=await o.service.planTest(c.tenantId,endpointId),credential=plan.credentialReference?await o.secrets.resolve(plan.credentialReference):undefined,response=await o.transport.probe(plan,credential?.bytes);return{body:{available:response.status>=200&&response.status<300,status:response.status}};}));
- app.post("/api/webhooks/:subscriptionId",async(r:any,s,n)=>{try{const raw=r.rawBody instanceof Uint8Array?r.rawBody:Buffer.from(JSON.stringify(r.body??{}));const result=await admitInboundWebhook({subscriptionId:uuid(r.params.subscriptionId),rawBody:raw,headers:headers(r.headers)}, {policies:o.policies,secrets:o.secrets,repository:o.repository});s.status(result.duplicate?200:202).json({receiptId:result.id,duplicate:result.duplicate});}catch(e){handle(e,s,n);}});
+import type {
+  Authorizer,
+  VerifiedRequestContext,
+} from "@athyper/server-contract-auth";
+import type {
+  Delivery,
+  ConnectorTransport,
+  IntegrationRepository,
+  JsonObject,
+  SecretResolver,
+} from "@athyper/server-contract-integration";
+import type { JobPublisher } from "@athyper/server-contract-jobs";
+import {
+  raw as parseRawBody,
+  type Application,
+  type RequestHandler,
+  type Response,
+} from "express";
+import { admitInboundWebhook } from "./inbound-webhook.js";
+import { enqueueIntegrationDelivery } from "./delivery-jobs.js";
+import { IntegrationService } from "./integration-service.js";
+import type { InboundWebhookPolicyResolver } from "@athyper/server-contract-integration";
+export function registerIntegrationRoutes(
+  app: Application,
+  o: {
+    authenticate: RequestHandler;
+    readContext: (response: Response) => VerifiedRequestContext;
+    authorizer: Authorizer;
+    repository: IntegrationRepository;
+    service: IntegrationService;
+    jobs: JobPublisher;
+    transport: ConnectorTransport;
+    secrets: SecretResolver;
+    policies: InboundWebhookPolicyResolver;
+  },
+) {
+  const route =
+    (
+      permission: string,
+      work: (
+        r: any,
+        c: VerifiedRequestContext,
+      ) => Promise<{ status?: number; body?: unknown }>,
+    ) =>
+    async (r: any, s: Response, n: any) => {
+      try {
+        const c = o.readContext(s);
+        if (
+          !(
+            await o.authorizer.authorize({
+              context: c,
+              permissionCode: permission,
+            })
+          ).allowed
+        ) {
+          problem(s, 403, "FORBIDDEN", `Missing permission: ${permission}`);
+          return;
+        }
+        const out = await work(r, c);
+        s.status(out.status ?? 200).json(out.body);
+      } catch (e) {
+        handle(e, s, n);
+      }
+    };
+  app.get(
+    "/api/integration/connector-types",
+    o.authenticate,
+    route("integration.connector_type.read", async (r) => ({
+      body: await o.repository.listTypes(category(r.query.categoryCode)),
+    })),
+  );
+  app.get(
+    "/api/integration/connector-types/:id",
+    o.authenticate,
+    route("integration.connector_type.read", async (r) => {
+      const value = await o.repository.getType(uuid(r.params.id));
+      if (!value) throw coded(404, "INTEGRATION_CONNECTOR_TYPE_NOT_FOUND");
+      return { body: value };
+    }),
+  );
+  app.get(
+    "/api/integration/connections/:id",
+    o.authenticate,
+    route("integration.connection.read", async (r, c) => {
+      const value = await o.repository.getInstance(
+        c.tenantId,
+        uuid(r.params.id),
+      );
+      if (!value) throw coded(404, "INTEGRATION_CONNECTION_NOT_FOUND");
+      return { body: safeInstance(value) };
+    }),
+  );
+  app.get(
+    "/api/integration/endpoints/:id",
+    o.authenticate,
+    route("integration.endpoint.read", async (r, c) => {
+      const value = await o.repository.getEndpoint(
+        c.tenantId,
+        uuid(r.params.id),
+      );
+      if (!value) throw coded(404, "INTEGRATION_ENDPOINT_NOT_FOUND");
+      return { body: { ...value, headers: redactHeaders(value.headers) } };
+    }),
+  );
+  app.get(
+    "/api/integration/deliveries/:id",
+    o.authenticate,
+    route("integration.delivery.read", async (r, c) => {
+      const value = await o.repository.getDelivery(
+        c.tenantId,
+        uuid(r.params.id),
+      );
+      if (!value) throw coded(404, "INTEGRATION_DELIVERY_NOT_FOUND");
+      return { body: safeDelivery(value) };
+    }),
+  );
+  app.post(
+    "/api/integration/deliveries/:id/replay",
+    o.authenticate,
+    route("integration.delivery.replay", async (r, c) => {
+      const deliveryId = uuid(r.params.id),
+        receipt = await o.repository.prepareDlqReplay({
+          tenantId: c.tenantId,
+          deliveryId,
+          principalId: c.principalId,
+          requestId: c.requestId,
+          ...(c.correlationId ? { correlationId: c.correlationId } : {}),
+        });
+      await enqueueIntegrationDelivery(
+        o.jobs,
+        { tenantId: c.tenantId, deliveryId },
+        receipt.maxAttempts,
+        receipt.jobId,
+      );
+      return { status: 202, body: receipt };
+    }),
+  );
+  app.post(
+    "/api/integration/endpoints/:id/deliveries",
+    o.authenticate,
+    route("integration.delivery.create", async (r, c) => {
+      const b = body(r),
+        delivery = await o.service.enqueue({
+          tenantId: c.tenantId,
+          endpointId: uuid(r.params.id),
+          payload: object(b.payload),
+          semanticKey: req(b, "semanticKey"),
+          actorPrincipalId: c.principalId,
+        });
+      const jobId = await enqueueIntegrationDelivery(
+        o.jobs,
+        { tenantId: c.tenantId, deliveryId: delivery.id },
+        delivery.plan.retryPolicy.maxAttempts,
+      );
+      return { status: 202, body: { delivery: safeDelivery(delivery), jobId } };
+    }),
+  );
+  app.post(
+    "/api/integration/connections/:id/test",
+    o.authenticate,
+    route("integration.connection.test", async (r, c) => {
+      const connectionId = uuid(r.params.id),
+        endpointId = uuid(body(r).endpointId),
+        endpoint = await o.repository.getEndpoint(c.tenantId, endpointId);
+      if (
+        !endpoint ||
+        endpoint.connectorInstanceId.toLowerCase() !== connectionId
+      )
+        throw coded(404, "INTEGRATION_ENDPOINT_NOT_FOUND");
+      const plan = await o.service.planTest(c.tenantId, endpointId),
+        credential = plan.credentialReference
+          ? await o.secrets.resolve(plan.credentialReference)
+          : undefined,
+        response = await o.transport.probe(plan, credential?.bytes);
+      return {
+        body: {
+          available: response.status >= 200 && response.status < 300,
+          status: response.status,
+        },
+      };
+    }),
+  );
+  app.post(
+    "/api/webhooks/:subscriptionId",
+    parseRawBody({
+      type: () => true,
+      limit: "10mb", // Maximum subscription limit allowed by the database.
+      inflate: false,
+    }),
+    async (r: any, s, n) => {
+      try {
+        const raw =
+          r.rawBody instanceof Uint8Array
+            ? r.rawBody
+            : r.body instanceof Uint8Array
+              ? r.body
+              : undefined;
+        if (!raw) throw coded(400, "INTEGRATION_WEBHOOK_RAW_BODY_REQUIRED");
+        const result = await admitInboundWebhook(
+          {
+            subscriptionId: uuid(r.params.subscriptionId),
+            rawBody: raw,
+            headers: headers(r.headers),
+          },
+          {
+            policies: o.policies,
+            secrets: o.secrets,
+            repository: o.repository,
+          },
+        );
+        s.status(result.duplicate ? 200 : 202).json({
+          receiptId: result.id,
+          duplicate: result.duplicate,
+        });
+      } catch (e) {
+        handle(e, s, n);
+      }
+    },
+  );
 }
-function safeInstance<T extends{credentialReference?:string}>(v:T){const{credentialReference:_secret,...safe}=v;return{...safe,credentialConfigured:Boolean(_secret)};}function body(r:any):Record<string,unknown>{if(!r.body||typeof r.body!=="object"||Array.isArray(r.body))throw coded(400,"INVALID_BODY");return r.body;}function object(v:unknown):JsonObject{if(!v||typeof v!=="object"||Array.isArray(v))throw coded(400,"INVALID_PAYLOAD");return v as JsonObject;}function text(v:unknown){return typeof v==="string"&&v.trim()?v.trim():undefined;}function req(v:Record<string,unknown>,k:string){const x=text(v[k]);if(!x)throw coded(400,"MISSING_FIELD");return x;}function uuid(v:unknown){const x=String(v??"");if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x))throw coded(400,"INVALID_ID");return x;}function headers(v:Record<string,unknown>){return Object.fromEntries(Object.entries(v).flatMap(([k,x])=>typeof x==="string"?[[k.toLowerCase(),x]]:[]));}function coded(status:number,code:string){return Object.assign(new Error(code),{status,code,retryable:false});}function problem(s:Response,status:number,code:string,detail:string){s.status(status).type("application/problem+json").json({type:`https://athyper.dev/problems/${code.toLowerCase()}`,title:code,status,detail,code});}function handle(e:unknown,s:Response,n:(e?:unknown)=>void){const status=typeof e==="object"&&e&&"status"in e?Number((e as any).status):undefined,code=typeof e==="object"&&e&&"code"in e?String((e as any).code):undefined;if(status&&code)problem(s,status,code,e instanceof Error?e.message:code);else n(e);}
+function safeInstance<T extends { credentialReference?: string }>(v: T) {
+  const { credentialReference: _secret, ...safe } = v;
+  return { ...safe, credentialConfigured: Boolean(_secret) };
+}
+function body(r: any): Record<string, unknown> {
+  if (!r.body || typeof r.body !== "object" || Array.isArray(r.body))
+    throw coded(400, "INVALID_BODY");
+  return r.body;
+}
+function object(v: unknown): JsonObject {
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    throw coded(400, "INVALID_PAYLOAD");
+  return v as JsonObject;
+}
+function text(v: unknown) {
+  return typeof v === "string" && v.trim() ? v.trim() : undefined;
+}
+function req(v: Record<string, unknown>, k: string) {
+  const x = text(v[k]);
+  if (!x) throw coded(400, "MISSING_FIELD");
+  return x;
+}
+function uuid(v: unknown) {
+  const x = String(v ?? "");
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      x,
+    )
+  )
+    throw coded(400, "INVALID_ID");
+  return x.toLowerCase();
+}
+function headers(v: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(v).flatMap(([k, x]) =>
+      typeof x === "string" ? [[k.toLowerCase(), x]] : [],
+    ),
+  );
+}
+function coded(status: number, code: string) {
+  return Object.assign(new Error(code), { status, code, retryable: false });
+}
+function problem(s: Response, status: number, code: string, detail: string) {
+  s.status(status)
+    .type("application/problem+json")
+    .json({
+      type: `https://athyper.dev/problems/${code.toLowerCase()}`,
+      title: code,
+      status,
+      detail,
+      code,
+    });
+}
+function handle(e: unknown, s: Response, n: (e?: unknown) => void) {
+  const status =
+      typeof e === "object" && e && "status" in e
+        ? Number((e as any).status)
+        : undefined,
+    code =
+      typeof e === "object" && e && "code" in e
+        ? String((e as any).code)
+        : undefined;
+  if (status && code)
+    problem(s, status, code, e instanceof Error ? e.message : code);
+  else n(e);
+}
+
+function category(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  const result = text(value);
+  if (!result) throw coded(400, "INVALID_CATEGORY_CODE");
+  return result;
+}
+function redactHeaders(value: Readonly<Record<string, string>>) {
+  return Object.fromEntries(
+    Object.entries(value).map(([key, value]) =>
+      [
+        /authorization/i,
+        /api[-_]?key/i,
+        /signature/i,
+        /cookie/i,
+        /token/i,
+        /secret/i,
+      ].some((pattern) => pattern.test(key))
+        ? [key, "[REDACTED]"]
+        : [key, value],
+    ),
+  );
+}
+function safeDelivery(value: Delivery) {
+  return {
+    ...value,
+    plan: {
+      ...safeInstance(value.plan),
+      headers: redactHeaders(value.plan.headers),
+    },
+  };
+}

@@ -651,3 +651,20 @@ test("Atlas home combines a timezone-aware greeting with the primary heading", a
     /max-width:600px.*athyper-home__composer>header>strong\{font-size:clamp\(\.4375rem,2\.3vw,\.6875rem\);[^}]*white-space:nowrap/s,
   );
 });
+
+test("shared activity routes are exact authenticated-shell destinations", async () => {
+  const { isShellActivityRoute } = await import("../../packages/platform/shell/shell/src/core");
+  for (const path of ["/inbox", "/notifications"]) assert.equal(isShellActivityRoute(path), true);
+  for (const path of ["/inbox/admin", "/notifications-other", "/mdg", "//notifications"]) assert.equal(isShellActivityRoute(path), false);
+});
+
+test("Studio MDG pages inherit the publication module and definition-read permission", async () => {
+  const { studioRoutes } = await import("../../packages/planes/studio/shell/src/navigation");
+  const workspaces = [{ code: "entity", name: "Entity", sortOrder: 1, modules: [{ code: "pub", name: "Publishing", sortOrder: 1, primary: true }] }];
+  const entitled = deriveShellNavigation(studioRoutes, { workspaces, permissions: ["studio.business_partner_definition.read"], features: {} });
+  for (const path of ["/mdg", "/mdg/business-partner", "/mdg/business-partner/model", "/mdg/business-partner/validation", "/mdg/business-partner/matching", "/mdg/business-partner/workflows", "/mdg/business-partner/publication", "/mdg/business-partner/operations", "/mdg/business-partner/ai-experience"]) {
+    assert.equal(canAccessRoute(entitled, path), true, path);
+    assert.equal(canAccessRoute(deriveShellNavigation(studioRoutes, { workspaces, permissions: [], features: {} }), path), false, path);
+    assert.equal(canAccessRoute(deriveShellNavigation(studioRoutes, { workspaces: [], permissions: ["studio.business_partner_definition.read"], features: {} }), path), false, path);
+  }
+});

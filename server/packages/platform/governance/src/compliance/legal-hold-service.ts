@@ -6,8 +6,8 @@ import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/tr
 export function createLegalHoldService(options: { readonly authorizer: Authorizer; readonly repositories: ExactPlaneRepositoryProvider<LegalHoldRepository>; readonly retention: LegalHoldRetentionAdapter; readonly now?: () => Date; readonly createId?: () => string }): LegalHoldService {
   const now = () => options.now?.() ?? new Date();
   const id = () => options.createId?.() ?? randomUUID();
-  const load = async (context: VerifiedRequestContext, holdId: string) => {
-    const hold = await options.repositories.require(context.planeKey).get(context.tenantId, holdId);
+  const load = async (context: VerifiedRequestContext, holdId: string, repository = options.repositories.require(context.planeKey)) => {
+    const hold = await repository.get(context.tenantId, holdId);
     if (!hold) throw coded("GOVERNANCE_NOT_FOUND");
     return hold;
   };
@@ -22,44 +22,51 @@ export function createLegalHoldService(options: { readonly authorizer: Authorize
     },
     async addResource(command) {
       await permit(options.authorizer, command.context);
-      const repository = options.repositories.require(command.context.planeKey);
+      return options.repositories.require(command.context.planeKey).withHoldLock(command.context.tenantId, command.holdId, async (repository) => {
       validateResource(command.resource);
-      const hold = await load(command.context, command.holdId);
+      const hold = await load(command.context, command.holdId, repository);
       if (hold.status !== "draft" && hold.status !== "active") throw coded("GOVERNANCE_INVALID_TRANSITION");
       if (hold.resources.some((item) => !item.releasedAt && item.kind === command.resource.kind && item.resourceId === command.resource.resourceId && item.uri === command.resource.uri)) throw coded("GOVERNANCE_INVALID_COMMAND", { field: "resource", reason: "duplicate_manifest_entry" });
       const resource = await repository.addResource(hold.tenantId, hold.id, { ...command.resource, id: id(), capturedAt: now().toISOString() }, command.context.principalId);
       if (hold.status === "active") await options.retention.apply({ context: command.context, hold, resource, effectiveAt: hold.effectiveAt! });
       return resource;
+      });
     },
     async removeResource(context, holdId, resourceId) {
       await permit(options.authorizer, context);
-      const hold = await load(context, holdId);
+      return options.repositories.require(context.planeKey).withHoldLock(context.tenantId, holdId, async (repository) => {
+      const hold = await load(context, holdId, repository);
       if (hold.status !== "draft") throw coded("GOVERNANCE_INVALID_TRANSITION", { policy: "A manifest may only be reduced while its hold is draft" });
-      if (!await options.repositories.require(context.planeKey).removeDraftResource(context.tenantId, holdId, resourceId)) throw coded("GOVERNANCE_NOT_FOUND");
+      if (!await repository.removeDraftResource(context.tenantId, holdId, resourceId)) throw coded("GOVERNANCE_NOT_FOUND");
+      });
     },
     async activate(context, holdId, requestedEffectiveAt) {
       await permit(options.authorizer, context);
-      const hold = await load(context, holdId);
+      return options.repositories.require(context.planeKey).withHoldLock(context.tenantId, holdId, async (repository) => {
+      const hold = await load(context, holdId, repository);
       if (hold.status !== "draft") throw coded("GOVERNANCE_INVALID_TRANSITION");
       const effectiveAt = requestedEffectiveAt ? instant(requestedEffectiveAt, "effectiveAt") : now().toISOString();
       if (new Date(effectiveAt) > now()) throw coded("GOVERNANCE_INVALID_COMMAND", { field: "effectiveAt", reason: "future" });
       if (hold.issuedAt && new Date(effectiveAt) < new Date(hold.issuedAt)) throw coded("GOVERNANCE_INVALID_COMMAND", { field: "effectiveAt", reason: "before_issued_at" });
       if (hold.resources.length === 0) throw coded("GOVERNANCE_INVALID_COMMAND", { field: "manifest", reason: "empty" });
       for (const resource of hold.resources) await options.retention.apply({ context, hold, resource, effectiveAt });
-      const activated = await options.repositories.require(context.planeKey).activate(context.tenantId, holdId, context.principalId, effectiveAt);
+      const activated = await repository.activate(context.tenantId, holdId, context.principalId, effectiveAt);
       if (!activated) throw coded("GOVERNANCE_INVALID_TRANSITION");
       return activated;
+      });
     },
     async release(context, holdId, requestedReleasedAt) {
       await permit(options.authorizer, context);
-      const hold = await load(context, holdId);
+      return options.repositories.require(context.planeKey).withHoldLock(context.tenantId, holdId, async (repository) => {
+      const hold = await load(context, holdId, repository);
       if (hold.status !== "active") throw coded("GOVERNANCE_INVALID_TRANSITION");
       const releasedAt = requestedReleasedAt ? instant(requestedReleasedAt, "releasedAt") : now().toISOString();
       if (new Date(releasedAt) > now() || new Date(releasedAt) < new Date(hold.effectiveAt!)) throw coded("GOVERNANCE_INVALID_COMMAND", { field: "releasedAt" });
       for (const resource of hold.resources.filter((item) => !item.releasedAt)) await options.retention.release({ context, hold, resource, releasedAt });
-      const released = await options.repositories.require(context.planeKey).release(context.tenantId, holdId, context.principalId, releasedAt);
+      const released = await repository.release(context.tenantId, holdId, context.principalId, releasedAt);
       if (!released) throw coded("GOVERNANCE_INVALID_TRANSITION");
       return released;
+      });
     },
     async get(context, holdId) { await permit(options.authorizer, context); return load(context, holdId); },
   };

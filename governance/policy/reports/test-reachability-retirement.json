@@ -36,6 +36,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/backchannel-logout-retry.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/bff-relay-security.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -76,6 +80,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/context-refresh-race.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/e2e-auth-state.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -104,6 +112,14 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/mesh-url-review.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/neon-application-url-review.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/neon-operating-organization-contract.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -120,6 +136,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/refresh-touch-race.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/server-plane-composition.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -128,11 +148,19 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/session-store-rotation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/shared-shell-navigation.test.ts",
       "runner": "test:plane-contracts"
     },
     {
       "path": "tests/contracts/studio-publication-navigation.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
+      "path": "tests/contracts/studio-url-review.test.ts",
       "runner": "test:plane-contracts"
     },
     {
@@ -221,6 +249,10 @@
     },
     {
       "path": "tests/foundation/quick-access-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/studio-experience-editor.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -345,6 +377,18 @@
     },
     {
       "path": "tooling/scripts/verification/business-partner-v1-qualification.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/local-master-data-operations.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/master-data-prerequisites.test.mjs",
       "runner": "test:operations"
     },
     {

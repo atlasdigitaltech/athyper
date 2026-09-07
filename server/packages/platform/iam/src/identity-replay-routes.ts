@@ -15,7 +15,13 @@ const uuid = {
   pattern:
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
 };
-const reason = { type: "string", minLength: 1, maxLength: 1000 };
+const reason = {
+  type: "string",
+  minLength: 1,
+  maxLength: 1000,
+  // PostgreSQL text cannot store the NUL code point.
+  pattern: "^[^\\u0000]*$",
+};
 const reasonBody = {
   type: "object",
   additionalProperties: false,

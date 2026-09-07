@@ -14,6 +14,7 @@ interface PolicyRow {
 export function createKyselyPolicyRepository(): PolicyRepository<PolicyTransaction> {
   return {
     async findActive(query, transaction) {
+      if (query.policyDefinitionIds?.length === 0) return [];
       const result = await sql<PolicyRow>`
         SELECT definition.id AS definition_id, definition.tenant_id, definition.entity_type,
                definition.name AS policy_name, definition.priority AS definition_priority,

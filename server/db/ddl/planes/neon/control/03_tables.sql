@@ -2,6 +2,8 @@
 -- Plan version history is captured by the plane's snapshot schema.
 
 CREATE TABLE control.subscription_plan (
+    entitlement_version integer NOT NULL DEFAULT 1 CHECK (entitlement_version > 0),
+    entitlement_effective_from timestamptz NOT NULL DEFAULT date_trunc('milliseconds', now()),
     id                uuid                NOT NULL DEFAULT shared.uuidv7(),
     code              text                NOT NULL,
     name              text                NOT NULL,

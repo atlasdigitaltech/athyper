@@ -14,7 +14,8 @@
   "dependencies": {
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/server-contract-finance": "workspace:*",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/server-foundation": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

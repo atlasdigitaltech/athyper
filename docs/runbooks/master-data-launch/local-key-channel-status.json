@@ -1,0 +1,28 @@
+{
+  "scope": "local_development",
+  "signingKey": {
+    "status": "valid_rotation_not_due",
+    "keyId": "local-contact-challenge-v1",
+    "expiresAt": "2026-12-05T19:19:53.727Z",
+    "rotationWindowStartsAt": "2026-11-21T19:19:53.727000+00:00",
+    "maintenanceTimer": "active_enabled",
+    "rotationAndRollbackTests": "passed_with_isolated_keys",
+    "liveKeyChanged": false
+  },
+  "channels": {
+    "captureAcceptance": "passed",
+    "messages": 6,
+    "channels": [
+      "email",
+      "sms",
+      "whatsapp",
+      "push:web",
+      "push:android",
+      "push:ios"
+    ],
+    "marker": "local-channel-acceptance-b86572b9-dd15-4615-8838-e21bd80c589d",
+    "realDeliveryAcceptance": "open_provider_and_authorized_recipients_required"
+  },
+  "nonlocalDeployment": "open_deferred_by_user",
+  "checkedAt": "2026-09-06T22:13:03.484Z"
+}

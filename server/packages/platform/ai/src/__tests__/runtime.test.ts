@@ -19,3 +19,24 @@ describe("AtlasAgentRuntime", () => {
     expect(providerCalls).toBe(1); expect(first.some((event)=>event.event.type==="attachment.cited")).toBe(true);expect(first.at(-1)?.event.type).toBe("run.completed"); expect(replay.some((event) => event.event.type === "message.delta")).toBe(true); expect(ledger).toHaveLength(1); expect(ledger[0]).not.toHaveProperty("prompt"); expect(ledger[0]).not.toHaveProperty("response"); expect(ledger[0]).toMatchObject({ bindingRevision: "binding-r1", policyRevision: "policy-r1", actualModelId: "model-exact" });
   });
 });
+
+it("marks a disconnected run cancelled when the SSE consumer closes the generator", async () => {
+  const { vi } = await import("vitest");
+  const cancel = vi.fn(async () => null);
+  const settle = vi.fn(async () => undefined);
+  const runtime = new AtlasAgentRuntime({
+    admission: { resolve: async () => ({ chatAllowed: true, persistenceAllowed: true, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "1" }) },
+    modelPolicy: { evaluate: async () => ({ allowed: true, policyRevision: "1", promptRevision: "1" }) },
+    bindings: new AtlasBindingRegistry([binding]), providers: {} as never, credentials: {} as never,
+    threads: { get: async () => thread, boundedHistory: async () => [] },
+    runs: { begin: async () => ({ replayed: false, run: { runId: "run", outputMessageId: "message" } }), cancel },
+    ledger: {} as never, prompts: { resolve: async () => ({ revision: "1", systemText: "system" }) },
+    quota: { reserve: async () => ({ reservationId: "reservation" }), settle }, maxInputCharacters: 100, maxToolRounds: 0,
+  } as never);
+  const controller = new AbortController();
+  const iterator = runtime.run({ context, threadId: thread.threadId, clientRequestId: "disconnect", publicModelId: "atlas-fast", dataClass: "internal", userText: "hello", catalogPolicyRevision: "1", signal: controller.signal })[Symbol.asyncIterator]();
+  expect((await iterator.next()).value?.event.type).toBe("run.started");
+  controller.abort(); await iterator.return?.();
+  expect(cancel).toHaveBeenCalledWith(expect.objectContaining({ context, runId: "run" }));
+  expect(settle).toHaveBeenCalledOnce();
+});

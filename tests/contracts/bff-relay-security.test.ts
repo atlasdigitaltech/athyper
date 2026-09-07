@@ -4,14 +4,48 @@ import { createServer } from "node:http";
 import { gzipSync } from "node:zlib";
 import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
+import ts from "typescript";
 import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
+// Inspect the actual relay configuration. Conditional pilot arrays can contain
+// their own closing brackets; imports and conditional branches do not prove
+// that a required operation is always registered.
+function registeredOperations(source: string): ReadonlySet<string> {
+  const file = ts.createSourceFile("relay.ts", source, ts.ScriptTarget.Latest, true);
+  const registered = new Set<string>();
+  function visit(node: ts.Node): void {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === "createRelayHandler") {
+      const options = node.arguments[0];
+      if (options && ts.isObjectLiteralExpression(options)) {
+        const property = options.properties.find((item) => ts.isPropertyAssignment(item) && item.name.getText(file) === "operations");
+        if (property && ts.isPropertyAssignment(property) && ts.isArrayLiteralExpression(property.initializer)) {
+          for (const element of property.initializer.elements) {
+            if (ts.isIdentifier(element)) registered.add(element.text);
+            else if (ts.isSpreadElement(element) && ts.isIdentifier(element.expression)) registered.add(element.expression.text);
+          }
+        }
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(file);
+  return registered;
+}
 const session = (plane = "neon", tenantId = "tenant-1", token = "server-token"): RelaySessionContext => ({ accessToken: token, plane, realmKey: "athyper", tenantId, principalId: "principal-1", authEpoch: 7, csrfToken: "csrf-proof" });
 function authority(current = session()): RelaySessionAuthority & { invalidated: number; refreshed: number } { return { invalidated: 0, refreshed: 0, resolve: async () => current, refresh: async function () { this.refreshed++; return { ...current, accessToken: "refreshed-token" }; }, invalidate: async function () { this.invalidated++; } }; }
 function relay(input: { plane?: string; operation?: RelayOperation; authority?: RelaySessionAuthority; fetch?: typeof fetch; diagnostics?: RelayDiagnostic[]; timeout?: number } = {}) { return createRelayHandler({ plane: input.plane ?? "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [input.operation ?? IAM_ME_OPERATION], session: input.authority ?? authority(), fetch: input.fetch ?? (async () => new Response("{}", { headers: { "content-type": "application/json" } })), timeouts: input.timeout ? { json: input.timeout, stream: input.timeout, upload: input.timeout, download: input.timeout } : undefined, onDiagnostic: (value) => input.diagnostics?.push(value) }); }
 
 describe("Phase 4 hardened BFF relay", () => {
+  it("checks unconditional relay registrations after nested pilot arrays", () => {
+    const source = `const unused = [IMPORTED_ONLY]; createRelayHandler({ operations: [
+      ...(enabled ? [PILOT_ONLY] : []), REQUIRED_READ, ...REQUIRED_GROUP,
+    ] });`;
+    assert.deepEqual([...registeredOperations(source)], ["REQUIRED_READ", "REQUIRED_GROUP"]);
+    assert.equal(registeredOperations(source).has("IMPORTED_ONLY"), false);
+    assert.equal(registeredOperations(source).has("PILOT_ONLY"), false);
+    assert.equal(registeredOperations(source.replace("...REQUIRED_GROUP", "")).has("REQUIRED_GROUP"), false);
+  });
   it("clears local session cookies and requires login after Runtime context revocation", async () => {
     for (const plane of ["neon", "mesh", "studio"]) for (const production of [true, false]) {
       let active: RelaySessionContext | undefined = session(plane);
@@ -94,7 +128,7 @@ describe("Phase 4 hardened BFF relay", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
       assert.match(source, /ATLAS_ANSWER_RELAY_OPERATIONS/);
-      assert.match(source, /operations:\s*\[[^\]]*\.\.\.ATLAS_ANSWER_RELAY_OPERATIONS/s);
+      assert.ok(registeredOperations(source).has("ATLAS_ANSWER_RELAY_OPERATIONS"), `${plane} must register Atlas operations`);
     }
     const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform:4000", appOrigin: "https://neon.example", operations: ATLAS_ANSWER_RELAY_OPERATIONS, session: authority(), fetch: async () => new Response('{"proposalId":"10000000-0000-4000-8000-000000000001","outcome":"completed"}', { headers: { "content-type": "application/json" } }) });
     assert.equal((await handler(new Request("https://neon.example/api/relay/atlas/tools/history"), context("atlas", "tools", "history"))).status, 200);
@@ -109,7 +143,9 @@ describe("Phase 4 hardened BFF relay", () => {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
       assert.match(source, /ENTITY_LIST_DESCRIPTOR_OPERATION/);
       assert.match(source, /ENTITY_LIST_QUERY_OPERATION/);
-      assert.match(source, /operations:\s*\[[^\]]*ENTITY_LIST_DESCRIPTOR_OPERATION[^\]]*ENTITY_LIST_QUERY_OPERATION/s);
+      const operations = registeredOperations(source);
+      assert.ok(operations.has("ENTITY_LIST_DESCRIPTOR_OPERATION"), `${plane} must register descriptor reads`);
+      assert.ok(operations.has("ENTITY_LIST_QUERY_OPERATION"), `${plane} must register list queries`);
     }
   });
 
@@ -117,7 +153,7 @@ describe("Phase 4 hardened BFF relay", () => {
     for (const plane of ["neon", "mesh", "studio"]) {
       const source = readFileSync(new URL(`../../apps/${plane}/lib/relay.ts`, import.meta.url), "utf8");
       assert.match(source, /RECORD_TRANSFER_RELAY_OPERATIONS/);
-      assert.match(source, /operations:\s*\[[^\]]*\.\.\.RECORD_TRANSFER_RELAY_OPERATIONS/s);
+      assert.ok(registeredOperations(source).has("RECORD_TRANSFER_RELAY_OPERATIONS"), `${plane} must register transfer operations`);
     }
     let upstream = "";
     const handler = createRelayHandler({

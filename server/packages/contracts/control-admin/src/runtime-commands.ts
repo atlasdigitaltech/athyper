@@ -37,6 +37,7 @@ export interface RuntimeCommandApproval {
   readonly approvalId: string;
   readonly commandId: string;
   readonly commandFingerprint: string;
+  readonly previewFingerprint?: string;
   readonly requestedBy: string;
   readonly requestedAt: string;
   readonly status: "pending" | RuntimeApprovalDecision;

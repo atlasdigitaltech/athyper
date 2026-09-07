@@ -246,3 +246,17 @@ BEGIN
     END IF;
 END;
 $$;
+
+REVOKE ALL ON control.tenant_module_entitlement_override FROM PUBLIC;
+GRANT SELECT, INSERT, UPDATE ON control.tenant_module_entitlement_override, control.tenant_usage_limit_override TO athyperapp;
+GRANT ALL ON control.tenant_module_entitlement_override TO athyperadmin;
+
+GRANT SELECT,INSERT,UPDATE ON control.feature_flag_override TO athyperapp;
+
+REVOKE ALL ON FUNCTION control.lock_parameter_definition(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION control.lock_parameter_definition(uuid) TO athyperapp,athyperadmin;
+
+REVOKE ALL ON FUNCTION control.parameter_value_matches_definition(jsonb,text,jsonb,jsonb,jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION control.parameter_json_is_api_compatible(jsonb,integer) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION control.parameter_value_matches_definition(jsonb,text,jsonb,jsonb,jsonb) TO athyperapp,athyperadmin;
+GRANT EXECUTE ON FUNCTION control.parameter_json_is_api_compatible(jsonb,integer) TO athyperapp,athyperadmin;

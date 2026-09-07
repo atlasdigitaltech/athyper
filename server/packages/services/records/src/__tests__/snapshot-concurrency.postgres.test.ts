@@ -25,4 +25,17 @@ describe.skipIf(!enabled)("snapshot PostgreSQL concurrency",()=>{
     expect(await repository.get({tenantId:randomUUID(),principalId:principalId!,planeKey:"neon"},latest!.id)).toBeNull();
     await expect(repository.get({tenantId:tenantId!,principalId:principalId!,planeKey:"studio"},latest!.id)).rejects.toThrow("WRONG_PLANE");
   });
+  it("persists canonical JSONB evidence and creates new evidence for retention changes", async () => {
+    const input = { tenantId: tenantId!, principalId: principalId!, planeKey: "neon" as const, entityType: "master.wave0_test", entityId: randomUUID(), entityCode: "wave0_test", entityContractHash: "a".repeat(64), captureEvent: "records.snapshot.capture", captureKind: "manual" as const, retentionClass: "temporary" as const, captureSource: "postgres_test", payload: { label: "Résumé 東京", nested: { longKey: 1, a: 2 }, date: new Date("2026-09-06T01:02:03.456Z") } };
+    const captured = await repository.capture(input);
+    const read = await repository.get({ tenantId: tenantId!, principalId: principalId!, planeKey: "neon" }, captured.snapshot.id);
+    expect(read).toEqual(captured.snapshot);
+    expect(read!.payload["date"]).toBe("2026-09-06T01:02:03.456Z");
+    const evidence = await sql<{ matches: boolean }>`SELECT i.payload_hash = snapshot.fn_compute_entity_snapshot_hash(i.tenant_id, i.entity_type, i.entity_id, i.version_number, i.payload_schema_version, i.entity_contract_hash, i.capture_event, i.capture_kind, p.payload_json, i.previous_snapshot_id, i.previous_payload_hash) AND i.payload_size_bytes = octet_length(p.payload_json::text) AS matches FROM snapshot.entity_snapshot_identity i JOIN snapshot.entity_snapshot p ON p.tenant_id = i.tenant_id AND p.snapshot_id = i.id AND p.captured_at = i.captured_at WHERE i.tenant_id = ${tenantId!}::uuid AND i.id = ${captured.snapshot.id}::uuid`.execute(database);
+    expect(evidence.rows).toEqual([{ matches: true }]);
+    expect((await repository.capture(input)).kind).toBe("replayed");
+    const legal = await repository.capture({ ...input, retentionClass: "legal" });
+    expect(legal).toMatchObject({ kind: "created", snapshot: { chainSequence: 2, retentionClass: "legal", previousSnapshotId: captured.snapshot.id } });
+  });
+
 });

@@ -46,6 +46,8 @@ export interface LegalHold {
 }
 
 export interface LegalHoldRepository {
+  /** Serialize manifest and lifecycle changes; roll back database changes if work fails. */
+  withHoldLock<T>(tenantId: string, holdId: string, work: (repository: LegalHoldRepository) => Promise<T>): Promise<T>;
   createDraft(input: Omit<LegalHold, "resources">): Promise<LegalHold>;
   get(tenantId: string, holdId: string): Promise<LegalHold | undefined>;
   addResource(

@@ -121,7 +121,7 @@ test("DEV-full parity is bounded and includes every Phase 8 service", () => {
   assert.equal(plan.resources.memoryMiB, 13_312);
   assert.equal(plan.resources.cpu, 15.95);
   assert.ok(plan.services.some((service) => service.id === "db-migration"));
-  assert.equal(plan.sources.compose.length, 2);
+  assert.equal(plan.sources.compose.filter(file => !file.endsWith("local-atlas.compose.json")).length, plan.sources.localMasterData ? 2 + (plan.sources.compose.some(file => file.endsWith("local-runtime-preserved.compose.json")) ? 4 : 3) : 2);
   assert.ok(plan.domains.includes("mail.dev.athyper.test"));
   assert.ok(plan.domains.includes("minio.dev.athyper.test"));
   assert.ok(plan.domains.includes("objects.dev.athyper.test"));
@@ -137,7 +137,7 @@ test("QA plan is independently addressed and uses complete immutable candidate i
   const plan = createPlan(defaultRepoRoot, "qa");
   assert.equal(plan.project, "athyper-qa");
   assert.equal(plan.preset, "qa-standard");
-  assert.equal(plan.sources.compose.length, 2);
+  assert.equal(plan.sources.compose.filter(file => !file.endsWith("local-atlas.compose.json")).length, plan.sources.localMasterData ? 2 + (plan.sources.compose.some(file => file.endsWith("local-runtime-preserved.compose.json")) ? 4 : 3) : 2);
   assert.deepEqual(plan.debugPorts, { postgres: "127.0.0.1:55432" });
   assert.deepEqual(plan.platform.ingressPorts, ["127.0.0.1:80", "127.0.0.1:443"]);
   assert.ok(plan.networks.every((name) => name.startsWith("athyper-qa_")));
@@ -283,7 +283,7 @@ test("optional capability plans are profile-scoped, bounded, and read-only", () 
     assert.equal(plan.readOnly, true);
     assert.equal(plan.executionAuthorized, false);
     assert.deepEqual(plan.composeProfiles, [profile]);
-    assert.equal(plan.composeFiles.length, 3);
+    assert.equal(plan.composeFiles.length, createPlan(defaultRepoRoot, "dev").sources.compose.length + 1);
     assert.equal(plan.services.length, contract.services);
     assert.equal(plan.resources.additionalMemoryMiB, contract.memoryMiB);
     assert.equal(plan.resources.additionalCpu, contract.cpu);

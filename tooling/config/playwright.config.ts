@@ -18,6 +18,7 @@
  */
 
 import { defineConfig, devices } from "@playwright/test";
+import { resolve } from "node:path";
 
 const planeBaseUrls = {
   studio:
@@ -61,7 +62,7 @@ export default defineConfig({
     screenshot: "on",
     trace: "retain-on-failure",
     ignoreHTTPSErrors: true,
-    storageState: "../../tests/e2e/.auth/storage-state.json",
+    storageState: resolve(__dirname, "../../tests/e2e/.auth/storage-state.json"),
   },
   projects: [
     {
@@ -71,7 +72,7 @@ export default defineConfig({
       use: {
         browserName: "chromium",
         baseURL: planeBaseUrls[sessionPlane],
-        storageState: `../../tests/e2e/.auth/${sessionPlane}.json`,
+        storageState: resolve(__dirname, `../../tests/e2e/.auth/${sessionPlane}.json`),
       },
     },
     {
@@ -114,7 +115,7 @@ export default defineConfig({
         use: {
           browserName: "chromium" as const,
           baseURL: planeBaseUrls[plane],
-          storageState: `../../tests/e2e/.auth/${plane}.json`,
+          storageState: resolve(__dirname, `../../tests/e2e/.auth/${plane}.json`),
           viewport: { width: 1440, height: 900 },
         },
       },
@@ -125,7 +126,7 @@ export default defineConfig({
         use: {
           ...devices["Pixel 7"],
           baseURL: planeBaseUrls[plane],
-          storageState: `../../tests/e2e/.auth/${plane}.json`,
+          storageState: resolve(__dirname, `../../tests/e2e/.auth/${plane}.json`),
         },
       },
     ]),

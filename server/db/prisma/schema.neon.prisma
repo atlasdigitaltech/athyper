@@ -14494,8 +14494,8 @@ model address_link {
   tenant                   tenant     @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "address_link_tenant_fk")
   principal                principal? @relation(fields: [tenant_id, usage_denied_by], references: [tenant_id, id], onUpdate: NoAction, map: "address_link_usage_denied_by_fk")
 
-  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_current_primary_uq", where: raw("(is_primary AND (effective_until IS NULL))"))
-  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id], map: "address_link_owner_purpose_address_uq")
+  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier], map: "address_link_current_primary_uq", where: raw("(is_primary AND (effective_until IS NULL) AND (usage_status <> 'cancelled'::text))"))
+  @@unique([tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id], map: "address_link_owner_purpose_address_uq", where: raw("(usage_status <> 'cancelled'::text)"))
   @@unique([tenant_id, id], map: "address_link_tenant_id_uq")
   @@index([tenant_id, address_id], map: "address_link_address_idx")
   @@index([tenant_id, owner_type_id, owner_id, created_at(sort: Desc), id(sort: Desc)], map: "address_link_owner_cursor_idx", where: raw("(usage_status = 'active'::text)"))

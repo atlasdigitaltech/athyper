@@ -199,3 +199,10 @@ describe("Business Partner request service", () => {
 
   it("rejects mismatched add-role request kinds before authorization",async()=>{const value=fixture();await expect(value.service.create(command({kind:"add_customer",targetBusinessPartnerId:"10101010-1010-4010-8010-101010101010",requestedRole:"supplier"}))).rejects.toMatchObject({code:"BUSINESS_PARTNER_REQUEST_INVALID",status:400});expect(value.permissions).toEqual([]);});
 });
+
+
+it.each(["invalid", "2026-13-01", "2026-02-30", "infinity"])("rejects invalid case list timestamp %s before querying",async beforeCreatedAt=>{
+  const value=fixture();
+  await expect(value.service.list({context,operatingOrganizationId:"55555555-5555-4555-8555-555555555555",beforeCreatedAt})).rejects.toMatchObject({status:400,code:"BUSINESS_PARTNER_REQUEST_INVALID"});
+  expect(value.permissions).toHaveLength(0);
+});

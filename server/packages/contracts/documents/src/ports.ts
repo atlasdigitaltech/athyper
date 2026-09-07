@@ -11,12 +11,12 @@ export interface DocumentTemplateRepository<Transaction> { resolvePublished(quer
 export interface SaveGeneratedDocument {
   readonly id: string; readonly tenantId: string; readonly principalId: string; readonly entityType: string; readonly entityId: string; readonly operationCode: string;
   readonly fileName: string; readonly storageBucket: string; readonly storageKey: string; readonly sizeBytes: number; readonly sha256: string;
-  readonly template: PublishedDocumentTemplate; readonly renderProvider: string; readonly renderDurationMs: number; readonly malwareScan: CleanMalwareScanResult; readonly idempotencyKey?: string;
+  readonly template: PublishedDocumentTemplate; readonly renderProvider: string; readonly renderDurationMs: number; readonly malwareScan: CleanMalwareScanResult; readonly idempotencyKey?: string; readonly requestHash?: string;
 }
 export interface DocumentArtifactRepository<Transaction> {
   save(input: SaveGeneratedDocument, transaction: Transaction): Promise<GeneratedDocument>;
   findAccessible(context: VerifiedRequestContext, documentId: string, transaction: Transaction): Promise<(GeneratedDocument & { readonly storageKey: string }) | null>;
-  findIdempotent(context: VerifiedRequestContext, idempotencyKey: string, transaction: Transaction): Promise<GeneratedDocument | null>;
+  findIdempotent(context: VerifiedRequestContext, idempotencyKey: string, transaction: Transaction): Promise<(GeneratedDocument & { readonly requestHash?: string }) | null>;
   findNotificationCandidate?(
     input: Pick<ResolveDocumentDeliveryAttachment, "tenantId" | "attachmentId" | "versionPolicy" | "attachmentVersionId">,
     transaction: Transaction,

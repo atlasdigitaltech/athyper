@@ -28,6 +28,10 @@ export async function start(): Promise<void> {
     isReady: () => startupComplete,
     healthRegistry: container.runtimes.health,
     environment: config.env,
+    openApi: {
+      title: "Athyper API", version: "0.1.0",
+      authenticatedHeaders: { type: "object", required: ["x-plane"], properties: { "x-plane": { type: "string", enum: ["studio", "neon", "mesh"] } } },
+    },
     onUnexpectedError(error, request) {
       captureOperationalError(error, {
         "http.method": request.method,

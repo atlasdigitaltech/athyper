@@ -62,6 +62,7 @@ export class AtlasThreadService {
   }
   async putParticipant(context: VerifiedRequestContext, threadId: string, principalId: string, role: "member" | "observer", expectedRowVersion: number): Promise<AtlasThread> {
     const thread = await this.requireThread(context, threadId); await this.authorize(context, "participants", thread);
+    if (principalId === thread.ownerPrincipalId) throw new AtlasServiceError("PERMISSION_DENIED", "The Atlas thread owner cannot be demoted.");
     const updated = await this.options.repository.putParticipant({ context, threadId, principalId, role, expectedRowVersion });
     if (!updated) throw new AtlasServiceError("VERSION_CONFLICT", "The Atlas thread participant set changed."); return updated;
   }

@@ -1,6 +1,9 @@
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { PolicyBundle, PolicyDefinition, PolicyDecision, PolicyEvaluationRequest, PolicyRule, PolicyTestCase, PolicyTestResult, SignedPolicyBundle } from "./policy.js";
 
 export interface PolicyRepositoryQuery {
+  /** Required for caching across plane-local databases; omitted queries bypass the cache. */
+  readonly planeKey?: VerifiedRequestContext["planeKey"];
   readonly tenantId: string;
   readonly entityType: string;
   readonly policyDefinitionIds?: readonly string[];

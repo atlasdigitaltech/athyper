@@ -8,6 +8,7 @@ export const meshPlaneComposition = Object.freeze({
 });
 
 export * from "./record-collection-scope.js";
+export * from "./network-account-context.js";
 export * from "./network-relationship-import.js";
 export * from "./business-partner-profile-publication.js";
 export * from "./business-partner-profile-publication-routes.js";

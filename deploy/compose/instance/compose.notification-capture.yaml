@@ -1,0 +1,16 @@
+# Explicit opt-in for isolated development/QA. Mailpit must be selected.
+x-capture: &capture
+  ATHYPER_ENV: local
+  NOTIFICATION_CAPTURE: "true"
+  EMAIL_PROVIDER: smtp
+  SMTP_HOST: mailtrap
+  SMTP_PORT: "1025"
+  SMTP_SECURE: "false"
+  SMTP_FROM: noreply@${ATHYPER_DOMAIN_SUFFIX:-dev.athyper.test}
+services:
+  api:
+    environment: *capture
+  worker:
+    environment: *capture
+  scheduler:
+    environment: *capture

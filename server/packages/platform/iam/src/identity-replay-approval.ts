@@ -82,7 +82,8 @@ export class IdentityReplayApprovalService {
     const ttlSeconds = input.ttlSeconds ?? 900;
     if (
       !reason ||
-      reason.length > 1000 ||
+      Array.from(reason).length > 1000 ||
+      reason.includes("\0") ||
       !Number.isInteger(ttlSeconds) ||
       ttlSeconds < 60 ||
       ttlSeconds > 3600
@@ -107,7 +108,7 @@ export class IdentityReplayApprovalService {
   ): Promise<IdentityReplayApproval> {
     await this.authorize(context, { approvalId: input.approvalId });
     const reason = input.reason.trim();
-    if (!reason || reason.length > 1000)
+    if (!reason || Array.from(reason).length > 1000 || reason.includes("\0"))
       throw new IdentityReplayError(400, "IAM_REPLAY_APPROVAL_INVALID");
     return this.repository.decide(context, { ...input, reason });
   }

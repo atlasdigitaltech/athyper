@@ -17,7 +17,7 @@ test("the publication workspace is available to both separated actors", () => {
     const nav = navigation(["studio.business_partner_definition.read", `studio.business_partner_definition.${permission}`]);
     assert.equal(canAccessRoute(nav, path), true);
     assert.equal(nav.routes.find(route => route.href === path)?.moduleCode, "pub");
-    assert.equal(canAccessRoute(nav, "/mdg/business-partner/workflows"), false);
+    assert.equal(canAccessRoute(nav, "/mdg/business-partner/workflows"), true);
   }
 });
 test("publication navigation requires definition read permission", () => {

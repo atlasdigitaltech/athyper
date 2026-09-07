@@ -1,3 +1,4 @@
+import { featurePercentageCohort } from "@athyper/server-foundation";
 import { createHash } from "node:crypto";
 import {
   parseExperienceSurface,
@@ -62,6 +63,7 @@ export class ExperienceAccessError extends Error {
 export interface ExperienceServiceOptions {
   readonly repositories: ExperienceRepositoryProvider;
   readonly cache?: ExperienceCache;
+  readonly readRuntimeDefaults?: (context:VerifiedRequestContext,at:Date)=>Promise<{readonly densityCode:"comfortable"|"compact";readonly configurationRevision:string}>;
   readonly now?: () => Date;
 }
 
@@ -95,11 +97,14 @@ export function createExperienceService(options: ExperienceServiceOptions) {
     ): Promise<ExperienceBootstrap> {
       assertSnapshotBoundToContext(context);
       const repository = options.repositories.require(context.planeKey);
-      const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}`;
+      const at = now();
+      const runtimeDefaults = await options.readRuntimeDefaults?.(context,at);
+      const featureRevision = await repository.readFeatureRevision?.(context, at) ?? "unversioned";
+      const entitlementRevision = await repository.readEntitlementRevision?.(context, at) ?? "unversioned";
+      const cacheKey = `experience:${context.planeKey}:${context.tenantId}:${context.principalId}:${context.authEpoch}:${context.profileHash}:${input.clientVersion ?? "-"}:${entitlementRevision}:${featureRevision}:${runtimeDefaults?.configurationRevision??"default"}`;
       const cacheGeneration = options.cache?.generation;
       const cached = await options.cache?.get(cacheKey);
       if (isBootstrap(cached)) return cached;
-      const at = now();
       const identity = await repository.readIdentity(context, at);
       assertIdentityAdmission(context, identity);
 
@@ -110,6 +115,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const resolvedProfile = await readProfileOrDefault(
         repository.readProfile.bind(repository),
         context,
+        runtimeDefaults?.densityCode,
       );
       const { profile, localization } = applyLocalePolicy(
         resolvedProfile,
@@ -167,6 +173,7 @@ export function createExperienceService(options: ExperienceServiceOptions) {
       const features = resolveFeatures(
         featureRows,
         context.tenantId,
+        context.principalId,
         entitledModuleIds,
         input.clientVersion,
       );
@@ -1024,6 +1031,7 @@ async function readProfileOrDefault(
     principal?: Readonly<Record<string, unknown>>;
   }>,
   context: VerifiedRequestContext,
+  defaultDensity: ExperienceProfile["densityCode"] = PLATFORM_PROFILE.densityCode,
 ): Promise<{
   readonly profile: ExperienceProfile;
   readonly localization: ExperienceLocalization;
@@ -1061,7 +1069,7 @@ async function readProfileOrDefault(
       appearanceMode:
         appearance(principal.appearanceMode) ?? PLATFORM_PROFILE.appearanceMode,
       densityCode:
-        density(principal.densityCode) ?? PLATFORM_PROFILE.densityCode,
+        density(principal.densityCode) ?? defaultDensity,
     };
     return {
       profile,
@@ -1072,7 +1080,7 @@ async function readProfileOrDefault(
     };
   } catch {
     return {
-      profile: PLATFORM_PROFILE,
+      profile: {...PLATFORM_PROFILE,densityCode:defaultDensity},
       localization: effectiveLocalization(PLATFORM_PROFILE, "platform"),
     };
   }
@@ -1512,6 +1520,7 @@ function resolveWorkspaces(
 function resolveFeatures(
   rows: readonly ExperienceFeatureRecord[],
   tenantId: string,
+  principalId: string,
   moduleIds: ReadonlySet<string>,
   clientVersion?: string,
 ): Readonly<Record<string, EffectiveFeature>> {
@@ -1536,7 +1545,7 @@ function resolveFeatures(
     let enabled = row.defaultEnabled,
       source: EffectiveFeature["source"] = "catalog_default";
     if (row.rolloutPct !== undefined) {
-      enabled = enabled && cohort(tenantId, row.code) < row.rolloutPct;
+      enabled = enabled && featurePercentageCohort(row.cohortStrategy, tenantId, principalId, row.code) < row.rolloutPct;
       source = "rollout";
     }
     if (row.kind === "kill_switch") {
@@ -1549,17 +1558,6 @@ function resolveFeatures(
     output[row.code] = { code: row.code, enabled, source };
   }
   return Object.freeze(output);
-}
-function cohort(tenantId: string, code: string): number {
-  return (
-    Number.parseInt(
-      createHash("sha256")
-        .update(`${tenantId}:${code}`)
-        .digest("hex")
-        .slice(0, 8),
-      16,
-    ) % 100
-  );
 }
 function compareVersions(left: string, right: string): number {
   const parse = (value: string) =>

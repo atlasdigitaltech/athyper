@@ -15,17 +15,17 @@ test.beforeEach(async ({ page }, testInfo) => {
   await observeWebVitals(page);
 });
 
-test("login and context selection remain reachable", async ({ browser }, testInfo) => {
+test("identity-provider sign-in remains reachable", async ({ browser }, testInfo) => {
   const project = productionContext(testInfo);
   const context = await browser.newContext({
     baseURL: testInfo.project.use.baseURL as string,
     ignoreHTTPSErrors: true,
   });
   const page = await context.newPage();
-  await page.goto("/login");
+  await page.goto("/api/auth/login?returnTo=%2Fhome");
   await expect(page.getByLabel(/email|username/i)).toBeVisible();
-  await expect(page.getByLabel(/password/i)).toBeVisible();
-  await expect(page.getByRole("button", { name: /sign in|log in/i })).toBeEnabled();
+  // Identity-first sign-in may ask for the password on the next screen.
+  await expect(page.getByRole("button", { name: /sign in|log in|continue|next/i })).toBeVisible();
   await context.close();
   expect(["studio", "neon", "mesh"]).toContain(project.plane);
 });

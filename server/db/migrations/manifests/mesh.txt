@@ -1,2 +1,4 @@
 # Canonical local-development baseline. Add post-baseline Mesh migrations below.
 20260906_mesh_exchange_readiness.sql
+20260907_atlas_conversation_runtime_access.sql
+20260907_lookup_reference_governance.sql

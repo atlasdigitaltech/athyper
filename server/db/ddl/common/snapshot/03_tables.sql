@@ -122,3 +122,21 @@ COMMENT ON COLUMN snapshot.entity_snapshot_identity.payload_hash IS
 
 COMMENT ON COLUMN snapshot.entity_snapshot_identity.audit_event_id IS
   'Canonical audit.audit_log event that caused this snapshot. No FK is possible because audit evidence is time-partitioned with a composite key.';
+
+-- Global plane-local commercial snapshots; tenant entity snapshots cannot
+-- represent this catalog without inventing a tenant owner.
+CREATE TABLE snapshot.subscription_plan_entitlement (
+    subscription_plan_id uuid NOT NULL,
+    version integer NOT NULL CHECK (version > 0),
+    code text NOT NULL,
+    effective_from timestamptz NOT NULL,
+    status shared.ref_status_d NOT NULL,
+    modules jsonb NOT NULL CHECK (jsonb_typeof(modules) = 'array'),
+    limits jsonb NOT NULL CHECK (jsonb_typeof(limits) = 'object'),
+    dimensions jsonb NOT NULL CHECK (jsonb_typeof(dimensions) = 'object'),
+    captured_at timestamptz NOT NULL DEFAULT clock_timestamp(),
+    captured_by uuid NOT NULL,
+    PRIMARY KEY (subscription_plan_id, version)
+);
+CREATE INDEX subscription_plan_entitlement_effective_idx
+    ON snapshot.subscription_plan_entitlement(code, effective_from DESC, version DESC);

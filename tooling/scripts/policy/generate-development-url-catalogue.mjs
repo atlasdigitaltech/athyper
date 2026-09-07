@@ -76,6 +76,51 @@ async function appRoutes(app) {
   return [...routes.values()].sort((a, b) => sort(a.path, b.path));
 }
 
+export function auditCatalogue(lines) {
+  const origins = new Map();
+  const shared = new Map();
+  let origin;
+  for (const line of lines) {
+    if (line.startsWith('Base URL:')) origin = line.match(/https:\/\/[^\]]+/)[0];
+    const match = line.match(/^- \*\*([A-Z, ]+)\*\* (?:`([^`]+)`|\[([^\]]+)\])/);
+    if (!match) continue;
+    const path = match[2] ?? match[3];
+    // Keep single, required catch-all and optional catch-all patterns distinct.
+    const shape = path.replace(/\{[^}]+\}/g, (parameter) => parameter.endsWith('...?}') ? '{segments...?}' : parameter.endsWith('...}') ? '{path...}' : '{parameter}');
+    if (!origins.has(origin)) origins.set(origin, { entries: 0, identities: new Map(), paths: new Map() });
+    const inventory = origins.get(origin);
+    for (const method of match[1].split(', ')) {
+      inventory.entries++;
+      const key = `${method} ${shape}`;
+      if (!inventory.identities.has(key)) inventory.identities.set(key, []);
+      inventory.identities.get(key).push(path);
+      if (!inventory.paths.has(shape)) inventory.paths.set(shape, new Set());
+      inventory.paths.get(shape).add(method);
+      if (origin !== API) {
+        if (!shared.has(key)) shared.set(key, new Set());
+        shared.get(key).add(origin);
+      }
+    }
+  }
+  const result = [
+    '## Duplicate URL audit', '',
+    'This audit checks every listed App and Runtime entry, including discovery endpoints. Identity is origin + HTTP method + path shape: parameter names are ignored, while single segments, required catch-all and optional catch-all patterns remain distinct. Combined method lists are expanded. Counts describe catalogue entries after the existing source scanners merge declarations; they do not prove the absence of duplicate runtime registrations or overlapping wildcard routes.', '',
+    '| Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |',
+    '| --- | ---: | ---: | ---: | ---: |',
+  ];
+  const duplicates = [];
+  for (const [host, inventory] of origins) {
+    const repeated = [...inventory.identities].filter(([, paths]) => paths.length > 1);
+    result.push(`| ${host} | ${inventory.entries} | ${inventory.identities.size} | ${repeated.length} | ${[...inventory.paths.values()].filter((methods) => methods.size > 1).length} |`);
+    for (const [key, paths] of repeated) duplicates.push(`| ${host} | \`${key}\` | ${paths.map((path) => `\`${path}\``).join('<br>')} |`);
+  }
+  result.push('', 'Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.', '');
+  if (duplicates.length) result.push('| Origin | Method and normalized path | Listed paths |', '| --- | --- | --- |', ...duplicates, '');
+  else result.push('No duplicate identities found.', '');
+  result.push(`${[...shared.values()].filter((hosts) => hosts.size > 1).length} method/path shapes are shared across application origins. Different origins identify different URLs. Multiple HTTP methods on the same path are separate operations, not duplicate identities.`, '');
+  return result;
+}
+
 export async function renderCatalogue(snapshot) {
   const sourceRoutes = buildRouteManifest(ROOT).routes.filter((route) => route.current.length);
   const byIdentity = new Map(sourceRoutes.map((route) => [identity(route), route]));
@@ -99,7 +144,7 @@ export async function renderCatalogue(snapshot) {
       // Runtime discovery URLs are configurable and listed explicitly above the inventories.
       if (sourcePath === 'server/packages/runtime/http/src/http-runtime.ts' && /^app.get\((artifactPath,|openApi.docsPath \?\? "\/docs")/.test(unresolved.expression)) continue;
       // This cross-file adapter consumes the descriptors extracted from register-finance.ts.
-      if (sourcePath === 'server/packages/planes/neon/src/finance-http.ts' && unresolved.expression.startsWith('defineRouteContract({method:point.method,path:point.path,')) {
+      if (sourcePath === 'server/packages/planes/neon/src/finance-http.ts' && unresolved.expression.replace(/\s+/g, '').startsWith('defineRouteContract({method:point.method,path:point.path,')) {
         const descriptors = extractStaticUrlRoutes(readFileSync(join(ROOT, 'server/packages/planes/neon/src/register-finance.ts'), 'utf8')).routes;
         if (!descriptors.length) throw new Error('Finance route descriptors could not be extracted');
         continue;
@@ -126,6 +171,7 @@ export async function renderCatalogue(snapshot) {
     '- [Studio](#studio-application-urls) · [NEON](#neon-application-urls) · [MESH](#mesh-application-urls)',
     '- [Runtime discovery](#runtime-discovery) · [Deployed Swagger APIs](#runtime-apis-in-deployed-swagger)',
     '- [Additional source APIs](#additional-backend-apis-declared-in-source) · [Refresh instructions](#how-to-use-and-refresh)', '',
+    '- [Duplicate URL audit](#duplicate-url-audit)', '',
     'Each entry shows its method and path, followed by its details and source. Fixed paths link to the full development URL; parameterized paths are templates to combine with the section’s base URL. All entries stay expanded for browser Find.', '',
     '## How to use and refresh', '',
     '- [Runtime Swagger UI](https://api.dev.athyper.test/docs) reads `/openapi.json`. Browser APIs on the application origins are separate and do not appear in Runtime Swagger.',
@@ -188,6 +234,7 @@ export async function renderCatalogue(snapshot) {
     }
   }
   lines.push('', 'See [Business Partner field extensibility and 360 aggregation](field-extensibility-and-360-aggregation.md) for the aggregation and security model.', '');
+  lines.splice(lines.indexOf('## How to use and refresh'), 0, ...auditCatalogue(lines));
   return lines.join('\n');
 }
 

@@ -2,10 +2,11 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { createHash } from "node:crypto";
+import { extractStaticUrlRoutes } from "./extract-static-url-routes.mjs";
 
 const ROOT = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
-const OUTPUT_JSON = join(ROOT, "docs", "architecture", "server-route-manifest.json");
-const OUTPUT_MD = join(ROOT, "docs", "architecture", "server-route-manifest.md");
+const BASELINE = "governance/config/governance/server-legacy-route-baseline.json";
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".mjs", ".cjs"]);
 const IGNORED_DIRECTORIES = new Set(["node_modules", "dist", "coverage", ".turbo", ".git", "__tests__", "fixtures"]);
 const HTTP_METHODS = new Set(["get", "post", "put", "patch", "delete"]);
@@ -16,7 +17,7 @@ function sourceText(path) { return readFileSync(path, "utf8").replace(/^\uFEFF/,
 
 function* walk(root) {
   if (!existsSync(root)) return;
-  for (const entry of readdirSync(root)) {
+  for (const entry of readdirSync(root).sort()) {
     if (IGNORED_DIRECTORIES.has(entry)) continue;
     const path = join(root, entry);
     const stat = statSync(path);
@@ -253,19 +254,79 @@ export function extractRoutesFromSource(source, options = {}) {
   });
 }
 
-function collectTree(root, tree) {
+function collectTree(root, tree, workspaceRoot) {
   const occurrences = [];
   const defaultMount = tree === "legacy" ? "/api" : "";
   for (const path of walk(root)) {
     const source = sourceText(path);
-    for (const route of extractRoutesFromSource(source, { defaultMount })) occurrences.push({ ...route, source: posix(relative(ROOT, path)) });
+    const routes = extractRoutesFromSource(source, { defaultMount });
+    // Descriptor factories (for example Neon finance) bind routes in another file.
+    // Supplement current source only; historical baseline extraction remains stable.
+    if (tree === "current" && /\bkind\s*:\s*["']route["']/.test(source)) {
+      for (const route of extractStaticUrlRoutes(source).routes) {
+        const normalized = normalizeRoutePath(route.declaredPath);
+        if (!routes.some(existing => existing.method === route.method && existing.path === normalized)) routes.push({...route, path: normalized});
+      }
+    }
+    for (const route of routes) occurrences.push({ ...route, source: posix(relative(workspaceRoot, path)) });
   }
   return occurrences;
 }
 
-export function buildRouteManifest(root = ROOT) {
-  const legacy = collectTree(join(root, "server-backup"), "legacy");
-  const current = collectTree(join(root, "server"), "current");
+function validateBaseline(baseline) {
+  const provenance = baseline?.provenance;
+  if (baseline?.schemaVersion !== 1 || !["historical-manifest", "source-tree"].includes(provenance?.kind)
+    || typeof provenance.path !== "string" || !provenance.path
+    || !/^[a-f0-9]{64}$/.test(provenance.sha256 ?? "")
+    || (provenance.kind === "historical-manifest" && !/^[a-f0-9]{40}$/.test(provenance.commit ?? ""))
+    || !Array.isArray(baseline.routes) || baseline.routes.length === 0) {
+    throw new Error("Invalid legacy route baseline: nonempty routes and verifiable provenance are required");
+  }
+  const seen = new Set();
+  for (const route of baseline.routes) {
+    if (!route || typeof route.method !== "string" || !HTTP_METHODS.has(route.method.toLowerCase()) || route.method !== route.method.toUpperCase()
+      || typeof route.path !== "string" || !route.path.startsWith("/") || normalizeRoutePath(route.path) !== route.path
+      || typeof route.declaredPath !== "string" || !route.declaredPath.startsWith("/")
+      || typeof route.source !== "string" || !route.source.startsWith("server-backup/")
+      || route.source.includes("\\") || route.source.split("/").includes("..")
+      || !Number.isSafeInteger(route.line) || route.line < 1 || !["direct", "contract", "loop"].includes(route.kind)) {
+      throw new Error("Invalid legacy route baseline occurrence");
+    }
+    const key = JSON.stringify([route.method, route.path, route.source, route.line, route.declaredPath, route.kind]);
+    if (seen.has(key)) throw new Error("Duplicate legacy route baseline occurrence");
+    seen.add(key);
+  }
+  return baseline;
+}
+
+/** The backup tree is read only by this explicit refresh operation, never by routine checks. */
+export function refreshLegacyBaseline({ root = ROOT } = {}) {
+  const legacyRoot = join(root, "server-backup");
+  if (!existsSync(legacyRoot)) throw new Error("Restore the authentic server-backup snapshot before refreshing the legacy baseline");
+  const hash = createHash("sha256");
+  for (const path of [...walk(legacyRoot)].sort()) {
+    // Hash a deterministic sequence of source paths and their exact bytes, with length framing.
+    const name = Buffer.from(posix(relative(root, path)));
+    const content = readFileSync(path);
+    hash.update(`${name.length}:`).update(name).update(`${content.length}:`).update(content);
+  }
+  const baseline = validateBaseline({ schemaVersion: 1,
+    provenance: { kind: "source-tree", path: "server-backup", sha256: hash.digest("hex") },
+    routes: collectTree(legacyRoot, "legacy", root),
+  });
+  const destination = join(root, BASELINE);
+  mkdirSync(dirname(destination), { recursive: true });
+  writeFileSync(destination, renderJson(baseline));
+  console.log(`Refreshed legacy baseline (${baseline.routes.length} occurrences). Review and commit the baseline and regenerated manifest.`);
+  return baseline;
+}
+
+export function buildRouteManifest(root = ROOT, { currentOnly = false } = {}) {
+  const baselinePath = join(root, BASELINE);
+  const baseline = !currentOnly && existsSync(baselinePath) ? validateBaseline(JSON.parse(sourceText(baselinePath))) : null;
+  const legacy = baseline?.routes ?? [];
+  if (!existsSync(join(root, "server"))) throw new Error("Current server source directory is required to generate the route manifest");
+  const current = collectTree(join(root, "server"), "current", root);
   const grouped = new Map();
   for (const [tree, routes] of [["legacy", legacy], ["current", current]]) {
     for (const route of routes) {
@@ -279,18 +340,20 @@ export function buildRouteManifest(root = ROOT) {
   for (const route of routes) {
     route.legacy.sort((left, right) => `${left.source}:${left.line}`.localeCompare(`${right.source}:${right.line}`));
     route.current.sort((left, right) => `${left.source}:${left.line}`.localeCompare(`${right.source}:${right.line}`));
-    route.status = route.legacy.length && route.current.length ? "matched" : route.legacy.length ? "legacy-only" : "current-only";
+    route.status = !baseline ? "current-uncompared" : route.legacy.length && route.current.length ? "matched" : route.legacy.length ? "legacy-only" : "current-only";
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     normalization: { legacyDefaultMount: "/api", parameterNames: ":param", excluded: ["tests", "fixtures", "dist", "node_modules"] },
-    sources: { legacy: "server-backup", current: "server" },
+    sources: { legacy: baseline ? BASELINE : null, current: "server" },
+    legacyParity: baseline ? { status: "available", provenance: baseline.provenance }
+      : { status: "unavailable", reason: currentOnly ? "Explicit current-routes-only mode" : "Legacy route baseline is missing" },
     summary: {
       identities: routes.length,
-      matched: routes.filter((route) => route.status === "matched").length,
-      legacyOnly: routes.filter((route) => route.status === "legacy-only").length,
-      currentOnly: routes.filter((route) => route.status === "current-only").length,
-      legacyOccurrences: legacy.length,
+      matched: baseline ? routes.filter((route) => route.status === "matched").length : null,
+      legacyOnly: baseline ? routes.filter((route) => route.status === "legacy-only").length : null,
+      currentOnly: baseline ? routes.filter((route) => route.status === "current-only").length : null,
+      legacyOccurrences: baseline ? legacy.length : null,
       currentOccurrences: current.length,
     },
     routes,
@@ -303,14 +366,16 @@ function markdown(manifest) {
     "",
     "Generated by `pnpm routes:server-manifest`. Do not edit manually.",
     "",
+    `Legacy parity: **${manifest.legacyParity.status}**. ${manifest.legacyParity.reason ?? `Baseline: \`${manifest.sources.legacy}\` (${manifest.legacyParity.provenance.kind}).`}`,
+    "",
     "The comparison resolves literal router mounts, route contracts, and finite string/tuple loops. Legacy package routes receive the historical `/api` host mount. Parameter names are normalized to `:param`; a match is structural evidence, not proof of authorization or response-contract parity.",
     "",
     "| Measure | Count |",
     "| --- | ---: |",
-    `| Matched identities | ${manifest.summary.matched} |`,
-    `| Legacy-only identities | ${manifest.summary.legacyOnly} |`,
-    `| Current-only identities | ${manifest.summary.currentOnly} |`,
-    `| Legacy occurrences | ${manifest.summary.legacyOccurrences} |`,
+    `| Matched identities | ${manifest.summary.matched ?? "Unavailable"} |`,
+    `| Legacy-only identities | ${manifest.summary.legacyOnly ?? "Unavailable"} |`,
+    `| Current-only identities | ${manifest.summary.currentOnly ?? "Unavailable"} |`,
+    `| Legacy occurrences | ${manifest.summary.legacyOccurrences ?? "Unavailable"} |`,
     `| Current occurrences | ${manifest.summary.currentOccurrences} |`,
     "",
     "| Status | Method | Normalized path | Legacy sources | Current sources |",
@@ -323,22 +388,28 @@ function markdown(manifest) {
 
 function renderJson(manifest) { return `${JSON.stringify(manifest, null, 2)}\n`; }
 
-export function writeOrCheck({ write = false, root = ROOT } = {}) {
-  if (!existsSync(join(root, "server-backup"))) throw new Error("server-backup is required to generate the route manifest");
-  const manifest = buildRouteManifest(root);
-  const outputs = [[OUTPUT_JSON, renderJson(manifest)], [OUTPUT_MD, markdown(manifest)]];
+export function writeOrCheck({ write = false, root = ROOT, currentOnly = false } = {}) {
+  const manifest = buildRouteManifest(root, { currentOnly });
+  if (!currentOnly && manifest.legacyParity.status !== "available") throw new Error("Legacy route baseline is missing. Restore the committed baseline, or use --current-only to explicitly report legacy parity as unavailable.");
+  const outputs = [[join(root, "docs/architecture/server-route-manifest.json"), renderJson(manifest)], [join(root, "docs/architecture/server-route-manifest.md"), markdown(manifest)]];
   if (write) {
     for (const [path, content] of outputs) { mkdirSync(dirname(path), { recursive: true }); writeFileSync(path, content); }
-    console.log(`Wrote normalized route manifest (${manifest.routes.length} identities).`);
+    console.log(`Wrote normalized route manifest (${manifest.routes.length} identities; legacy parity ${manifest.legacyParity.status}).`);
     return manifest;
   }
-  const stale = outputs.filter(([path, content]) => !existsSync(path) || sourceText(path) !== content).map(([path]) => posix(relative(ROOT, path)));
+  const stale = outputs.filter(([path, content]) => !existsSync(path) || sourceText(path) !== content).map(([path]) => posix(relative(root, path)));
   if (stale.length) throw new Error(`Route manifest is stale. Run pnpm routes:server-manifest.\n${stale.join("\n")}`);
-  console.log(`Normalized route manifest verified (${manifest.routes.length} identities).`);
+  console.log(`Normalized route manifest verified (${manifest.routes.length} identities; legacy parity ${manifest.legacyParity.status}).`);
   return manifest;
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
-  try { writeOrCheck({ write: process.argv.includes("--write") }); }
+  try {
+    const args = process.argv.slice(2);
+    if (args.some((arg) => !["--write", "--current-only", "--refresh-legacy-baseline"].includes(arg))
+      || (args.includes("--refresh-legacy-baseline") && args.length !== 1)) throw new Error("Use --write, --current-only, or --refresh-legacy-baseline (alone)");
+    if (args.includes("--refresh-legacy-baseline")) refreshLegacyBaseline();
+    else writeOrCheck({ write: args.includes("--write"), currentOnly: args.includes("--current-only") });
+  }
   catch (error) { console.error(error instanceof Error ? error.message : error); process.exitCode = 1; }
 }

@@ -188,7 +188,7 @@ CREATE TABLE governance.cycle_deviation (
     created_by uuid NOT NULL,
     CONSTRAINT cycle_deviation_pkey PRIMARY KEY (id),
     CONSTRAINT cycle_deviation_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT cycle_deviation_carry_idempotency_uq UNIQUE NULLS NOT DISTINCT (tenant_id, carry_idempotency_key),
+    CONSTRAINT cycle_deviation_carry_idempotency_uq UNIQUE (tenant_id, carry_idempotency_key),
     CONSTRAINT cycle_deviation_severity_chk CHECK (severity_code IN ('low','medium','high','critical')),
     CONSTRAINT cycle_deviation_status_chk CHECK (status IN ('open','resolved','waived','carried')),
     CONSTRAINT cycle_deviation_carry_count_chk CHECK (carry_count >= 0),

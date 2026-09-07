@@ -17,6 +17,7 @@
     "@athyper/server-contract-events": "workspace:*",
     "@athyper/server-contract-integration": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "ajv": "^8.20.0",
     "express": "^5.0.0",
     "kysely": "^0.28.17"
   },

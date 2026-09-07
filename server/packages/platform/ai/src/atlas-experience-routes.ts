@@ -1,6 +1,6 @@
 import { atlasAdminSchemas, type AtlasExperienceDefinition } from "@athyper/server-contract-ai";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
-import { defineRouteContract, registerContractRoute, type RuntimeSchema } from "@athyper/server-runtime-http";
+import { HttpError, defineRouteContract, registerContractRoute, type RuntimeSchema } from "@athyper/server-runtime-http";
 import type { Application, Request, RequestHandler, Response } from "express";
 import type { AtlasExperienceConfigurationService } from "./experience-configuration.js";
 
@@ -12,8 +12,8 @@ export function registerAtlasExperienceRoutes(app:Application,options:{authentic
   registerContractRoute(app,contract("put","/api/admin/atlas/experience/draft","atlas.admin.experience.saveDraft","Save a versioned Studio Atlas experience draft",atlasAdminSchemas.experienceDefinition,true),options.authenticate,admin((request,context)=>{const body=object(request.body);return options.experience.saveDraft(context,definition(body),body.expectedRevision===undefined?undefined:positiveInteger(body.expectedRevision));}));
   registerContractRoute(app,contract("post","/api/admin/atlas/experience/publish","atlas.admin.experience.publish","Publish the current Studio Atlas experience draft",atlasAdminSchemas.experiencePublish,true),options.authenticate,admin((request,context)=>{const body=object(request.body);return options.experience.publish(context,text(body.scope,"scope"),positiveInteger(body.expectedRevision));}));
 }
-function contract(method:"get"|"put"|"post",path:string,id:string,summary:string,body?:RuntimeSchema,admin=false){return defineRouteContract({method,path,operationId:id,summary,tags:[admin?"Atlas Administration":"Atlas"],authenticated:true,...(admin?{permission:"studio.platform.catalog.manage"}:{}),...(body?{request:{body}}:{}),responses:{200:{description:"Atlas experience response",body:objectSchema},400:{description:"Invalid request"},403:{description:"Permission denied"},409:{description:"Revision conflict"}}});}
-function queryScope(request:Request):string{return typeof request.query.scope==="string"&&request.query.scope.trim()?request.query.scope.trim():"home";}
+function contract(method:"get"|"put"|"post",path:string,id:string,summary:string,body?:RuntimeSchema,admin=false){return defineRouteContract({method,path,operationId:id,summary,tags:[admin?"Atlas Administration":"Atlas"],authenticated:true,...(admin?{permission:"studio.platform.catalog.manage"}:{}),...(body?{request:{body}}:{}),responses:{200:{description:"Atlas experience response",body:method==="get"?{type:["object","null"]}:objectSchema},400:{description:"Invalid request"},403:{description:"Permission denied"},409:{description:"Revision conflict"}}});}
+function queryScope(request:Request):string{const scope=request.query.scope;if(scope===undefined)return "home";if(typeof scope!=="string"||!/^[a-z][a-z0-9_.:-]{0,127}$/.test(scope.trim()))throw new HttpError(400,"ATLAS_EXPERIENCE_INVALID_SCOPE","scope is invalid");return scope.trim();}
 function object(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw new TypeError("JSON object required.");return value as Record<string,unknown>;}
 function definition(body:Record<string,unknown>):AtlasExperienceDefinition{return{schema:body.schema as "atlas-experience-definition/1",scope:body.scope as string,widgets:body.widgets as never,searchSources:body.searchSources as never,prompts:body.prompts as never,agents:body.agents as never};}
 function positiveInteger(value:unknown):number{const result=Number(value);if(!Number.isSafeInteger(result)||result<1)throw new TypeError("A positive revision is required.");return result;}

@@ -1,3 +1,4 @@
+import { stablePercentageCohort, featurePercentageCohort } from "@athyper/server-foundation";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { LOCALE_REGISTRY } from "@athyper/platform-i18n";
 import { createExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
@@ -20,7 +21,7 @@ function repository(overrides: Partial<ExperiencePlaneRepository> = {}): Experie
     async readIdentity() { return { tenantCode:"tenant",tenantDisplayName:"Tenant Alpha",tenantStatus: "active", tenantRealmKey: "neon", subscriptionPlanId: "40000000-0000-4000-8000-000000000001", tenantRevision: "tenant:1",principalCode:"user.one",principalDisplayName:"User One",principalSecondaryLabel:"user.one", principalStatus: "active", principalAuthEpoch: 4, principalRevision: "principal:1", identityBindingActive: true, membershipActive: true, membershipRevision: "membership:1" }; },
     async readProfile() { return { tenant: { localeCode: "en-MY", timezoneCode: "Asia/Kuala_Lumpur", weekendDays: [0, 6] }, principal: { localeCode: "fr-FR", appearanceMode: "dark", densityCode: "compact" }, revision: "profile:1" }; },
     async readCatalog() { return { planActive: true, planRevision: "plan:1", associations: [{ workspaceCode: "finance", workspaceName: "Finance", workspaceSortOrder: 2, moduleId, moduleCode: "invoicing", moduleName: "Invoicing", moduleSortOrder: 3, primary: true, revision: "catalog:1" }], permissions: [{ code: "finance.invoice.read", moduleId, revision: "permission:1" }] }; },
-    async readFeatures() { return [{ id: "feature-1", code: "finance.invoice_v2", moduleId, kind: "release_gate", defaultEnabled: false, overrideEnabled: true, metadata: {}, revision: "flag:1" }, { id: "feature-2", code: "finance.future", moduleId, kind: "release_gate", defaultEnabled: true, metadata: { minimumClientVersion: "2.0.0" }, revision: "flag:2" }]; },
+    async readFeatures() { return [{ id: "feature-1", code: "finance.invoice_v2", moduleId, kind: "release_gate", cohortStrategy: "principal_fnv1a_v2", defaultEnabled: false, overrideEnabled: true, metadata: {}, revision: "flag:1" }, { id: "feature-2", code: "finance.future", moduleId, kind: "release_gate", cohortStrategy: "principal_fnv1a_v2", defaultEnabled: true, metadata: { minimumClientVersion: "2.0.0" }, revision: "flag:2" }]; },
     async readWorkContexts(){return[];},
     async readOperatingOrganizations(){return[];},
     async readNetworkAccounts(){return[];},
@@ -31,6 +32,60 @@ function repository(overrides: Partial<ExperiencePlaneRepository> = {}): Experie
 function service(repo = repository()) { return createExperienceService({ repositories: createExactPlaneRepositoryProvider({ neon: repo }, { unavailableCode: "EXPERIENCE_EXACT_PLANE_REPOSITORY_UNAVAILABLE" }), now: () => new Date("2026-08-12T00:00:00Z") }); }
 
 describe("experience effective-access projection", () => {
+  it("keeps an explicit user density preference above the next-request runtime default",async()=>{
+    const repo=repository({readProfile:async()=>({tenant:{},principal:{densityCode:"comfortable"},revision:"1"})});
+    const runtime=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),readRuntimeDefaults:async()=>({densityCode:"compact",configurationRevision:"revision-1"})});
+    expect((await runtime.bootstrap(context)).profile.densityCode).toBe("comfortable");
+  });
+
+  it.each(["tenant_sha256_v1", "principal_fnv1a_v2"] as const)("uses persisted %s assignments",async cohortStrategy=>{
+    const code="finance.rollout";
+    const repo=repository({readFeatures:async()=>[{id:"flag",code,moduleId,kind:"release_gate",defaultEnabled:true,cohortStrategy,rolloutPct:50,metadata:{},revision:"1"}]});
+    for(let i=0;i<20;i++) {
+      const principal=`principal-${i}`,c={...context,principalId:principal,permissions:{...context.permissions,principalId:principal}};
+      expect((await service(repo).bootstrap(c)).features[code]!.enabled).toBe(featurePercentageCohort(cohortStrategy,tenantId,principal,code)<50);
+    }
+  });
+  it("refreshes cached bootstrap when the database entitlement revision changes without a local invalidation", async () => {
+    let revision="base", included=false, reads=0;
+    const base=repository();
+    const repo=repository({readEntitlementRevision:async()=>revision,readCatalog:async(...args)=>{
+      reads++; const catalog=(await base.readCatalog(...args))!;
+      return {...catalog,associations:included?catalog.associations:[]};
+    }});
+    const cached=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    expect((await cached.bootstrap(context)).workspaces).toHaveLength(0);
+    await cached.bootstrap(context); expect(reads).toBe(1);
+    // A different host commits an override, or a scheduled start becomes effective.
+    revision="override-active"; included=true;
+    expect((await cached.bootstrap(context)).workspaces).toHaveLength(1); expect(reads).toBe(2);
+    revision="override-expired"; included=false;
+    expect((await cached.bootstrap(context)).workspaces).toHaveLength(0); expect(reads).toBe(3);
+  });
+
+  it("uses the control API's stable tenant/principal/feature cohort",async()=>{
+    const code="finance.rollout",seen=new Set<boolean>();
+    const repo=repository({readFeatures:async()=>[{id:"flag",code,moduleId,kind:"release_gate",cohortStrategy: "principal_fnv1a_v2", defaultEnabled:true,rolloutPct:50,metadata:{},revision:"1"}]});
+    for(let i=0;i<20;i++){
+      const principal=`principal-${i}`,c={...context,principalId:principal,permissions:{...context.permissions,principalId:principal}};
+      const enabled=(await service(repo).bootstrap(c)).features[code]!.enabled;
+      expect(enabled).toBe(stablePercentageCohort(`${tenantId}:${principal}:${code}`)<50);seen.add(enabled);
+    }
+    expect(seen.size).toBe(2);
+  });
+
+  it("refreshes feature results for remote writes and scheduled boundaries without local cache eviction",async()=>{
+    let revision="on",enabled=true,reads=0;
+    const base=repository();const repo=repository({readFeatureRevision:async()=>revision,readFeatures:async(...args)=>{
+      reads++;return (await base.readFeatures(...args)).map(flag=>({...flag,overrideEnabled:enabled}));
+    }});
+    const cached=createExperienceService({repositories:createExactPlaneRepositoryProvider({neon:repo}),cache:createMemoryExperienceCache()});
+    expect((await cached.bootstrap(context)).features["finance.invoice_v2"]?.enabled).toBe(true);
+    await cached.bootstrap(context);expect(reads).toBe(1);
+    revision="off";enabled=false;
+    expect((await cached.bootstrap(context)).features["finance.invoice_v2"]?.enabled).toBe(false);expect(reads).toBe(2);
+  });
+
   it("inherits typed profile fields, orders catalog, filters unknown permissions, and resolves flags", async () => {
     const first = await service().bootstrap(context, { clientVersion: "1.5.0" });
     const second = await service().bootstrap(context, { clientVersion: "1.5.0" });
@@ -140,7 +195,7 @@ describe("experience effective-access projection", () => {
 
   it("keeps rollout cohorts stable and invalidates cached authorization projections", async () => {
     let reads = 0;
-    const repo = repository({ async readFeatures() { reads += 1; return [{ id: "cohort", code: "finance.cohort", moduleId, kind: "experiment", defaultEnabled: true, rolloutPct: 50, metadata: {}, revision: "cohort:1" }]; } });
+    const repo = repository({ async readFeatures() { reads += 1; return [{ id: "cohort", code: "finance.cohort", moduleId, kind: "experiment", cohortStrategy: "principal_fnv1a_v2", defaultEnabled: true, rolloutPct: 50, metadata: {}, revision: "cohort:1" }]; } });
     const cache = createMemoryExperienceCache();
     const projection = createExperienceService({ repositories: createExactPlaneRepositoryProvider({ neon: repo }), cache });
     const first = await projection.bootstrap(context);

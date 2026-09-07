@@ -56,7 +56,7 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
         VALUES (${input.id}::uuid,${input.tenantId}::uuid,${input.fileName},${input.fileName},
           'application/pdf',${input.sizeBytes},${input.sha256},'generated_document',
           ${input.storageBucket},${input.storageKey},1,1,${input.id}::uuid,true,true,'pending',
-          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey } : {}) })}::jsonb,
+          ${JSON.stringify({ template_id: input.template.templateId, template_version_id: input.template.templateVersionId, template_version: input.template.version, template_checksum: input.template.checksum, binding_id: input.template.bindingId, render_provider: input.renderProvider, render_duration_ms: input.renderDurationMs, malware_scan: { status: input.malwareScan.status, scanner: input.malwareScan.scanner, scanned_at: input.malwareScan.scannedAt, duration_ms: input.malwareScan.durationMs, ...(input.malwareScan.signatureVersion ? { signature_version: input.malwareScan.signatureVersion } : {}) }, ...(input.idempotencyKey ? { idempotency_key: input.idempotencyKey, request_hash: input.requestHash } : {}) })}::jsonb,
           'active',${input.principalId}::uuid,${input.principalId}::uuid)
         RETURNING created_at
       `.execute(transaction);
@@ -79,6 +79,8 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
             ON link.tenant_id = attachment.tenant_id AND link.attachment_series_id = attachment.series_id
          WHERE attachment.tenant_id = ${context.tenantId}::uuid AND attachment.id = ${documentId}::uuid
            AND attachment.kind = 'generated_document' AND attachment.status = 'active' AND attachment.is_virus_scanned
+           AND attachment.is_active AND (attachment.expires_at IS NULL OR attachment.expires_at > clock_timestamp())
+           AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id = attachment.id)
          LIMIT 1
       `.execute(transaction);
       const row = result.rows[0]; if (!row) return null;
@@ -89,15 +91,18 @@ export function createKyselyDocumentArtifactRepository(): DocumentArtifactReposi
       const result = await sql<Record<string, unknown>>`
         SELECT attachment.id, link.entity_type, link.entity_id, attachment.file_name,
                attachment.content_type, attachment.size_bytes, attachment.sha256,
-               attachment.metadata, attachment.created_at
+               attachment.metadata, attachment.created_at,
+               (attachment.status = 'active' AND attachment.is_active AND attachment.is_virus_scanned
+                AND link.entity_id IS NOT NULL
+                AND (attachment.expires_at IS NULL OR attachment.expires_at > clock_timestamp())) AS replayable
           FROM document.attachment AS attachment
-          JOIN document.attachment_link AS link
+          LEFT JOIN document.attachment_link AS link
             ON link.tenant_id=attachment.tenant_id AND link.attachment_series_id=attachment.series_id
-         WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.kind='generated_document' AND attachment.is_virus_scanned
-           AND attachment.status='active' AND attachment.metadata->>'idempotency_key'=${idempotencyKey}
+         WHERE attachment.tenant_id=${context.tenantId}::uuid AND attachment.kind='generated_document'
+           AND attachment.metadata->>'idempotency_key'=${idempotencyKey}
          LIMIT 1`.execute(transaction);
       const row=result.rows[0]; if(!row)return null; const metadata=object(row["metadata"]);
-      return {id:String(row["id"]),entityType:String(row["entity_type"]),entityId:String(row["entity_id"]),fileName:String(row["file_name"]),contentType:"application/pdf",sizeBytes:Number(row["size_bytes"]),sha256:String(row["sha256"]),templateId:stringValue(metadata["template_id"]),templateVersionId:stringValue(metadata["template_version_id"]),templateVersion:Number(metadata["template_version"]),createdAt:dateTime(row["created_at"])};
+      return {id:String(row["id"]),entityType:String(row["entity_type"]),entityId:String(row["entity_id"]),fileName:String(row["file_name"]),contentType:"application/pdf",sizeBytes:Number(row["size_bytes"]),sha256:String(row["sha256"]),templateId:stringValue(metadata["template_id"]),templateVersionId:stringValue(metadata["template_version_id"]),templateVersion:Number(metadata["template_version"]),createdAt:dateTime(row["created_at"]), ...(row["replayable"] === true && typeof metadata["request_hash"] === "string" ? { requestHash: metadata["request_hash"] } : {})};
     },
     async findNotificationCandidate(input, transaction) {
       const result = await sql<Record<string, unknown>>`

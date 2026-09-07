@@ -10,11 +10,11 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 127 |
 | Swagger paths | 119 |
-| Backend method/path identities extracted from source | 505 |
-| Source identities absent from Swagger | 378 |
+| Backend method/path identities extracted from source | 503 |
+| Source identities absent from Swagger | 376 |
 | studio URL entries (including patterns) | 78 |
-| neon URL entries (including patterns) | 124 |
-| mesh URL entries (including patterns) | 63 |
+| neon URL entries (including patterns) | 125 |
+| mesh URL entries (including patterns) | 64 |
 
 ## Jump to
 
@@ -22,7 +22,29 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 - [Runtime discovery](#runtime-discovery) · [Deployed Swagger APIs](#runtime-apis-in-deployed-swagger)
 - [Additional source APIs](#additional-backend-apis-declared-in-source) · [Refresh instructions](#how-to-use-and-refresh)
 
+- [Duplicate URL audit](#duplicate-url-audit)
+
 Each entry shows its method and path, followed by its details and source. Fixed paths link to the full development URL; parameterized paths are templates to combine with the section’s base URL. All entries stay expanded for browser Find.
+
+## Duplicate URL audit
+
+This audit checks every listed App and Runtime entry, including discovery endpoints. Identity is origin + HTTP method + path shape: parameter names are ignored, while single segments, required catch-all and optional catch-all patterns remain distinct. Combined method lists are expanded. Counts describe catalogue entries after the existing source scanners merge declarations; they do not prove the absence of duplicate runtime registrations or overlapping wildcard routes.
+
+| Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
+| --- | ---: | ---: | ---: | ---: |
+| https://api.dev.athyper.test | 505 | 505 | 0 | 37 |
+| https://studio.dev.athyper.test | 82 | 82 | 0 | 1 |
+| https://neon.dev.athyper.test | 129 | 127 | 2 | 1 |
+| https://mesh.dev.athyper.test | 68 | 68 | 0 | 1 |
+
+Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
+
+| Origin | Method and normalized path | Listed paths |
+| --- | --- | --- |
+| https://neon.dev.athyper.test | `GET /mdg/business-partner/business-partners/{parameter}` | `/mdg/business-partner/business-partners/{entityId}`<br>`/mdg/business-partner/business-partners/{recordId}` |
+| https://neon.dev.athyper.test | `GET /mdg/business-partner/requests/{parameter}` | `/mdg/business-partner/requests/{entityId}`<br>`/mdg/business-partner/requests/{requestId}` |
+
+47 method/path shapes are shared across application origins. Different origins identify different URLs. Multiple HTTP methods on the same path are separate operations, not duplicate identities.
 
 ## How to use and refresh
 
@@ -454,13 +476,16 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
   Page — Business Partner Management · [source](../../../apps/neon/app/(shell)/mdg/business-partner/page.tsx)
 
 - **GET** [/mdg/business-partner/business-partners](https://neon.dev.athyper.test/mdg/business-partner/business-partners)  
-  Entity list — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+  Page — Business Partners · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/page.tsx)
 
 - **GET** [/mdg/business-partner/business-partners/new](https://neon.dev.athyper.test/mdg/business-partner/business-partners/new)  
-  Entity create — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+  Page — Business Partners · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/new/page.tsx)
 
 - **GET** `/mdg/business-partner/business-partners/{entityId}`  
   Entity detail — Business Partners · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** `/mdg/business-partner/business-partners/{recordId}`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/business-partners/[recordId]/page.tsx)
 
 - **GET** [/mdg/business-partner/customer/new](https://neon.dev.athyper.test/mdg/business-partner/customer/new)  
   Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx)
@@ -481,7 +506,7 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
   Page — Business Partner Requests · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/page.tsx)
 
 - **GET** [/mdg/business-partner/requests/new](https://neon.dev.athyper.test/mdg/business-partner/requests/new)  
-  Entity create — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
+  Page — Business Partner Requests · [source](../../../apps/neon/app/(shell)/mdg/business-partner/requests/new/page.tsx)
 
 - **GET** `/mdg/business-partner/requests/{entityId}`  
   Entity detail — Business Partner Requests · [source](../../../apps/neon/lib/catalog-routes.ts)
@@ -721,6 +746,9 @@ Base URL: [https://mesh.dev.athyper.test](https://mesh.dev.athyper.test). Paths 
 
 - **GET** [/atlas](https://mesh.dev.athyper.test/atlas)  
   Page · [source](../../../apps/mesh/app/(shell)/atlas/page.tsx)
+
+- **GET** [/auth/required-action](https://mesh.dev.athyper.test/auth/required-action)  
+  Page · [source](../../../apps/mesh/app/(public)/auth/required-action/page.tsx)
 
 - **GET** [/commercial-collaboration](https://mesh.dev.athyper.test/commercial-collaboration)  
   Workspace — Commercial Collaboration · [source](../../../apps/mesh/lib/catalog-routes.ts)
@@ -1561,7 +1589,7 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 ### Source routes: /api/audit
 
 - **GET** [/api/audit/status](https://api.dev.athyper.test/api/audit/status)  
-  Raw route · [source](../../../server/packages/platform/audit/src/audit-routes.ts)
+  Route contract · [source](../../../server/packages/platform/audit/src/audit-routes.ts)
 
 ### Source routes: /api/collab
 
@@ -1814,95 +1842,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** [/api/documents/render](https://api.dev.athyper.test/api/documents/render)  
   Raw route · [source](../../../server/packages/services/documents/src/document-routes.ts)
 
-### Source routes: /api/finance
-
-- **POST** `/api/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions`  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
-
-- **GET** [/api/finance/budget/balance](https://api.dev.athyper.test/api/finance/budget/balance)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/budget/command](https://api.dev.athyper.test/api/finance/budget/command)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/budget/rebuild](https://api.dev.athyper.test/api/finance/budget/rebuild)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/budget/reverse](https://api.dev.athyper.test/api/finance/budget/reverse)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/close/recover](https://api.dev.athyper.test/api/finance/close/recover)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/close/reverse](https://api.dev.athyper.test/api/finance/close/reverse)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/close/run](https://api.dev.athyper.test/api/finance/close/run)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **GET** [/api/finance/close/status](https://api.dev.athyper.test/api/finance/close/status)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/commitment/fulfill](https://api.dev.athyper.test/api/finance/commitment/fulfill)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/commitment/reverse](https://api.dev.athyper.test/api/finance/commitment/reverse)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/cross-book/execute](https://api.dev.athyper.test/api/finance/cross-book/execute)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/gl/post](https://api.dev.athyper.test/api/finance/gl/post)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **GET** [/api/finance/gl/reconcile](https://api.dev.athyper.test/api/finance/gl/reconcile)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **GET** [/api/finance/inventory/balance](https://api.dev.athyper.test/api/finance/inventory/balance)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/inventory/move](https://api.dev.athyper.test/api/finance/inventory/move)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/inventory/rebuild](https://api.dev.athyper.test/api/finance/inventory/rebuild)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/inventory/reverse](https://api.dev.athyper.test/api/finance/inventory/reverse)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/numbering/allocations](https://api.dev.athyper.test/api/finance/numbering/allocations)  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
-
-- **GET** [/api/finance/numbering/reconciliation](https://api.dev.athyper.test/api/finance/numbering/reconciliation)  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
-
-- **GET** [/api/finance/planning/output](https://api.dev.athyper.test/api/finance/planning/output)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/planning/run](https://api.dev.athyper.test/api/finance/planning/run)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/posting-admissions](https://api.dev.athyper.test/api/finance/posting-admissions)  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
-
-- **POST** [/api/finance/rounding/resolve](https://api.dev.athyper.test/api/finance/rounding/resolve)  
-  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
-
-- **POST** [/api/finance/tax/calculate](https://api.dev.athyper.test/api/finance/tax/calculate)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/tax/credit/move](https://api.dev.athyper.test/api/finance/tax/credit/move)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **GET** [/api/finance/tax/point-in-time](https://api.dev.athyper.test/api/finance/tax/point-in-time)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/tax/rebuild](https://api.dev.athyper.test/api/finance/tax/rebuild)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
-- **POST** [/api/finance/tax/reverse](https://api.dev.athyper.test/api/finance/tax/reverse)  
-  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
-
 ### Source routes: /api/governance
 
 - **POST** [/api/governance/channel-consents](https://api.dev.athyper.test/api/governance/channel-consents)  
@@ -2037,6 +1976,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **PATCH** `/api/master/contacts/{contactId}/verification`  
   Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
 
+- **POST** `/api/master/contacts/{contactId}/verification-challenges`  
+  Raw route · [source](../../../server/packages/services/master-data/src/local-contact-challenge-routes.ts)
+
 - **POST** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/addresses`  
   Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
 
@@ -2045,6 +1987,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** `/api/master/owners/{entityCode}/{ownerTypeId}/{ownerId}/profile`  
   Raw route · [source](../../../server/packages/services/master-data/src/master-data-routes.ts)
+
+- **POST** `/api/master/verification-challenges/{challengeId}/complete`  
+  Raw route · [source](../../../server/packages/services/master-data/src/local-contact-challenge-routes.ts)
 
 ### Source routes: /api/me
 
@@ -2378,6 +2323,93 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** [/api/neon/external/supplier-registrations/accept](https://api.dev.athyper.test/api/neon/external/supplier-registrations/accept)  
   Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
 
+- **POST** `/api/neon/finance/books/{ledgerBookId}/periods/{fiscalPeriodId}/transitions`  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/neon/finance/budget/balance](https://api.dev.athyper.test/api/neon/finance/budget/balance)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/budget/command](https://api.dev.athyper.test/api/neon/finance/budget/command)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/budget/rebuild](https://api.dev.athyper.test/api/neon/finance/budget/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/budget/reverse](https://api.dev.athyper.test/api/neon/finance/budget/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/close/recover](https://api.dev.athyper.test/api/neon/finance/close/recover)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/close/reverse](https://api.dev.athyper.test/api/neon/finance/close/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/close/run](https://api.dev.athyper.test/api/neon/finance/close/run)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/neon/finance/close/status](https://api.dev.athyper.test/api/neon/finance/close/status)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/commitment/fulfill](https://api.dev.athyper.test/api/neon/finance/commitment/fulfill)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/commitment/reverse](https://api.dev.athyper.test/api/neon/finance/commitment/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/cross-book/execute](https://api.dev.athyper.test/api/neon/finance/cross-book/execute)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/gl/post](https://api.dev.athyper.test/api/neon/finance/gl/post)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/neon/finance/gl/reconcile](https://api.dev.athyper.test/api/neon/finance/gl/reconcile)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/neon/finance/inventory/balance](https://api.dev.athyper.test/api/neon/finance/inventory/balance)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/inventory/move](https://api.dev.athyper.test/api/neon/finance/inventory/move)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/inventory/rebuild](https://api.dev.athyper.test/api/neon/finance/inventory/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/inventory/reverse](https://api.dev.athyper.test/api/neon/finance/inventory/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/numbering/allocations](https://api.dev.athyper.test/api/neon/finance/numbering/allocations)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/neon/finance/numbering/reconciliation](https://api.dev.athyper.test/api/neon/finance/numbering/reconciliation)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **GET** [/api/neon/finance/planning/output](https://api.dev.athyper.test/api/neon/finance/planning/output)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/planning/run](https://api.dev.athyper.test/api/neon/finance/planning/run)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/posting-admissions](https://api.dev.athyper.test/api/neon/finance/posting-admissions)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **POST** [/api/neon/finance/rounding/resolve](https://api.dev.athyper.test/api/neon/finance/rounding/resolve)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/finance-routes.ts)
+
+- **POST** [/api/neon/finance/tax/calculate](https://api.dev.athyper.test/api/neon/finance/tax/calculate)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/tax/credit/move](https://api.dev.athyper.test/api/neon/finance/tax/credit/move)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **GET** [/api/neon/finance/tax/point-in-time](https://api.dev.athyper.test/api/neon/finance/tax/point-in-time)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/tax/rebuild](https://api.dev.athyper.test/api/neon/finance/tax/rebuild)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
+- **POST** [/api/neon/finance/tax/reverse](https://api.dev.athyper.test/api/neon/finance/tax/reverse)  
+  Route contract · [source](../../../server/packages/planes/neon/src/register-finance.ts)
+
 - **POST** [/api/neon/governed-business-partner-cases](https://api.dev.athyper.test/api/neon/governed-business-partner-cases)  
   Raw route · [source](../../../server/packages/services/master-data/src/governed-internal-business-partner-routes.ts)
 
@@ -2567,10 +2599,10 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 ### Source routes: /api/policy
 
 - **POST** [/api/policy/evaluate](https://api.dev.athyper.test/api/policy/evaluate)  
-  Raw route · [source](../../../server/packages/platform/policy/src/policy-routes.ts)
+  Route contract · [source](../../../server/packages/platform/policy/src/policy-route-contracts.ts)
 
 - **POST** [/api/policy/simulate](https://api.dev.athyper.test/api/policy/simulate)  
-  Raw route · [source](../../../server/packages/platform/policy/src/policy-routes.ts)
+  Route contract · [source](../../../server/packages/platform/policy/src/policy-route-contracts.ts)
 
 ### Source routes: /api/record-snapshots
 
@@ -2606,20 +2638,6 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **POST** `/api/studio/onboarding/cases/{caseId}/work-items/{workItemId}/resolve`  
   Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)
-
-### Source routes: /api/user
-
-- **GET** [/api/user/saved-views](https://api.dev.athyper.test/api/user/saved-views)  
-  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
-
-- **DELETE** `/api/user/saved-views/{viewId}/{action}`  
-  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
-
-- **PATCH** `/api/user/saved-views/{viewId}/{action}`  
-  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
-
-- **POST** `/api/user/saved-views/{viewId}/clone`  
-  Raw route · [source](../../../server/packages/platform/preferences/src/saved-view-routes.ts)
 
 ### Source routes: /api/webhooks
 

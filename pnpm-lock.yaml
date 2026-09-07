@@ -1771,6 +1771,9 @@ importers:
       '@athyper/server-platform-control-admin':
         specifier: workspace:*
         version: link:../../packages/platform/control-admin
+      '@athyper/server-platform-entitlements':
+        specifier: workspace:*
+        version: link:../../packages/platform/entitlements
       '@athyper/server-platform-experience':
         specifier: workspace:*
         version: link:../../packages/platform/experience
@@ -3114,6 +3117,9 @@ importers:
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../contracts/auth
+      '@athyper/server-runtime-http':
+        specifier: workspace:*
+        version: link:../../runtime/http
       express:
         specifier: ^5.0.0
         version: 5.2.1
@@ -3195,6 +3201,9 @@ importers:
       '@athyper/server-contract-control-admin':
         specifier: workspace:*
         version: link:../../contracts/control-admin
+      '@athyper/server-contract-integration':
+        specifier: workspace:*
+        version: link:../../contracts/integration
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
@@ -3208,12 +3217,33 @@ importers:
         specifier: ^0.28.17
         version: 0.28.17
     devDependencies:
+      '@athyper/server-adapter-experience-postgres':
+        specifier: workspace:*
+        version: link:../../adapters/experience-postgres
+      '@athyper/server-platform-entitlements':
+        specifier: workspace:*
+        version: link:../entitlements
+      '@athyper/server-platform-experience':
+        specifier: workspace:*
+        version: link:../experience
+      '@athyper/server-platform-iam':
+        specifier: workspace:*
+        version: link:../iam
+      '@athyper/server-service-finance':
+        specifier: workspace:*
+        version: link:../../services/finance
       '@types/express':
         specifier: ^5.0.1
         version: 5.0.6
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -3226,7 +3256,19 @@ importers:
       '@athyper/platform-temporal':
         specifier: workspace:*
         version: link:../../../../packages/platform/foundation/temporal
+      '@athyper/server-contract-auth':
+        specifier: workspace:*
+        version: link:../../contracts/auth
+      '@athyper/server-foundation':
+        specifier: workspace:*
+        version: link:../../foundation
+      kysely:
+        specifier: ^0.28.17
+        version: 0.28.17
     devDependencies:
+      '@types/node':
+        specifier: ^25.6.0
+        version: 25.6.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -3483,6 +3525,9 @@ importers:
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      '@athyper/server-runtime-http':
+        specifier: workspace:*
+        version: link:../../runtime/http
       express:
         specifier: ^5.0.0
         version: 5.2.1
@@ -3916,6 +3961,9 @@ importers:
       '@athyper/server-contract-finance':
         specifier: workspace:*
         version: link:../../contracts/finance
+      '@athyper/server-foundation':
+        specifier: workspace:*
+        version: link:../../foundation
       kysely:
         specifier: ^0.28.17
         version: 0.28.17
@@ -3953,6 +4001,9 @@ importers:
       '@athyper/server-contract-jobs':
         specifier: workspace:*
         version: link:../../contracts/jobs
+      ajv:
+        specifier: ^8.20.0
+        version: 8.20.0
       express:
         specifier: ^5.0.0
         version: 5.2.1
@@ -4046,6 +4097,12 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
+      '@types/pg':
+        specifier: ^8.20.0
+        version: 8.20.0
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       typescript:
         specifier: ^6.0.3
         version: 6.0.3

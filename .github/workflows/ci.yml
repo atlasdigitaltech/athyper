@@ -125,6 +125,9 @@ jobs:
       - name: Test URL catalogue extraction
         run: pnpm run test:url-catalogue
 
+      - name: Verify server route manifest against committed legacy baseline
+        run: pnpm run routes:server-manifest:check
+
       - name: Verify DDL service coverage policy and generated artifact
         run: pnpm run ddl:coverage:check
 

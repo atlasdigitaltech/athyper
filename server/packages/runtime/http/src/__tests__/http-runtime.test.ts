@@ -1,3 +1,4 @@
+import express from "express";
 import { createServer } from "node:http";
 import {
   getRequestContext,
@@ -32,6 +33,26 @@ afterEach(async () =>
 );
 
 describe("HTTP runtime", () => {
+  it("leaves webhook bytes to the route parser while retaining ordinary JSON limits", async () => {
+    const app = createHttpApplication({ jsonLimit: "1kb", openApi: false, configure(app) {
+    app.post("/api/webhooks/:subscriptionId", express.raw({ type: () => true, limit: "10mb", inflate: false }), (request, response) => {
+      response.json({ raw: Buffer.isBuffer(request.body), size: request.body.length });
+    });
+    app.post("/ordinary", (_request, response) => { response.json({ ok: true }); });
+    } });
+    const url = await listen(app);
+    const body = JSON.stringify({ value: "x".repeat(300_000) });
+    const response = await fetch(`${url}/api/webhooks/subscription`, { method: "POST", headers: { "content-type": "application/json" }, body });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ raw: true, size: Buffer.byteLength(body) });
+    const ordinary = await fetch(`${url}/ordinary`, { method: "POST", headers: { "content-type": "application/json" }, body });
+    expect(ordinary.status).toBe(413);
+    const compressed = await fetch(`${url}/api/webhooks/subscription`, { method: "POST", headers: { "content-encoding": "gzip" }, body: "bytes" });
+    expect(compressed.status).toBe(415);
+    const oversized = await fetch(`${url}/api/webhooks/subscription`, { method: "POST", body: "x".repeat(10 * 1024 * 1024 + 1) });
+    expect(oversized.status).toBe(413);
+  });
+
   it("provides liveness and dependency-aware readiness", async () => {
     const registry = new HealthRegistry();
     registry.register("database", async () => ({

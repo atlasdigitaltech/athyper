@@ -86,3 +86,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+REVOKE ALL ON snapshot.subscription_plan_entitlement FROM PUBLIC;
+GRANT USAGE ON SCHEMA snapshot TO athyperapp, athyperadmin;
+GRANT SELECT ON snapshot.subscription_plan_entitlement TO athyperapp, athyperadmin;
+GRANT EXECUTE ON FUNCTION control.entitlement_plan_at(text,timestamptz), control.effective_tenant_entitlement(uuid,timestamptz,text) TO athyperapp, athyperadmin;

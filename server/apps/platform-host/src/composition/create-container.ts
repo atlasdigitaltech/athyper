@@ -1,3 +1,5 @@
+import type { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
+import type { MasterDataServices } from "@athyper/server-service-master-data";
 import type { KeycloakAuthAdapter } from "@athyper/server-adapter-auth-keycloak";
 import type { RedisCacheAdapter } from "@athyper/server-adapter-cache-redis";
 import type { RedisNotificationEventBus } from "@athyper/server-adapter-cache-redis";
@@ -100,6 +102,7 @@ export interface Container {
     scheduler?: ClosableJobScheduler;
   };
   readonly platform: {
+    entitlements?: ReturnType<typeof createKyselyEntitlementRuntime>;
     audit?: AuditRecorder;
     iam?: Authenticator;
     provisioning?: ProvisioningVertical;
@@ -115,6 +118,7 @@ export interface Container {
     readonly httpRegistrars: Array<(application: Application) => void>;
   };
   readonly services: {
+    masterData?: MasterDataServices;
     records?: {
       readonly queries: RecordQueryService;
       readonly mutations: RecordMutationService;

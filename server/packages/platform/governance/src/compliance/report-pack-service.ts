@@ -42,7 +42,8 @@ export function createReportPackService(options: { readonly authorizer: Authoriz
       if (pack.expiresAt && new Date(pack.expiresAt) <= now()) throw coded("GOVERNANCE_REPORT_PACK_EXPIRED");
       const actual = createHash("sha256").update(await options.storage.get(pack.artifactUri)).digest("hex");
       if (actual !== pack.artifactHash) throw coded("GOVERNANCE_ARTIFACT_INTEGRITY_FAILED", { expected: pack.artifactHash, actual });
-      const expiresInSeconds = options.downloadTtlSeconds ?? 300;
+      const expiresInSeconds = Math.min(options.downloadTtlSeconds ?? 300, pack.expiresAt ? Math.floor((Date.parse(pack.expiresAt) - now().getTime()) / 1000) : Infinity);
+      if (expiresInSeconds < 1) throw coded("GOVERNANCE_REPORT_PACK_EXPIRED");
       return { url: await options.storage.createDownloadUrl(pack.artifactUri, expiresInSeconds), expiresInSeconds, sha256: actual };
     },
   };

@@ -40,13 +40,6 @@ export function registerCollaborationRoutes(
               detail: e.message,
               code: e.code,
             });
-        else if (e instanceof TypeError)
-          s.status(400).type("application/problem+json").json({
-            title: "INVALID_COLLABORATION_REQUEST",
-            status: 400,
-            detail: e.message,
-            code: "INVALID_COLLABORATION_REQUEST",
-          });
         else n(e);
       }
     };
@@ -150,7 +143,7 @@ export function registerCollaborationRoutes(
           deleted: await o.collaboration.deleteDraft({
             context: c,
             ...coordinate(q),
-            parentCommentId: opt(q, "parentCommentId"),
+            parentCommentId: uuidOpt(q.parentCommentId),
           }),
         },
       };
@@ -209,6 +202,15 @@ function command(c: VerifiedRequestContext, b: Record<string, unknown>) {
 function rich(b: Record<string, unknown>) {
   const format = one(b.format, ["plain", "rich_json"] as const) as
     CommentFormat | undefined;
+  if (
+    b.content !== undefined &&
+    (!b.content || typeof b.content !== "object" || Array.isArray(b.content))
+  )
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      "content must be an object",
+    );
   return {
     format,
     ...(b.content && typeof b.content === "object" && !Array.isArray(b.content)
@@ -225,17 +227,33 @@ function coordinate(v: Record<string, unknown>) {
 }
 function body(r: any): Record<string, unknown> {
   if (!r.body || typeof r.body !== "object" || Array.isArray(r.body))
-    throw new TypeError("JSON object required");
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      "JSON object required",
+    );
   return r.body;
 }
 function req(v: Record<string, unknown>, k: string) {
   const x = opt(v, k);
-  if (!x) throw new TypeError(`${k} is required`);
+  if (!x)
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      `${k} is required`,
+    );
   return x;
 }
 function opt(v: Record<string, unknown>, k: string) {
   const x = v[k];
-  return typeof x === "string" && x.trim() ? x.trim() : undefined;
+  if (x === undefined) return undefined;
+  if (typeof x !== "string" || !x.trim())
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      `${k} must be a nonempty string`,
+    );
+  return x.trim();
 }
 function uuid(v: unknown) {
   const x = String(v ?? "");
@@ -244,7 +262,11 @@ function uuid(v: unknown) {
       x,
     )
   )
-    throw new TypeError("UUID required");
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      "UUID required",
+    );
   return x;
 }
 function uuidOpt(v: unknown) {
@@ -252,12 +274,21 @@ function uuidOpt(v: unknown) {
 }
 function uuids(v: unknown) {
   if (v === undefined) return undefined;
-  if (!Array.isArray(v)) throw new TypeError("UUID array required");
+  if (!Array.isArray(v))
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      "UUID array required",
+    );
   return v.map(uuid);
 }
 function one<T extends string>(v: unknown, values: readonly T[]) {
   if (v === undefined) return undefined;
   if (typeof v !== "string" || !values.includes(v as T))
-    throw new TypeError(`Expected one of: ${values.join(", ")}`);
+    throw new CollaborationError(
+      400,
+      "INVALID_COLLABORATION_REQUEST",
+      `Expected one of: ${values.join(", ")}`,
+    );
   return v as T;
 }

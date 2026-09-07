@@ -7,3 +7,4 @@ export * from "./fcm-push.adapter.js";
 export * from "./sms.adapter.js";
 export * from "./web-push.adapter.js";
 export * from "./whatsapp-meta.adapter.js";
+export * from "./capture.adapter.js";

@@ -316,3 +316,26 @@ function subscription(platform: "web" | "android", id: string) {
       : { deviceToken: "device-token" }),
   };
 }
+
+
+describe("SSE setup cleanup", () => {
+  it.each(["abort", "write failure"])("unsubscribes when %s occurs during subscribe", (failure) => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const unsubscribe = vi.fn();
+      let writes = 0;
+      openNotificationSseStream({
+        subscriber: { subscribe: (_scope, listener) => {
+          if (failure === "abort") controller.abort();
+          else void listener({ type: "notification.refresh", tenantId: "t", principalId: "p", occurredAt: "now" });
+          return unsubscribe;
+        } },
+        tenantId: "t", principalId: "p", signal: controller.signal,
+        write: () => { if (++writes > 1) throw new Error("disconnected"); },
+      });
+      expect(unsubscribe).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { vi.useRealTimers(); }
+  });
+});

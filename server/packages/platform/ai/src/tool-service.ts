@@ -168,7 +168,7 @@ export class AtlasToolService {
     assertAtlasContext(input.context);
     const proposal = await this.options.proposals.get({ context: input.context, proposalId: input.proposalId });
     if (!proposal || proposal.principalId !== input.context.principalId) throw new AtlasServiceError("TOOL_DENIED", "Atlas tool proposal not found.");
-    return this.cancelled(input.context, proposal, input.reason ?? "worker_cancelled");
+    return this.cancelled(input.context, proposal, input.reason ?? "user_cancelled", false);
   }
 
   async history(input: { readonly context: VerifiedRequestContext; readonly limit?: number }): Promise<{ readonly items: readonly AtlasToolAuditEntry[] }> {
@@ -177,9 +177,10 @@ export class AtlasToolService {
     return Object.freeze({ items: Object.freeze(proposals.map(publicAuditEntry)) });
   }
 
-  private async cancelled(context: VerifiedRequestContext, proposal: AtlasToolProposal, reason: string): Promise<AtlasToolRunResult> {
+  private async cancelled(context: VerifiedRequestContext, proposal: AtlasToolProposal, reason: string, worker = true): Promise<AtlasToolRunResult> {
     const terminalAt = this.now();
-    const result = await this.options.proposals.cancel({ context, proposalId: proposal.proposalId, expectedStatuses: ["proposed", "confirmed", "executing"], errorClass: reason, terminalAt: terminalAt.toISOString(), durationMs: elapsed(proposal.createdAt, terminalAt) });
+    const result = await this.options.proposals.cancel({ context, proposalId: proposal.proposalId, expectedStatuses: worker ? ["proposed", "confirmed", "executing"] : ["proposed", "confirmed"], errorClass: reason, terminalAt: terminalAt.toISOString(), durationMs: elapsed(proposal.createdAt, terminalAt) });
+    if (result.kind === "conflict" && result.proposal?.status === "executing") throw new AtlasServiceError("TOOL_IN_PROGRESS", "An executing Atlas tool cannot be cancelled by this endpoint.");
     if (result.kind === "conflict" && result.proposal?.status === "completed") return replayResult(result.proposal);
     if (result.kind === "conflict") throw new AtlasServiceError("VERSION_CONFLICT", "Atlas tool cancellation raced with a terminal transition.");
     return { proposalId: proposal.proposalId, outcome: "cancelled", replayed: result.kind === "replayed", sources: [] };

@@ -14,7 +14,8 @@
   "dependencies": {
     "@athyper/server-contract-audit": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
-    "express": "^5.0.0"
+    "express": "^5.0.0",
+    "@athyper/server-runtime-http": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

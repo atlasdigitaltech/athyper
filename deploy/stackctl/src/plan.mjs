@@ -1,3 +1,4 @@
+import { loadLocalMasterData } from "./local-master-data.mjs";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { RELEASE_MODES } from "./constants.mjs";
@@ -106,6 +107,8 @@ export function renderConfig(repoRoot, instanceId) {
 export function createPlan(repoRoot, instanceId, probes = {}) {
   const model = loadModel(repoRoot, instanceId);
   const instance = model.instance;
+  const localMasterData = loadLocalMasterData(repoRoot, probes.runtimeRoot ?? runtimeRoot(), instance);
+  const localAtlas = join(probes.runtimeRoot ?? runtimeRoot(), "instances", instanceId, "config", "local-atlas.compose.json");
   const collisions = staticCollisionChecks(repoRoot);
   // The QA baseline and forward runner execute serially under the controller;
   // they share one migration slot and are never resident together.
@@ -172,6 +175,10 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
   for (const problem of providerConfiguration?.problems ?? []) {
     blockers.push(`STAGING notification provider configuration: ${problem}`);
   }
+  for (const secret of localMasterData?.secrets ?? []) {
+    const problem = (probes.secretProblem ?? secretProblem)(join(probes.runtimeRoot ?? runtimeRoot(), "instances", instanceId, "secrets", secret));
+    if (problem) blockers.push(`Local master-data secret ${secret}: ${problem}`);
+  }
   const occupiedPorts = probes.listeningPorts?.() ?? listeningPorts();
   for (const [name, binding] of Object.entries(instance.spec.debugPorts ?? {})) {
     const port = Number(binding.slice(binding.lastIndexOf(":") + 1));
@@ -223,6 +230,7 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
       ...(providerConfiguration ? { providerConfiguration: providerConfiguration.path } : {}),
       providers: model.providerPath,
       catalogs: model.catalogFiles,
+      ...(localMasterData ? {localMasterData: localMasterData.path} : {}),
       compose: [
         join(repoRoot, "deploy/compose/instance/compose.yaml"),
         ...(PARITY_PRESETS.has(instance.spec.preset)
@@ -231,6 +239,8 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
         ...(externalNotificationProviders
           ? [join(repoRoot, "deploy/compose/instance/compose.notification-providers.yaml")]
           : []),
+        ...(localMasterData?.compose ?? []),
+        ...(instanceId === "dev" && existsSync(localAtlas) ? [localAtlas] : []),
       ],
       qualification: infrastructure.qualification.path,
       coldStart: infrastructure.cold.path,
@@ -247,7 +257,9 @@ export function createPlan(repoRoot, instanceId, probes = {}) {
     services: model.selected.map((service) => ({
       id: service.id,
       lifecycle: service.lifecycle,
-      image: imageOverrides.get(publishedImageId(service.id)) ?? service.image,
+      image: localMasterData && ["api", "worker", "scheduler", "neon-web"].includes(service.id)
+        ? (service.id === "neon-web" ? localMasterData.neonImage : localMasterData.runtimeImage)
+        : imageOverrides.get(publishedImageId(service.id)) ?? service.image,
       profiles: service.profiles,
       resources: service.resources,
     })),

@@ -6,6 +6,19 @@
   "idStrategy": "uuidv5:namespace=uuidv5(dns,athyper.authorization.catalog.v2);name={canonicalCode}",
   "permissions": [
     {
+      "permissionId": "62980311-c596-5942-a5cf-69a97b2ac50a",
+      "canonicalCode": "studio.ai.agent.use",
+      "product": "studio",
+      "domain": "ai",
+      "entity": "agent",
+      "operation": "use",
+      "permissionKind": "capability",
+      "riskTier": "medium",
+      "requiresMfa": true,
+      "lifecycle": "proposed",
+      "definitionSha256": "3e77e9ff164c90bc53024a46cdca9999f13ba2f3812fe061cfd7dbe65b035d8d"
+    },
+    {
       "permissionId": "37a1fe0e-8a21-5139-a783-61cbaeed9ce9",
       "canonicalCode": "studio.iam.application_projection.read",
       "product": "studio",
@@ -344,5 +357,5 @@
       "definitionSha256": "da9a566fb1bc0f2e09bc9e4380123ea4a4fa38384de217bcacf5de3964043b69"
     }
   ],
-  "sha256": "9608a8668c396c9e5714ddf705b4b93943ed5cd8a66842e5abef5c439d0a922f"
+  "sha256": "de9fc66787e6cfc926c2b5b5fa912dd2589e441697d856fbf91b3f1e22a1eced"
 }

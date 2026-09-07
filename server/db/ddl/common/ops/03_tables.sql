@@ -508,6 +508,7 @@ CREATE TABLE ops.control_runtime_command_approval_request (
     command_id          text        NOT NULL,
     kind                text        NOT NULL,
     command_fingerprint text        NOT NULL,
+    preview_fingerprint text CHECK (preview_fingerprint ~ '^[a-f0-9]{64}$'),
     requested_by        uuid        NOT NULL,
     requested_at        timestamptz NOT NULL,
     CONSTRAINT control_runtime_command_approval_request_pkey PRIMARY KEY (id),

@@ -409,9 +409,7 @@ function uuid(value: unknown, name: string) {
   const result = textOptional(value);
   if (
     !result ||
-    !`-${result}-`.match(
-      /-[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}-/i,
-    )
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(result)
   )
     throw bad(`${name} must be a UUID`);
   return result;

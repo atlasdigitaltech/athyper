@@ -1,8 +1,29 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
-import { appPath, openApiInventory, renderCatalogue } from './generate-development-url-catalogue.mjs';
+import { appPath, auditCatalogue, openApiInventory, renderCatalogue } from './generate-development-url-catalogue.mjs';
 import { extractStaticUrlRoutes } from './extract-static-url-routes.mjs';
+
+test('duplicate audit respects origins, HTTP methods and catch-all semantics', () => {
+  const report = auditCatalogue([
+    'Base URL: [https://neon.dev.athyper.test]',
+    '- **GET** `/items/{id}`',
+    '- **GET** `/items/{entityId}`',
+    '- **POST, PUT** `/items/{id}`',
+    '- **GET** `/items/{path...}`',
+    '- **GET** `/items/{segments...?}`',
+    'Base URL: [https://mesh.dev.athyper.test]',
+    '- **GET** `/items/{recordId}`',
+    'Base URL: [https://api.dev.athyper.test]',
+    '- **GET** `/items/{id}`',
+    '- **GET** `/items/{id}`',
+  ]).join('\n');
+  assert.ok(report.includes('| https://neon.dev.athyper.test | 6 | 5 | 1 | 1 |'));
+  assert.ok(report.includes('| https://mesh.dev.athyper.test | 1 | 1 | 0 | 0 |'));
+  assert.ok(report.includes('| https://api.dev.athyper.test | 2 | 1 | 1 | 0 |'));
+  assert.ok(report.includes('`/items/{id}`<br>`/items/{entityId}`'));
+  assert.ok(report.includes('1 method/path shapes are shared across application origins.'));
+});
 
 test('OpenAPI inventory includes every HTTP method and preserves parameters, ignoring path metadata', () => {
   const inventory = openApiInventory({ openapi: '3.1.0', paths: {
@@ -50,11 +71,11 @@ test('static scanner expands descriptor paths and reports unresolved declaration
     descriptor('finance.budget.write', 'write');
     function descriptor(code, action) {
       const suffix = code.replace(/^finance\\./, '').replaceAll('.', '/');
-      return {kind:'route', method: action === 'read' ? 'get' : 'post', path: \`/api/finance/\${suffix}\`};
+      return {kind:'route', method: action === 'read' ? 'get' : 'post', path: \`/api/neon/finance/\${suffix}\`};
     }
     function register(app, options) { app.post(options.dynamicPath, handler); }
   `);
-  assert.deepEqual(result.routes.map((r) => `${r.method} ${r.declaredPath}`).sort(), ['GET /api/finance/budget/read', 'POST /api/finance/budget/write']);
+  assert.deepEqual(result.routes.map((r) => `${r.method} ${r.declaredPath}`).sort(), ['GET /api/neon/finance/budget/read', 'POST /api/neon/finance/budget/write']);
   assert.equal(result.unresolved.length, 1);
   assert.match(result.unresolved[0].expression, /options.dynamicPath/);
 });
@@ -69,7 +90,7 @@ test('catalogue covers the complete Swagger snapshot, compatibility APIs, financ
     assert.ok(deployed.includes(`- **${operation.method}** ${path}`), `${operation.method} ${operation.path}`);
   }
   assert.ok(!deployed.includes('Not found by source scanner'));
-  for (const path of ['/api/neon/business-partner-cases/{requestId}/materialize', '/api/neon/business-partner-requests/{requestId}/apply', '/api/neon/external/candidate-registrations/accept', '/api/content/items/{id}/publish', '/api/meta-entity-authoring/change-sets/{id}/publish', '/api/finance/budget/command']) assert.ok(markdown.includes(path), path);
+  for (const path of ['/api/neon/business-partner-cases/{requestId}/materialize', '/api/neon/business-partner-requests/{requestId}/apply', '/api/neon/external/candidate-registrations/accept', '/api/content/items/{id}/publish', '/api/meta-entity-authoring/change-sets/{id}/publish', '/api/neon/finance/budget/command']) assert.ok(markdown.includes(path), path);
   for (const app of ['studio', 'neon', 'mesh']) {
     const section = markdown.split(`## ${app === 'studio' ? 'Studio' : app.toUpperCase()} application URLs`)[1].split('\n## ')[0];
     assert.ok(section.includes(`Base URL: [https://${app}.dev.athyper.test]`));

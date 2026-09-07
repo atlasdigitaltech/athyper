@@ -227,9 +227,16 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, master
 AS $$
 BEGIN
+    IF TG_OP = 'UPDATE' AND OLD.usage_status = 'cancelled' AND NEW.usage_status <> 'cancelled' THEN
+        RAISE EXCEPTION 'Cancelled address usage cannot be reactivated' USING ERRCODE = 'check_violation';
+    END IF;
+    IF NEW.usage_status = 'cancelled' AND NEW.effective_from < (CURRENT_TIMESTAMP AT TIME ZONE 'UTC')::date
+       AND (TG_OP = 'INSERT' OR OLD.usage_status <> 'cancelled') THEN
+        RAISE EXCEPTION 'Established address usage must be end-dated' USING ERRCODE = 'check_violation';
+    END IF;
     IF TG_OP IN ('INSERT', 'UPDATE') THEN
         IF NEW.usage_status IS DISTINCT FROM OLD.usage_status OR TG_OP = 'INSERT' THEN
-            IF NEW.usage_status IN ('suspended', 'prohibited') THEN
+            IF NEW.usage_status IN ('suspended', 'prohibited', 'cancelled') THEN
                 NEW.usage_denied_at := COALESCE(NEW.usage_denied_at, clock_timestamp());
                 NEW.usage_denied_by := COALESCE(
                     NEW.usage_denied_by,

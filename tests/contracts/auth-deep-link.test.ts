@@ -49,3 +49,9 @@ for (const plane of ["neon", "mesh", "studio"] as const) {
     assert.equal(response.headers.get(REQUEST_DESTINATION_HEADER), null);
   });
 }
+
+test("Studio sign-in normalizes repeated query parameters", async () => {
+  const { readSignInQuery } = await import("../../apps/studio/lib/auth-query");
+  assert.deepEqual(readSignInQuery({ reason: ["expired", "service"], returnTo: ["/plans", "/home"], requestId: ["first", "second"] }), { reason: "expired", returnTo: "/plans", requestId: "first" });
+  assert.deepEqual(readSignInQuery({}), { reason: undefined, returnTo: undefined, requestId: undefined });
+});

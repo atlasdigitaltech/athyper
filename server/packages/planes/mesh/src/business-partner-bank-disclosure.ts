@@ -1,58 +1,879 @@
 import { createHash, randomUUID } from "node:crypto";
 import { sql, type Transaction } from "kysely";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
-import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type {
+  Authorizer,
+  VerifiedRequestContext,
+} from "@athyper/server-contract-auth";
 import type { OutboxWriter } from "@athyper/server-contract-events";
 
 type Tx = Transaction<Record<string, never>>;
 type Row = Readonly<Record<string, unknown>>;
-export const businessPartnerBankDisclosurePermissions = Object.freeze({ request: "mesh.bank_disclosure.request", decide: "mesh.bank_disclosure.decide", read: "mesh.bank_disclosure.read", revoke: "mesh.bank_disclosure.revoke" } as const);
-export type BankDisclosureStatus = "pending_approval" | "active" | "rejected" | "expired" | "revoked" | "superseded";
-export interface BusinessPartnerBankDisclosure { readonly id:string; readonly ownerTenantId:string; readonly ownerAccountId:string; readonly bankAccountId:string; readonly networkRelationshipId:string; readonly recipientTenantId:string; readonly recipientAccountId:string; readonly purpose:"settlement"|"refund"; readonly disclosureVersion:number; readonly status:BankDisclosureStatus; readonly lifecycleVersion:number; readonly payloadHash?:string; readonly payload?:Readonly<Record<string,unknown>>; readonly expiresAt?:string; readonly disclosedAt:string; readonly disclosedBy:string; readonly approvedAt?:string; readonly approvedBy?:string; readonly revokedAt?:string; readonly revokedBy?:string; readonly revocationReason?:string; }
-export class MeshBankDisclosureError extends Error { constructor(readonly status:number, readonly code:string, message:string){super(message);this.name="MeshBankDisclosureError";} }
-export interface BankDisclosureTransactions { run<T>(plane:"mesh",actor:{readonly tenantId:string;readonly principalId:string;readonly requestId?:string;readonly correlationId?:string},work:(tx:Tx)=>Promise<T>):Promise<T>; }
+export const businessPartnerBankDisclosurePermissions = Object.freeze({
+  request: "mesh.bank_disclosure.request",
+  decide: "mesh.bank_disclosure.decide",
+  read: "mesh.bank_disclosure.read",
+  revoke: "mesh.bank_disclosure.revoke",
+} as const);
+export type BankDisclosureStatus =
+  | "pending_approval"
+  | "active"
+  | "rejected"
+  | "expired"
+  | "revoked"
+  | "superseded";
+export interface BusinessPartnerBankDisclosure {
+  readonly id: string;
+  readonly ownerTenantId: string;
+  readonly ownerAccountId: string;
+  readonly bankAccountId: string;
+  readonly networkRelationshipId: string;
+  readonly recipientTenantId: string;
+  readonly recipientAccountId: string;
+  readonly purpose: "settlement" | "refund";
+  readonly disclosureVersion: number;
+  readonly status: BankDisclosureStatus;
+  readonly lifecycleVersion: number;
+  readonly payloadHash?: string;
+  readonly payload?: Readonly<Record<string, unknown>>;
+  readonly expiresAt?: string;
+  readonly disclosedAt: string;
+  readonly disclosedBy: string;
+  readonly approvedAt?: string;
+  readonly approvedBy?: string;
+  readonly revokedAt?: string;
+  readonly revokedBy?: string;
+  readonly revocationReason?: string;
+}
+export class MeshBankDisclosureError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+    this.name = "MeshBankDisclosureError";
+  }
+}
+export interface BankDisclosureTransactions {
+  run<T>(
+    plane: "mesh",
+    actor: {
+      readonly tenantId: string;
+      readonly principalId: string;
+      readonly requestId?: string;
+      readonly correlationId?: string;
+    },
+    work: (tx: Tx) => Promise<T>,
+  ): Promise<T>;
+}
 export interface BusinessPartnerBankDisclosureService {
-  request(input:{context:VerifiedRequestContext;ownerAccountId:string;bankAccountId:string;networkRelationshipId:string;purpose:"settlement"|"refund";expiresAt?:string;idempotencyKey:string}):Promise<{disclosure:BusinessPartnerBankDisclosure;replayed:boolean}>;
-  decide(input:{context:VerifiedRequestContext;disclosureId:string;decision:"approve"|"reject";reason?:string;secureRetrievalReference?:string;idempotencyKey:string}):Promise<{disclosure:BusinessPartnerBankDisclosure;replayed:boolean}>;
-  get(input:{context:VerifiedRequestContext;disclosureId:string}):Promise<BusinessPartnerBankDisclosure>;
-  revoke(input:{context:VerifiedRequestContext;disclosureId:string;reason:string;idempotencyKey:string}):Promise<{disclosure:BusinessPartnerBankDisclosure;replayed:boolean}>;
+  request(input: {
+    context: VerifiedRequestContext;
+    ownerAccountId: string;
+    bankAccountId: string;
+    networkRelationshipId: string;
+    purpose: "settlement" | "refund";
+    expiresAt?: string;
+    idempotencyKey: string;
+  }): Promise<{ disclosure: BusinessPartnerBankDisclosure; replayed: boolean }>;
+  decide(input: {
+    context: VerifiedRequestContext;
+    disclosureId: string;
+    decision: "approve" | "reject";
+    reason?: string;
+    secureRetrievalReference?: string;
+    idempotencyKey: string;
+  }): Promise<{ disclosure: BusinessPartnerBankDisclosure; replayed: boolean }>;
+  get(input: {
+    context: VerifiedRequestContext;
+    disclosureId: string;
+  }): Promise<BusinessPartnerBankDisclosure>;
+  revoke(input: {
+    context: VerifiedRequestContext;
+    disclosureId: string;
+    reason: string;
+    idempotencyKey: string;
+  }): Promise<{ disclosure: BusinessPartnerBankDisclosure; replayed: boolean }>;
 }
 
 export class KyselyBusinessPartnerBankDisclosureRepository {
-  async byRequestKey(tenantId:string,key:string,tx:Tx){return one(await sql<Row>`SELECT d.*,s.payload_json,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE d.owner_tenant_id=${tenantId}::uuid AND d.idempotency_key=${key}`.execute(tx));}
-  async decisionByKey(tenantId:string,key:string,tx:Tx){return one(await sql<Row>`SELECT d.*,s.payload_json,e.lifecycle_version FROM mesh.bank_account_disclosure_event e JOIN mesh.bank_account_disclosure d ON d.id=e.disclosure_id LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE e.owner_tenant_id=${tenantId}::uuid AND e.idempotency_key=${key}`.execute(tx));}
-  async source(tenantId:string,ownerAccountId:string,bankAccountId:string,relationshipId:string,purpose:string,tx:Tx){return one(await sql<Row>`SELECT * FROM mesh.read_eligible_bank_disclosure_source(${tenantId}::uuid,${ownerAccountId}::uuid,${bankAccountId}::uuid,${relationshipId}::uuid,${purpose})`.execute(tx));}
-  async create(input:{tenantId:string;principalId:string;ownerAccountId:string;bankAccountId:string;relationshipId:string;recipientTenantId:string;recipientAccountId:string;purpose:string;expiresAt?:string;key:string},tx:Tx){await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.tenantId}:${input.relationshipId}:${input.recipientAccountId}:${input.purpose}`},0))`.execute(tx);const version=Number((await sql<{version:number}>`SELECT COALESCE(max(disclosure_version),0)::int+1 version FROM mesh.bank_account_disclosure WHERE owner_tenant_id=${input.tenantId}::uuid AND network_relationship_id=${input.relationshipId}::uuid AND recipient_account_id=${input.recipientAccountId}::uuid AND purpose=${input.purpose}`.execute(tx)).rows[0]?.version??1),id=randomUUID();await sql`INSERT INTO mesh.bank_account_disclosure(id,owner_tenant_id,owner_account_id,bank_account_id,network_relationship_id,recipient_tenant_id,recipient_account_id,purpose,expires_at,disclosure_version,idempotency_key,disclosed_by,created_by) VALUES(${id}::uuid,${input.tenantId}::uuid,${input.ownerAccountId}::uuid,${input.bankAccountId}::uuid,${input.relationshipId}::uuid,${input.recipientTenantId}::uuid,${input.recipientAccountId}::uuid,${input.purpose},${input.expiresAt??null}::timestamptz,${version},${input.key},${input.principalId}::uuid,${input.principalId}::uuid)`.execute(tx);return required(await this.get(id,tx));}
-  async get(id:string,tx:Tx,lock=false){const q=sql<Row>`SELECT d.*,s.payload_json,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE d.id=${id}::uuid ${sql.raw(lock?'FOR UPDATE OF d':'')}`;return one(await q.execute(tx));}
-  async approve(row:Row,source:Row,principalId:string,secureRef:string,key:string,tx:Tx){
-    const id=String(row["id"]);
-    const prior=one(await sql<Row>`SELECT d.*,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d WHERE d.owner_tenant_id=${row["owner_tenant_id"]}::uuid AND d.network_relationship_id=${row["network_relationship_id"]}::uuid AND d.recipient_account_id=${row["recipient_account_id"]}::uuid AND d.purpose=${row["purpose"]} AND d.status='active' AND d.id<>${id}::uuid FOR UPDATE`.execute(tx));
-    const snapshotId=randomUUID(),version=Number(row["disclosure_version"]),fingerprint=hash({bankAccountId:row["bank_account_id"],accountIdType:source["account_id_type"]});
-    const payload={schemaCode:"mesh.bank_account_disclosure",schemaVersion:1,fieldSetCode:"masked_retrieval_v1",disclosureId:id,disclosureVersion:version,purpose:row["purpose"],authority:{ownerTenantId:row["owner_tenant_id"],ownerNetworkAccountId:row["owner_account_id"]},recipient:{tenantId:row["recipient_tenant_id"],networkAccountId:row["recipient_account_id"],networkRelationshipId:row["network_relationship_id"]},bankAccount:{accountHolderName:source["account_holder_name"],accountIdType:source["account_id_type"],accountLast4:source["account_last4"],currencyCode:source["currency_code"],bankName:source["bank_name"],bankCountryCode:source["bank_country_code"],bic:source["bic"],accountFingerprint:fingerprint},secureRetrievalReference:secureRef};
-    const payloadHash=hash(payload),decisionFingerprint=hash({id,version,payloadHash,decision:"approve",principalId});
-    await sql`INSERT INTO snapshot.bank_account_disclosure(id,owner_tenant_id,recipient_tenant_id,disclosure_id,disclosure_version,payload_json,payload_hash,captured_by) VALUES(${snapshotId}::uuid,${row["owner_tenant_id"]}::uuid,${row["recipient_tenant_id"]}::uuid,${id}::uuid,${version},${JSON.stringify(payload)}::jsonb,${payloadHash},${principalId}::uuid)`.execute(tx);
-    if(prior){
-      await sql`UPDATE mesh.bank_account_disclosure SET status='superseded',updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${prior["id"]}::uuid`.execute(tx);
-      const supersedeFingerprint=hash({id:prior["id"],replacementId:id,decision:"supersede",principalId});
-      await this.event(prior,"superseded",`Replaced by disclosure ${id}`,supersedeFingerprint,`supersede:${hash(key)}`,principalId,tx);
-    }
-    await sql`UPDATE mesh.bank_account_disclosure SET status='active',snapshot_id=${snapshotId}::uuid,payload_hash=${payloadHash},secure_retrieval_reference=${secureRef},decision_fingerprint=${decisionFingerprint},approved_at=clock_timestamp(),approved_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${id}::uuid`.execute(tx);
-    await this.event(row,"approved",null,decisionFingerprint,key,principalId,tx);
-    return{...required(await this.get(id,tx)),...(prior?{replaced_disclosure_id:String(prior["id"])}:{})};
+  async byRequestKey(tenantId: string, key: string, tx: Tx) {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${tenantId + ":bank-disclosure"},0))`.execute(
+      tx,
+    );
+    return one(
+      await sql<Row>`SELECT d.*,s.payload_json,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE d.owner_tenant_id=${tenantId}::uuid AND d.idempotency_key=${key}`.execute(
+        tx,
+      ),
+    );
   }
-  async reject(row:Row,reason:string,key:string,principalId:string,tx:Tx){const fingerprint=hash({id:row["id"],decision:"reject",reason,principalId});await sql`UPDATE mesh.bank_account_disclosure SET status='rejected',decision_fingerprint=${fingerprint},updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(tx);await this.event(row,"rejected",reason,fingerprint,key,principalId,tx);return required(await this.get(String(row["id"]),tx));}
-  async revoke(row:Row,reason:string,key:string,principalId:string,tx:Tx){const fingerprint=hash({id:row["id"],decision:"revoke",reason,principalId});await sql`UPDATE mesh.bank_account_disclosure SET status='revoked',revoked_at=clock_timestamp(),revoked_by=${principalId}::uuid,revocation_reason=${reason},updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(tx);await this.event(row,"revoked",reason,fingerprint,key,principalId,tx);return required(await this.get(String(row["id"]),tx));}
-  private async event(row:Row,kind:string,reason:string|null,fingerprint:string,key:string,principalId:string,tx:Tx){const lifecycle=Number(row["lifecycle_version"]??0)+1;await sql`INSERT INTO mesh.bank_account_disclosure_event(owner_tenant_id,recipient_tenant_id,disclosure_id,lifecycle_version,event_kind,reason,decision_fingerprint,idempotency_key,recorded_by) VALUES(${row["owner_tenant_id"]}::uuid,${row["recipient_tenant_id"]}::uuid,${row["id"]}::uuid,${lifecycle},${kind},${reason},${fingerprint},${key},${principalId}::uuid)`.execute(tx);}
+  async decisionByKey(tenantId: string, key: string, tx: Tx) {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${tenantId + ":bank-disclosure"},0))`.execute(
+      tx,
+    );
+    return one(
+      await sql<Row>`SELECT d.*,s.payload_json,e.event_kind AS replay_event_kind,e.reason AS replay_reason,e.recorded_by AS replay_actor_id,(SELECT max(latest.lifecycle_version) FROM mesh.bank_account_disclosure_event latest WHERE latest.owner_tenant_id=d.owner_tenant_id AND latest.disclosure_id=d.id) lifecycle_version FROM mesh.bank_account_disclosure_event e JOIN mesh.bank_account_disclosure d ON d.id=e.disclosure_id LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE e.owner_tenant_id=${tenantId}::uuid AND e.idempotency_key=${key}`.execute(
+        tx,
+      ),
+    );
+  }
+  async source(
+    tenantId: string,
+    ownerAccountId: string,
+    bankAccountId: string,
+    relationshipId: string,
+    purpose: string,
+    tx: Tx,
+  ) {
+    return one(
+      await sql<Row>`SELECT * FROM mesh.read_eligible_bank_disclosure_source(${tenantId}::uuid,${ownerAccountId}::uuid,${bankAccountId}::uuid,${relationshipId}::uuid,${purpose})`.execute(
+        tx,
+      ),
+    );
+  }
+  async create(
+    input: {
+      tenantId: string;
+      principalId: string;
+      ownerAccountId: string;
+      bankAccountId: string;
+      relationshipId: string;
+      recipientTenantId: string;
+      recipientAccountId: string;
+      purpose: string;
+      expiresAt?: string;
+      key: string;
+    },
+    tx: Tx,
+  ) {
+    await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.tenantId}:${input.relationshipId}:${input.recipientAccountId}:${input.purpose}`},0))`.execute(
+      tx,
+    );
+    const version = Number(
+        (
+          await sql<{
+            version: number;
+          }>`SELECT COALESCE(max(disclosure_version),0)::int+1 version FROM mesh.bank_account_disclosure WHERE owner_tenant_id=${input.tenantId}::uuid AND network_relationship_id=${input.relationshipId}::uuid AND recipient_account_id=${input.recipientAccountId}::uuid AND purpose=${input.purpose}`.execute(
+            tx,
+          )
+        ).rows[0]?.version ?? 1,
+      ),
+      id = randomUUID();
+    await sql`INSERT INTO mesh.bank_account_disclosure(id,owner_tenant_id,owner_account_id,bank_account_id,network_relationship_id,recipient_tenant_id,recipient_account_id,purpose,expires_at,disclosure_version,idempotency_key,disclosed_by,created_by) VALUES(${id}::uuid,${input.tenantId}::uuid,${input.ownerAccountId}::uuid,${input.bankAccountId}::uuid,${input.relationshipId}::uuid,${input.recipientTenantId}::uuid,${input.recipientAccountId}::uuid,${input.purpose},${input.expiresAt ?? null}::timestamptz,${version},${input.key},${input.principalId}::uuid,${input.principalId}::uuid)`.execute(
+      tx,
+    );
+    return required(await this.get(id, tx));
+  }
+  async get(id: string, tx: Tx, lock = false) {
+    const q = sql<Row>`SELECT d.*,s.payload_json,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d LEFT JOIN snapshot.bank_account_disclosure s ON s.owner_tenant_id=d.owner_tenant_id AND s.id=d.snapshot_id WHERE d.id=${id}::uuid ${sql.raw(lock ? "FOR UPDATE OF d" : "")}`;
+    return one(await q.execute(tx));
+  }
+  async approve(
+    row: Row,
+    source: Row,
+    principalId: string,
+    secureRef: string,
+    key: string,
+    tx: Tx,
+  ) {
+    const id = String(row["id"]);
+    const prior = one(
+      await sql<Row>`SELECT d.*,(SELECT e.lifecycle_version FROM mesh.bank_account_disclosure_event e WHERE e.owner_tenant_id=d.owner_tenant_id AND e.disclosure_id=d.id ORDER BY e.lifecycle_version DESC LIMIT 1) lifecycle_version FROM mesh.bank_account_disclosure d WHERE d.owner_tenant_id=${row["owner_tenant_id"]}::uuid AND d.network_relationship_id=${row["network_relationship_id"]}::uuid AND d.recipient_account_id=${row["recipient_account_id"]}::uuid AND d.purpose=${row["purpose"]} AND d.status='active' AND d.id<>${id}::uuid FOR UPDATE`.execute(
+        tx,
+      ),
+    );
+    const snapshotId = randomUUID(),
+      version = Number(row["disclosure_version"]),
+      fingerprint = hash({
+        bankAccountId: row["bank_account_id"],
+        accountIdType: source["account_id_type"],
+      });
+    const payload = {
+      schemaCode: "mesh.bank_account_disclosure",
+      schemaVersion: 1,
+      fieldSetCode: "masked_retrieval_v1",
+      disclosureId: id,
+      disclosureVersion: version,
+      purpose: row["purpose"],
+      authority: {
+        ownerTenantId: row["owner_tenant_id"],
+        ownerNetworkAccountId: row["owner_account_id"],
+      },
+      recipient: {
+        tenantId: row["recipient_tenant_id"],
+        networkAccountId: row["recipient_account_id"],
+        networkRelationshipId: row["network_relationship_id"],
+      },
+      bankAccount: {
+        accountHolderName: source["account_holder_name"],
+        accountIdType: source["account_id_type"],
+        accountLast4: source["account_last4"],
+        currencyCode: source["currency_code"],
+        bankName: source["bank_name"],
+        bankCountryCode: source["bank_country_code"],
+        bic: source["bic"],
+        accountFingerprint: fingerprint,
+      },
+      secureRetrievalReference: secureRef,
+    };
+    const payloadHash = hash(payload),
+      decisionFingerprint = hash({
+        id,
+        version,
+        payloadHash,
+        decision: "approve",
+        principalId,
+      });
+    await sql`INSERT INTO snapshot.bank_account_disclosure(id,owner_tenant_id,recipient_tenant_id,disclosure_id,disclosure_version,payload_json,payload_hash,captured_by) VALUES(${snapshotId}::uuid,${row["owner_tenant_id"]}::uuid,${row["recipient_tenant_id"]}::uuid,${id}::uuid,${version},${JSON.stringify(payload)}::jsonb,${payloadHash},${principalId}::uuid)`.execute(
+      tx,
+    );
+    if (prior) {
+      await sql`UPDATE mesh.bank_account_disclosure SET status='superseded',updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${prior["id"]}::uuid`.execute(
+        tx,
+      );
+      const supersedeFingerprint = hash({
+        id: prior["id"],
+        replacementId: id,
+        decision: "supersede",
+        principalId,
+      });
+      await this.event(
+        prior,
+        "superseded",
+        `Replaced by disclosure ${id}`,
+        supersedeFingerprint,
+        `supersede:${hash(key)}`,
+        principalId,
+        tx,
+      );
+    }
+    await sql`UPDATE mesh.bank_account_disclosure SET status='active',snapshot_id=${snapshotId}::uuid,payload_hash=${payloadHash},secure_retrieval_reference=${secureRef},decision_fingerprint=${decisionFingerprint},approved_at=clock_timestamp(),approved_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${id}::uuid`.execute(
+      tx,
+    );
+    await this.event(
+      row,
+      "approved",
+      null,
+      decisionFingerprint,
+      key,
+      principalId,
+      tx,
+    );
+    return {
+      ...required(await this.get(id, tx)),
+      ...(prior ? { replaced_disclosure_id: String(prior["id"]) } : {}),
+    };
+  }
+  async reject(
+    row: Row,
+    reason: string,
+    key: string,
+    principalId: string,
+    tx: Tx,
+  ) {
+    const fingerprint = hash({
+      id: row["id"],
+      decision: "reject",
+      reason,
+      principalId,
+    });
+    await sql`UPDATE mesh.bank_account_disclosure SET status='rejected',decision_fingerprint=${fingerprint},updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(
+      tx,
+    );
+    await this.event(
+      row,
+      "rejected",
+      reason,
+      fingerprint,
+      key,
+      principalId,
+      tx,
+    );
+    return required(await this.get(String(row["id"]), tx));
+  }
+  async revoke(
+    row: Row,
+    reason: string,
+    key: string,
+    principalId: string,
+    tx: Tx,
+  ) {
+    const fingerprint = hash({
+      id: row["id"],
+      decision: "revoke",
+      reason,
+      principalId,
+    });
+    await sql`UPDATE mesh.bank_account_disclosure SET status='revoked',revoked_at=clock_timestamp(),revoked_by=${principalId}::uuid,revocation_reason=${reason},updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(
+      tx,
+    );
+    await this.event(row, "revoked", reason, fingerprint, key, principalId, tx);
+    return required(await this.get(String(row["id"]), tx));
+  }
+  private async event(
+    row: Row,
+    kind: string,
+    reason: string | null,
+    fingerprint: string,
+    key: string,
+    principalId: string,
+    tx: Tx,
+  ) {
+    const lifecycle = Number(row["lifecycle_version"] ?? 0) + 1;
+    await sql`INSERT INTO mesh.bank_account_disclosure_event(owner_tenant_id,recipient_tenant_id,disclosure_id,lifecycle_version,event_kind,reason,decision_fingerprint,idempotency_key,recorded_by) VALUES(${row["owner_tenant_id"]}::uuid,${row["recipient_tenant_id"]}::uuid,${row["id"]}::uuid,${lifecycle},${kind},${reason},${fingerprint},${key},${principalId}::uuid)`.execute(
+      tx,
+    );
+  }
 }
 
-export function createBusinessPartnerBankDisclosureService(options:{authorizer:Authorizer;repository:KyselyBusinessPartnerBankDisclosureRepository;transactions:BankDisclosureTransactions;audit:AuditRecorder<Tx>;outbox:OutboxWriter<Tx>}):BusinessPartnerBankDisclosureService{return{
-  async request(input){plane(input.context);key(input.idempotencyKey);await permit(options.authorizer,input.context,businessPartnerBankDisclosurePermissions.request,input.networkRelationshipId);return options.transactions.run("mesh",actor(input.context),async tx=>{const replay=await options.repository.byRequestKey(input.context.tenantId,input.idempotencyKey,tx);if(replay){if(String(replay["bank_account_id"])!==input.bankAccountId||String(replay["network_relationship_id"])!==input.networkRelationshipId)throw conflict("MESH_BANK_DISCLOSURE_IDEMPOTENCY_CONFLICT","Request key was reused for another coordinate");return{disclosure:map(replay),replayed:true};}const source=await options.repository.source(input.context.tenantId,input.ownerAccountId,input.bankAccountId,input.networkRelationshipId,input.purpose,tx);if(!source)throw conflict("MESH_BANK_DISCLOSURE_NOT_ELIGIBLE","An active directional relationship and verified, effective bank link are required");const recipientTenantId=String(source[input.purpose==="settlement"?"buyer_tenant_id":"supplier_tenant_id"]),recipientAccountId=String(source[input.purpose==="settlement"?"buyer_account_id":"supplier_account_id"]);const disclosure=await options.repository.create({tenantId:input.context.tenantId,principalId:input.context.principalId,ownerAccountId:input.ownerAccountId,bankAccountId:input.bankAccountId,relationshipId:input.networkRelationshipId,recipientTenantId,recipientAccountId,purpose:input.purpose,...(input.expiresAt?{expiresAt:input.expiresAt}:{}),key:input.idempotencyKey},tx);return{disclosure:map(disclosure),replayed:false};});},
-  async decide(input){plane(input.context);key(input.idempotencyKey);return options.transactions.run("mesh",actor(input.context),async tx=>{const replay=await options.repository.decisionByKey(input.context.tenantId,input.idempotencyKey,tx);if(replay){if(String(replay["id"])!==input.disclosureId)throw conflict("MESH_BANK_DISCLOSURE_IDEMPOTENCY_CONFLICT","Decision key was reused for another disclosure");return{disclosure:map(replay),replayed:true};}const row=await options.repository.get(input.disclosureId,tx,true);if(!row||String(row["owner_tenant_id"])!==input.context.tenantId)throw missing();await permit(options.authorizer,input.context,businessPartnerBankDisclosurePermissions.decide,String(row["network_relationship_id"]));if(String(row["status"])!=="pending_approval")throw conflict("MESH_BANK_DISCLOSURE_NOT_PENDING","Only a pending disclosure can be decided");if(String(row["created_by"])===input.context.principalId)throw new MeshBankDisclosureError(403,"MESH_BANK_DISCLOSURE_SELF_APPROVAL","Requester cannot approve or reject their own disclosure");let result:Row;if(input.decision==="approve"){if(!input.secureRetrievalReference?.trim())throw invalid("secureRetrievalReference is required for approval");const source=await options.repository.source(String(row["owner_tenant_id"]),String(row["owner_account_id"]),String(row["bank_account_id"]),String(row["network_relationship_id"]),String(row["purpose"]),tx);if(!source)throw conflict("MESH_BANK_DISCLOSURE_NOT_ELIGIBLE","Relationship or bank eligibility changed before approval");result=await options.repository.approve(row,source,input.context.principalId,input.secureRetrievalReference,input.idempotencyKey,tx);await publish(options,input.context,tx,map(result),result["replaced_disclosure_id"]?"mesh.bank_account.changed":"mesh.bank_account.disclosed");}else{reason(input.reason);result=await options.repository.reject(row,input.reason!,input.idempotencyKey,input.context.principalId,tx);await rejectionAudit(options,input.context,tx,map(result),input.reason!);}return{disclosure:map(result),replayed:false};});},
-  async get(input){plane(input.context);return options.transactions.run("mesh",actor(input.context),async tx=>{const row=await options.repository.get(input.disclosureId,tx);if(!row)throw missing();await permit(options.authorizer,input.context,businessPartnerBankDisclosurePermissions.read,String(row["network_relationship_id"]));return map(row);});},
-  async revoke(input){plane(input.context);key(input.idempotencyKey);reason(input.reason);return options.transactions.run("mesh",actor(input.context),async tx=>{const replay=await options.repository.decisionByKey(input.context.tenantId,input.idempotencyKey,tx);if(replay)return{disclosure:map(replay),replayed:true};const row=await options.repository.get(input.disclosureId,tx,true);if(!row||String(row["owner_tenant_id"])!==input.context.tenantId)throw missing();await permit(options.authorizer,input.context,businessPartnerBankDisclosurePermissions.revoke,String(row["network_relationship_id"]));if(String(row["status"])!=="active")throw conflict("MESH_BANK_DISCLOSURE_NOT_ACTIVE","Only an active disclosure can be revoked");const result=map(await options.repository.revoke(row,input.reason,input.idempotencyKey,input.context.principalId,tx));await publish(options,input.context,tx,result,"mesh.bank_account.revoked",input.reason);return{disclosure:result,replayed:false};});}
-};}
+export function createBusinessPartnerBankDisclosureService(options: {
+  authorizer: Authorizer;
+  repository: KyselyBusinessPartnerBankDisclosureRepository;
+  transactions: BankDisclosureTransactions;
+  audit: AuditRecorder<Tx>;
+  outbox: OutboxWriter<Tx>;
+}): BusinessPartnerBankDisclosureService {
+  return {
+    async request(input) {
+      plane(input.context);
+      key(input.idempotencyKey);
+      if (
+        input.expiresAt !== undefined &&
+        !Number.isFinite(Date.parse(input.expiresAt))
+      )
+        throw invalid("expiresAt must be a valid timestamp");
+      await permit(
+        options.authorizer,
+        input.context,
+        businessPartnerBankDisclosurePermissions.request,
+        input.networkRelationshipId,
+      );
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const replay = await options.repository.byRequestKey(
+            input.context.tenantId,
+            input.idempotencyKey,
+            tx,
+          );
+          if (replay) {
+            if (
+              String(replay["bank_account_id"]) !== input.bankAccountId ||
+              String(replay["network_relationship_id"]) !==
+                input.networkRelationshipId ||
+              String(replay["owner_account_id"]) !== input.ownerAccountId ||
+              String(replay["purpose"]) !== input.purpose ||
+              timestamp(replay["expires_at"]) !== timestamp(input.expiresAt)
+            )
+              throw conflict(
+                "MESH_BANK_DISCLOSURE_IDEMPOTENCY_CONFLICT",
+                "Request key was reused for another coordinate",
+              );
+            return { disclosure: map(replay), replayed: true };
+          }
+          if (input.expiresAt && Date.parse(input.expiresAt) <= Date.now())
+            throw invalid("expiresAt must be in the future");
+          const source = await options.repository.source(
+            input.context.tenantId,
+            input.ownerAccountId,
+            input.bankAccountId,
+            input.networkRelationshipId,
+            input.purpose,
+            tx,
+          );
+          if (!source)
+            throw conflict(
+              "MESH_BANK_DISCLOSURE_NOT_ELIGIBLE",
+              "An active directional relationship and verified, effective bank link are required",
+            );
+          const recipientTenantId = String(
+              source[
+                input.purpose === "settlement"
+                  ? "buyer_tenant_id"
+                  : "supplier_tenant_id"
+              ],
+            ),
+            recipientAccountId = String(
+              source[
+                input.purpose === "settlement"
+                  ? "buyer_account_id"
+                  : "supplier_account_id"
+              ],
+            );
+          const disclosure = await options.repository.create(
+            {
+              tenantId: input.context.tenantId,
+              principalId: input.context.principalId,
+              ownerAccountId: input.ownerAccountId,
+              bankAccountId: input.bankAccountId,
+              relationshipId: input.networkRelationshipId,
+              recipientTenantId,
+              recipientAccountId,
+              purpose: input.purpose,
+              ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
+              key: input.idempotencyKey,
+            },
+            tx,
+          );
+          return { disclosure: map(disclosure), replayed: false };
+        },
+      );
+    },
+    async decide(input) {
+      plane(input.context);
+      key(input.idempotencyKey);
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const replay = await options.repository.decisionByKey(
+            input.context.tenantId,
+            input.idempotencyKey,
+            tx,
+          );
+          if (replay) {
+            await permit(
+              options.authorizer,
+              input.context,
+              businessPartnerBankDisclosurePermissions.decide,
+              String(replay["network_relationship_id"]),
+            );
+            checkReplay(
+              replay,
+              input.disclosureId,
+              input.decision === "approve" ? "approved" : "rejected",
+              input.context.principalId,
+              input.decision === "reject" ? input.reason : undefined,
+              input.decision === "approve"
+                ? input.secureRetrievalReference
+                : undefined,
+            );
+            return { disclosure: map(replay), replayed: true };
+          }
+          const row = await options.repository.get(
+            input.disclosureId,
+            tx,
+            true,
+          );
+          if (!row || String(row["owner_tenant_id"]) !== input.context.tenantId)
+            throw missing();
+          await permit(
+            options.authorizer,
+            input.context,
+            businessPartnerBankDisclosurePermissions.decide,
+            String(row["network_relationship_id"]),
+          );
+          if (String(row["status"]) !== "pending_approval")
+            throw conflict(
+              "MESH_BANK_DISCLOSURE_NOT_PENDING",
+              "Only a pending disclosure can be decided",
+            );
+          if (String(row["created_by"]) === input.context.principalId)
+            throw new MeshBankDisclosureError(
+              403,
+              "MESH_BANK_DISCLOSURE_SELF_APPROVAL",
+              "Requester cannot approve or reject their own disclosure",
+            );
+          let result: Row;
+          if (input.decision === "approve") {
+            if (
+              row["expires_at"] &&
+              Date.parse(String(row["expires_at"])) <= Date.now()
+            )
+              throw conflict(
+                "MESH_BANK_DISCLOSURE_EXPIRED",
+                "An expired disclosure cannot be approved",
+              );
+            if (!input.secureRetrievalReference?.trim())
+              throw invalid(
+                "secureRetrievalReference is required for approval",
+              );
+            const source = await options.repository.source(
+              String(row["owner_tenant_id"]),
+              String(row["owner_account_id"]),
+              String(row["bank_account_id"]),
+              String(row["network_relationship_id"]),
+              String(row["purpose"]),
+              tx,
+            );
+            if (!source)
+              throw conflict(
+                "MESH_BANK_DISCLOSURE_NOT_ELIGIBLE",
+                "Relationship or bank eligibility changed before approval",
+              );
+            result = await options.repository.approve(
+              row,
+              source,
+              input.context.principalId,
+              input.secureRetrievalReference,
+              input.idempotencyKey,
+              tx,
+            );
+            await publish(
+              options,
+              input.context,
+              tx,
+              map(result),
+              result["replaced_disclosure_id"]
+                ? "mesh.bank_account.changed"
+                : "mesh.bank_account.disclosed",
+            );
+          } else {
+            reason(input.reason);
+            result = await options.repository.reject(
+              row,
+              input.reason!,
+              input.idempotencyKey,
+              input.context.principalId,
+              tx,
+            );
+            await rejectionAudit(
+              options,
+              input.context,
+              tx,
+              map(result),
+              input.reason!,
+            );
+          }
+          return { disclosure: map(result), replayed: false };
+        },
+      );
+    },
+    async get(input) {
+      plane(input.context);
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const row = await options.repository.get(input.disclosureId, tx);
+          if (!row) throw missing();
+          await permit(
+            options.authorizer,
+            input.context,
+            businessPartnerBankDisclosurePermissions.read,
+            String(row["network_relationship_id"]),
+          );
+          return map(row);
+        },
+      );
+    },
+    async revoke(input) {
+      plane(input.context);
+      key(input.idempotencyKey);
+      reason(input.reason);
+      return options.transactions.run(
+        "mesh",
+        actor(input.context),
+        async (tx) => {
+          const replay = await options.repository.decisionByKey(
+            input.context.tenantId,
+            input.idempotencyKey,
+            tx,
+          );
+          if (replay) {
+            await permit(
+              options.authorizer,
+              input.context,
+              businessPartnerBankDisclosurePermissions.revoke,
+              String(replay["network_relationship_id"]),
+            );
+            checkReplay(
+              replay,
+              input.disclosureId,
+              "revoked",
+              input.context.principalId,
+              input.reason,
+            );
+            return { disclosure: map(replay), replayed: true };
+          }
+          const row = await options.repository.get(
+            input.disclosureId,
+            tx,
+            true,
+          );
+          if (!row || String(row["owner_tenant_id"]) !== input.context.tenantId)
+            throw missing();
+          await permit(
+            options.authorizer,
+            input.context,
+            businessPartnerBankDisclosurePermissions.revoke,
+            String(row["network_relationship_id"]),
+          );
+          if (String(row["status"]) !== "active")
+            throw conflict(
+              "MESH_BANK_DISCLOSURE_NOT_ACTIVE",
+              "Only an active disclosure can be revoked",
+            );
+          const result = map(
+            await options.repository.revoke(
+              row,
+              input.reason,
+              input.idempotencyKey,
+              input.context.principalId,
+              tx,
+            ),
+          );
+          await publish(
+            options,
+            input.context,
+            tx,
+            result,
+            "mesh.bank_account.revoked",
+            input.reason,
+          );
+          return { disclosure: result, replayed: false };
+        },
+      );
+    },
+  };
+}
 
-async function publish(options:{audit:AuditRecorder<Tx>;outbox:OutboxWriter<Tx>},context:VerifiedRequestContext,tx:Tx,d:BusinessPartnerBankDisclosure,eventType:string,reasonValue?:string){const envelope={eventId:randomUUID(),eventType,schemaVersion:1,sourcePlane:"mesh",sourceTenantId:d.ownerTenantId,recipientTenantId:d.recipientTenantId,sourceNetworkAccountId:d.ownerAccountId,recipientNetworkAccountId:d.recipientAccountId,networkRelationshipId:d.networkRelationshipId,disclosureId:d.id,disclosureVersion:d.disclosureVersion,lifecycleVersion:d.lifecycleVersion,payloadHash:d.payloadHash,occurredAt:new Date().toISOString(),...(d.payload?{payload:d.payload}:{withdrawal:{reason:reasonValue}})};await options.outbox.append({tenantId:d.ownerTenantId,topic:"mesh-business-partner-bank",eventType,eventKey:`${d.id}:lifecycle:${d.lifecycleVersion}`,entityType:"bank_account_disclosure",entityId:d.id,aggregateType:"network_relationship",aggregateId:d.networkRelationshipId,actorId:context.principalId,correlationId:context.correlationId,partitionKey:d.recipientTenantId,payload:envelope},tx);await options.audit.record({eventCode:eventType.endsWith("revoked")?"business_partner.bank_disclosure.revoked":"business_partner.bank_disclosure.approved",action:eventType.endsWith("revoked")?"revoke":"approve",outcome:"success",actor:{kind:"user",principalId:context.principalId},tenantId:d.ownerTenantId,entityType:"bank_account_disclosure",entityId:d.id,requestId:context.requestId,...(context.correlationId?{correlationId:context.correlationId}:{}),metadata:{networkRelationshipId:d.networkRelationshipId,recipientTenantId:d.recipientTenantId,disclosureVersion:d.disclosureVersion,lifecycleVersion:d.lifecycleVersion,payloadHash:d.payloadHash}},tx);}
-async function rejectionAudit(options:{audit:AuditRecorder<Tx>},context:VerifiedRequestContext,tx:Tx,d:BusinessPartnerBankDisclosure,reasonValue:string){await options.audit.record({eventCode:"business_partner.bank_disclosure.rejected",action:"reject",outcome:"success",actor:{kind:"user",principalId:context.principalId},tenantId:d.ownerTenantId,entityType:"bank_account_disclosure",entityId:d.id,requestId:context.requestId,...(context.correlationId?{correlationId:context.correlationId}:{}),metadata:{networkRelationshipId:d.networkRelationshipId,recipientTenantId:d.recipientTenantId,disclosureVersion:d.disclosureVersion,lifecycleVersion:d.lifecycleVersion,reason:reasonValue}},tx);}
-function map(row:Row):BusinessPartnerBankDisclosure{return{id:String(row["id"]),ownerTenantId:String(row["owner_tenant_id"]),ownerAccountId:String(row["owner_account_id"]),bankAccountId:String(row["bank_account_id"]),networkRelationshipId:String(row["network_relationship_id"]),recipientTenantId:String(row["recipient_tenant_id"]),recipientAccountId:String(row["recipient_account_id"]),purpose:String(row["purpose"]) as "settlement"|"refund",disclosureVersion:Number(row["disclosure_version"]),status:String(row["status"]) as BankDisclosureStatus,lifecycleVersion:Number(row["lifecycle_version"]??0),...(row["payload_hash"]?{payloadHash:String(row["payload_hash"])}:{}),...(row["payload_json"]?{payload:object(row["payload_json"])}:{}),...(row["expires_at"]?{expiresAt:new Date(String(row["expires_at"])).toISOString()}:{}),disclosedAt:new Date(String(row["disclosed_at"])).toISOString(),disclosedBy:String(row["disclosed_by"]),...(row["approved_at"]?{approvedAt:new Date(String(row["approved_at"])).toISOString(),approvedBy:String(row["approved_by"])}:{}),...(row["revoked_at"]?{revokedAt:new Date(String(row["revoked_at"])).toISOString(),revokedBy:String(row["revoked_by"]),revocationReason:String(row["revocation_reason"])}:{})};}
-function one(result:{rows:readonly Row[]}){return result.rows[0]??null;}function required<T>(v:T|null|undefined):T{if(v==null)throw new Error("Required disclosure row was not returned");return v;}function plane(c:VerifiedRequestContext){if(c.planeKey!=="mesh")throw invalid("MESH context is required");}function actor(c:VerifiedRequestContext){return{tenantId:c.tenantId,principalId:c.principalId,requestId:c.requestId,correlationId:c.correlationId};}async function permit(a:Authorizer,c:VerifiedRequestContext,permissionCode:string,relationshipId:string){if(!(await a.authorize({context:c,permissionCode,resource:{tenantId:c.tenantId,networkRelationshipId:relationshipId,recipientRelationshipValidated:true}})).allowed)throw new MeshBankDisclosureError(403,"FORBIDDEN",`Permission denied: ${permissionCode}`);}function key(v:string){if(v.trim()!==v||v.length<8||v.length>200)throw invalid("idempotencyKey must contain 8 to 200 trimmed characters");}function reason(v?:string){if(!v||v.trim()!==v||v.length>4000)throw invalid("reason must contain 1 to 4000 trimmed characters");}function object(v:unknown){return v&&typeof v==="object"&&!Array.isArray(v)?v as Readonly<Record<string,unknown>>:{};}function invalid(message:string){return new MeshBankDisclosureError(400,"MESH_BANK_DISCLOSURE_INVALID",message);}function conflict(code:string,message:string){return new MeshBankDisclosureError(409,code,message);}function missing(){return new MeshBankDisclosureError(404,"MESH_BANK_DISCLOSURE_NOT_FOUND","Bank disclosure was not found");}function stable(v:unknown):string{if(v===null||typeof v!=="object")return JSON.stringify(v);if(Array.isArray(v))return`[${v.map(stable).join(",")}]`;return`{${Object.entries(v as Record<string,unknown>).filter(([,x])=>x!==undefined).sort(([a],[b])=>a.localeCompare(b)).map(([k,x])=>`${JSON.stringify(k)}:${stable(x)}`).join(",")}}`;}function hash(v:unknown){return createHash("sha256").update(stable(v)).digest("hex");}
+async function publish(
+  options: { audit: AuditRecorder<Tx>; outbox: OutboxWriter<Tx> },
+  context: VerifiedRequestContext,
+  tx: Tx,
+  d: BusinessPartnerBankDisclosure,
+  eventType: string,
+  reasonValue?: string,
+) {
+  const envelope = {
+    eventId: randomUUID(),
+    eventType,
+    schemaVersion: 1,
+    sourcePlane: "mesh",
+    sourceTenantId: d.ownerTenantId,
+    recipientTenantId: d.recipientTenantId,
+    sourceNetworkAccountId: d.ownerAccountId,
+    recipientNetworkAccountId: d.recipientAccountId,
+    networkRelationshipId: d.networkRelationshipId,
+    disclosureId: d.id,
+    disclosureVersion: d.disclosureVersion,
+    lifecycleVersion: d.lifecycleVersion,
+    payloadHash: d.payloadHash,
+    occurredAt: new Date().toISOString(),
+    ...(eventType.endsWith("revoked")
+      ? { withdrawal: { reason: reasonValue } }
+      : { payload: d.payload }),
+  };
+  await options.outbox.append(
+    {
+      tenantId: d.ownerTenantId,
+      topic: "mesh-business-partner-bank",
+      eventType,
+      eventKey: `${d.id}:lifecycle:${d.lifecycleVersion}`,
+      entityType: "bank_account_disclosure",
+      entityId: d.id,
+      aggregateType: "network_relationship",
+      aggregateId: d.networkRelationshipId,
+      actorId: context.principalId,
+      correlationId: context.correlationId,
+      partitionKey: d.recipientTenantId,
+      payload: envelope,
+    },
+    tx,
+  );
+  await options.audit.record(
+    {
+      eventCode: eventType.endsWith("revoked")
+        ? "business_partner.bank_disclosure.revoked"
+        : "business_partner.bank_disclosure.approved",
+      action: eventType.endsWith("revoked") ? "revoke" : "approve",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: d.ownerTenantId,
+      entityType: "bank_account_disclosure",
+      entityId: d.id,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      metadata: {
+        networkRelationshipId: d.networkRelationshipId,
+        recipientTenantId: d.recipientTenantId,
+        disclosureVersion: d.disclosureVersion,
+        lifecycleVersion: d.lifecycleVersion,
+        payloadHash: d.payloadHash,
+      },
+    },
+    tx,
+  );
+}
+async function rejectionAudit(
+  options: { audit: AuditRecorder<Tx> },
+  context: VerifiedRequestContext,
+  tx: Tx,
+  d: BusinessPartnerBankDisclosure,
+  reasonValue: string,
+) {
+  await options.audit.record(
+    {
+      eventCode: "business_partner.bank_disclosure.rejected",
+      action: "reject",
+      outcome: "success",
+      actor: { kind: "user", principalId: context.principalId },
+      tenantId: d.ownerTenantId,
+      entityType: "bank_account_disclosure",
+      entityId: d.id,
+      requestId: context.requestId,
+      ...(context.correlationId
+        ? { correlationId: context.correlationId }
+        : {}),
+      metadata: {
+        networkRelationshipId: d.networkRelationshipId,
+        recipientTenantId: d.recipientTenantId,
+        disclosureVersion: d.disclosureVersion,
+        lifecycleVersion: d.lifecycleVersion,
+        reason: reasonValue,
+      },
+    },
+    tx,
+  );
+}
+function map(row: Row): BusinessPartnerBankDisclosure {
+  return {
+    id: String(row["id"]),
+    ownerTenantId: String(row["owner_tenant_id"]),
+    ownerAccountId: String(row["owner_account_id"]),
+    bankAccountId: String(row["bank_account_id"]),
+    networkRelationshipId: String(row["network_relationship_id"]),
+    recipientTenantId: String(row["recipient_tenant_id"]),
+    recipientAccountId: String(row["recipient_account_id"]),
+    purpose: String(row["purpose"]) as "settlement" | "refund",
+    disclosureVersion: Number(row["disclosure_version"]),
+    status: String(row["status"]) as BankDisclosureStatus,
+    lifecycleVersion: Number(row["lifecycle_version"] ?? 0),
+    ...(row["payload_hash"]
+      ? { payloadHash: String(row["payload_hash"]) }
+      : {}),
+    ...(row["payload_json"] ? { payload: object(row["payload_json"]) } : {}),
+    ...(row["expires_at"]
+      ? { expiresAt: new Date(String(row["expires_at"])).toISOString() }
+      : {}),
+    disclosedAt: new Date(String(row["disclosed_at"])).toISOString(),
+    disclosedBy: String(row["disclosed_by"]),
+    ...(row["approved_at"]
+      ? {
+          approvedAt: new Date(String(row["approved_at"])).toISOString(),
+          approvedBy: String(row["approved_by"]),
+        }
+      : {}),
+    ...(row["revoked_at"]
+      ? {
+          revokedAt: new Date(String(row["revoked_at"])).toISOString(),
+          revokedBy: String(row["revoked_by"]),
+          revocationReason: String(row["revocation_reason"]),
+        }
+      : {}),
+  };
+}
+function one(result: { rows: readonly Row[] }) {
+  return result.rows[0] ?? null;
+}
+function required<T>(v: T | null | undefined): T {
+  if (v == null) throw new Error("Required disclosure row was not returned");
+  return v;
+}
+function plane(c: VerifiedRequestContext) {
+  if (c.planeKey !== "mesh") throw invalid("MESH context is required");
+}
+function actor(c: VerifiedRequestContext) {
+  return {
+    tenantId: c.tenantId,
+    principalId: c.principalId,
+    requestId: c.requestId,
+    correlationId: c.correlationId,
+  };
+}
+async function permit(
+  a: Authorizer,
+  c: VerifiedRequestContext,
+  permissionCode: string,
+  relationshipId: string,
+) {
+  if (
+    !(
+      await a.authorize({
+        context: c,
+        permissionCode,
+        resource: {
+          tenantId: c.tenantId,
+          networkRelationshipId: relationshipId,
+          recipientRelationshipValidated: true,
+        },
+      })
+    ).allowed
+  )
+    throw new MeshBankDisclosureError(
+      403,
+      "FORBIDDEN",
+      `Permission denied: ${permissionCode}`,
+    );
+}
+function key(v: string) {
+  if (v.trim() !== v || v.length < 8 || v.length > 200)
+    throw invalid("idempotencyKey must contain 8 to 200 trimmed characters");
+}
+function reason(v?: string) {
+  if (!v || v.trim() !== v || v.length > 4000)
+    throw invalid("reason must contain 1 to 4000 trimmed characters");
+}
+function object(v: unknown) {
+  return v && typeof v === "object" && !Array.isArray(v)
+    ? (v as Readonly<Record<string, unknown>>)
+    : {};
+}
+function invalid(message: string) {
+  return new MeshBankDisclosureError(
+    400,
+    "MESH_BANK_DISCLOSURE_INVALID",
+    message,
+  );
+}
+function conflict(code: string, message: string) {
+  return new MeshBankDisclosureError(409, code, message);
+}
+function missing() {
+  return new MeshBankDisclosureError(
+    404,
+    "MESH_BANK_DISCLOSURE_NOT_FOUND",
+    "Bank disclosure was not found",
+  );
+}
+function stable(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  return `{${Object.entries(v as Record<string, unknown>)
+    .filter(([, x]) => x !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, x]) => `${JSON.stringify(k)}:${stable(x)}`)
+    .join(",")}}`;
+}
+function hash(v: unknown) {
+  return createHash("sha256").update(stable(v)).digest("hex");
+}
+
+function timestamp(value: unknown) {
+  return value == null ? null : new Date(String(value)).toISOString();
+}
+function checkReplay(
+  row: Row,
+  id: string,
+  event: string,
+  principalId: string,
+  reasonValue?: string,
+  secureRef?: string,
+) {
+  if (
+    String(row["id"]) !== id ||
+    row["replay_event_kind"] !== event ||
+    row["replay_actor_id"] !== principalId ||
+    (event !== "approved" && row["replay_reason"] !== reasonValue) ||
+    (event === "approved" && row["secure_retrieval_reference"] !== secureRef)
+  )
+    throw conflict(
+      "MESH_BANK_DISCLOSURE_IDEMPOTENCY_CONFLICT",
+      "Idempotency key was reused for a different command",
+    );
+}

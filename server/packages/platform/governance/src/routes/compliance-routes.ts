@@ -1,3 +1,9 @@
+import {
+  governanceHttpError,
+  invalidRequest,
+  timestamp,
+  optionalBody,
+} from "./route-validation.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import {
   compliancePermissions,
@@ -48,7 +54,7 @@ export function registerGovernanceComplianceRoutes(
           }),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -65,7 +71,7 @@ export function registerGovernanceComplianceRoutes(
           ),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -99,7 +105,7 @@ export function registerGovernanceComplianceRoutes(
           }),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -116,7 +122,7 @@ export function registerGovernanceComplianceRoutes(
         );
         response.status(204).end();
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -142,7 +148,7 @@ export function registerGovernanceComplianceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -169,7 +175,9 @@ export function registerGovernanceComplianceRoutes(
                   },
                 }
               : {}),
-            parameters: object(body["parameters"] ?? {}),
+            parameters: object(
+              body["parameters"] === undefined ? {} : body["parameters"],
+            ),
             ...(text(body["supersedesReportPackId"])
               ? {
                   supersedesReportPackId: uuid(body["supersedesReportPackId"]),
@@ -178,7 +186,7 @@ export function registerGovernanceComplianceRoutes(
           }),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -195,7 +203,7 @@ export function registerGovernanceComplianceRoutes(
           ),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -205,6 +213,7 @@ export function registerGovernanceComplianceRoutes(
     options.authenticate,
     async (request, response, next) => {
       try {
+        response.setHeader("Cache-Control", "no-store");
         response.json(
           await options.reportPacks.download(
             context(response),
@@ -212,7 +221,7 @@ export function registerGovernanceComplianceRoutes(
           ),
         );
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -229,6 +238,7 @@ const schema = { type: "object", additionalProperties: true } as const,
     403: { description: "Forbidden" },
     404: { description: "Not found" },
     409: { description: "Invalid transition" },
+    503: { description: "Governance unavailable" },
   } as const;
 function contract(
   method: "get" | "post" | "delete",
@@ -245,7 +255,17 @@ function contract(
     tags: ["Governance compliance"],
     authenticated: true,
     permission,
-    ...(method === "post" ? { request: { body: schema } } : {}),
+    ...(method === "post"
+      ? {
+          request: {
+            body:
+              operationId.endsWith(".activate") ||
+              operationId.endsWith(".release")
+                ? optionalBody
+                : schema,
+          },
+        }
+      : {}),
     responses,
   });
 }
@@ -326,15 +346,18 @@ const resourceKinds = [
 ] as const satisfies readonly LegalHoldResourceKind[];
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("JSON object required");
+    throw invalidRequest("JSON object required");
   return value as Record<string, unknown>;
 }
 function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim())
+    throw invalidRequest("Nonempty string required");
+  return value.trim();
 }
 function required(value: unknown): string {
   const result = text(value);
-  if (!result) throw new TypeError("Required string missing");
+  if (!result) throw invalidRequest("Required string missing");
   return result;
 }
 function uuid(value: unknown): string {
@@ -345,24 +368,21 @@ function uuid(value: unknown): string {
       result,
     )
   )
-    throw new TypeError("UUID required");
+    throw invalidRequest("UUID required");
   return result;
 }
 function date(value: unknown): string {
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime()))
-    throw new TypeError("ISO timestamp required");
-  return parsed.toISOString();
+  return timestamp(value);
 }
 function choice<T extends string>(value: unknown, allowed: readonly T[]): T {
   const result = text(value);
   if (!result || !allowed.includes(result as T))
-    throw new TypeError(`Expected one of: ${allowed.join(", ")}`);
+    throw invalidRequest(`Expected one of: ${allowed.join(", ")}`);
   return result as T;
 }
 function hash(value: unknown): string {
   const result = text(value)?.toLowerCase();
   if (!result || !/^[0-9a-f]{64}$/u.test(result))
-    throw new TypeError("SHA-256 required");
+    throw invalidRequest("SHA-256 required");
   return result;
 }

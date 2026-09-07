@@ -699,7 +699,7 @@ function route(
     action,
     permission,
     method: action === "read" ? "get" : "post",
-    path: `/api/finance/${suffix}`,
+    path: `/api/neon/finance/${suffix}`,
   };
 }
 function worker(code: string): FinanceEntryPoint {

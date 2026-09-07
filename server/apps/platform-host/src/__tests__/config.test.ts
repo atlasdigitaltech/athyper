@@ -153,6 +153,7 @@ describe("loadConfig", () => {
   );
   keys.push(
     "WAVE0_CONTROL_ADMIN_TENANT_OVERRIDES_ENABLED",
+    "WAVE0_CONTROL_ADMIN_PARAMETERS_ENABLED",
     "WAVE0_CONTROL_ADMIN_LOOKUP_ROUNDING_ENABLED",
     "WAVE0_CONTROL_ADMIN_CONNECTOR_LIFECYCLE_ENABLED",
     "WAVE0_CONTROL_ADMIN_CYCLE_CONFIG_ENABLED",
@@ -710,6 +711,17 @@ describe("loadConfig", () => {
     delete process.env["PUBLICATION_REQUIRE_SIGNATURE"];
     process.env["PUBLICATION_TARGET_PLANES"] = "athyper";
     expect(() => loadConfig()).toThrow("invalid plane");
+  });
+
+  it("enables parameters independently of adjacent administration surfaces", () => {
+    expect(loadConfig().wave0.controlAdminParametersEnabled).toBe(false);
+    process.env["WAVE0_CONTROL_ADMIN_PARAMETERS_ENABLED"] = "true";
+    expect(loadConfig().wave0).toMatchObject({
+      controlAdminParametersEnabled: true,
+      controlAdminTenantOverridesEnabled: false,
+      controlAdminLocalCatalogReadsEnabled: false,
+      controlAdminCatalogAuthoringEnabled: false,
+    });
   });
 
   it("reads independently gated control-administration surfaces", () => {

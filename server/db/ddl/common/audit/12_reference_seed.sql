@@ -1,6 +1,6 @@
 -- seed-contract-version: 1
 -- seed-pack: common.audit.event-contracts
--- seed-pack-version: 1.9.0
+-- seed-pack-version: 1.11.0
 -- seed-dataset: master.audit-event-contract
 -- seed-data-class: production_reference
 -- seed-provenance: {"source":"internal-audit-contract","publisher":"Athyper","source_version":"1","retrieved_at":"2026-08-13","license":"internal"}
@@ -9,7 +9,7 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:26
+-- seed-expected-row-count: exact:28
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
@@ -324,6 +324,28 @@ VALUES
         'tenant', false, 'metadata', 16384, 1,
         '{"event_category":"generic_action","owner":"application","purpose":"generic_action_evidence"}'::jsonb,
         'active'
+    ),
+    (
+        'master_contact_address_mutation_event',
+        '^master[.](contact[.](created|deactivated)|address[.](linked|deactivated))$',
+        34,
+        ARRAY['create','update','execute']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"contact_address_mutation","owner":"master-data","sensitive":true}'::jsonb,
+        'active'
+    ),
+    (
+        'master_contact_verification_event',
+        '^master\.contact\.verification_changed$',
+        34,
+        ARRAY['execute','update']::audit.operation_d[],
+        'info',
+        ARRAY['user','service_account','system']::audit.actor_type_d[],
+        'tenant', false, 'metadata', 16384, 1,
+        '{"event_category":"contact_verification","owner":"master-data","sensitive":true}'::jsonb,
+        'active'
     )
 ON CONFLICT(code) DO UPDATE SET
     event_code_pattern  = EXCLUDED.event_code_pattern,
@@ -369,12 +391,12 @@ DECLARE
       'entity_access_event','business_partner_case_event','business_partner_request_event','finance_period_event','entity_business_event',
       'inbox_routing_event','records_transfer_event','integration_event','data_import_event','ai_support_event',
       'ai_event','schema_authoring_event','notification_event','config_change_event',
-      'platform_system_event','generic_action_event'
+      'platform_system_event','generic_action_event','master_contact_verification_event','master_contact_address_mutation_event'
     ];
 BEGIN
     -- seed-assertion: expected-count
-    IF (SELECT count(*) FROM master.audit_event_contract WHERE code = ANY(v_codes)) <> 26 THEN
-        RAISE EXCEPTION '[common.audit.event-contracts] expected 26 rows';
+    IF (SELECT count(*) FROM master.audit_event_contract WHERE code = ANY(v_codes)) <> 28 THEN
+        RAISE EXCEPTION '[common.audit.event-contracts] expected 28 rows';
     END IF;
     -- seed-assertion: orphan
     IF EXISTS (SELECT 1 FROM master.audit_event_contract WHERE code = ANY(v_codes) AND allowed_operations IS NULL) THEN
@@ -389,3 +411,36 @@ BEGIN
         RAISE EXCEPTION '[common.audit.event-contracts] inactive contract';
     END IF;
 END $seed_assertions$;
+
+INSERT INTO master.audit_event_contract (
+    code, event_code_pattern, priority, allowed_operations, default_severity,
+    allowed_actor_types, allowed_scope, reason_required, capture_mode,
+    max_payload_bytes, schema_version, metadata, status
+) VALUES (
+    'control_entitlement_override', '^control\.entitlement_override\.(created|updated|expired)$', 10,
+    ARRAY['create','update']::audit.operation_d[], 'info',
+    ARRAY['user','service_account','system']::audit.actor_type_d[], 'tenant', false, 'safe_values',
+    65536, 1, '{"owner":"control-admin","reason_location":"new_values.reason"}'::jsonb, 'active'
+) ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+    allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('control_feature_override','^control\.feature_override\.(created|updated|expired)$',10,
+    ARRAY['create','update']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+    'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","reason_location":"new_values.reason"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
+-- The operator's tenant owns the audit record; the affected catalog scope is the entire plane.
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+    allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('control_feature_cohort','^control\.feature_cohort\.changed$',10,
+    ARRAY['update']::audit.operation_d[],'info',ARRAY['user','service_account']::audit.actor_type_d[],
+    'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","affected_scope":"plane","reason_location":"new_values.reason"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;
+
+INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
+ allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
+VALUES('control_parameter_value','^control\.parameter_value\.(created|updated|expired)$',10,
+ ARRAY['create','update']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
+ 'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","parameter_values":"omitted"}'::jsonb,'active')
+ON CONFLICT(code) DO NOTHING;

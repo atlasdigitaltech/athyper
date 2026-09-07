@@ -1,47 +1,507 @@
-import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
-import type {ContentAclService}from"@athyper/server-contract-content";
+import type {
+  Authorizer,
+  VerifiedRequestContext,
+} from "@athyper/server-contract-auth";
+import type { ContentAclService } from "@athyper/server-contract-content";
 import type { Application, RequestHandler, Response } from "express";
-import {AttachmentDownloadError,type AttachmentLifecycle } from "./attachment-lifecycle.js";
-import {QuotaExceededError} from "./quota.js";
+import {
+  AttachmentConflictError,
+  AttachmentDownloadError,
+  type AttachmentLifecycle,
+} from "./attachment-lifecycle.js";
+import { QuotaExceededError } from "./quota.js";
 
-export interface AttachmentRouteOptions { readonly authenticate:RequestHandler; readonly readContext:(response:Response)=>VerifiedRequestContext; readonly authorizer:Authorizer; readonly attachments:AttachmentLifecycle; readonly maxUploadBytes:number;readonly contentAcl?:ContentAclService; }
-
-export function registerAttachmentRoutes(application:Application,options:AttachmentRouteOptions):void{
-  application.post("/api/attachments/stage",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),value=body(request.body);
-    const attachmentId=uuid(value,"attachmentId"),fileName=text(value,"fileName",1024),contentType=text(value,"contentType",255),sizeBytes=integer(value,"sizeBytes");
-    const owner=coordinate(value);await allowedAttachment(options.authorizer,context,"create",{attachmentId,resourceId:attachmentId},owner.entityType==="atlas.prompt");
-    if(sizeBytes<1||sizeBytes>options.maxUploadBytes){problem(response,413,"ATTACHMENT_SIZE_EXCEEDED",`Attachment size must be between 1 and ${options.maxUploadBytes} bytes`);return;}
-    const staged=await options.attachments.stage({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId,fileName,contentType,sizeBytes,...owner});
-    response.status(201).json(staged);
-  }catch(error){handle(error,response,next);}});
-  application.post("/api/attachments/:attachmentId/finalize",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await allowedAttachment(options.authorizer,context,"finalize",{attachmentId,resourceId:attachmentId},true);const value=body(request.body);
-    const result=await options.attachments.finalize({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},text(value,"contentType",255));response.status(200).json({attachmentId:result.id,status:result.status});
-  }catch(error){handle(error,response,next);}});
-  application.get("/api/attachments/:attachmentId/status",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await allowedAttachment(options.authorizer,context,"read",{attachmentId,resourceId:attachmentId},true);const result=await options.attachments.status({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId});response.json({attachmentId:result.id,status:result.status,extractionStatus:result.textExtractionStatus??null,...(result.fileName?{fileName:result.fileName}:{}),...(result.contentType?{contentType:result.contentType}:{}),...(result.sizeBytes===undefined?{}:{sizeBytes:result.sizeBytes})});
-  }catch(error){handle(error,response,next);}});
-  application.post("/api/attachments/:attachmentId/download",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await allowedAttachment(options.authorizer,context,"download",{attachmentId,resourceId:attachmentId},false);
-    const value=body(request.body??{}),ttl=value["expirySeconds"]===undefined?120:integer(value,"expirySeconds");
-    const result=await options.attachments.createAuthorizedDownload({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},ttl);response.setHeader("Cache-Control","private, no-store");response.setHeader("Pragma","no-cache");response.status(200).json(result);
-  }catch(error){handle(error,response,next);}});
-  application.delete("/api/attachments/:attachmentId",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),attachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await allowedAttachment(options.authorizer,context,"delete",{attachmentId,resourceId:attachmentId},true);await options.attachments.deactivate({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId},"user_removed");response.status(204).end();
-  }catch(error){handle(error,response,next);}});
-  application.post("/api/content/items/:id/attachments/:attachmentId/versions",options.authenticate,async(request,response,next)=>{try{
-    const context=options.readContext(response),contentItemId=uuidValue(String(request.params["id"]??""),"id"),parentAttachmentId=uuidValue(String(request.params["attachmentId"]??""),"attachmentId");await allowed(options.authorizer,context,"document.attachment.create",{contentItemId,parentAttachmentId});if(options.contentAcl&&!await options.contentAcl.authorize({context,contentItemId,required:"write"})){problem(response,403,"CONTENT_ACCESS_DENIED","Content item write access is required");return;}const value=body(request.body),attachmentId=uuid(value,"newAttachmentId"),fileName=text(value,"fileName",1024),contentType=text(value,"contentType",255),sizeBytes=integer(value,"sizeBytes");if(sizeBytes<1||sizeBytes>options.maxUploadBytes){problem(response,413,"ATTACHMENT_SIZE_EXCEEDED",`Attachment size must be between 1 and ${options.maxUploadBytes} bytes`);return;}const staged=await options.attachments.stage({planeKey:context.planeKey,tenantId:context.tenantId,principalId:context.principalId,attachmentId,fileName,contentType,sizeBytes,parentAttachmentId,entityType:"content.item",entityId:contentItemId});response.status(201).json(staged);
-  }catch(error){handle(error,response,next);}});
+export interface AttachmentRouteOptions {
+  readonly authenticate: RequestHandler;
+  readonly readContext: (response: Response) => VerifiedRequestContext;
+  readonly authorizer: Authorizer;
+  readonly attachments: AttachmentLifecycle;
+  readonly maxUploadBytes: number;
+  readonly contentAcl?: ContentAclService;
 }
-async function allowed(authorizer:Authorizer,context:VerifiedRequestContext,permissionCode:string,resource?:Readonly<Record<string,unknown>>):Promise<void>{if(!(await authorizer.authorize({context,permissionCode,...(resource?{resource}:{})})).allowed)throw new RouteError(403,"FORBIDDEN",`Missing permission: ${permissionCode}`);}
-async function allowedAttachment(authorizer:Authorizer,context:VerifiedRequestContext,operation:"create"|"finalize"|"read"|"download"|"delete",resource:Readonly<Record<string,unknown>>,atlasPrompt:boolean):Promise<void>{const atlasDecision=atlasPrompt?await authorizer.authorize({context,permissionCode:`${context.planeKey}.ai.agent.use`}):undefined;if(atlasDecision?.allowed)return;const planeCode=context.planeKey==="neon"?`neon.collaboration.attachment.${operation}`:context.planeKey==="mesh"?`mesh.catalog.attachment.${operation}`:`studio.catalog.attachment.${operation}`;const candidates=[planeCode,`attachment.${operation}`,`document.attachment.${operation}`,...(operation==="finalize"?[context.planeKey==="mesh"?"mesh.catalog.attachment.create":"attachment.create"]:[])];for(const permissionCode of candidates)if((await authorizer.authorize({context,permissionCode,resource})).allowed)return;if(atlasDecision?.reason==="mfa_required")throw new RouteError(403,"ATLAS_MFA_REQUIRED","Atlas attachments require an elevated MFA session");if(atlasPrompt&&atlasDecision?.reason==="missing_permission")throw new RouteError(403,"ATLAS_PERMISSION_REQUIRED",`Missing permission: ${context.planeKey}.ai.agent.use`);throw new RouteError(403,"FORBIDDEN",`Missing attachment ${operation} permission`);}
-function body(value:unknown):Record<string,unknown>{if(!value||typeof value!=="object"||Array.isArray(value))throw new RouteError(400,"INVALID_BODY","JSON object required");return value as Record<string,unknown>;}
-function text(value:Record<string,unknown>,key:string,max:number):string{const item=value[key];if(typeof item!=="string"||!item.trim()||item.length>max)throw new RouteError(400,"INVALID_FIELD",`${key} is invalid`);return item.trim();}
-function integer(value:Record<string,unknown>,key:string):number{const item=value[key];if(!Number.isSafeInteger(item))throw new RouteError(400,"INVALID_FIELD",`${key} must be an integer`);return Number(item);}
-function uuid(value:Record<string,unknown>,key:string):string{return uuidValue(text(value,key,36),key);}
-function uuidValue(value:string,key:string):string{if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value))throw new RouteError(400,"INVALID_FIELD",`${key} must be a UUID`);return value;}
-function coordinate(value:Record<string,unknown>):{entityType?:string;entityId?:string}{const entityType=value["entityType"],entityId=value["entityId"];if(entityType===undefined&&entityId===undefined)return{};if(typeof entityType!=="string"||!/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/.test(entityType)||typeof entityId!=="string"||!entityId.trim()||entityId.length>512)throw new RouteError(400,"INVALID_RESOURCE_COORDINATE","entityType and entityId must form a valid coordinate");return{entityType,entityId};}
-function problem(response:Response,status:number,code:string,detail:string):void{response.status(status).type("application/problem+json").json({type:`https://athyper.dev/problems/${code.toLowerCase()}`,title:code,status,detail,code});}
-function handle(error:unknown,response:Response,next:(error?:unknown)=>void):void{if(error instanceof QuotaExceededError){response.setHeader("Retry-After",String(error.policy.retryAfterSeconds));response.status(429).type("application/problem+json").json({type:"https://athyper.dev/problems/attachment-storage-quota-exceeded",title:"Attachment storage quota exceeded",status:429,detail:error.message,code:"ATTACHMENT_STORAGE_QUOTA_EXCEEDED",quotaKind:error.policy.kind,limitBytes:error.policy.limitBytes,...error.usage,requestedBytes:error.requestedBytes,retryAfterSeconds:error.policy.retryAfterSeconds});}else if(error instanceof AttachmentDownloadError)problem(response,410,error.code,error.message);else if(error instanceof RouteError)problem(response,error.status,error.code,error.message);else if(error instanceof TypeError)problem(response,400,"INVALID_ATTACHMENT",error.message);else if(error instanceof Error&&error.message==="Attachment not found")problem(response,404,"ATTACHMENT_NOT_FOUND",error.message);else if(error instanceof Error&&error.message==="Attachment was quarantined")problem(response,422,"ATTACHMENT_QUARANTINED",error.message);else next(error);}
-class RouteError extends Error{constructor(readonly status:number,readonly code:string,message:string){super(message);}}
+
+export function registerAttachmentRoutes(
+  application: Application,
+  options: AttachmentRouteOptions,
+): void {
+  application.post(
+    "/api/attachments/stage",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          value = body(request.body);
+        const attachmentId = uuid(value, "attachmentId"),
+          fileName = text(value, "fileName", 1024),
+          contentType = text(value, "contentType", 255),
+          sizeBytes = integer(value, "sizeBytes");
+        const owner = coordinate(value);
+        if (
+          owner.entityType === "content.item" &&
+          options.contentAcl &&
+          !(await options.contentAcl.authorize({
+            context,
+            contentItemId: uuidValue(owner.entityId!, "entityId"),
+            required: "write",
+          }))
+        ) {
+          problem(
+            response,
+            403,
+            "CONTENT_ACCESS_DENIED",
+            "Content item write access is required",
+          );
+          return;
+        }
+        await allowedAttachment(
+          options.authorizer,
+          context,
+          "create",
+          { attachmentId, resourceId: attachmentId },
+          owner.entityType === "atlas.prompt",
+        );
+        if (sizeBytes < 1 || sizeBytes > options.maxUploadBytes) {
+          problem(
+            response,
+            413,
+            "ATTACHMENT_SIZE_EXCEEDED",
+            `Attachment size must be between 1 and ${options.maxUploadBytes} bytes`,
+          );
+          return;
+        }
+        const staged = await options.attachments.stage({
+          planeKey: context.planeKey,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
+          attachmentId,
+          fileName,
+          contentType,
+          sizeBytes,
+          ...owner,
+        });
+        response.setHeader("Cache-Control", "private, no-store");
+        response.status(201).json(staged);
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+  application.post(
+    "/api/attachments/:attachmentId/finalize",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          attachmentId = uuidValue(
+            String(request.params["attachmentId"] ?? ""),
+            "attachmentId",
+          );
+        await allowedAttachment(
+          options.authorizer,
+          context,
+          "finalize",
+          { attachmentId, resourceId: attachmentId },
+          await isAtlasAttachment(options, context, attachmentId),
+        );
+        const value = body(request.body);
+        const result = await options.attachments.finalize(
+          {
+            planeKey: context.planeKey,
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            attachmentId,
+          },
+          text(value, "contentType", 255),
+        );
+        response
+          .status(200)
+          .json({ attachmentId: result.id, status: result.status });
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+  application.get(
+    "/api/attachments/:attachmentId/status",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          attachmentId = uuidValue(
+            String(request.params["attachmentId"] ?? ""),
+            "attachmentId",
+          );
+        await allowedAttachment(
+          options.authorizer,
+          context,
+          "read",
+          { attachmentId, resourceId: attachmentId },
+          await isAtlasAttachment(options, context, attachmentId),
+        );
+        const result = await options.attachments.status({
+          planeKey: context.planeKey,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
+          attachmentId,
+        });
+        response.json({
+          attachmentId: result.id,
+          status: result.status,
+          extractionStatus: result.textExtractionStatus ?? null,
+          ...(result.fileName ? { fileName: result.fileName } : {}),
+          ...(result.contentType ? { contentType: result.contentType } : {}),
+          ...(result.sizeBytes === undefined
+            ? {}
+            : { sizeBytes: result.sizeBytes }),
+        });
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+  application.post(
+    "/api/attachments/:attachmentId/download",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          attachmentId = uuidValue(
+            String(request.params["attachmentId"] ?? ""),
+            "attachmentId",
+          );
+        await allowedAttachment(
+          options.authorizer,
+          context,
+          "download",
+          { attachmentId, resourceId: attachmentId },
+          false,
+        );
+        const value = body(request.body ?? {}),
+          ttl =
+            value["expirySeconds"] === undefined
+              ? 120
+              : integer(value, "expirySeconds");
+        const result = await options.attachments.createAuthorizedDownload(
+          {
+            planeKey: context.planeKey,
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            attachmentId,
+          },
+          ttl,
+        );
+        response.setHeader("Cache-Control", "private, no-store");
+        response.setHeader("Pragma", "no-cache");
+        response.status(200).json(result);
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+  application.delete(
+    "/api/attachments/:attachmentId",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          attachmentId = uuidValue(
+            String(request.params["attachmentId"] ?? ""),
+            "attachmentId",
+          );
+        await allowedAttachment(
+          options.authorizer,
+          context,
+          "delete",
+          { attachmentId, resourceId: attachmentId },
+          await isAtlasAttachment(options, context, attachmentId),
+        );
+        await options.attachments.deactivate(
+          {
+            planeKey: context.planeKey,
+            tenantId: context.tenantId,
+            principalId: context.principalId,
+            attachmentId,
+          },
+          "user_removed",
+        );
+        response.status(204).end();
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+  application.post(
+    "/api/content/items/:id/attachments/:attachmentId/versions",
+    options.authenticate,
+    async (request, response, next) => {
+      try {
+        const context = options.readContext(response),
+          contentItemId = uuidValue(String(request.params["id"] ?? ""), "id"),
+          parentAttachmentId = uuidValue(
+            String(request.params["attachmentId"] ?? ""),
+            "attachmentId",
+          );
+        await allowed(
+          options.authorizer,
+          context,
+          "document.attachment.create",
+          { contentItemId, parentAttachmentId },
+        );
+        if (
+          options.contentAcl &&
+          !(await options.contentAcl.authorize({
+            context,
+            contentItemId,
+            required: "write",
+          }))
+        ) {
+          problem(
+            response,
+            403,
+            "CONTENT_ACCESS_DENIED",
+            "Content item write access is required",
+          );
+          return;
+        }
+        const value = body(request.body),
+          attachmentId = uuid(value, "newAttachmentId"),
+          fileName = text(value, "fileName", 1024),
+          contentType = text(value, "contentType", 255),
+          sizeBytes = integer(value, "sizeBytes");
+        if (sizeBytes < 1 || sizeBytes > options.maxUploadBytes) {
+          problem(
+            response,
+            413,
+            "ATTACHMENT_SIZE_EXCEEDED",
+            `Attachment size must be between 1 and ${options.maxUploadBytes} bytes`,
+          );
+          return;
+        }
+        const staged = await options.attachments.stage({
+          planeKey: context.planeKey,
+          tenantId: context.tenantId,
+          principalId: context.principalId,
+          attachmentId,
+          fileName,
+          contentType,
+          sizeBytes,
+          parentAttachmentId,
+          entityType: "content.item",
+          entityId: contentItemId,
+        });
+        response.status(201).json(staged);
+      } catch (error) {
+        handle(error, response, next);
+      }
+    },
+  );
+}
+async function isAtlasAttachment(
+  options: AttachmentRouteOptions,
+  context: VerifiedRequestContext,
+  attachmentId: string,
+): Promise<boolean> {
+  const record = await options.attachments.status({
+    planeKey: context.planeKey,
+    tenantId: context.tenantId,
+    principalId: context.principalId,
+    attachmentId,
+  });
+  return record.entityType === "atlas.prompt";
+}
+async function allowed(
+  authorizer: Authorizer,
+  context: VerifiedRequestContext,
+  permissionCode: string,
+  resource?: Readonly<Record<string, unknown>>,
+): Promise<void> {
+  if (
+    !(
+      await authorizer.authorize({
+        context,
+        permissionCode,
+        ...(resource ? { resource } : {}),
+      })
+    ).allowed
+  )
+    throw new RouteError(
+      403,
+      "FORBIDDEN",
+      `Missing permission: ${permissionCode}`,
+    );
+}
+async function allowedAttachment(
+  authorizer: Authorizer,
+  context: VerifiedRequestContext,
+  operation: "create" | "finalize" | "read" | "download" | "delete",
+  resource: Readonly<Record<string, unknown>>,
+  atlasPrompt: boolean,
+): Promise<void> {
+  const atlasDecision = atlasPrompt
+    ? await authorizer.authorize({
+        context,
+        permissionCode: `${context.planeKey}.ai.agent.use`,
+      })
+    : undefined;
+  if (atlasDecision?.allowed) return;
+  const planeCode =
+    context.planeKey === "neon"
+      ? `neon.collaboration.attachment.${operation}`
+      : context.planeKey === "mesh"
+        ? `mesh.catalog.attachment.${operation}`
+        : `studio.catalog.attachment.${operation}`;
+  const candidates = [
+    planeCode,
+    `attachment.${operation}`,
+    `document.attachment.${operation}`,
+    ...(operation === "finalize"
+      ? [
+          planeCode.replace(/finalize$/, "create"),
+          "attachment.create",
+          "document.attachment.create",
+        ]
+      : []),
+  ];
+  for (const permissionCode of candidates)
+    if (
+      (await authorizer.authorize({ context, permissionCode, resource }))
+        .allowed
+    )
+      return;
+  if (atlasDecision?.reason === "mfa_required")
+    throw new RouteError(
+      403,
+      "ATLAS_MFA_REQUIRED",
+      "Atlas attachments require an elevated MFA session",
+    );
+  if (atlasPrompt && atlasDecision?.reason === "missing_permission")
+    throw new RouteError(
+      403,
+      "ATLAS_PERMISSION_REQUIRED",
+      `Missing permission: ${context.planeKey}.ai.agent.use`,
+    );
+  throw new RouteError(
+    403,
+    "FORBIDDEN",
+    `Missing attachment ${operation} permission`,
+  );
+}
+function body(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value))
+    throw new RouteError(400, "INVALID_BODY", "JSON object required");
+  return value as Record<string, unknown>;
+}
+function text(
+  value: Record<string, unknown>,
+  key: string,
+  max: number,
+): string {
+  const item = value[key];
+  if (typeof item !== "string" || !item.trim() || item.length > max)
+    throw new RouteError(400, "INVALID_FIELD", `${key} is invalid`);
+  return item.trim();
+}
+function integer(value: Record<string, unknown>, key: string): number {
+  const item = value[key];
+  if (!Number.isSafeInteger(item))
+    throw new RouteError(400, "INVALID_FIELD", `${key} must be an integer`);
+  return Number(item);
+}
+function uuid(value: Record<string, unknown>, key: string): string {
+  return uuidValue(text(value, key, 36), key);
+}
+function uuidValue(value: string, key: string): string {
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  )
+    throw new RouteError(400, "INVALID_FIELD", `${key} must be a UUID`);
+  return value;
+}
+function coordinate(value: Record<string, unknown>): {
+  entityType?: string;
+  entityId?: string;
+} {
+  const entityType = value["entityType"],
+    entityId = value["entityId"];
+  if (entityType === undefined && entityId === undefined) return {};
+  if (
+    typeof entityType !== "string" ||
+    !/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/.test(entityType) ||
+    typeof entityId !== "string" ||
+    !entityId.trim() ||
+    entityId.length > 512
+  )
+    throw new RouteError(
+      400,
+      "INVALID_RESOURCE_COORDINATE",
+      "entityType and entityId must form a valid coordinate",
+    );
+  return { entityType, entityId };
+}
+function problem(
+  response: Response,
+  status: number,
+  code: string,
+  detail: string,
+): void {
+  response
+    .status(status)
+    .type("application/problem+json")
+    .json({
+      type: `https://athyper.dev/problems/${code.toLowerCase()}`,
+      title: code,
+      status,
+      detail,
+      code,
+    });
+}
+function handle(
+  error: unknown,
+  response: Response,
+  next: (error?: unknown) => void,
+): void {
+  if (error instanceof QuotaExceededError) {
+    response.setHeader("Retry-After", String(error.policy.retryAfterSeconds));
+    response
+      .status(429)
+      .type("application/problem+json")
+      .json({
+        type: "https://athyper.dev/problems/attachment-storage-quota-exceeded",
+        title: "Attachment storage quota exceeded",
+        status: 429,
+        detail: error.message,
+        code: "ATTACHMENT_STORAGE_QUOTA_EXCEEDED",
+        quotaKind: error.policy.kind,
+        limitBytes: error.policy.limitBytes,
+        ...error.usage,
+        requestedBytes: error.requestedBytes,
+        retryAfterSeconds: error.policy.retryAfterSeconds,
+      });
+  } else if (error instanceof AttachmentConflictError)
+    problem(response, 409, "ATTACHMENT_CONFLICT", error.message);
+  else if (error instanceof AttachmentDownloadError)
+    problem(response, 410, error.code, error.message);
+  else if (error instanceof RouteError)
+    problem(response, error.status, error.code, error.message);
+  else if (error instanceof TypeError)
+    problem(response, 400, "INVALID_ATTACHMENT", error.message);
+  else if (error instanceof Error && error.message === "Attachment not found")
+    problem(response, 404, "ATTACHMENT_NOT_FOUND", error.message);
+  else if (
+    error instanceof Error &&
+    error.message === "Attachment was quarantined"
+  )
+    problem(response, 422, "ATTACHMENT_QUARANTINED", error.message);
+  else next(error);
+}
+class RouteError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+  ) {
+    super(message);
+  }
+}

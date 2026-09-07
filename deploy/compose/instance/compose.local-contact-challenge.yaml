@@ -1,0 +1,25 @@
+# Append AFTER notification capture and only to the development instance.
+x-challenge: &challenge
+  LOCAL_CONTACT_CHALLENGE_ENABLED: "true"
+  LOCAL_CONTACT_CHALLENGE_KEY_ID: local-contact-challenge-v1
+  LOCAL_CONTACT_CHALLENGE_PRIVATE_KEY_FILE: /run/secrets/local-contact-challenge-private-key
+  LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY_FILE: /run/secrets/local-contact-challenge-delivery-key
+  MASTER_DATA_VERIFICATION_KEYS_JSON_FILE: /run/secrets/local-contact-challenge-trust
+services:
+  api:
+    environment: *challenge
+    secrets: [local-contact-challenge-private-key, local-contact-challenge-trust, local-contact-challenge-delivery-key]
+  worker:
+    environment:
+      LOCAL_CONTACT_CHALLENGE_DELIVERY_KEY_FILE: /run/secrets/local-contact-challenge-delivery-key
+    secrets: [local-contact-challenge-delivery-key]
+  neon-web:
+    environment:
+      LOCAL_CONTACT_CHALLENGE_ENABLED: "true"
+secrets:
+  local-contact-challenge-delivery-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?}/instances/dev/secrets/local-contact-challenge-delivery-key
+  local-contact-challenge-private-key:
+    file: ${ATHYPER_RUNTIME_ROOT:?}/instances/dev/secrets/local-contact-challenge-private-key
+  local-contact-challenge-trust:
+    file: ${ATHYPER_RUNTIME_ROOT:?}/instances/dev/secrets/local-contact-challenge-trust

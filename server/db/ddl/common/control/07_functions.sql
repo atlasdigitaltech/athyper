@@ -292,6 +292,9 @@ BEGIN
         RAISE EXCEPTION 'deprecated usage controls cannot be reactivated'
             USING ERRCODE = 'check_violation';
     END IF;
+    IF TG_TABLE_NAME = 'tenant_usage_limit_override' THEN
+        NEW.version := OLD.version + 1;
+    END IF;
     RETURN NEW;
 END;
 $$;
@@ -322,6 +325,34 @@ BEGIN
 END;
 $$;
 
+-- Reject JSON that cannot be consumed by the API without non-finite numbers or excess nesting.
+CREATE OR REPLACE FUNCTION control.parameter_json_is_api_compatible(p_value jsonb, p_depth integer DEFAULT 0)
+RETURNS boolean LANGUAGE plpgsql IMMUTABLE SET search_path=pg_catalog AS $$
+DECLARE
+    v_child jsonb;
+    v_number double precision;
+BEGIN
+    IF p_value IS NULL OR p_depth > 64 THEN RETURN false; END IF;
+    CASE jsonb_typeof(p_value)
+      WHEN 'number' THEN
+        BEGIN
+            v_number := p_value::text::double precision;
+        EXCEPTION WHEN numeric_value_out_of_range THEN RETURN false;
+        END;
+        RETURN v_number NOT IN ('Infinity'::double precision, '-Infinity'::double precision, 'NaN'::double precision);
+      WHEN 'array' THEN
+        FOR v_child IN SELECT value FROM jsonb_array_elements(p_value) LOOP
+            IF NOT control.parameter_json_is_api_compatible(v_child,p_depth+1) THEN RETURN false; END IF;
+        END LOOP;
+      WHEN 'object' THEN
+        FOR v_child IN SELECT value FROM jsonb_each(p_value) LOOP
+            IF NOT control.parameter_json_is_api_compatible(v_child,p_depth+1) THEN RETURN false; END IF;
+        END LOOP;
+      ELSE NULL;
+    END CASE;
+    RETURN true;
+END $$;
+
 CREATE OR REPLACE FUNCTION control.parameter_value_matches_definition(
     p_value jsonb,
     p_value_type text,
@@ -336,33 +367,52 @@ SET search_path = pg_catalog
 AS $$
 DECLARE
     v_numeric_value numeric;
+    v_allowed jsonb;
+    v_matches boolean := false;
 BEGIN
-    IF p_value_type = 'boolean' AND jsonb_typeof(p_value) <> 'boolean' THEN
-        RETURN false;
-    ELSIF p_value_type = 'integer'
-          AND (jsonb_typeof(p_value) <> 'number' OR p_value::text !~ '^-?[0-9]+$') THEN
-        RETURN false;
-    ELSIF p_value_type = 'number' AND jsonb_typeof(p_value) <> 'number' THEN
-        RETURN false;
-    ELSIF p_value_type IN ('string', 'enum') AND jsonb_typeof(p_value) <> 'string' THEN
-        RETURN false;
-    ELSIF p_value_type = 'duration' AND jsonb_typeof(p_value) NOT IN ('number', 'string') THEN
+    IF NOT control.parameter_json_is_api_compatible(p_value)
+       OR p_value_type IS NULL OR p_value_type NOT IN ('boolean','integer','number','string','enum','duration','json') THEN
         RETURN false;
     END IF;
-
-    IF p_allowed_values IS NOT NULL
-       AND NOT (p_allowed_values @> jsonb_build_array(p_value)) THEN
-        RETURN false;
-    END IF;
-
-    IF p_value_type IN ('integer', 'number') THEN
+    CASE p_value_type
+      WHEN 'boolean' THEN IF jsonb_typeof(p_value) <> 'boolean' THEN RETURN false; END IF;
+      WHEN 'string' THEN IF jsonb_typeof(p_value) <> 'string' THEN RETURN false; END IF;
+      WHEN 'integer' THEN
+        IF jsonb_typeof(p_value) <> 'number' THEN RETURN false; END IF;
         v_numeric_value := p_value::text::numeric;
-        IF p_min_value IS NOT NULL AND v_numeric_value < p_min_value::text::numeric THEN
-            RETURN false;
-        END IF;
-        IF p_max_value IS NOT NULL AND v_numeric_value > p_max_value::text::numeric THEN
-            RETURN false;
-        END IF;
+        IF trunc(v_numeric_value) <> v_numeric_value OR abs(v_numeric_value) > 9007199254740991 THEN RETURN false; END IF;
+      WHEN 'number' THEN IF jsonb_typeof(p_value) <> 'number' THEN RETURN false; END IF;
+      WHEN 'enum' THEN
+        IF jsonb_typeof(p_value) NOT IN ('string','number','boolean') OR p_allowed_values IS NULL THEN RETURN false; END IF;
+      WHEN 'duration' THEN
+        IF jsonb_typeof(p_value) <> 'string' THEN RETURN false; END IF;
+        IF (p_value #>> '{}') !~ '^P([0-9]+D)?(T([0-9]+H)?([0-9]+M)?([0-9]+([.][0-9]+)?S)?)?$'
+           OR (p_value #>> '{}') IN ('P','PT') OR (p_value #>> '{}') ~ 'T$' THEN RETURN false; END IF;
+      ELSE NULL;
+    END CASE;
+
+    -- SQL NULL means no bound. JSON null and non-number bounds are invalid configuration.
+    IF p_min_value IS NOT NULL OR p_max_value IS NOT NULL THEN
+        IF p_value_type NOT IN ('integer','number') THEN RETURN false; END IF;
+        IF p_min_value IS NOT NULL AND (jsonb_typeof(p_min_value) <> 'number'
+           OR NOT control.parameter_json_is_api_compatible(p_min_value)) THEN RETURN false; END IF;
+        IF p_max_value IS NOT NULL AND (jsonb_typeof(p_max_value) <> 'number'
+           OR NOT control.parameter_json_is_api_compatible(p_max_value)) THEN RETURN false; END IF;
+        IF p_min_value IS NOT NULL AND p_max_value IS NOT NULL
+           AND p_min_value::text::numeric > p_max_value::text::numeric THEN RETURN false; END IF;
+        v_numeric_value := p_value::text::numeric;
+        IF p_min_value IS NOT NULL AND v_numeric_value < p_min_value::text::numeric THEN RETURN false; END IF;
+        IF p_max_value IS NOT NULL AND v_numeric_value > p_max_value::text::numeric THEN RETURN false; END IF;
+    END IF;
+
+    IF p_allowed_values IS NOT NULL THEN
+        IF jsonb_typeof(p_allowed_values) <> 'array' THEN RETURN false; END IF;
+        FOR v_allowed IN SELECT value FROM jsonb_array_elements(p_allowed_values) LOOP
+            IF NOT control.parameter_json_is_api_compatible(v_allowed) THEN RETURN false; END IF;
+            -- Full jsonb equality preserves array order and scalar types, unlike containment.
+            IF v_allowed = p_value THEN v_matches := true; END IF;
+        END LOOP;
+        IF NOT v_matches THEN RETURN false; END IF;
     END IF;
     RETURN true;
 END;
@@ -625,4 +675,219 @@ BEGIN
   END IF;
   RETURN OLD;
 END;
+$$;
+
+-- Versions describe the current catalog projection. Historical reads must use
+-- snapshot evidence; the adapter never presents today's composition as history.
+CREATE OR REPLACE FUNCTION control.trg_version_entitlement_plan()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, control AS $$
+BEGIN
+    NEW.entitlement_version := OLD.entitlement_version + 1;
+    NEW.entitlement_effective_from := greatest(date_trunc('milliseconds', clock_timestamp()), OLD.entitlement_effective_from + interval '1 millisecond');
+    RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION control.trg_version_entitlement_plan_components()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control AS $$
+DECLARE v_old jsonb; v_new jsonb;
+BEGIN
+    IF TG_OP <> 'INSERT' THEN v_old := to_jsonb(OLD); END IF;
+    IF TG_OP <> 'DELETE' THEN v_new := to_jsonb(NEW); END IF;
+    IF TG_TABLE_NAME IN ('subscription_plan_module', 'subscription_plan_usage_limit') THEN
+        UPDATE control.subscription_plan SET entitlement_version = entitlement_version
+        WHERE id IN ((v_old->>'subscription_plan_id')::uuid, (v_new->>'subscription_plan_id')::uuid);
+    ELSIF TG_TABLE_NAME = 'module' THEN
+        UPDATE control.subscription_plan SET entitlement_version = entitlement_version
+        WHERE id IN (SELECT subscription_plan_id FROM control.subscription_plan_module
+                     WHERE module_id IN ((v_old->>'id')::uuid, (v_new->>'id')::uuid));
+    ELSE
+        UPDATE control.subscription_plan SET entitlement_version = entitlement_version
+        WHERE id IN (SELECT subscription_plan_id FROM control.subscription_plan_usage_limit
+                     WHERE usage_metric_id IN ((v_old->>'id')::uuid, (v_new->>'id')::uuid));
+    END IF;
+    RETURN NULL;
+END $$;
+REVOKE ALL ON FUNCTION control.trg_version_entitlement_plan_components() FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.trg_guard_module_entitlement_override()
+RETURNS trigger LANGUAGE plpgsql SET search_path = pg_catalog, control AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.module_id IS DISTINCT FROM OLD.module_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by
+       OR (OLD.status = 'deprecated' AND NEW.status <> 'deprecated') THEN
+        RAISE EXCEPTION 'Module exception identity and terminal lifecycle are immutable' USING ERRCODE='check_violation';
+    END IF;
+    NEW.version := OLD.version + 1;
+    RETURN NEW;
+END $$;
+
+CREATE OR REPLACE FUNCTION control.capture_entitlement_plan(p_id uuid)
+RETURNS void LANGUAGE sql SECURITY DEFINER SET search_path = pg_catalog, control, snapshot AS $$
+    INSERT INTO snapshot.subscription_plan_entitlement
+        (subscription_plan_id, version, code, effective_from, status, modules, limits, dimensions, captured_by)
+    SELECT p.id, p.entitlement_version, p.code, p.entitlement_effective_from, p.status,
+        coalesce((SELECT jsonb_agg(m.code ORDER BY m.code)
+            FROM control.subscription_plan_module pm JOIN control.module m ON m.id=pm.module_id
+            WHERE pm.subscription_plan_id=p.id AND pm.status='active'
+              AND pm.entitlement_mode='included' AND m.status='active'), '[]'::jsonb),
+        coalesce((SELECT jsonb_object_agg(m.code, l.limit_value::text)
+            FROM control.subscription_plan_usage_limit l JOIN control.usage_metric_catalog m ON m.id=l.usage_metric_id
+            WHERE l.subscription_plan_id=p.id AND l.status='active' AND m.status='active' AND l.dimension_code='*'), '{}'::jsonb),
+        coalesce((SELECT jsonb_object_agg(d.code, d.values) FROM (
+            SELECT m.code, jsonb_object_agg(l.dimension_code, l.limit_value::text) AS values
+            FROM control.subscription_plan_usage_limit l JOIN control.usage_metric_catalog m ON m.id=l.usage_metric_id
+            WHERE l.subscription_plan_id=p.id AND l.status='active' AND m.status='active' GROUP BY m.code
+        ) d), '{}'::jsonb), coalesce(p.updated_by, p.created_by)
+    FROM control.subscription_plan p WHERE p.id=p_id;
+$$;
+REVOKE ALL ON FUNCTION control.capture_entitlement_plan(uuid) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.trg_capture_entitlement_plan()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, control AS $$
+BEGIN
+    PERFORM control.capture_entitlement_plan(NEW.id);
+    RETURN NULL;
+END $$;
+REVOKE ALL ON FUNCTION control.trg_capture_entitlement_plan() FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.entitlement_plan_at(p_code text, p_at timestamptz)
+RETURNS TABLE (id uuid, code text, version integer, effective_from timestamptz,
+    effective_until timestamptz, modules jsonb, limits jsonb, dimensions jsonb)
+LANGUAGE sql STABLE SET search_path = pg_catalog, control, snapshot AS $$
+    SELECT r.subscription_plan_id, r.code, r.version, r.effective_from, r.effective_until, r.modules, r.limits, r.dimensions
+    FROM (
+        SELECT s.*, lead(s.effective_from) OVER (PARTITION BY s.subscription_plan_id ORDER BY s.version) AS effective_until
+        FROM snapshot.subscription_plan_entitlement s WHERE s.code=p_code
+    ) r
+    WHERE r.status='active' AND r.effective_from<=p_at AND (r.effective_until IS NULL OR r.effective_until>p_at)
+    ORDER BY r.version DESC LIMIT 1;
+$$;
+REVOKE ALL ON FUNCTION control.entitlement_plan_at(text,timestamptz) FROM PUBLIC;
+
+-- Runtime commercial availability. This does not grant IAM permission or
+-- reserve usage capacity; callers still enforce authorization and metering.
+CREATE OR REPLACE FUNCTION control.effective_tenant_entitlement(p_tenant uuid, p_at timestamptz, p_dimension text DEFAULT '*')
+RETURNS jsonb LANGUAGE sql STABLE SET search_path = pg_catalog, control, master AS $$
+    WITH plan AS MATERIALIZED (
+        SELECT h.* FROM master.tenant t JOIN control.subscription_plan p ON p.id=t.subscription_plan_id
+        CROSS JOIN LATERAL control.entitlement_plan_at(p.code,p_at) h
+        WHERE t.id=p_tenant AND p_tenant=shared.current_tenant_id_soft() AND t.status='active'
+    ), base_limits AS (
+        SELECT d.key, coalesce(d.value->p_dimension, d.value->'*') AS value
+        FROM plan p CROSS JOIN LATERAL jsonb_each(p.dimensions) d
+        WHERE d.value ? p_dimension OR d.value ? '*'
+    ), usage_exceptions AS MATERIALIZED (
+        SELECT DISTINCT ON (m.code) m.code, o.limit_value, o.id, o.version
+        FROM control.tenant_usage_limit_override o JOIN control.usage_metric_catalog m ON m.id=o.usage_metric_id
+        CROSS JOIN plan p
+        WHERE o.tenant_id=p_tenant AND (o.subscription_plan_id=p.id OR o.subscription_plan_id IS NULL)
+          AND o.dimension_code IN (p_dimension,'*') AND o.status='active'
+          AND o.effective_from<=p_at AND (o.effective_until IS NULL OR o.effective_until>p_at)
+          AND p.dimensions ? m.code
+        ORDER BY m.code, (o.dimension_code=p_dimension) DESC, o.id
+    ), module_exceptions AS MATERIALIZED (
+        SELECT m.code, o.id, o.version FROM control.tenant_module_entitlement_override o
+        JOIN control.module m ON m.id=o.module_id AND m.status='active' CROSS JOIN plan p
+        WHERE o.tenant_id=p_tenant AND o.subscription_plan_id=p.id AND o.status='active'
+          AND o.effective_from<=p_at AND (o.effective_until IS NULL OR o.effective_until>p_at)
+    ), resolved AS (
+        SELECT jsonb_build_object('planCode',p.code,'planId',p.id,'version',p.version,
+            'modules', (SELECT coalesce(jsonb_agg(code ORDER BY code),'[]'::jsonb) FROM (
+                SELECT jsonb_array_elements_text(p.modules) AS code UNION SELECT code FROM module_exceptions
+            ) codes),
+            'limits', coalesce((SELECT jsonb_object_agg(key,value) FROM base_limits),'{}'::jsonb)
+                || coalesce((SELECT jsonb_object_agg(code,limit_value::text) FROM usage_exceptions),'{}'::jsonb),
+            'overrides', (SELECT coalesce(jsonb_agg(jsonb_build_object('id',id,'version',version) ORDER BY id),'[]'::jsonb)
+                FROM (SELECT id,version FROM usage_exceptions UNION ALL SELECT id,version FROM module_exceptions) x)
+        ) AS value FROM plan p
+    ) SELECT value || jsonb_build_object('revision',md5(value::text)) FROM resolved;
+$$;
+REVOKE ALL ON FUNCTION control.effective_tenant_entitlement(uuid,timestamptz,text) FROM PUBLIC;
+
+CREATE OR REPLACE FUNCTION control.trg_guard_feature_override()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control AS $$
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
+       OR NEW.feature_flag_id IS DISTINCT FROM OLD.feature_flag_id
+       OR NEW.created_at IS DISTINCT FROM OLD.created_at OR NEW.created_by IS DISTINCT FROM OLD.created_by
+       OR (OLD.status='deprecated' AND NEW.status<>'deprecated') THEN
+        RAISE EXCEPTION 'Feature exception identity and terminal lifecycle are immutable' USING ERRCODE='check_violation';
+    END IF;
+    NEW.version:=OLD.version+1;
+    RETURN NEW;
+END $$;
+
+-- Catalog writers must deliberately review and identify a cohort cutover.
+-- Ordinary tenant override writers have no UPDATE privilege on this catalog.
+CREATE OR REPLACE FUNCTION control.trg_guard_feature_cohort()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control AS $$
+DECLARE
+    v_actor uuid;
+    v_reason text;
+    v_audit uuid;
+    v_before jsonb;
+    v_after jsonb;
+    v_invalidation jsonb;
+BEGIN
+    IF NEW.id IS DISTINCT FROM OLD.id OR NEW.code IS DISTINCT FROM OLD.code THEN
+        RAISE EXCEPTION 'Feature cohort identity is immutable; create a new feature' USING ERRCODE='check_violation';
+    END IF;
+    NEW.cohort_revision := OLD.cohort_revision;
+    IF NEW.cohort_strategy IS NOT DISTINCT FROM OLD.cohort_strategy THEN
+        IF nullif(current_setting('app.feature_cohort_expected_revision',true),'') IS NOT NULL
+           AND current_setting('app.feature_cohort_expected_revision')::integer <> OLD.cohort_revision THEN
+            RAISE EXCEPTION 'Feature cohort revision conflict' USING ERRCODE='serialization_failure';
+        END IF;
+        RETURN NEW;
+    END IF;
+    v_actor := master.current_principal_id_soft();
+    v_reason := btrim(current_setting('app.feature_cohort_change_reason',true));
+    IF v_actor IS NULL OR shared.current_tenant_id_soft() IS NULL
+       OR v_reason IS NULL OR length(v_reason) NOT BETWEEN 1 AND 2000 THEN
+        RAISE EXCEPTION 'Cohort cutover requires operator tenant, principal and reason' USING ERRCODE='check_violation';
+    END IF;
+    IF nullif(current_setting('app.feature_cohort_expected_revision',true),'')::integer IS DISTINCT FROM OLD.cohort_revision THEN
+        RAISE EXCEPTION 'Feature cohort revision conflict' USING ERRCODE='serialization_failure';
+    END IF;
+    NEW.cohort_revision := OLD.cohort_revision + 1;
+    NEW.updated_at := clock_timestamp();
+    NEW.updated_by := v_actor;
+    v_before := jsonb_build_object('code',OLD.code,'cohortStrategy',OLD.cohort_strategy,'cohortRevision',OLD.cohort_revision);
+    v_after := jsonb_build_object('code',NEW.code,'cohortStrategy',NEW.cohort_strategy,'cohortRevision',NEW.cohort_revision,'reason',v_reason);
+    v_invalidation := jsonb_build_object('namespace','features','scope','plane','keys',jsonb_build_array(NEW.code));
+    v_audit := audit.append_event(p_event_code=>'control.feature_cohort.changed',p_operation=>'update'::audit.operation_d,
+        p_entity_type=>'control.feature_flag_catalog',p_entity_id=>NEW.id,p_old_values=>v_before,p_new_values=>v_after,
+        p_context=>jsonb_build_object('plane',current_setting('app.database_plane'),'cacheInvalidation',v_invalidation));
+    INSERT INTO event.outbox(tenant_id,topic,event_type,event_key,entity_type,entity_id,aggregate_type,aggregate_id,actor_id,source,partition_key,payload,created_by)
+    VALUES(shared.current_tenant_id(),'control.features','control.feature_cohort.changed',NEW.id::text || ':cohort:' || NEW.cohort_revision,
+        'control.feature_flag_catalog',NEW.id,'control.feature_flag_catalog',NEW.id,v_actor,'control-admin',current_setting('app.database_plane'),
+        jsonb_build_object('schemaVersion',1,'plane',current_setting('app.database_plane'),'actorId',v_actor,'auditEventId',v_audit,
+            'before',v_before,'after',v_after,'cacheInvalidation',v_invalidation),v_actor);
+    RETURN NEW;
+END $$;
+
+-- Counters are database-owned; existing identity/lifecycle guards remain in force.
+CREATE OR REPLACE FUNCTION control.trg_advance_parameter_version()
+RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,control AS $$
+BEGIN
+    IF TG_TABLE_NAME = 'parameter_definition' THEN
+        IF TG_OP = 'INSERT' THEN NEW.revision := 1;
+        ELSE NEW.revision := OLD.revision + 1;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'tenant_parameter_value' THEN
+        IF TG_OP = 'INSERT' THEN NEW.version := 1;
+        ELSE NEW.version := OLD.version + 1;
+        END IF;
+    ELSE
+        RAISE EXCEPTION 'Unexpected parameter version target' USING ERRCODE='check_violation';
+    END IF;
+    RETURN NEW;
+END $$;
+
+-- Narrow locking capability: readers can lock a non-sensitive definition without catalog UPDATE grants.
+CREATE OR REPLACE FUNCTION control.lock_parameter_definition(p_id uuid)
+RETURNS SETOF control.parameter_definition LANGUAGE sql SECURITY DEFINER
+SET search_path=pg_catalog,control AS $$
+ SELECT * FROM control.parameter_definition WHERE id=p_id AND NOT is_sensitive FOR SHARE;
 $$;

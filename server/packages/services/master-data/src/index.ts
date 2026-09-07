@@ -52,3 +52,13 @@ export * from "./worker-engagement-lifecycle-routes.js";
 export * from "./supplier-workforce-requisition-repository.js";
 export * from "./supplier-workforce-requisition-routes.js";
 export * from "./supplier-workforce-distribution-http-adapter.js";
+
+export * from "./kysely-master-data-repository.js";
+
+export * from "./provider-evidence-verifier.js";
+export * from "./local-contact-challenge.js";
+export * from "./kysely-contact-challenge.js";
+export * from "./local-contact-challenge-routes.js";
+export * from "./verification-authority.js";
+
+export * from "./master-data-authority.js";

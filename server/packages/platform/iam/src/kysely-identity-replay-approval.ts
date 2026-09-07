@@ -30,6 +30,23 @@ export class KyselyIdentityReplayApprovalRepository implements IdentityReplayApp
     private readonly run: <T>(work: (tx: Tx) => Promise<T>) => Promise<T>,
     private readonly audit: AuditRecorder<Tx>,
   ) {}
+  private async mutate<T>(work: (tx: Tx) => Promise<T>): Promise<T> {
+    try {
+      return await this.run(work);
+    } catch (error) {
+      // Expiry can pass the UPDATE predicate and elapse before a database guard
+      // runs. Translate only those guard failures, after the transaction rolls back.
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code === "23514" &&
+        (error.message === "invalid replay approval transition" ||
+          error.message === "durable replay approval required")
+      )
+        throw conflict();
+      throw error;
+    }
+  }
   private async record(
     tx: Tx,
     context: VerifiedRequestContext,
@@ -59,8 +76,9 @@ export class KyselyIdentityReplayApprovalRepository implements IdentityReplayApp
       tx,
     );
   }
-  // All mutators lock projection -> attempt -> approval. Workers also lock the projection
-  // before claiming, so a desired-state update/claim cannot race approval consumption.
+  // Creation, approval and consumption lock projection -> attempt -> approval.
+  // Revocation only locks the approval row. Workers lock the projection before
+  // claiming, so a desired-state update/claim cannot race approval consumption.
   private async lockAttempt(tx: Tx, tenantId: string, attemptId: string) {
     const projection = (
       await sql<{
@@ -102,7 +120,7 @@ export class KyselyIdentityReplayApprovalRepository implements IdentityReplayApp
     context: VerifiedRequestContext,
     input: { attemptId: string; reason: string; ttlSeconds: number },
   ) {
-    return this.run(async (tx) => {
+    return this.mutate(async (tx) => {
       const attempt = await this.lockAttempt(
         tx,
         context.tenantId,
@@ -143,7 +161,7 @@ export class KyselyIdentityReplayApprovalRepository implements IdentityReplayApp
       reason: string;
     },
   ) {
-    return this.run(async (tx) => {
+    return this.mutate(async (tx) => {
       const approval = await this.find(tx, context.tenantId, input.approvalId);
       // Revocation must remain available even after the desired state has changed.
       if (input.decision === "approve") {
@@ -173,7 +191,7 @@ export class KyselyIdentityReplayApprovalRepository implements IdentityReplayApp
     context: VerifiedRequestContext,
     input: { attemptId: string; approvalId: string },
   ) {
-    return this.run(async (tx) => {
+    return this.mutate(async (tx) => {
       const attempt = await this.lockAttempt(
         tx,
         context.tenantId,

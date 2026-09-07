@@ -211,20 +211,7 @@ export function createKyselyPermissionResolver(
           ORDER BY permission_code,effect,proof,scope_kind,target_id,record_id NULLS FIRST
         `.execute(transaction);
         const evidenceCodes = [...new Set(result.rows.map((row) => row.permission_code))];
-        const catalog = evidenceCodes.length ? await sql<RequirementRow>`
-          SELECT permission.canonical_code AS permission_code,permission.module_id::text AS module_id,
-                 permission.risk_tier::text AS risk_tier,permission.requires_mfa,permission.requires_sod,
-                 EXISTS(
-                   SELECT 1 FROM master.tenant tenant
-                   JOIN control.subscription_plan plan ON plan.id=tenant.subscription_plan_id AND plan.status='active'
-                   JOIN control.subscription_plan_module plan_module
-                     ON plan_module.subscription_plan_id=plan.id AND plan_module.module_id=permission.module_id
-                    AND plan_module.status='active' AND plan_module.entitlement_mode='included'
-                   WHERE tenant.id=${identity.tenantId}::uuid AND tenant.status='active'
-                 ) AS entitled
-          FROM authz.permission permission
-          WHERE permission.status='published' AND permission.canonical_code = ANY(${sql.val(evidenceCodes)}::text[])
-        `.execute(transaction) : { rows: [] as RequirementRow[] };
+        const catalog = { rows: await readEntitlementRequirements(transaction, identity.tenantId, evidenceCodes) };
         const operationRows = await sql<OperationBindingRow>`
           SELECT binding.entity_code,binding.operation_key,permission.canonical_code AS permission_code,
                  binding.decision_mode::text AS decision_mode,
@@ -335,3 +322,19 @@ function compareEvidence(left: EffectiveAuthorizationEvidence, right: EffectiveA
 }
 
 function digest(value: string): string { return createHash("sha256").update(value).digest("hex"); }
+
+/** Shared by permission snapshot construction and the database integration tests. */
+export async function readEntitlementRequirements(transaction: AuthorizationTransaction, tenantId: string, evidenceCodes: readonly string[]): Promise<readonly RequirementRow[]> {
+  if (!evidenceCodes.length) return [];
+  return (await sql<RequirementRow>`
+          SELECT permission.canonical_code AS permission_code,permission.module_id::text AS module_id,
+                 permission.risk_tier::text AS risk_tier,permission.requires_mfa,permission.requires_sod,
+                 EXISTS(
+                   SELECT 1 FROM control.module m
+                   WHERE m.id=permission.module_id AND m.status='active'
+                     AND (control.effective_tenant_entitlement(${tenantId}::uuid,statement_timestamp())->'modules') ? m.code
+                 ) AS entitled
+          FROM authz.permission permission
+          WHERE permission.status='published' AND permission.canonical_code = ANY(${sql.val(evidenceCodes)}::text[])
+        `.execute(transaction)).rows;
+}

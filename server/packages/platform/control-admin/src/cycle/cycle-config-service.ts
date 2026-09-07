@@ -5,6 +5,7 @@ import type {
 } from "@athyper/server-contract-auth";
 import {
   controlAdminPermissions,
+  cycleConfigSchemas,
   type CycleConfigService,
   type CycleDesiredStatePayload,
   type CycleDesiredStateVerifier,
@@ -15,11 +16,21 @@ import {
 } from "@athyper/server-contract-control-admin";
 import type { ExactPlaneRepositoryProvider } from "@athyper/server-foundation/transaction";
 
+import { parseInstant } from "@athyper/platform-temporal";
+import { cycleError as coded, validateCycleValue } from "./cycle-config-validation.js";
+
 export function createCycleConfigService(options: {
   readonly authorizer: Authorizer;
   readonly repositories: ExactPlaneRepositoryProvider<CycleTemplateRepository>;
   readonly desiredStateVerifier?: CycleDesiredStateVerifier;
 }): CycleConfigService {
+  const repositoryFor = (context: VerifiedRequestContext) => {
+    try { return options.repositories.require(context.planeKey); }
+    catch (error) {
+      if (error instanceof Error && "status" in error && error.status === 503) throw coded("CONTROL_ADMIN_CYCLE_REPOSITORY_UNAVAILABLE");
+      throw error;
+    }
+  };
   const inspect = async (
     context: VerifiedRequestContext,
     draft: CycleTemplateDraft,
@@ -29,12 +40,12 @@ export function createCycleConfigService(options: {
       context,
       controlAdminPermissions.cycleTemplateManage,
     );
-    const repository = options.repositories.require(context.planeKey);
+    const repository = repositoryFor(context);
     const template = normalize(draft);
     const issues = validateLocal(template);
     await validateExternal(context.tenantId, template, repository, issues);
     const topologicalTaskIds = issues.some(
-      (item) => item.code === "CYCLIC_DEPENDENCY",
+      (item) => ["CYCLIC_DEPENDENCY", "SELF_DEPENDENCY", "DUPLICATE_CODE", "MISSING_REFERENCE"].includes(item.code),
     )
       ? []
       : topological(template);
@@ -51,12 +62,13 @@ export function createCycleConfigService(options: {
     preview: inspect,
     validate: inspect,
     async publish(command) {
+      validateCycleValue(cycleConfigSchemas.publish, { template: command.template, idempotencyKey: command.idempotencyKey, expectedLatestVersion: command.expectedLatestVersion });
       const preview = await inspect(command.context, command.template);
       if (!preview.valid)
         throw coded("CONTROL_ADMIN_CYCLE_TEMPLATE_INVALID", {
           issues: preview.issues,
         });
-      return options.repositories.require(command.context.planeKey).publish({
+      return repositoryFor(command.context).publish({
         tenantId: command.context.tenantId,
         principalId: command.context.principalId,
         idempotencyKey: command.idempotencyKey,
@@ -72,7 +84,9 @@ export function createCycleConfigService(options: {
         command.context,
         controlAdminPermissions.cycleTemplateManage,
       );
-      const revision = command.revision;
+      validateCycleValue(cycleConfigSchemas.apply, { revision: command.revision, expectedLatestVersion: command.expectedLatestVersion });
+      const revision = structuredClone(command.revision);
+      if (!Number.isFinite(parseInstant(revision.issuedAt))) throw coded("CONTROL_ADMIN_CYCLE_TEMPLATE_INVALID");
       if (
         revision.tenantId !== command.context.tenantId ||
         revision.targetPlane !== command.context.planeKey
@@ -94,7 +108,7 @@ export function createCycleConfigService(options: {
         throw coded("CONTROL_ADMIN_CYCLE_TEMPLATE_INVALID", {
           issues: preview.issues,
         });
-      return options.repositories.require(command.context.planeKey).publish({
+      return repositoryFor(command.context).publish({
         tenantId: command.context.tenantId,
         principalId: command.context.principalId,
         idempotencyKey: `studio:${revision.desiredStateId}:${revision.sourceRevision}:${revision.targetPlane}`,
@@ -110,9 +124,9 @@ export function createCycleConfigService(options: {
         context,
         controlAdminPermissions.catalogRead,
       );
-      const found = await options.repositories
-        .require(context.planeKey)
-        .getPublished(context.tenantId, cycleTypeId, version);
+      validateCycleValue(cycleConfigSchemas.uuid, cycleTypeId);
+      if (version !== undefined && (!Number.isSafeInteger(version) || version < 1 || version > 2147483647)) throw coded("CONTROL_ADMIN_CYCLE_TEMPLATE_INVALID");
+      const found = await repositoryFor(context).getPublished(context.tenantId, cycleTypeId, version);
       if (!found) throw coded("CONTROL_ADMIN_CYCLE_TEMPLATE_NOT_FOUND");
       return found;
     },
@@ -187,6 +201,16 @@ function validateLocal(template: CycleTemplateDraft): CycleTemplateIssue[] {
     "deviationType",
     issues,
   );
+  duplicates(template.crossDependencies, edge => `${edge.predecessorTypeId}:${edge.predecessorPhaseId}:${edge.successorTypeId}:${edge.successorPhaseId}`, "crossDependencies", "edge", issues, "DUPLICATE_DEPENDENCY");
+  template.crossDependencies.forEach((edge, index) => {
+    if (edge.predecessorTypeId === edge.successorTypeId && edge.predecessorPhaseId === edge.successorPhaseId) issue(issues, "SELF_DEPENDENCY", `crossDependencies[${index}]`, "A cycle phase cannot depend on itself");
+  });
+  const phaseEdges=template.crossDependencies.map(edge=>[`${edge.predecessorTypeId}:${edge.predecessorPhaseId}`,`${edge.successorTypeId}:${edge.successorPhaseId}`] as const);
+  const incoming=new Map<string,number>(),outgoing=new Map<string,string[]>();
+  for(const [from,to] of phaseEdges){if(!incoming.has(from))incoming.set(from,0);incoming.set(to,(incoming.get(to)??0)+1);if(!outgoing.has(from))outgoing.set(from,[]);outgoing.get(from)!.push(to);}
+  const ready=[...incoming].filter(([,count])=>count===0).map(([id])=>id);let visited=0;
+  while(ready.length){const id=ready.pop()!;visited++;for(const next of outgoing.get(id)??[]){incoming.set(next,incoming.get(next)!-1);if(incoming.get(next)===0)ready.push(next);}}
+  if(visited!==incoming.size)issue(issues,"CYCLIC_DEPENDENCY","crossDependencies","Cycle-phase dependencies contain a cycle");
   const phaseIds = new Set(template.phases.map((item) => item.id));
   const categoryIds = new Set(template.categories.map((item) => item.id));
   const taskIds = new Set(template.tasks.map((item) => item.id));
@@ -354,6 +378,8 @@ function topological(template: CycleTemplateDraft): string[] {
 }
 
 function normalize(template: CycleTemplateDraft): CycleTemplateDraft {
+  validateCycleValue(cycleConfigSchemas.template, template);
+  template = structuredClone(template);
   return {
     cycleType: template.cycleType,
     phases: [...template.phases].sort(byOrder),
@@ -435,7 +461,4 @@ async function requirePermission(
 ): Promise<void> {
   if (!(await authorizer.authorize({ context, permissionCode })).allowed)
     throw coded("CONTROL_ADMIN_PERMISSION_DENIED");
-}
-function coded(code: string, details?: unknown): Error {
-  return Object.assign(new Error(code), { code, details });
 }

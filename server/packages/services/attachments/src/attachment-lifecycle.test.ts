@@ -62,7 +62,7 @@ describe("attachment lifecycle", () => {
   });
 
   it("reuses an existing staged upload without reserving quota again", async () => {
-    const existing = { id: "22222222-2222-4222-8222-222222222222", status: "uploading" as const, storageKey: "quarantine/neon/existing", isCurrent: true, isActive: true, hasLegalHold: false, expiresAt: "2026-08-30T04:00:00.000Z" };
+    const existing = { id: "22222222-2222-4222-8222-222222222222", status: "uploading" as const, storageKey: "quarantine/neon/existing", isCurrent: true, isActive: true, hasLegalHold: false, expiresAt: "2099-08-30T04:00:00.000Z" };
     const reserve = vi.fn(async () => "created" as const);
     const createStaged = vi.fn(async () => existing);
     const lifecycle = createAttachmentLifecycle({
@@ -86,7 +86,7 @@ describe("attachment lifecycle", () => {
     const identity = { planeKey: "neon" as const, tenantId: "11111111-1111-4111-8111-111111111111", attachmentId: "22222222-2222-4222-8222-222222222222", principalId: "33333333-3333-4333-8333-333333333333" };
     const lifecycle = createAttachmentLifecycle({
       transactions: { run: async (_plane, _actor, work) => work({}) },
-      repository: { createStaged: async () => { throw new Error("unused"); }, load: async () => ({ id: identity.attachmentId, status: "uploaded" as const, storageKey: "quarantine/source", isCurrent: true, isActive: true, hasLegalHold: false }), finalizeClean: async () => ({ id: identity.attachmentId, status: "active" as const, storageKey: "attachments/source", isCurrent: true, isActive: true, hasLegalHold: false }), quarantine: async () => undefined, deactivate: async () => undefined, expire: async () => undefined, markPurged: async () => undefined },
+      repository: { createStaged: async () => { throw new Error("unused"); }, load: async () => ({ id: identity.attachmentId, status: "uploaded" as const, storageKey: "quarantine/source", isCurrent: true, isActive: true, hasLegalHold: false }), finalizeClean: async (_identity, input) => ({ id: identity.attachmentId, status: "active" as const, storageKey: input.storageKey, isCurrent: true, isActive: true, hasLegalHold: false }), quarantine: async () => undefined, deactivate: async () => undefined, expire: async () => undefined, markPurged: async () => undefined },
       storage: { get: async () => new TextEncoder().encode("source"), getStream: async () => (async function*(){yield new TextEncoder().encode("source");})(), put: async () => undefined, delete: async () => undefined, exists: async () => true, createDownloadUrl: async () => "", createUploadUrl: async () => "", copy: async () => undefined },
       scanner: { scan: async ({content}) => { for await (const _chunk of content) { /* consume the scan stream */ } return { status: "clean" as const, scanner: "fixture", scannedAt: new Date().toISOString(), durationMs: 1 }; } },
       quota: { reserve: async () => "created" as const, commit: async () => undefined, release: async () => false, expire: async () => [] }, quotaPolicies: { resolve: async () => ({ kind: "attachment.storage", limitBytes: 1_000, limitItems: 10, reservationTtlSeconds: 60, retryAfterSeconds: 60 }) },

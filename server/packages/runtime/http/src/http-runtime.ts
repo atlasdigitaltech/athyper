@@ -41,6 +41,8 @@ export interface HttpRuntimeOptions {
     readonly version: string;
     readonly path?: string;
     readonly docsPath?: string;
+    /** Common headers consumed by the host authentication middleware. */
+    readonly authenticatedHeaders?: import("./route-contract.js").RuntimeSchema;
     readonly docsPermission?: string;
     readonly authorizeDocs?: RequestHandler;
     /** Fail application construction when a configured Express route has no route contract. */
@@ -113,7 +115,15 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
   const openApi = options.openApi === false ? undefined : options.openApi ?? { title: "Athyper API", version: "0.1.0" };
   app.disable("x-powered-by");
   app.use(createRequestCancellationMiddleware(options.requestDeadlineMs, options.drainController));
-  app.use(express.json({limit:options.jsonLimit??"256kb",verify:(request,_response,buffer)=>{(request as Request&{rawBody?:Uint8Array}).rawBody=Uint8Array.from(buffer);}}));
+  const parseJson = express.json({limit:options.jsonLimit??"256kb",verify:(request,_response,buffer)=>{(request as Request&{rawBody?:Uint8Array}).rawBody=Uint8Array.from(buffer);}});
+  app.use((request, response, next) => {
+    // Webhook signatures cover the original bytes; the route owns parsing and limits.
+    if (request.method === "POST" && /^\/api\/webhooks\/[^/]+\/?$/i.test(request.path)) {
+      next();
+      return;
+    }
+    parseJson(request, response, next);
+  });
   app.use((request, response, next) => {
     const requestId = headerValue(request, "x-request-id") ?? randomUUID();
     const correlationId = headerValue(request, "x-correlation-id");
@@ -201,6 +211,16 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
     if (error instanceof SyntaxError && "type" in error && error.type === "entity.parse.failed") {
       sendProblem(response, request, new HttpError(400, "INVALID_JSON", "Request body must contain valid JSON"));
       return;
+    }
+    if (error instanceof Error && "type" in error) {
+      if (error.type === "entity.too.large") {
+        sendProblem(response, request, new HttpError(413, "PAYLOAD_TOO_LARGE", "Request body exceeds the allowed size"));
+        return;
+      }
+      if (error.type === "encoding.unsupported" || error.type === "charset.unsupported") {
+        sendProblem(response, request, new HttpError(415, "UNSUPPORTED_MEDIA_TYPE", "Request body encoding is unsupported"));
+        return;
+      }
     }
     if (error instanceof HttpError) {
       sendProblem(response, request, error);

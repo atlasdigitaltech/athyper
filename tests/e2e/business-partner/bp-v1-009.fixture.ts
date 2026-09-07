@@ -1,3 +1,4 @@
+import { authenticateBrowser } from "../authenticate-browser";
 import { test as base, type BrowserContext, type Page } from "@playwright/test";
 
 type ActorCredentials = Readonly<{
@@ -169,36 +170,11 @@ export async function authenticate(
   const applicationOrigin = new URL(
     (await context.request.get("/api/auth/session")).url(),
   ).origin;
-  const identity = page.getByLabel(/email|username/i);
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await page.goto("/login");
-    const ready = await identity
-      .waitFor({ state: "visible", timeout: 5_000 })
-      .then(() => true)
-      .catch(() => false);
-    if (ready) break;
-    if (attempt === 3)
-      throw new Error("BP-V1-009 login surface remained unavailable after 3 attempts");
-  }
-  await identity.fill(actor.username);
-  const password = page.getByLabel(/^password$/i);
-  if (!(await password.isVisible())) {
-    await page
-      .getByRole("button", { name: /sign in|log in|continue/i })
-      .click();
-  }
-  await password.fill(actor.password);
-  await page.getByRole("button", { name: /sign in|log in/i }).click();
-  await expectSession(page, applicationOrigin);
-  if (/\/login(?:\/|$)/.test(new URL(page.url()).pathname)) {
-    await page.goto("/home");
-  }
-  const contextChoice = page
-    .getByRole("button", { name: /continue|select|open/i })
-    .first();
-  if (await contextChoice.isVisible().catch(() => false)) {
-    await contextChoice.click();
-  }
+  await authenticateBrowser(page, {
+    origin: applicationOrigin, username: actor.username, password: actor.password,
+    tenantName: process.env.PLAYWRIGHT_NEON_TENANT_NAME,
+  });
+
   const sessionResponse = await page.request.get("/api/auth/session");
   if (!sessionResponse.ok()) {
     throw new Error(
@@ -211,27 +187,6 @@ export async function authenticate(
     tenantId: sessionValue(session, "tenantId"),
     principalId: sessionValue(session, "principalId"),
   });
-}
-
-async function expectSession(
-  page: Page,
-  applicationOrigin: string,
-): Promise<void> {
-  await page.waitForFunction(
-    async (origin) => {
-      const response = await fetch(`${origin}/api/auth/session`, {
-        credentials: "same-origin",
-      });
-      if (!response.ok) return false;
-      const session = (await response.json()) as Record<string, unknown>;
-      return (
-        typeof session.tenantId === "string" &&
-        typeof session.principalId === "string"
-      );
-    },
-    applicationOrigin,
-    { timeout: 30_000 },
-  );
 }
 
 function required(environment: FixtureEnvironment, name: string): string {

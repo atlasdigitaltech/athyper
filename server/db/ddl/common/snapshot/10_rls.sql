@@ -48,3 +48,8 @@ BEGIN
     END IF;
 END;
 $$;
+
+ALTER TABLE snapshot.subscription_plan_entitlement ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshot.subscription_plan_entitlement FORCE ROW LEVEL SECURITY;
+CREATE POLICY subscription_plan_entitlement_read ON snapshot.subscription_plan_entitlement FOR SELECT USING (true);
+CREATE POLICY subscription_plan_entitlement_capture ON snapshot.subscription_plan_entitlement FOR INSERT TO CURRENT_USER WITH CHECK (true);

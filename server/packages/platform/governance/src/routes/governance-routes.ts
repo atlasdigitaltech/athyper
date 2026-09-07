@@ -1,3 +1,9 @@
+import {
+  governanceHttpError,
+  invalidRequest,
+  timestamp,
+  optionalBody,
+} from "./route-validation.js";
 import { parseBusinessDate } from "@athyper/platform-temporal";
 import type {
   Authorizer,
@@ -79,11 +85,13 @@ export function registerGovernanceRoutes(
             ? { expiresAt: date(body["expiresAt"]) }
             : {}),
           sourceCode: text(body["sourceCode"]) ?? "governance_api",
-          evidence: object(body["evidence"] ?? {}),
+          evidence: object(
+            body["evidence"] === undefined ? {} : body["evidence"],
+          ),
         });
         response.status(200).json(decision);
       } catch (error) {
-        next(error);
+        next(governanceHttpError(error));
       }
     },
   );
@@ -125,11 +133,11 @@ export function registerGovernanceRoutes(
             ...(text(body["ownerPrincipalId"])
               ? { ownerPrincipalId: uuid(body["ownerPrincipalId"]) }
               : {}),
-            data: object(body["data"] ?? {}),
+            data: object(body["data"] === undefined ? {} : body["data"]),
           });
           response.status(result.kind === "created" ? 201 : 200).json(result);
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -156,7 +164,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -173,7 +181,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -197,7 +205,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -214,7 +222,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -237,7 +245,7 @@ export function registerGovernanceRoutes(
               ),
             );
           } catch (error) {
-            next(error);
+            next(governanceHttpError(error));
           }
         },
       );
@@ -255,7 +263,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -288,7 +296,7 @@ export function registerGovernanceRoutes(
             }),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -306,7 +314,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -324,7 +332,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -347,7 +355,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -369,7 +377,7 @@ export function registerGovernanceRoutes(
             }),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -389,7 +397,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -407,7 +415,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -425,7 +433,7 @@ export function registerGovernanceRoutes(
             ),
           );
         } catch (error) {
-          next(error);
+          next(governanceHttpError(error));
         }
       },
     );
@@ -433,11 +441,14 @@ export function registerGovernanceRoutes(
 }
 function object(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("JSON object required");
+    throw invalidRequest("JSON object required");
   return value as Record<string, unknown>;
 }
 function text(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !value.trim())
+    throw invalidRequest("Nonempty string required");
+  return value.trim();
 }
 function uuid(value: unknown): string {
   const result = text(value);
@@ -447,25 +458,22 @@ function uuid(value: unknown): string {
       result,
     )
   )
-    throw new TypeError("UUID required");
+    throw invalidRequest("UUID required");
   return result;
 }
 function boolean(value: unknown): boolean {
   if (typeof value !== "boolean")
-    throw new TypeError("consented must be boolean");
+    throw invalidRequest("consented must be boolean");
   return value;
 }
 function choice<T extends string>(value: unknown, allowed: readonly T[]): T {
   const result = text(value);
   if (!result || !allowed.includes(result as T))
-    throw new TypeError(`Expected one of: ${allowed.join(", ")}`);
+    throw invalidRequest(`Expected one of: ${allowed.join(", ")}`);
   return result as T;
 }
 function date(value: unknown): string {
-  const parsed = new Date(String(value));
-  if (Number.isNaN(parsed.getTime()))
-    throw new TypeError("ISO timestamp required");
-  return parsed.toISOString();
+  return timestamp(value);
 }
 function isoDate(value: unknown): string {
   const result = text(value);
@@ -474,24 +482,27 @@ function isoDate(value: unknown): string {
     !/^\d{4}-\d{2}-\d{2}$/.test(result) ||
     Number.isNaN(parseBusinessDate(result))
   )
-    throw new TypeError("ISO date required");
+    throw invalidRequest("ISO date required");
   return result;
 }
 function required(value: unknown): string {
   const result = text(value);
-  if (!result) throw new TypeError("Required string missing");
+  if (!result) throw invalidRequest("Required string missing");
   return result;
 }
 function positiveInteger(value: unknown): number {
-  const result = Number(value);
-  if (!Number.isInteger(result) || result < 1)
-    throw new TypeError("Positive integer required");
+  const result = value;
+  if (typeof result !== "number" || !Number.isSafeInteger(result) || result < 1)
+    throw invalidRequest("Positive integer required");
   return result;
 }
 const schema = { type: "object", additionalProperties: true } as const;
 const responses = {
-  200: { description: "Cycle template result", body: schema },
-  400: { description: "Invalid template" },
+  200: { description: "Governance result", body: schema },
+  201: { description: "Created", body: schema },
+  404: { description: "Not found" },
+  503: { description: "Governance unavailable" },
+  400: { description: "Invalid request" },
   401: { description: "Authentication required" },
   403: { description: "Forbidden" },
   409: { description: "Version or idempotency conflict" },
@@ -635,7 +646,16 @@ function contract(
     tags: ["Governance"],
     authenticated: true,
     permission,
-    ...(method === "post" ? { request: { body: schema } } : {}),
+    ...(method === "post"
+      ? {
+          request: {
+            body:
+              operationId.endsWith(".claim") || operationId.endsWith(".start")
+                ? optionalBody
+                : schema,
+          },
+        }
+      : {}),
     responses,
   });
 }

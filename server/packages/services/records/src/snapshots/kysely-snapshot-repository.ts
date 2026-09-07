@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { RecordSnapshot, RecordSnapshotCaptureInput, RecordSnapshotRepository, RecordTransactionCoordinator, SnapshotCaptureReceipt, SnapshotReadScope } from "@athyper/server-contract-records";
 import { sql, type Transaction } from "kysely";
 import { stable } from "./snapshot-service.js";
@@ -11,16 +11,27 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
   constructor(private readonly transactions: RecordTransactionCoordinator<Tx>, private readonly createId: () => string = randomUUID) {}
 
   capture(input: RecordSnapshotCaptureInput): Promise<SnapshotCaptureReceipt> {
+    // Hash and compare the exact JSON representation persisted in jsonb (including Dates).
+    input = { ...input, payload: JSON.parse(JSON.stringify(input.payload)) as Record<string, unknown> };
     return this.transactions.run(input.planeKey, { tenantId: input.tenantId, principalId: input.principalId }, async (transaction) => {
-      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${input.tenantId}:${input.entityType}:${input.entityId}`}, 0))`.execute(transaction);
+      await sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.tenantId}::uuid::text || ':' || ${input.entityType} || ':' || ${input.entityId}::uuid::text, 0))`.execute(transaction);
       const previous = await this.latestIn(input.tenantId, input.entityType, input.entityId, transaction);
-      if (previous && stable(previous.payload) === stable(input.payload)) return { kind: "replayed", snapshot: previous };
+      if (previous && sameCapture(previous, input)) return { kind: "replayed", snapshot: previous };
       const id = this.createId();
       const capturedAt = new Date().toISOString();
       const chainSequence = (previous?.chainSequence ?? 0) + 1;
-      const payloadText = stable(input.payload);
-      const payloadHash = sha256(stable({ tenantId: input.tenantId, entityType: input.entityType, entityId: input.entityId, payload: input.payload, previousPayloadHash: previous?.payloadHash ?? null }));
-      const payloadSizeBytes = Buffer.byteLength(payloadText, "utf8");
+      // Use the same JSONB canonicalization and evidence function as the payload trigger.
+      const payloadJson = JSON.stringify(input.payload);
+      const evidence = await sql<{ payload_hash: string; payload_size_bytes: number | string }>`
+        SELECT snapshot.fn_compute_entity_snapshot_hash(
+          ${input.tenantId}::uuid, ${input.entityType}, ${input.entityId}::uuid,
+          ${chainSequence}::integer, 1, ${input.entityContractHash}, ${input.captureEvent},
+          ${input.captureKind}::snapshot.capture_kind_d, ${payloadJson}::jsonb,
+          ${previous?.id ?? null}::uuid, ${previous?.payloadHash ?? null}
+        ) AS payload_hash, octet_length((${payloadJson}::jsonb)::text) AS payload_size_bytes
+      `.execute(transaction);
+      const payloadHash = evidence.rows[0]!.payload_hash;
+      const payloadSizeBytes = Number(evidence.rows[0]!.payload_size_bytes);
       const inserted = await sql<Row>`
         INSERT INTO snapshot.entity_snapshot_identity(
           id, tenant_id, entity_type, entity_id, entity_code, version_number, payload_schema_version,
@@ -35,7 +46,7 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
           ${input.principalId}::uuid, ${input.captureSource}
         ) RETURNING *
       `.execute(transaction);
-      await sql`INSERT INTO snapshot.entity_snapshot(tenant_id, snapshot_id, captured_at, payload_json) VALUES (${input.tenantId}::uuid, ${id}::uuid, ${capturedAt}::timestamptz, ${JSON.stringify(input.payload)}::jsonb)`.execute(transaction);
+      await sql`INSERT INTO snapshot.entity_snapshot(tenant_id, snapshot_id, captured_at, payload_json) VALUES (${input.tenantId}::uuid, ${id}::uuid, ${capturedAt}::timestamptz, ${payloadJson}::jsonb)`.execute(transaction);
       return { kind: "created", snapshot: snapshotRow(inserted.rows[0]!, input.payload) };
     });
   }
@@ -59,5 +70,11 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
 
 function snapshotRow(row: Row, payload: Readonly<Record<string, unknown>>): RecordSnapshot { return { id: String(row["id"]), tenantId: String(row["tenant_id"]), entityType: String(row["entity_type"]), entityId: String(row["entity_id"]), ...(row["entity_code"] ? { entityCode: String(row["entity_code"]) } : {}), versionNumber: Number(row["version_number"]), payloadSchemaVersion: Number(row["payload_schema_version"]), entityContractHash: String(row["entity_contract_hash"]), ...(row["source_record_version"] ? { sourceRecordVersion: Number(row["source_record_version"]) } : {}), captureEvent: String(row["capture_event"]), captureKind: String(row["capture_kind"]) as RecordSnapshot["captureKind"], payloadHash: String(row["payload_hash"]), ...(row["previous_snapshot_id"] ? { previousSnapshotId: String(row["previous_snapshot_id"]) } : {}), ...(row["previous_payload_hash"] ? { previousPayloadHash: String(row["previous_payload_hash"]) } : {}), chainSequence: Number(row["chain_seq"]), ...(row["correlation_id"] ? { correlationId: String(row["correlation_id"]) } : {}), ...(row["audit_event_id"] ? { auditEventId: String(row["audit_event_id"]) } : {}), ...(row["valid_from"] ? { validFrom: iso(row["valid_from"]) } : {}), ...(row["valid_until"] ? { validUntil: iso(row["valid_until"]) } : {}), retentionClass: String(row["retention_class"]) as RecordSnapshot["retentionClass"], payloadSizeBytes: Number(row["payload_size_bytes"]), capturedAt: iso(row["captured_at"]), capturedBy: String(row["captured_by"]), captureSource: String(row["capture_source"]), payload }; }
 function object(value: unknown): Readonly<Record<string, unknown>> { if (typeof value === "string") return JSON.parse(value) as Record<string, unknown>; return value as Readonly<Record<string, unknown>>; }
-function sha256(value: string): string { return createHash("sha256").update(value, "utf8").digest("hex"); }
-function iso(value: unknown): string { return new Date(String(value)).toISOString(); }
+function iso(value: unknown): string { return (value instanceof Date ? value : new Date(String(value))).toISOString(); }
+
+// Request correlation and actor are delivery metadata; changes to the captured
+// contract, version, event, validity or retention must produce fresh evidence.
+function sameCapture(previous: RecordSnapshot, input: RecordSnapshotCaptureInput): boolean {
+  const keys = ["entityCode", "entityContractHash", "sourceRecordVersion", "captureEvent", "captureKind", "auditEventId", "validFrom", "validUntil", "retentionClass", "captureSource", "payload"] as const;
+  return keys.every(key => stable(previous[key]) === stable(input[key]));
+}

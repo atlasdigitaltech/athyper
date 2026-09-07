@@ -1,3 +1,178 @@
-import type{VerifiedRequestContext}from'@athyper/server-contract-auth';import type{Application,NextFunction,Request,RequestHandler,Response}from'@athyper/server-runtime-http';import{MeshProfilePublicationError,type BusinessPartnerProfilePublicationService}from'./business-partner-profile-publication.js';
-export function registerBusinessPartnerProfilePublicationRoutes(app:Application,options:{authenticate:RequestHandler;readContext:(response:Response)=>VerifiedRequestContext;service:BusinessPartnerProfilePublicationService;telemetry?:(event:{operation:string;outcome:'success'|'denied'|'error';statusCode:number;durationMs:number})=>void}){const route=(operation:string,work:(request:Request,context:VerifiedRequestContext,response:Response)=>Promise<unknown>):RequestHandler=>async(request,response,next)=>{const started=performance.now();let outcome:'success'|'denied'|'error'='success',statusCode=200;try{const result=await work(request,options.readContext(response),response);if(!response.headersSent)response.json(result);statusCode=response.statusCode;}catch(error){outcome=error instanceof MeshProfilePublicationError&&error.status===403?'denied':'error';statusCode=error instanceof MeshProfilePublicationError?error.status:500;handle(error,response,next);}finally{options.telemetry?.({operation,outcome,statusCode,durationMs:performance.now()-started});}};app.post('/api/mesh/business-partner-profile-publications',options.authenticate,route('publish',async(req,ctx,res)=>{const body=object(req.body),result=await options.service.publish({context:ctx,ownerAccountId:uuid(body['ownerAccountId'],'ownerAccountId'),networkRelationshipId:uuid(body['networkRelationshipId'],'networkRelationshipId'),idempotencyKey:required(body['idempotencyKey'],'idempotencyKey')});res.status(result.replayed?200:201);return result;}));app.get('/api/mesh/business-partner-profile-publications',options.authenticate,route('list',(req,ctx)=>options.service.list({context:ctx,networkRelationshipId:uuid(req.query['networkRelationshipId'],'networkRelationshipId'),limit:integer(req.query['limit'])})));app.get('/api/mesh/business-partner-profile-publications/:publicationId',options.authenticate,route('read',(req,ctx)=>options.service.get({context:ctx,publicationId:uuid(req.params['publicationId'],'publicationId')})));app.post('/api/mesh/business-partner-profile-publications/:publicationId/withdrawals',options.authenticate,route('withdraw',async(req,ctx,res)=>{const body=object(req.body),result=await options.service.withdraw({context:ctx,publicationId:uuid(req.params['publicationId'],'publicationId'),reason:required(body['reason'],'reason'),idempotencyKey:required(body['idempotencyKey'],'idempotencyKey')});res.status(result.replayed?200:201);return result;}));}
-function object(v:unknown):Record<string,unknown>{if(!v||typeof v!=='object'||Array.isArray(v))throw bad('JSON object required');return v as Record<string,unknown>;}function required(v:unknown,name:string){if(typeof v!=='string'||!v.trim())throw bad(`${name} is required`);return v.trim();}function uuid(v:unknown,name:string){const x=required(v,name);if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(x))throw bad(`${name} must be a UUID`);return x;}function integer(v:unknown){if(v==null||v==='')return undefined;const x=Number(v);if(!Number.isSafeInteger(x))throw bad('limit must be an integer');return x;}function bad(message:string){return new MeshProfilePublicationError(400,'MESH_PROFILE_PUBLICATION_INVALID',message);}function handle(error:unknown,response:Response,next:NextFunction){if(!(error instanceof MeshProfilePublicationError)){next(error);return;}response.status(error.status).type('application/problem+json').json({type:`https://athyper.dev/problems/${error.code.toLowerCase()}`,title:error.code,status:error.status,detail:error.message,code:error.code});}
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
+import type {
+  Application,
+  NextFunction,
+  Request,
+  RequestHandler,
+  Response,
+} from "@athyper/server-runtime-http";
+import {
+  MeshProfilePublicationError,
+  type BusinessPartnerProfilePublicationService,
+} from "./business-partner-profile-publication.js";
+export function registerBusinessPartnerProfilePublicationRoutes(
+  app: Application,
+  options: {
+    authenticate: RequestHandler;
+    readContext: (response: Response) => VerifiedRequestContext;
+    service: BusinessPartnerProfilePublicationService;
+    telemetry?: (event: {
+      operation: string;
+      outcome: "success" | "denied" | "error";
+      statusCode: number;
+      durationMs: number;
+    }) => void;
+  },
+) {
+  const route =
+    (
+      operation: string,
+      work: (
+        request: Request,
+        context: VerifiedRequestContext,
+        response: Response,
+      ) => Promise<unknown>,
+    ): RequestHandler =>
+    async (request, response, next) => {
+      const started = performance.now();
+      let outcome: "success" | "denied" | "error" = "success",
+        statusCode = 200;
+      try {
+        const result = await work(
+          request,
+          options.readContext(response),
+          response,
+        );
+        if (!response.headersSent) response.json(result);
+        statusCode = response.statusCode;
+      } catch (error) {
+        outcome =
+          error instanceof MeshProfilePublicationError && error.status === 403
+            ? "denied"
+            : "error";
+        statusCode =
+          error instanceof MeshProfilePublicationError ? error.status : 500;
+        handle(error, response, next);
+      } finally {
+        options.telemetry?.({
+          operation,
+          outcome,
+          statusCode,
+          durationMs: performance.now() - started,
+        });
+      }
+    };
+  app.post(
+    "/api/mesh/business-partner-profile-publications",
+    options.authenticate,
+    route("publish", async (req, ctx, res) => {
+      const body = object(req.body),
+        result = await options.service.publish({
+          context: ctx,
+          ownerAccountId: uuid(body["ownerAccountId"], "ownerAccountId"),
+          networkRelationshipId: uuid(
+            body["networkRelationshipId"],
+            "networkRelationshipId",
+          ),
+          idempotencyKey: required(
+            body["idempotencyKey"] ?? req.get("idempotency-key"),
+            "idempotencyKey",
+          ),
+        });
+      res.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+  app.get(
+    "/api/mesh/business-partner-profile-publications",
+    options.authenticate,
+    route("list", (req, ctx) =>
+      options.service.list({
+        context: ctx,
+        networkRelationshipId: uuid(
+          req.query["networkRelationshipId"],
+          "networkRelationshipId",
+        ),
+        limit: integer(req.query["limit"]),
+      }),
+    ),
+  );
+  app.get(
+    "/api/mesh/business-partner-profile-publications/:publicationId",
+    options.authenticate,
+    route("read", (req, ctx) =>
+      options.service.get({
+        context: ctx,
+        publicationId: uuid(req.params["publicationId"], "publicationId"),
+      }),
+    ),
+  );
+  app.post(
+    "/api/mesh/business-partner-profile-publications/:publicationId/withdrawals",
+    options.authenticate,
+    route("withdraw", async (req, ctx, res) => {
+      const body = object(req.body),
+        result = await options.service.withdraw({
+          context: ctx,
+          publicationId: uuid(req.params["publicationId"], "publicationId"),
+          reason: required(body["reason"], "reason"),
+          idempotencyKey: required(
+            body["idempotencyKey"] ?? req.get("idempotency-key"),
+            "idempotencyKey",
+          ),
+        });
+      res.status(result.replayed ? 200 : 201);
+      return result;
+    }),
+  );
+}
+function object(v: unknown): Record<string, unknown> {
+  if (!v || typeof v !== "object" || Array.isArray(v))
+    throw bad("JSON object required");
+  return v as Record<string, unknown>;
+}
+function required(v: unknown, name: string) {
+  if (typeof v !== "string" || !v.trim()) throw bad(`${name} is required`);
+  return v.trim();
+}
+function uuid(v: unknown, name: string) {
+  const x = required(v, name);
+  if (
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      x,
+    )
+  )
+    throw bad(`${name} must be a UUID`);
+  return x.toLowerCase();
+}
+function integer(v: unknown) {
+  if (v === undefined) return undefined;
+  if (typeof v !== "string" || !/^\d+$/.test(v))
+    throw bad("limit must be an integer");
+  const x = Number(v);
+  if (!Number.isSafeInteger(x)) throw bad("limit must be an integer");
+  return x;
+}
+function bad(message: string) {
+  return new MeshProfilePublicationError(
+    400,
+    "MESH_PROFILE_PUBLICATION_INVALID",
+    message,
+  );
+}
+function handle(error: unknown, response: Response, next: NextFunction) {
+  if (!(error instanceof MeshProfilePublicationError)) {
+    next(error);
+    return;
+  }
+  response
+    .status(error.status)
+    .type("application/problem+json")
+    .json({
+      type: `https://athyper.dev/problems/${error.code.toLowerCase()}`,
+      title: error.code,
+      status: error.status,
+      detail: error.message,
+      code: error.code,
+    });
+}

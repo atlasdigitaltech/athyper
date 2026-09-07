@@ -5,12 +5,23 @@ import type {
   RequestHandler,
   Response,
 } from "express";
-import { randomUUID } from "node:crypto";
-import type {
-  OnboardingCaseCommand,
-  OnboardingCaseLifecycleService,
+import { createHash } from "node:crypto";
+import {
+  validateCompilation,
+  type OnboardingCaseCommand,
+  type OnboardingCaseLifecycleService,
 } from "./case-lifecycle.js";
 import type { OnboardingMaintenanceService } from "./maintenance.js";
+import {
+  choice,
+  criticalities,
+  object,
+  OnboardingValidationError,
+  statuses,
+  text,
+  uuid,
+  version,
+} from "./validation.js";
 
 export interface OnboardingRouteOptions {
   readonly authenticate: RequestHandler;
@@ -19,7 +30,9 @@ export interface OnboardingRouteOptions {
     context: VerifiedRequestContext,
     caseId: string,
   ) => Promise<boolean>;
-  readonly saga: { reconcile(caseId: string): Promise<unknown> };
+  readonly saga: {
+    reconcile(caseId: string, tenantId: string): Promise<unknown>;
+  };
   readonly lifecycle?: Pick<
     OnboardingCaseLifecycleService<unknown>,
     | "draft"
@@ -48,187 +61,176 @@ export function registerOnboardingRoutes(
   app: Application,
   options: OnboardingRouteOptions,
 ): void {
+  const guarded =
+    (handler: RequestHandler): RequestHandler =>
+    async (request, response, next) => {
+      try {
+        await handler(request, response, next);
+      } catch (error) {
+        handleError(error, response, next);
+      }
+    };
+  const authorize = async (
+    context: VerifiedRequestContext,
+    caseId: string,
+    response: Response,
+  ) => {
+    if (await options.authorize(context, caseId)) return true;
+    response.status(403).json({ code: "FORBIDDEN" });
+    return false;
+  };
   app.post(
     "/api/studio/onboarding/cases/:caseId/reconcile",
     options.authenticate,
-    async (request, response, next) => {
-      try {
-        const caseId = String(request.params.caseId ?? "").trim();
-        if (!caseId) {
-          response
-            .status(400)
-            .json({ code: "INVALID_CASE_ID", message: "caseId is required" });
-          return;
-        }
-        if (!(await options.authorize(options.readContext(response), caseId))) {
-          response.status(403).json({
-            code: "FORBIDDEN",
-            message: "Onboarding reconciliation is not permitted",
-          });
-          return;
-        }
-        response.status(202).json(await options.saga.reconcile(caseId));
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message.startsWith("Onboarding case not found:")
-        ) {
-          response.status(404).json({
-            code: "ONBOARDING_CASE_NOT_FOUND",
-            message: "Onboarding case not found",
-          });
-          return;
-        }
-        (next as NextFunction)(error);
-      }
-    },
+    guarded(async (request, response) => {
+      const caseId = uuid(request.params.caseId, "caseId"),
+        context = options.readContext(response);
+      if (!(await authorize(context, caseId, response))) return;
+      response
+        .status(202)
+        .json(await options.saga.reconcile(caseId, context.tenantId));
+    }),
   );
   const lifecycle = options.lifecycle;
-  if (lifecycle)
+  if (lifecycle) {
     app.post(
       "/api/studio/onboarding/cases",
       options.authenticate,
-      async (request, response, next) => {
-        try {
-          const context = options.readContext(response),
-            body = object(request.body),
-            caseCode = String(body["caseCode"] ?? ""),
-            canonicalPartyId = String(body["canonicalPartyId"] ?? ""),
-            idempotencyKey = String(
-              request.header("idempotency-key") ?? body["idempotencyKey"] ?? "",
-            );
-          if (!caseCode || !canonicalPartyId || !idempotencyKey) {
-            response.status(400).json({
-              code: "ONBOARDING_DRAFT_INVALID",
-              message:
-                "caseCode, canonicalPartyId, and Idempotency-Key are required",
-            });
-            return;
-          }
-          const result = await lifecycle.draft({
-            context,
-            idempotencyKey,
-            caseId:
-              typeof body["caseId"] === "string"
-                ? body["caseId"]
-                : randomUUID(),
-            caseCode,
-            canonicalPartyId,
-            ...(typeof body["sourceMode"] === "string"
-              ? { sourceMode: body["sourceMode"] as never }
-              : {}),
-            ...(typeof body["activationCriticality"] === "string"
-              ? {
-                  activationCriticality: body["activationCriticality"] as never,
-                }
-              : {}),
-            ...(isObject(body["requestMetadata"])
-              ? { requestMetadata: body["requestMetadata"] }
-              : {}),
-            ...(isObject(body["requestPayload"])
-              ? { requestPayload: body["requestPayload"] }
-              : {}),
-          });
-          response.status(result.replayed ? 200 : 201).json(result);
-        } catch (error) {
-          (next as NextFunction)(error);
-        }
-      },
+      guarded(async (request, response) => {
+        const context = options.readContext(response),
+          body = object(request.body);
+        const caseCode = text(body["caseCode"], "caseCode").toLowerCase();
+        const canonicalPartyId = uuid(
+          body["canonicalPartyId"],
+          "canonicalPartyId",
+        );
+        const idempotencyKey = text(
+          request.header("idempotency-key") ?? body["idempotencyKey"],
+          "Idempotency-Key",
+        );
+        const caseId =
+          body["caseId"] === undefined
+            ? draftId(context.tenantId, caseCode, idempotencyKey)
+            : uuid(body["caseId"], "caseId");
+        if (!(await authorize(context, caseId, response))) return;
+        const result = await lifecycle.draft({
+          context,
+          caseId,
+          caseCode,
+          canonicalPartyId,
+          idempotencyKey,
+          ...(body["sourceMode"] !== undefined
+            ? {
+                sourceMode: choice(
+                  body["sourceMode"],
+                  [
+                    "self_service",
+                    "buyer_invited",
+                    "ops_governed",
+                    "system_triggered",
+                  ] as const,
+                  "sourceMode",
+                ),
+              }
+            : {}),
+          ...(body["activationCriticality"] !== undefined
+            ? {
+                activationCriticality: choice(
+                  body["activationCriticality"],
+                  criticalities,
+                  "activationCriticality",
+                ),
+              }
+            : {}),
+          ...(body["requestMetadata"] !== undefined
+            ? {
+                requestMetadata: object(
+                  body["requestMetadata"],
+                  "requestMetadata",
+                ),
+              }
+            : {}),
+          ...(body["requestPayload"] !== undefined
+            ? {
+                requestPayload: object(
+                  body["requestPayload"],
+                  "requestPayload",
+                ),
+              }
+            : {}),
+        });
+        response.status(result.replayed ? 200 : 201).json(result);
+      }),
     );
-  if (lifecycle)
     app.post(
       "/api/studio/onboarding/cases/:caseId/actions/:action",
       options.authenticate,
-      async (request, response, next) => {
-        try {
-          const caseId = String(request.params.caseId ?? "").trim(),
-            action = String(request.params.action ?? "").trim();
-          const context = options.readContext(response);
-          if (!caseId || !(await options.authorize(context, caseId))) {
-            response
-              .status(caseId ? 403 : 400)
-              .json({ code: caseId ? "FORBIDDEN" : "INVALID_CASE_ID" });
-            return;
-          }
-          const body = object(request.body),
-            expectedStatus = String(
-              body["expectedStatus"] ?? "",
-            ) as OnboardingCaseCommand["expectedStatus"],
-            idempotencyKey = String(
-              request.header("idempotency-key") ?? body["idempotencyKey"] ?? "",
-            );
-          if (!expectedStatus || !idempotencyKey) {
-            response.status(400).json({
-              code: "ONBOARDING_COMMAND_INVALID",
-              message: "expectedStatus and Idempotency-Key are required",
-            });
-            return;
-          }
-          const command = {
-            context,
-            caseId,
-            expectedStatus,
-            idempotencyKey,
-            ...(Number.isSafeInteger(body["expectedDesiredVersion"])
-              ? {
-                  expectedDesiredVersion: Number(
-                    body["expectedDesiredVersion"],
-                  ),
-                }
-              : {}),
-            ...(typeof body["reason"] === "string"
-              ? { reason: body["reason"] }
-              : {}),
-            ...(isObject(body["approvedRevision"])
-              ? { approvedRevision: body["approvedRevision"] }
-              : {}),
-            ...(isObject(body["compilation"])
-              ? { compilation: body["compilation"] as never }
-              : {}),
-          };
-          const result = await executeAction(lifecycle, action, command);
-          response.status(200).json(result);
-        } catch (error) {
-          if (
-            error instanceof Error &&
-            /conflict|stale|expected status/i.test(error.message)
-          ) {
-            response
-              .status(409)
-              .json({ code: "ONBOARDING_CONFLICT", message: error.message });
-            return;
-          }
-          (next as NextFunction)(error);
-        }
-      },
+      guarded(async (request, response) => {
+        const caseId = uuid(request.params.caseId, "caseId"),
+          context = options.readContext(response);
+        if (!(await authorize(context, caseId, response))) return;
+        const body = object(request.body);
+        const command: OnboardingCaseCommand = {
+          context,
+          caseId,
+          expectedStatus: choice(
+            body["expectedStatus"],
+            statuses,
+            "expectedStatus",
+          ),
+          idempotencyKey: text(
+            request.header("idempotency-key") ?? body["idempotencyKey"],
+            "Idempotency-Key",
+          ),
+          ...(body["expectedDesiredVersion"] !== undefined
+            ? {
+                expectedDesiredVersion: version(body["expectedDesiredVersion"]),
+              }
+            : {}),
+          ...(body["reason"] !== undefined
+            ? { reason: text(body["reason"], "reason") }
+            : {}),
+          ...(body["approvedRevision"] !== undefined
+            ? {
+                approvedRevision: object(
+                  body["approvedRevision"],
+                  "approvedRevision",
+                ),
+              }
+            : {}),
+          ...(body["compilation"] !== undefined
+            ? { compilation: compilation(body["compilation"]) }
+            : {}),
+        };
+        response
+          .status(200)
+          .json(
+            await executeAction(
+              lifecycle,
+              text(request.params.action, "action"),
+              command,
+            ),
+          );
+      }),
     );
-  if (options.maintenance)
+  }
+  const maintenance = options.maintenance;
+  if (maintenance)
     app.post(
       "/api/studio/onboarding/cases/:caseId/work-items/:workItemId/resolve",
       options.authenticate,
-      async (request, response, next) => {
-        try {
-          const caseId = String(request.params.caseId ?? "").trim(),
-            workItemId = String(request.params.workItemId ?? "").trim(),
-            context = options.readContext(response);
-          if (!caseId || !workItemId) {
-            response.status(400).json({ code: "ONBOARDING_WORK_ITEM_INVALID" });
-            return;
-          }
-          if (!(await options.authorize(context, caseId))) {
-            response.status(403).json({ code: "FORBIDDEN" });
-            return;
-          }
-          const resolved = await options.maintenance!.resolveWorkItem({
-            context,
-            caseId,
-            workItemId,
-          });
-          response.status(resolved ? 200 : 404).json({ resolved });
-        } catch (error) {
-          (next as NextFunction)(error);
-        }
-      },
+      guarded(async (request, response) => {
+        const caseId = uuid(request.params.caseId, "caseId"),
+          workItemId = uuid(request.params.workItemId, "workItemId"),
+          context = options.readContext(response);
+        if (!(await authorize(context, caseId, response))) return;
+        const resolved = await maintenance.resolveWorkItem({
+          context,
+          caseId,
+          workItemId,
+        });
+        response.status(resolved ? 200 : 404).json({ resolved });
+      }),
     );
 }
 
@@ -272,9 +274,51 @@ async function executeAction(
       });
   }
 }
-function object(value: unknown): Record<string, unknown> {
-  return isObject(value) ? value : {};
+
+function compilation(
+  value: unknown,
+): NonNullable<OnboardingCaseCommand["compilation"]> {
+  validateCompilation(
+    value as NonNullable<OnboardingCaseCommand["compilation"]>,
+  );
+  return value as NonNullable<OnboardingCaseCommand["compilation"]>;
 }
-function isObject(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+// Stable UUID coordinates keep retries without a client-supplied caseId replayable.
+function draftId(tenantId: string, caseCode: string, key: string): string {
+  const hash = createHash("sha256")
+    .update(JSON.stringify(["onboarding-draft", tenantId, caseCode, key]))
+    .digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-8${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+}
+function handleError(
+  error: unknown,
+  response: Response,
+  next: NextFunction,
+): void {
+  const code =
+    error instanceof Error
+      ? ((error as Error & { code?: string }).code ?? error.message)
+      : "";
+  if (error instanceof OnboardingValidationError) {
+    response
+      .status(400)
+      .json({ code: "ONBOARDING_COMMAND_INVALID", message: error.message });
+  } else if (code === "ONBOARDING_ACTION_UNKNOWN") {
+    response.status(404).json({ code });
+  } else if (code === "ONBOARDING_WORK_ITEM_FORBIDDEN") {
+    response.status(403).json({ code });
+  } else if (
+    code === "ONBOARDING_CASE_NOT_FOUND" ||
+    code.startsWith("Onboarding case not found:")
+  ) {
+    response.status(404).json({ code: "ONBOARDING_CASE_NOT_FOUND" });
+  } else if (
+    /^ONBOARDING_[A-Z_]*CONFLICT$/.test(code) ||
+    code === "ONBOARDING_CANONICAL_REVISION_REQUIRED"
+  ) {
+    response.status(409).json({ code });
+  } else {
+    next(error);
+  }
 }

@@ -5,6 +5,19 @@
   "defaultScopeBehavior": "deny_undeclared",
   "permissions": [
     {
+      "permissionCode": "mesh.ai.agent.use",
+      "scopes": [
+        {
+          "kind": "tenant",
+          "propagation": "exact"
+        },
+        {
+          "kind": "network_account",
+          "propagation": "exact"
+        }
+      ]
+    },
+    {
       "permissionCode": "mesh.catalog.attachment.create",
       "scopes": [
         {
@@ -558,5 +571,5 @@
       ]
     }
   ],
-  "sha256": "f1a9f14320eb6ac1aca2ce5d961368bd7d507f57f12d4ef455c864f2622576c4"
+  "sha256": "78620352cbc1ae9a051cee435856331705e3a90406306a09eaa061d43c9eb397"
 }

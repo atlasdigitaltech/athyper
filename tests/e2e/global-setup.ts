@@ -1,4 +1,5 @@
-import { chromium, type FullConfig } from "@playwright/test";
+import { authenticateBrowser } from "./authenticate-browser";
+import { chromium, request, type FullConfig } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
@@ -12,6 +13,31 @@ const PLANES = ["studio", "neon", "mesh"] as const;
  * and dry-runs cannot accidentally reuse an old authenticated run.
  */
 export default async function globalSetup(config: FullConfig): Promise<void> {
+  // Explicit reuse supports sessions established through interactive MFA.
+  // Validate with the BFF; the presence of a cookie alone does not prove login.
+  const reusePlane = process.env.PLAYWRIGHT_REUSE_AUTH_STATE;
+  if (reusePlane) {
+    if (!PLANES.some((plane) => plane === reusePlane)) {
+      throw new Error("PLAYWRIGHT_REUSE_AUTH_STATE must be studio, neon, or mesh");
+    }
+    const project = config.projects.find((item) => item.name === `production-${reusePlane}-desktop`);
+    if (!project?.use.baseURL) throw new Error(`No base URL configured for ${reusePlane}`);
+    const client = await request.newContext({
+      baseURL: String(project.use.baseURL),
+      ignoreHTTPSErrors: true,
+      storageState: `./tests/e2e/.auth/${reusePlane}.json`,
+    });
+    try {
+      const response = await client.get("/api/auth/session");
+      const session = response.ok() ? await response.json() : undefined;
+      if (session?.state !== "authenticated" || session.plane !== reusePlane || !session.tenantId) {
+        throw new Error(`Saved ${reusePlane} session is not authenticated; complete sign-in and MFA again`);
+      }
+    } finally {
+      await client.dispose();
+    }
+    return;
+  }
   const hasAnyCredentials = PLANES.some((plane) => {
     const suffix = plane.toUpperCase();
     return Boolean(
@@ -50,20 +76,10 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       mkdirSync(dirname(statePath), { recursive: true });
       const context = await browser.newContext({ baseURL, ignoreHTTPSErrors: true });
       const page = await context.newPage();
-      await page.goto("/login");
-      await page.getByLabel(/email|username/i).fill(username);
-      await page.getByLabel(/password/i).fill(password);
-      await page.getByRole("button", { name: /sign in|log in/i }).click();
-      await page.waitForURL((url) => !/\/login(?:\/|$)/.test(url.pathname), {
-        timeout: 30_000,
+      await authenticateBrowser(page, {
+        origin: baseURL, username, password,
+        tenantName: process.env[`PLAYWRIGHT_${suffix}_TENANT_NAME`],
       });
-
-      const contextChoice = page.getByRole("button", {
-        name: /continue|select|open/i,
-      }).first();
-      if (await contextChoice.isVisible().catch(() => false)) {
-        await contextChoice.click();
-      }
 
       const state = await context.storageState();
       const authenticated = state.cookies.some(({ name, value }) =>

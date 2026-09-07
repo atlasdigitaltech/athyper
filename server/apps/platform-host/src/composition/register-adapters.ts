@@ -12,6 +12,8 @@ import {
 } from "@athyper/server-adapter-cache-redis";
 import {
   createEmailAdapter,
+  createCaptureChannel,
+  createCapturePush,
   createSesEmailAdapter,
   createSesEventSqsAdapter,
   createFcmPushAdapter,
@@ -194,6 +196,25 @@ export function registerAdapters(
     lifecycle.onShutdown(() => notificationEvents.close());
   }
 
+  if (config.notificationCapture) {
+    if (config.env !== "local" || config.email.provider !== "smtp" ||
+        !config.email.host || !["mailtrap", "localhost", "127.0.0.1", "::1"].includes(config.email.host) ||
+        !config.email.fromAddress || config.email.user || config.email.password) {
+      throw new Error("Notification capture requires local unauthenticated Mailpit SMTP");
+    }
+    const inbox = dependencies.createEmail({
+      host: config.email.host,
+      port: config.email.port,
+      secure: config.email.secure,
+      fromAddress: config.email.fromAddress,
+    });
+    const captureDomain = config.email.fromAddress.split("@").at(-1)!;
+    for (const channel of ["email", "sms", "whatsapp"] as const) {
+      container.adapters.notificationChannels.set(channel, createCaptureChannel(channel, inbox, captureDomain));
+    }
+    container.adapters.pushTransports.push(createCapturePush(inbox, captureDomain));
+    lifecycle.onShutdown(() => inbox.close?.());
+  } else {
   if (config.email.provider === "smtp" && config.email.host && config.email.fromAddress) {
     const email = dependencies.createEmail({
       host: config.email.host,
@@ -302,6 +323,8 @@ export function registerAdapters(
         privateKey: config.webPush.privateKey,
       }),
     );
+  }
+
   }
 
   if (config.objectStorage.bucket) {

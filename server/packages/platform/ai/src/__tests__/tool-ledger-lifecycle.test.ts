@@ -68,3 +68,20 @@ describe("durable Atlas tool invocation lifecycle", () => {
     await expect(preview(service)).rejects.toMatchObject({ code: "TOOL_INVALID" }); expect(store.rows.size).toBe(0);
   });
 });
+
+it("rejects cancellation during command execution and preserves its completion receipt", async () => {
+  let release!: () => void;
+  let started!: () => void;
+  const running = new Promise<void>(resolve => { started = resolve; });
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const { service, store } = harness({ commands: async () => { started(); await gate; return { commandId: ids.command, revision: "8" }; } });
+  const proposal = await preview(service);
+  const execution = service.run({ context: context(), proposalId: proposal.proposalId, arguments: { invoiceId: "inv-1", secret: "must-not-persist" }, confirmationToken: proposal.confirmationToken });
+  await running;
+  try {
+    await expect(service.cancel({ context: context(), proposalId: proposal.proposalId })).rejects.toMatchObject({ code: "TOOL_IN_PROGRESS" });
+    expect(store.rows.get(ids.proposal)?.status).toBe("executing");
+  } finally { release(); }
+  await expect(execution).resolves.toMatchObject({ outcome: "completed", commandId: ids.command });
+  expect(store.rows.get(ids.proposal)?.status).toBe("completed");
+});

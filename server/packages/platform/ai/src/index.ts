@@ -25,3 +25,5 @@ export * from "./surface-draft-generation.js";
 export * from "./atlas-surface-draft-routes.js";
 
 export * from "./business-partner-tools.js";
+export * from "./kysely-thread-repository.js";
+export * from "./conversation-composition.js";

@@ -1,3 +1,9 @@
+import { queueLocalVerificationEmail, localVerificationEmailHandler } from "./local-verification-delivery.js";
+import { KyselyContactChallengeRepository, createContactVerificationAuthority, createMasterDataAuthority } from "@athyper/server-service-master-data";
+import { createKyselyEntitlementRuntime } from "@athyper/server-platform-entitlements";
+import { registerMasterData } from "./register-master-data.js";
+import { createProviderEvidenceVerifier, KyselyMasterDataRepository } from "@athyper/server-service-master-data";
+import type { MasterDataServiceOptions } from "@athyper/server-service-master-data";
 import { checkMeshExchangeReadiness } from "./mesh-exchange-readiness.js";
 import { TenantPublicationOrchestrator } from "./tenant-publication-orchestrator.js";
 import { createBusinessPartnerDefinitionAuthorizer } from "./business-partner-definition-authorizer.js";
@@ -7,10 +13,9 @@ import type {
 } from "@athyper/server-contract-events";
 import type { ProvisioningCommandTransport } from "@athyper/server-contract-integration";
 import type {
-  AuthorizationManagementRepository,
   AuthorizationManagementRolloutPolicySource,
   AuthorizationWriterSwitchGate,
-  LegacyAuthorizationWriter,
+  AuthorizationManagementUnitOfWork,
   VerifiedRequestContext,
 } from "@athyper/server-contract-auth";
 import type {
@@ -162,21 +167,28 @@ import {
   assertControlServiceRoutePlaneSafety,
   controlAdminFoundation,
   createAuthorizationManagementService,
+  createKyselyControlRepositories,
+  createKyselyAuthorizationManagementUnitOfWork,
+  type LegacyAuthorizationTransactionBinder,
   createBankValidationService,
   createConnectorControlService,
   createCycleConfigService,
   createEntitlementControlService,
-  createExactPlaneAuthorizationRepositoryProvider,
   createFeatureFlagService,
   createLookupService,
+  createKyselyParameterRepositories,
+  createExperienceParameterConsumer,
   createParameterService,
   createRoundingService,
   createRuntimeCommandService,
   createSafeAuthorizationManagementRolloutSelector,
   KyselyCycleTemplateRepository,
+  createKyselyEntitlementRepositories,
+  createKyselyFeatureFlagRepositories,
   KyselyRuntimeCommandStore,
   registerAuthorizationManagementRoutes,
   registerControlServiceRoutes,
+  registerParameterRoutes,
   registerCycleConfigRoutes,
   registerRuntimeCommandRoutes,
   type ControlServiceRouteFlags,
@@ -202,10 +214,12 @@ import {
   KyselyAtlasExperienceConfigurationRepository,
   KyselyAtlasTenantQuotaManager,
   createAtlasA2Services,
+  createAtlasConversationServices,
   createAtlasDriftHandler,
   createAtlasKnowledgeIngestionHandler,
   KyselyAtlasToolProposalStore,
   registerAtlasAdminRoutes,
+  hasPermission as hasAtlasPermission,
   registerAtlasExperienceRoutes,
   registerAtlasRoutes,
   registerAtlasSurfaceDraftRoutes,
@@ -249,6 +263,7 @@ import {
   RECONCILE_BUSINESS_PARTNER_EVENTS_JOB,
   registerBusinessPartnerBankDisclosureRoutes,
   registerBusinessPartnerNetworkExchangeRoutes,
+  resolveMeshNetworkAccountContext,
   registerBusinessPartnerProfilePublicationRoutes,
   type BusinessPartnerDeliveryItem,
   type DeliveryDisposition,
@@ -535,8 +550,11 @@ export interface ServiceRegistrationDependencies {
   /** Immutable source/destination adapters required by qualified Neon finance slices. */
   readonly finance?: FinanceRegistrationPorts;
   readonly metadata?: MetadataReader;
+  /** Override the default PostgreSQL repository and optionally supply a trusted evidence verifier. */
+  readonly masterData?: Partial<Pick<MasterDataServiceOptions<RecordTransaction>, "repository" | "evidenceVerifier">>;
   readonly repository?: RecordRepository<RecordTransaction>;
   readonly workflowRepository?: WorkflowRepository<RecordTransaction>;
+  readonly workflowCommandExecutions?: CommandExecutionStore<RecordTransaction, import("@athyper/server-contract-workflow").WorkItemActionResult>;
   readonly policyRepository?: PolicyRepository<RecordTransaction>;
   readonly transactions?: PlaneTransactionCoordinator<RecordTransaction>;
   readonly outbox?: OutboxWriter<RecordTransaction>;
@@ -574,15 +592,18 @@ export interface ServiceRegistrationDependencies {
   readonly onboardingTransport?: ProvisioningCommandTransport;
   /** Exact-plane repositories own atomic OCC, audit, and outbox persistence. */
   readonly controlAdmin?: {
-    readonly features: ExactPlaneRepositoryProvider<FeatureFlagRepository>;
-    readonly parameters: ExactPlaneRepositoryProvider<ParameterRepository>;
-    readonly lookups: ExactPlaneRepositoryProvider<LookupRepository>;
-    readonly rounding: ExactPlaneRepositoryProvider<RoundingRepository>;
-    readonly bankValidation: ExactPlaneRepositoryProvider<BankValidationRepository>;
-    readonly entitlements: ExactPlaneRepositoryProvider<EntitlementRepository>;
-    readonly connectors: ExactPlaneRepositoryProvider<ConnectorRepository>;
+    /** Dedicated per-plane connections inheriting athyperapp and athyper_control_writer. */
+    readonly writerDatabases?: Readonly<Partial<Record<PlaneKey, Kysely<Record<string, never>>>>>;
+    readonly features?: ExactPlaneRepositoryProvider<FeatureFlagRepository>;
+    readonly parameters?: ExactPlaneRepositoryProvider<ParameterRepository>;
+    readonly lookups?: ExactPlaneRepositoryProvider<LookupRepository>;
+    readonly rounding?: ExactPlaneRepositoryProvider<RoundingRepository>;
+    readonly bankValidation?: ExactPlaneRepositoryProvider<BankValidationRepository>;
+    /** Defaults to the governed Kysely adapter for each available plane database. */
+    readonly entitlements?: ExactPlaneRepositoryProvider<EntitlementRepository>;
+    readonly connectors?: ExactPlaneRepositoryProvider<ConnectorRepository>;
     readonly cache: CacheInvalidator;
-    readonly connectorHealthJobs: ConnectorHealthJobs;
+    readonly connectorHealthJobs?: ConnectorHealthJobs;
     readonly runtimeCommandExecutor?: RuntimeCommandExecutor;
     readonly guarantees: {
       readonly expectedVersion: true;
@@ -593,10 +614,9 @@ export interface ServiceRegistrationDependencies {
   };
   /** C4 adapters are injected together; no cross-plane or implicit writer fallback is composed. */
   readonly authorizationManagement?: {
-    readonly repositories: Readonly<
-      Partial<Record<PlaneKey, AuthorizationManagementRepository>>
-    >;
-    readonly legacyWriter: LegacyAuthorizationWriter;
+    readonly unitOfWork?: AuthorizationManagementUnitOfWork;
+    readonly legacyTransactionBinder?: LegacyAuthorizationTransactionBinder;
+    readonly writerDatabases?: Readonly<Partial<Record<PlaneKey, Kysely<Record<string, never>>>>>;
     readonly rolloutPolicies: AuthorizationManagementRolloutPolicySource;
     readonly writerGate: AuthorizationWriterSwitchGate;
   };
@@ -653,6 +673,9 @@ export function registerServices(
       ? { studio: container.adapters.athyperDatabase.database }
       : {}),
   } as Partial<Record<PlaneKey, Kysely<Record<string, never>>>>;
+  const parameterRepositories =
+    dependencies.controlAdmin?.parameters ??
+    createKyselyParameterRepositories(metadataDatabases);
   if (Object.keys(metadataDatabases).length > 0) {
     const experienceAdapters = {
       ...(container.adapters.neonDatabase
@@ -690,6 +713,9 @@ export function registerServices(
     const experience = createExperienceService({
       repositories: experienceRepositories,
       cache: experienceCache,
+      ...(config?.wave0.controlAdminParametersEnabled
+        ? { readRuntimeDefaults: createExperienceParameterConsumer(parameterRepositories) }
+        : {}),
     });
     container.platform.experience = {
       service: experience,
@@ -744,8 +770,10 @@ export function registerServices(
       ),
       { code: "CONTROL_ADMIN_RUNTIME_STORE_REQUIRED" },
     );
-  if (!dependencies.metadata && Object.keys(metadataDatabases).length === 0)
+  if (!dependencies.metadata && Object.keys(metadataDatabases).length === 0) {
+    registerMasterData(container);
     return;
+  }
 
   const transactions =
     dependencies.transactions ?? createPlaneTransactionCoordinator(container);
@@ -1106,6 +1134,7 @@ export function registerServices(
       ? ["neon"]
       : [],
   });
+  container.platform.entitlements = createKyselyEntitlementRuntime(metadataDatabases);
   const cycleRepositories = createExactPlaneRepositoryProvider(
     {
       ...(metadataDatabases.studio
@@ -1143,14 +1172,101 @@ export function registerServices(
         })
       : undefined;
   const controlRoutesEnabled = Object.values(controlRouteFlags).some(Boolean);
-  if (controlRoutesEnabled && !dependencies.controlAdmin)
+  if (
+    controlRoutesEnabled &&
+    !dependencies.controlAdmin &&
+    Object.keys(metadataDatabases).length === 0
+  )
     throw Object.assign(
       new Error(
         "Enabled control-administration routes require governed exact-plane repositories",
       ),
       { code: "CONTROL_ADMIN_REPOSITORIES_REQUIRED" },
     );
-  const controlOptions = dependencies.controlAdmin;
+  const suppliedControl = dependencies.controlAdmin;
+  const controlWriterDatabases =
+    suppliedControl?.writerDatabases ?? metadataDatabases;
+  const persistedControl = createKyselyControlRepositories(
+    controlWriterDatabases,
+  );
+  const controlOptions =
+    suppliedControl || Object.keys(metadataDatabases).length > 0
+      ? {
+          ...suppliedControl,
+          lookups: suppliedControl?.lookups ?? persistedControl.lookups,
+          rounding: suppliedControl?.rounding ?? persistedControl.rounding,
+          bankValidation:
+            suppliedControl?.bankValidation ?? persistedControl.bankValidation,
+          connectors:
+            suppliedControl?.connectors ?? persistedControl.connectors,
+          connectorHealthJobs:
+            suppliedControl?.connectorHealthJobs ?? persistedControl.healthJobs,
+          // These repository reads are uncached; durable events cover downstream invalidation.
+          cache: suppliedControl?.cache ?? { invalidate: async () => {} },
+          guarantees: suppliedControl?.guarantees ?? {
+            expectedVersion: true as const,
+            audit: "transactional" as const,
+            outbox: "transactional" as const,
+            invalidation: true as const,
+          },
+        }
+      : undefined;
+  if (controlRouteFlags.connectorLifecycle && !suppliedControl?.connectorHealthJobs) {
+    const queue = "control.connector-health", name = "control.connector-health.poll";
+    const mode = config?.mode ?? "api";
+    if (mode === "scheduler" && !container.runtimes.scheduler)
+      throw new Error("Connector health scheduler requires the scheduling runtime");
+    if ((mode === "api" || mode === "worker") && !container.runtimes.jobs)
+      throw new Error("Connector health checks require the jobs runtime");
+    if (mode === "worker") {
+      const jobs = container.runtimes.jobs, secrets = container.adapters.secretStore;
+      if (!jobs || !secrets) throw new Error("Connector health worker requires jobs and secret store");
+      const transport = createIntegrationHttpTransport();
+      jobs.register(queue, name, {
+        async handle(job) {
+          const planeKey = (job.data as { planeKey?: PlaneKey }).planeKey;
+          if (!planeKey || job.execution?.planeKey !== planeKey)
+            return {status:"discarded", reason:"Invalid connector-health plane"};
+          const processed = await persistedControl.connectors.require(planeKey).processHealthJobs(transport, secrets);
+          return {status:"completed", output:{processed}};
+        },
+      });
+    }
+    container.runtimes.jobDefinitions.push({
+      code: name,
+      owner: "@athyper/server-platform-control-admin",
+      queue,
+      name,
+      scope: "plane",
+      payloadSchema: { name, version: 1 },
+      timeoutMs: 180000,
+      maxAttempts: 3,
+      executionRetentionDays: 30,
+    });
+    if (container.runtimes.scheduler)
+      for (const planeKey of Object.keys(controlWriterDatabases) as PlaneKey[])
+        container.runtimes.scheduledJobs.push({
+          scheduleId: `connector-health-${planeKey}`,
+          queue,
+          name,
+          data: { planeKey },
+          pattern: { kind: "interval", everyMs: 15000 },
+          options: {
+            jobId: `connector-health:${planeKey}`,
+            maxAttempts: 3,
+            payloadSchema: { name, version: 1 },
+            execution: {
+              planeKey,
+              scope: "plane",
+              principalId: "00000000-0000-0000-0000-000000000000",
+            },
+          },
+        });
+  }
+  const featureRepositories = controlOptions?.features ?? createKyselyFeatureFlagRepositories(metadataDatabases);
+  const entitlementRepositories =
+    controlOptions?.entitlements ??
+    createKyselyEntitlementRepositories(metadataDatabases);
   if (
     controlOptions &&
     (controlOptions.guarantees.expectedVersion !== true ||
@@ -1164,16 +1280,42 @@ export function registerServices(
       ),
       { code: "CONTROL_ADMIN_MUTATION_GUARANTEES_REQUIRED" },
     );
+  if (config?.wave0.controlAdminParametersEnabled) {
+    const service = createParameterService({
+      authorizer,
+      repositories: parameterRepositories,
+      // Parameter reads are uncached; bootstrap checks a fresh database revision.
+      cache: controlOptions?.cache ?? { invalidate: async () => {} },
+    });
+    container.platform.httpRegistrars.push((application) =>
+      registerParameterRoutes(application, {
+        authenticate: createIamAuthenticationMiddleware(iam),
+        readContext: readVerifiedRequestContext,
+        service,
+        reads: !controlOptions || !controlRouteFlags.localCatalogReads,
+        writes: !controlOptions || !controlRouteFlags.tenantOverrides,
+      }),
+    );
+    for (const planeKey of Object.keys(metadataDatabases) as PlaneKey[]) {
+      container.runtimes.health.register(`control.${planeKey}.parameters`, async () => {
+        const result = await parameterRepositories.health(planeKey);
+        return result.status === "healthy"
+          ? { status: "healthy" }
+          : { status: "unhealthy", message: result.message ?? "Parameter repository unavailable" };
+      });
+    }
+  }
   const controlServices = controlOptions
     ? {
         features: createFeatureFlagService({
           authorizer,
-          repositories: controlOptions.features,
+          repositories: featureRepositories,
+          onChanged: async (context) => { await container.platform.experience?.invalidation.flagChanged(context.planeKey, context.tenantId); },
           cache: controlOptions.cache,
         }),
         parameters: createParameterService({
           authorizer,
-          repositories: controlOptions.parameters,
+          repositories: parameterRepositories,
           cache: controlOptions.cache,
         }),
         lookups: createLookupService({
@@ -1192,8 +1334,9 @@ export function registerServices(
         }),
         entitlements: createEntitlementControlService({
           authorizer,
-          repositories: controlOptions.entitlements,
+          repositories: entitlementRepositories,
           cache: controlOptions.cache,
+          onChanged: async (context) => { await container.platform.experience?.invalidation.planChanged(context.planeKey, context.tenantId); },
         }),
         connectors: createConnectorControlService({
           authorizer,
@@ -1232,11 +1375,8 @@ export function registerServices(
     config?.wave0.authorizationManagementMode ?? "legacy";
   const authorizationManagement = authorizationOptions
     ? createAuthorizationManagementService({
+        unitOfWork: authorizationOptions.unitOfWork ?? createKyselyAuthorizationManagementUnitOfWork(authorizationOptions.writerDatabases ?? metadataDatabases, authorizationOptions.legacyTransactionBinder),
         authorizer,
-        repositories: createExactPlaneAuthorizationRepositoryProvider(
-          authorizationOptions.repositories,
-        ),
-        legacyWriter: authorizationOptions.legacyWriter,
         rollout: {
           async select(input) {
             const selected =
@@ -1358,18 +1498,18 @@ export function registerServices(
             };
       },
     );
-  if (controlOptions)
+  if (controlOptions && controlRoutesEnabled)
     for (const planeKey of ["studio", "neon", "mesh"] as const)
       container.runtimes.health.register(
         `control.${planeKey}.administration`,
         async () => {
           const results = await Promise.all([
-            controlOptions.features.health(planeKey),
-            controlOptions.parameters.health(planeKey),
+            featureRepositories.health(planeKey),
+            parameterRepositories.health(planeKey),
             controlOptions.lookups.health(planeKey),
             controlOptions.rounding.health(planeKey),
             controlOptions.bankValidation.health(planeKey),
-            controlOptions.entitlements.health(planeKey),
+            entitlementRepositories.health(planeKey),
             controlOptions.connectors.health(planeKey),
           ]);
           const failed = results.find((result) => result.status !== "healthy");
@@ -1677,6 +1817,11 @@ export function registerServices(
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         service: networkExchange,
+        resolveAccountContext: async (context, requested) => {
+          const catalog = container.platform.experience?.service;
+          if (!catalog) throw new Error("Mesh account directory is unavailable");
+          return resolveMeshNetworkAccountContext(context, requested, catalog);
+        },
         telemetry: (event) => {
           const labels = { operation: event.operation, outcome: event.outcome, status_code: String(event.statusCode) };
           networkExchangeCount?.increment(labels);
@@ -2266,6 +2411,21 @@ export function registerServices(
         : {}),
     });
   container.platform.metadata = metadata;
+  registerMasterData(container, {
+    authorizeAccess: createMasterDataAuthority(authorizer, metadata),
+    authorizeVerification: createContactVerificationAuthority(authorizer),
+    repository: dependencies.masterData?.repository ?? new KyselyMasterDataRepository(),
+    evidenceVerifier: dependencies.masterData?.evidenceVerifier ?? (config?.masterDataVerificationKeys?.length ? createProviderEvidenceVerifier(config.masterDataVerificationKeys) : { verify: async () => { throw new MasterDataError(503, "MASTER_DATA_VERIFIER_UNAVAILABLE", "Contact verification provider is not configured"); } }),
+    metadata,
+    authorizer,
+    transactions: exactTransactions,
+    audit,
+    outbox: dependencies.outbox ?? createDatabaseOutboxWriter("master-data"),
+  }, config?.localContactChallenge ? {
+    config: config.localContactChallenge,
+    repository: new KyselyContactChallengeRepository(),
+    deliver: queueLocalVerificationEmail(config.localContactDeliveryKey!),
+  } : undefined);
   if (container.adapters.neonDatabase) {
     const neonDatabase = container.adapters.neonDatabase
       .database as unknown as Kysely<Record<string, never>>;
@@ -3422,6 +3582,7 @@ export function registerServices(
       authorizer,
       principals: createKyselyPrincipalDirectory(),
       repository: createKyselyCollaborationRepository(),
+      commandExecutions: createKyselyCommandExecutionStore<import("@athyper/server-contract-collaboration").CommentRecord>(),
       transactions: exactTransactions,
       outbox: createDatabaseOutboxWriter("collaboration"),
       audit,
@@ -3536,6 +3697,7 @@ export function registerServices(
     authorizer,
   });
   const notificationHandlers = new Map(container.adapters.notificationChannels);
+  if (config?.localContactDeliveryKey && notificationHandlers.has("email")) notificationHandlers.set("email",localVerificationEmailHandler(notificationHandlers.get("email")!,config.localContactDeliveryKey));
   const emailHandler = notificationHandlers.get("email");
   if (emailHandler && sesDeliveryRepository) {
     notificationHandlers.set(
@@ -3864,6 +4026,7 @@ export function registerServices(
     const mutations = createRecordMutationService(common);
     const snapshots = config?.wave0.recordSnapshotRoutesEnabled
       ? createRecordSnapshotService({
+          authorizer,
           metadata,
           queries,
           mutations,
@@ -4037,6 +4200,7 @@ export function registerServices(
       authorizer,
       audit,
       outbox: dependencies.outbox ?? createDatabaseOutboxWriter("workflow"),
+      commandExecutions: dependencies.workflowCommandExecutions ?? createKyselyCommandExecutionStore<import("@athyper/server-contract-workflow").WorkItemActionResult>(),
       repository,
       transactions,
       ...(policy ? { policy } : {}),
@@ -4345,10 +4509,22 @@ export function registerAtlas(
     };
     return;
   }
-  if (!dependencies)
-    throw new Error(
-      "Atlas is enabled but its repositories, policy resolvers, provider adapters, and command boundary are not composed.",
-    );
+  if (!dependencies) {
+    if (toolsEnabled) throw new Error("Atlas tools require the full provider and command-boundary composition.");
+    const { threads, admission } = createAtlasConversationServices(transactions);
+    container.platform.ai = { ledger, threads, routesEnabled: true, toolsEnabled: false };
+    container.platform.httpRegistrars.push(application => registerAtlasRoutes(application as never, {
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, threads, admission,
+    }));
+    container.runtimes.health.register("atlas.conversation-persistence", async () => {
+      await Promise.all(Object.values(databases).map(database => sql`SELECT conversation_id FROM ai.atlas_thread LIMIT 0`.execute(database!)));
+      return { status: "healthy" };
+    });
+    if (container.platform.experience) container.platform.httpRegistrars.push(application => registerAtlasSurfaceDraftRoutes(application as never, {
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
+    }));
+    return;
+  }
   const operations = createAtlasA2Services({
     transactions,
     platformCredentials: dependencies.credentials,
@@ -4445,7 +4621,7 @@ export function registerAtlas(
       admission: dependencies.admission,
       threads,
       runtime,
-      ...(toolsEnabled ? { tools } : {}),
+      ...(toolsEnabled ? { tools, runs: dependencies.runs } : {}),
     }),
   );
   if (container.platform.experience) {
@@ -4468,8 +4644,8 @@ export function registerAtlas(
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       authorize: async (context) =>
-        context.permissions.allowed.includes("atlas.admin.manage") ||
-        context.permissions.allowed.includes("ai.admin"),
+        hasAtlasPermission(context, "atlas.admin.manage") ||
+        hasAtlasPermission(context, "ai.admin"),
       credentials: operations.credentials,
       knowledge: operations.knowledge,
       policies: operations.policies,
@@ -5067,7 +5243,8 @@ function createDatabaseOutboxWriter(
     | "finance"
     | "attachments"
     | "business-partner"
-    | "mesh-business-partner",
+    | "mesh-business-partner"
+    | "master-data",
 ): OutboxWriter<RecordTransaction> {
   return {
     async append(event, transaction) {

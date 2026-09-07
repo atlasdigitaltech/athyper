@@ -102,4 +102,19 @@ describe("durable identity replay service", () => {
       }),
     ).rejects.toMatchObject({ status: 400 });
   });
+  it("rejects PostgreSQL-incompatible reasons before persistence", async () => {
+    const test = harness();
+    await expect(
+      test.service.create(context, { attemptId: "a", reason: "review\0" }),
+    ).rejects.toMatchObject({ status: 400 });
+    await expect(
+      test.service.decide(context, {
+        approvalId: "r",
+        decision: "approve",
+        reason: "review\0",
+      }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(test.repository.create).not.toHaveBeenCalled();
+    expect(test.repository.decide).not.toHaveBeenCalled();
+  });
 });

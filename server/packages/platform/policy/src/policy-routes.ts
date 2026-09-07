@@ -1,3 +1,8 @@
+import { registerContractRoute } from "@athyper/server-runtime-http";
+import {
+  policyEvaluateContract,
+  policySimulateContract,
+} from "./policy-route-contracts.js";
 import type {
   Authorizer,
   VerifiedRequestContext,
@@ -18,9 +23,14 @@ export function registerPolicyRoutes(
   application: Application,
   options: PolicyRouteOptions,
 ): void {
-  application.post(
-    "/api/policy/evaluate",
-    options.authenticate,
+  const authenticate: RequestHandler = (request, response, next) => {
+    response.setHeader("Cache-Control", "private, no-store");
+    return options.authenticate(request, response, next);
+  };
+  registerContractRoute(
+    application,
+    policyEvaluateContract,
+    authenticate,
     async (request, response, next) => {
       try {
         const context = options.readContext(response);
@@ -57,9 +67,10 @@ export function registerPolicyRoutes(
       }
     },
   );
-  application.post(
-    "/api/policy/simulate",
-    options.authenticate,
+  registerContractRoute(
+    application,
+    policySimulateContract,
+    authenticate,
     async (request, response, next) => {
       try {
         const context = options.readContext(response);
@@ -126,9 +137,14 @@ function optionalText(
   key: string,
 ): string | undefined {
   const result = value[key];
-  return typeof result === "string" && result.trim()
-    ? result.trim()
-    : undefined;
+  if (result === undefined) return undefined;
+  if (typeof result !== "string" || !result.trim())
+    throw new PolicyRouteError(
+      400,
+      "INVALID_FIELD",
+      `${key} must be a non-empty string`,
+    );
+  return result.trim();
 }
 function requiredText(value: Record<string, unknown>, key: string): string {
   const result = optionalText(value, key);
@@ -140,6 +156,7 @@ function uuidArray(value: unknown): readonly string[] | undefined {
   if (value === undefined) return undefined;
   if (
     !Array.isArray(value) ||
+    value.length === 0 ||
     value.length > 100 ||
     value.some(
       (entry) =>
@@ -152,7 +169,7 @@ function uuidArray(value: unknown): readonly string[] | undefined {
     throw new PolicyRouteError(
       400,
       "INVALID_POLICY_IDS",
-      "policyDefinitionIds must contain at most 100 UUIDs",
+      "policyDefinitionIds must contain between 1 and 100 UUIDs",
     );
-  return [...new Set(value.map((entry) => String(entry)))];
+  return [...new Set(value.map((entry) => String(entry).toLowerCase()))];
 }

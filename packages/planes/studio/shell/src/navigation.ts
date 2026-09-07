@@ -29,6 +29,14 @@ export const studioRoutes = definePlaneRoutes([
   ...catalogRoutes,
   {
     ...publicationRoute,
+    id: "studio.entity.pub.mdg",
+    href: "/mdg",
+    label: "Master Data Governance",
+    requiredPermissions: ["studio.business_partner_definition.read"],
+    navigation: "hidden",
+  },
+  {
+    ...publicationRoute,
     id: "studio.entity.pub.business-partner-publication",
     href: "/mdg/business-partner/publication",
     label: "Business Partner Publication",

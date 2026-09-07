@@ -1,1 +1,3 @@
 # Canonical local-development baseline. Add post-baseline Neon migrations below.
+20260907_atlas_conversation_runtime_access.sql
+20260907_lookup_reference_governance.sql

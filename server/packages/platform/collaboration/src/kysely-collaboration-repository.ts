@@ -1,16 +1,253 @@
-import{sql,type Transaction}from"kysely";import type{CollaborationRepository,CommentRecord,CreateCommentCommand,EditCommentCommand,PrincipalDirectory}from"@athyper/server-contract-collaboration";
-export type CollaborationTransaction=Transaction<Record<string,never>>;type Row=Record<string,unknown>;
-export function createKyselyPrincipalDirectory():PrincipalDirectory{return{async resolveActivePrincipals(context,ids,transaction){if(!ids.length)return[];const result=await sql<{id:string}>`SELECT id FROM master.principal WHERE tenant_id=${context.tenantId}::uuid AND id=ANY(${ids}::uuid[]) AND status='active' ORDER BY id`.execute(transaction as CollaborationTransaction);return result.rows.map(row=>row.id);}};}
-export function createKyselyCollaborationRepository():CollaborationRepository<CollaborationTransaction>{return{
- async create(command,mentions,tx){let depth=0;if(command.parentCommentId){const parent=(await sql<{thread_depth:number}>`SELECT thread_depth FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.parentCommentId}::uuid AND entity_type=${command.entityType} AND entity_id=${command.entityId} AND status<>'deleted' FOR UPDATE`.execute(tx)).rows[0];if(!parent)throw new Error("COMMENT_PARENT_NOT_FOUND");depth=Number(parent.thread_depth)+1;if(depth>5)throw new Error("COMMENT_THREAD_DEPTH_EXCEEDED");}const result=await sql<Row>`INSERT INTO document.comment(tenant_id,context_type,entity_type,entity_id,comment_intent,commenter_id,comment_text,content_format,content_json,content_html,content_schema,parent_comment_id,thread_depth,visibility,created_by) VALUES(${command.context.tenantId}::uuid,${command.contextType??"entity"},${command.entityType},${command.entityId},${command.intent??"general"},${command.context.principalId}::uuid,${command.text},${command.format??"plain"},${command.content?JSON.stringify(command.content):null}::jsonb,${command.html??null},${command.contentSchema??null},${command.parentCommentId??null}::uuid,${depth},${command.visibility??"public"},${command.context.principalId}::uuid) RETURNING *`.execute(tx);const comment=map(required(result.rows[0]));await replaceRelations(command,comment.id,mentions,tx);return comment;},
- async edit(command,mentions,tx){const current=(await sql<Row>`SELECT * FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid AND commenter_id=${command.context.principalId}::uuid AND status<>'deleted' FOR UPDATE`.execute(tx)).rows[0];if(!current||command.expectedUpdatedAt&&iso(current["updated_at"]??current["created_at"])!==command.expectedUpdatedAt)return null;const result=await sql<Row>`UPDATE document.comment SET comment_text=${command.text},content_format=${command.format??String(current["content_format"])},content_json=${command.content?JSON.stringify(command.content):null}::jsonb,content_html=${command.html??null},content_schema=${command.contentSchema??null},updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid RETURNING *`.execute(tx);await replaceRelations(command,command.commentId,mentions,tx);return map(required(result.rows[0]));},
- async softDelete(tenantId,id,principalId,tx){const r=await sql`UPDATE document.comment SET status='deleted',deleted_at=clock_timestamp(),deleted_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND id=${id}::uuid AND commenter_id=${principalId}::uuid AND status<>'deleted'`.execute(tx);return Number(r.numAffectedRows??0n)>0;},
- async putReaction(tenantId,commentId,principalId,code,tx){const r=await sql`INSERT INTO document.comment_reaction(tenant_id,comment_id,principal_id,reaction_type,created_by) SELECT ${tenantId}::uuid,c.id,${principalId}::uuid,${code},${principalId}::uuid FROM document.comment c WHERE c.tenant_id=${tenantId}::uuid AND c.id=${commentId}::uuid AND c.status<>'deleted' ON CONFLICT(tenant_id,comment_id,principal_id,reaction_type) DO NOTHING`.execute(tx);return Number(r.numAffectedRows??0n)>0;},
- async deleteReaction(tenantId,commentId,principalId,code,tx){const r=await sql`DELETE FROM document.comment_reaction WHERE tenant_id=${tenantId}::uuid AND comment_id=${commentId}::uuid AND principal_id=${principalId}::uuid AND reaction_type=${code}`.execute(tx);return Number(r.numAffectedRows??0n)>0;},
- async putDraft(command,tx){await sql`INSERT INTO document.comment_draft(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id,draft_text,content_format,content_json,content_html,content_schema,visibility,created_by) VALUES(${command.context.tenantId}::uuid,${command.context.principalId}::uuid,${command.contextType??"entity"},${command.entityType},${command.entityId},${command.parentCommentId??null}::uuid,${command.text},${command.format??"plain"},${command.content?JSON.stringify(command.content):null}::jsonb,${command.html??null},${command.contentSchema??null},${command.visibility??"public"},${command.context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id) DO UPDATE SET draft_text=EXCLUDED.draft_text,content_format=EXCLUDED.content_format,content_json=EXCLUDED.content_json,content_html=EXCLUDED.content_html,content_schema=EXCLUDED.content_schema,visibility=EXCLUDED.visibility,updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id`.execute(tx);},
- async deleteDraft(tenantId,principalId,c,parentId,tx){const r=await sql`DELETE FROM document.comment_draft WHERE tenant_id=${tenantId}::uuid AND principal_id=${principalId}::uuid AND context_type=${c.contextType??"entity"} AND entity_type=${c.entityType} AND entity_id=${c.entityId} AND parent_comment_id IS NOT DISTINCT FROM ${parentId??null}::uuid`.execute(tx);return Number(r.numAffectedRows??0n)>0;},
- async markRead(tenantId,principalId,c,readAt,tx){await sql`INSERT INTO document.comment_feed_cursor(tenant_id,principal_id,entity_type,entity_id,last_read_at) VALUES(${tenantId}::uuid,${principalId}::uuid,${c.entityType},${c.entityId},${readAt}::timestamptz) ON CONFLICT(tenant_id,principal_id,entity_type,entity_id) DO UPDATE SET last_read_at=GREATEST(document.comment_feed_cursor.last_read_at,EXCLUDED.last_read_at),updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id`.execute(tx);},
- async createFlag(tenantId,commentId,principalId,reasonCode,detail,tx){const r=await sql<{id:string}>`INSERT INTO event.comment_flag(tenant_id,comment_id,reporter_principal_id,reason_code,detail,created_by) SELECT ${tenantId}::uuid,c.id,${principalId}::uuid,${reasonCode},${detail??null},${principalId}::uuid FROM document.comment c WHERE c.tenant_id=${tenantId}::uuid AND c.id=${commentId}::uuid AND c.status<>'deleted' ON CONFLICT(tenant_id,comment_id,reporter_principal_id,resolved_at) DO UPDATE SET reason_code=EXCLUDED.reason_code,detail=EXCLUDED.detail RETURNING id`.execute(tx);return required(r.rows[0]).id;}
-};}
-async function replaceRelations(command:CreateCommentCommand|EditCommentCommand,commentId:string,mentions:readonly string[],tx:CollaborationTransaction){await sql`DELETE FROM document.comment_mention WHERE tenant_id=${command.context.tenantId}::uuid AND comment_id=${commentId}::uuid`.execute(tx);for(const id of mentions)await sql`INSERT INTO document.comment_mention(tenant_id,comment_id,mentioned_id,created_by) VALUES(${command.context.tenantId}::uuid,${commentId}::uuid,${id}::uuid,${command.context.principalId}::uuid)`.execute(tx);await sql`DELETE FROM document.attachment_link WHERE tenant_id=${command.context.tenantId}::uuid AND entity_type='document.comment' AND entity_id=${commentId} AND link_kind='comment'`.execute(tx);for(const id of command.attachmentIds??[])await sql`INSERT INTO document.attachment_link(tenant_id,entity_type,entity_id,attachment_series_id,link_kind,created_by) SELECT ${command.context.tenantId}::uuid,'document.comment',${commentId},a.series_id,'comment',${command.context.principalId}::uuid FROM document.attachment a WHERE a.tenant_id=${command.context.tenantId}::uuid AND a.id=${id}::uuid AND a.status='active' AND a.is_active`.execute(tx);}
-function map(r:Row):CommentRecord{return{id:String(r["id"]),tenantId:String(r["tenant_id"]),contextType:String(r["context_type"]),entityType:String(r["entity_type"]),entityId:String(r["entity_id"]),authorId:String(r["commenter_id"]),text:String(r["comment_text"]),format:String(r["content_format"])as CommentRecord["format"],...(r["content_json"]?{content:r["content_json"]as Record<string,unknown>}:{ }),...(r["content_schema"]?{contentSchema:String(r["content_schema"])}:{}),...(r["content_html"]?{html:String(r["content_html"])}:{}),...(r["parent_comment_id"]?{parentCommentId:String(r["parent_comment_id"])}:{}),threadDepth:Number(r["thread_depth"]),visibility:String(r["visibility"])as CommentRecord["visibility"],intent:String(r["comment_intent"]),status:String(r["status"])as CommentRecord["status"],createdAt:iso(r["created_at"]),...(r["updated_at"]?{updatedAt:iso(r["updated_at"])}:{})};}function iso(v:unknown){return(v instanceof Date?v:new Date(String(v))).toISOString();}function required<T>(v:T|undefined):T{if(!v)throw new Error("COLLABORATION_PERSISTENCE_CONFLICT");return v;}
+import { CollaborationError } from "./errors.js";
+import { sql, type Transaction } from "kysely";
+import type {
+  CollaborationRepository,
+  CommentRecord,
+  CreateCommentCommand,
+  EditCommentCommand,
+  PrincipalDirectory,
+} from "@athyper/server-contract-collaboration";
+export type CollaborationTransaction = Transaction<Record<string, never>>;
+type Row = Record<string, unknown>;
+export function createKyselyPrincipalDirectory(): PrincipalDirectory {
+  return {
+    async resolveActivePrincipals(context, ids, transaction) {
+      if (!ids.length) return [];
+      const result = await sql<{
+        id: string;
+      }>`SELECT id FROM master.principal WHERE tenant_id=${context.tenantId}::uuid AND id=ANY(${ids}::uuid[]) AND status='active' ORDER BY id`.execute(
+        transaction as CollaborationTransaction,
+      );
+      return result.rows.map((row) => row.id);
+    },
+  };
+}
+export function createKyselyCollaborationRepository(): CollaborationRepository<CollaborationTransaction> {
+  return {
+    async create(command, mentions, tx) {
+      await requireLookup(
+        tx,
+        command.context.tenantId,
+        "document.comment_type",
+        command.contextType ?? "entity",
+      );
+      await requireLookup(
+        tx,
+        command.context.tenantId,
+        "document.comment_intent",
+        command.intent ?? "general",
+      );
+      let depth = 0;
+      if (command.parentCommentId) {
+        // Parent coordinates/depth are immutable; a plain SELECT uses the read policy.
+        const parent = (
+          await sql<{
+            thread_depth: number;
+          }>`SELECT thread_depth FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.parentCommentId}::uuid AND context_type=${command.contextType ?? "entity"} AND entity_type=${command.entityType} AND entity_id=${command.entityId} AND status<>'deleted'`.execute(
+            tx,
+          )
+        ).rows[0];
+        if (!parent)
+          throw new CollaborationError(
+            404,
+            "COMMENT_PARENT_NOT_FOUND",
+            "Parent comment was not found in this context",
+          );
+        depth = Number(parent.thread_depth) + 1;
+        if (depth > 5)
+          throw new CollaborationError(
+            422,
+            "COMMENT_THREAD_DEPTH_EXCEEDED",
+            "Comment nesting depth cannot exceed five",
+          );
+      }
+      const result =
+        await sql<Row>`INSERT INTO document.comment(tenant_id,context_type,entity_type,entity_id,comment_intent,commenter_id,comment_text,content_format,content_json,content_html,content_schema,parent_comment_id,thread_depth,visibility,created_by) VALUES(${command.context.tenantId}::uuid,${command.contextType ?? "entity"},${command.entityType},${command.entityId},${command.intent ?? "general"},${command.context.principalId}::uuid,${command.text},${command.format ?? "plain"},${command.content ? JSON.stringify(command.content) : null}::jsonb,${command.html ?? null},${command.contentSchema ?? null},${command.parentCommentId ?? null}::uuid,${depth},${command.visibility ?? "public"},${command.context.principalId}::uuid) RETURNING *`.execute(
+          tx,
+        );
+      const comment = map(required(result.rows[0]));
+      await replaceRelations(command, comment.id, mentions, tx);
+      return comment;
+    },
+    async edit(command, mentions, tx) {
+      const current = (
+        await sql<Row>`SELECT * FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid AND commenter_id=${command.context.principalId}::uuid AND status<>'deleted' FOR UPDATE`.execute(
+          tx,
+        )
+      ).rows[0];
+      if (
+        !current ||
+        (command.expectedUpdatedAt &&
+          iso(current["updated_at"] ?? current["created_at"]) !==
+            command.expectedUpdatedAt)
+      )
+        return null;
+      const result =
+        await sql<Row>`UPDATE document.comment SET comment_text=${command.text},content_format=${command.format ?? String(current["content_format"])},content_json=${command.content ? JSON.stringify(command.content) : null}::jsonb,content_html=${command.html ?? null},content_schema=${command.contentSchema ?? null},updated_at=clock_timestamp(),updated_by=${command.context.principalId}::uuid WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.commentId}::uuid RETURNING *`.execute(
+          tx,
+        );
+      await replaceRelations(command, command.commentId, mentions, tx);
+      return map(required(result.rows[0]));
+    },
+    async softDelete(tenantId, id, principalId, tx) {
+      const r =
+        await sql`UPDATE document.comment SET status='deleted',deleted_at=clock_timestamp(),deleted_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${tenantId}::uuid AND id=${id}::uuid AND commenter_id=${principalId}::uuid AND status<>'deleted'`.execute(
+          tx,
+        );
+      return Number(r.numAffectedRows ?? 0n) > 0;
+    },
+    async putReaction(tenantId, commentId, principalId, code, tx) {
+      await requireLookup(tx, tenantId, "document.reaction_type", code);
+      const r =
+        await sql`INSERT INTO document.comment_reaction(tenant_id,comment_id,principal_id,reaction_type,created_by) SELECT ${tenantId}::uuid,c.id,${principalId}::uuid,${code},${principalId}::uuid FROM document.comment c WHERE c.tenant_id=${tenantId}::uuid AND c.id=${commentId}::uuid AND c.status<>'deleted' ON CONFLICT(tenant_id,comment_id,principal_id,reaction_type) DO NOTHING`.execute(
+          tx,
+        );
+      return Number(r.numAffectedRows ?? 0n) > 0;
+    },
+    async deleteReaction(tenantId, commentId, principalId, code, tx) {
+      const r =
+        await sql`DELETE FROM document.comment_reaction WHERE tenant_id=${tenantId}::uuid AND comment_id=${commentId}::uuid AND principal_id=${principalId}::uuid AND reaction_type=${code}`.execute(
+          tx,
+        );
+      return Number(r.numAffectedRows ?? 0n) > 0;
+    },
+    async putDraft(command, tx) {
+      await requireLookup(
+        tx,
+        command.context.tenantId,
+        "document.comment_type",
+        command.contextType ?? "entity",
+      );
+      if (command.parentCommentId) {
+        const parent =
+          await sql`SELECT id FROM document.comment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${command.parentCommentId}::uuid AND context_type=${command.contextType ?? "entity"} AND entity_type=${command.entityType} AND entity_id=${command.entityId} AND status<>'deleted'`.execute(
+            tx,
+          );
+        if (!parent.rows.length)
+          throw new CollaborationError(
+            404,
+            "COMMENT_PARENT_NOT_FOUND",
+            "Parent comment was not found in this context",
+          );
+      }
+      await sql`INSERT INTO document.comment_draft(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id,draft_text,content_format,content_json,content_html,content_schema,visibility,created_by) VALUES(${command.context.tenantId}::uuid,${command.context.principalId}::uuid,${command.contextType ?? "entity"},${command.entityType},${command.entityId},${command.parentCommentId ?? null}::uuid,${command.text},${command.format ?? "plain"},${command.content ? JSON.stringify(command.content) : null}::jsonb,${command.html ?? null},${command.contentSchema ?? null},${command.visibility ?? "public"},${command.context.principalId}::uuid) ON CONFLICT(tenant_id,principal_id,context_type,entity_type,entity_id,parent_comment_id) DO UPDATE SET draft_text=EXCLUDED.draft_text,content_format=EXCLUDED.content_format,content_json=EXCLUDED.content_json,content_html=EXCLUDED.content_html,content_schema=EXCLUDED.content_schema,visibility=EXCLUDED.visibility,updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id`.execute(
+        tx,
+      );
+    },
+    async deleteDraft(tenantId, principalId, c, parentId, tx) {
+      const r =
+        await sql`DELETE FROM document.comment_draft WHERE tenant_id=${tenantId}::uuid AND principal_id=${principalId}::uuid AND context_type=${c.contextType ?? "entity"} AND entity_type=${c.entityType} AND entity_id=${c.entityId} AND parent_comment_id IS NOT DISTINCT FROM ${parentId ?? null}::uuid`.execute(
+          tx,
+        );
+      return Number(r.numAffectedRows ?? 0n) > 0;
+    },
+    async markRead(tenantId, principalId, c, readAt, tx) {
+      await sql`INSERT INTO document.comment_feed_cursor(tenant_id,principal_id,entity_type,entity_id,last_read_at) VALUES(${tenantId}::uuid,${principalId}::uuid,${c.entityType},${c.entityId},${readAt}::timestamptz) ON CONFLICT(tenant_id,principal_id,entity_type,entity_id) DO UPDATE SET last_read_at=GREATEST(document.comment_feed_cursor.last_read_at,EXCLUDED.last_read_at),updated_at=clock_timestamp(),updated_by=EXCLUDED.principal_id`.execute(
+        tx,
+      );
+    },
+    async createFlag(tenantId, commentId, principalId, reasonCode, detail, tx) {
+      const r = await sql<{
+        id: string;
+      }>`INSERT INTO event.comment_flag(tenant_id,comment_id,reporter_principal_id,reason_code,detail,created_by) SELECT ${tenantId}::uuid,c.id,${principalId}::uuid,${reasonCode},${detail ?? null},${principalId}::uuid FROM document.comment c WHERE c.tenant_id=${tenantId}::uuid AND c.id=${commentId}::uuid AND c.status<>'deleted' ON CONFLICT(tenant_id,comment_id,reporter_principal_id,resolved_at) DO UPDATE SET reason_code=EXCLUDED.reason_code,detail=EXCLUDED.detail RETURNING id`.execute(
+        tx,
+      );
+      if (!r.rows[0])
+        throw new CollaborationError(
+          404,
+          "COMMENT_NOT_FOUND",
+          "Comment was not found",
+        );
+      return r.rows[0].id;
+    },
+  };
+}
+async function replaceRelations(
+  command: CreateCommentCommand | EditCommentCommand,
+  commentId: string,
+  mentions: readonly string[],
+  tx: CollaborationTransaction,
+) {
+  await sql`DELETE FROM document.comment_mention WHERE tenant_id=${command.context.tenantId}::uuid AND comment_id=${commentId}::uuid`.execute(
+    tx,
+  );
+  for (const id of mentions)
+    await sql`INSERT INTO document.comment_mention(tenant_id,comment_id,mentioned_id,created_by) VALUES(${command.context.tenantId}::uuid,${commentId}::uuid,${id}::uuid,${command.context.principalId}::uuid)`.execute(
+      tx,
+    );
+  await sql`DELETE FROM document.attachment_link WHERE tenant_id=${command.context.tenantId}::uuid AND entity_type='document.comment' AND entity_id=${commentId} AND link_kind='comment'`.execute(
+    tx,
+  );
+  for (const id of new Set(command.attachmentIds ?? [])) {
+    const linked =
+      await sql`INSERT INTO document.attachment_link(tenant_id,entity_type,entity_id,attachment_series_id,link_kind,created_by) SELECT ${command.context.tenantId}::uuid,'document.comment',${commentId},a.series_id,'comment',${command.context.principalId}::uuid FROM document.attachment a WHERE a.tenant_id=${command.context.tenantId}::uuid AND a.id=${id}::uuid AND a.status='active' AND a.is_active ON CONFLICT DO NOTHING`.execute(
+        tx,
+      );
+    if (Number(linked.numAffectedRows ?? 0n) === 0) {
+      const attachment =
+        await sql`SELECT id FROM document.attachment WHERE tenant_id=${command.context.tenantId}::uuid AND id=${id}::uuid AND status='active' AND is_active`.execute(
+          tx,
+        );
+      if (!attachment.rows.length)
+        throw new CollaborationError(
+          422,
+          "ATTACHMENT_NOT_FOUND",
+          "Every attachment must be active in this tenant",
+        );
+    }
+  }
+}
+function map(r: Row): CommentRecord {
+  return {
+    id: String(r["id"]),
+    tenantId: String(r["tenant_id"]),
+    contextType: String(r["context_type"]),
+    entityType: String(r["entity_type"]),
+    entityId: String(r["entity_id"]),
+    authorId: String(r["commenter_id"]),
+    text: String(r["comment_text"]),
+    format: String(r["content_format"]) as CommentRecord["format"],
+    ...(r["content_json"]
+      ? { content: r["content_json"] as Record<string, unknown> }
+      : {}),
+    ...(r["content_schema"]
+      ? { contentSchema: String(r["content_schema"]) }
+      : {}),
+    ...(r["content_html"] ? { html: String(r["content_html"]) } : {}),
+    ...(r["parent_comment_id"]
+      ? { parentCommentId: String(r["parent_comment_id"]) }
+      : {}),
+    threadDepth: Number(r["thread_depth"]),
+    visibility: String(r["visibility"]) as CommentRecord["visibility"],
+    intent: String(r["comment_intent"]),
+    status: String(r["status"]) as CommentRecord["status"],
+    createdAt: iso(r["created_at"]),
+    ...(r["updated_at"] ? { updatedAt: iso(r["updated_at"]) } : {}),
+  };
+}
+function iso(v: unknown) {
+  return (v instanceof Date ? v : new Date(String(v))).toISOString();
+}
+function required<T>(v: T | undefined): T {
+  if (!v) throw new Error("COLLABORATION_PERSISTENCE_CONFLICT");
+  return v;
+}
+
+async function requireLookup(
+  tx: CollaborationTransaction,
+  tenantId: string,
+  key: string,
+  code: string,
+): Promise<void> {
+  const result = await sql<{
+    active: boolean;
+  }>`SELECT control.lookup_value_is_active(${key},${code},${tenantId}::uuid) AS active`.execute(
+    tx,
+  );
+  if (!result.rows[0]?.active)
+    throw new CollaborationError(
+      422,
+      "INVALID_COLLABORATION_LOOKUP",
+      "Unknown or inactive collaboration code",
+    );
+}

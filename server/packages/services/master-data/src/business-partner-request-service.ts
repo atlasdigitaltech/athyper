@@ -81,6 +81,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
     },
     async list(query) {
       assertContext(query.context);
+      if (query.beforeCreatedAt !== undefined && !Number.isFinite(parseInstant(query.beforeCreatedAt))) throw invalid("beforeCreatedAt must be a valid timestamp");
       if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) throw invalid("limit must be between 1 and 200");
       await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(query.operatingOrganizationId));
       return options.transactions.run("neon", actor(query.context), transaction => options.repository.list({ tenantId: query.context.tenantId, operatingOrganizationId: query.operatingOrganizationId, ...(query.status ? { status: query.status } : {}), ...(query.limit ? { limit: query.limit } : {}), ...(query.beforeCreatedAt ? { beforeCreatedAt: query.beforeCreatedAt } : {}) }, transaction));

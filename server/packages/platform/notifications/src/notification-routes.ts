@@ -7,6 +7,7 @@ import type {
 } from "@athyper/server-contract-notifications";
 import type { Application, RequestHandler, Response } from "express";
 import {
+  HttpError,
   defineRouteContract,
   registerContractRoute,
 } from "@athyper/server-runtime-http";
@@ -74,7 +75,7 @@ export function registerNotificationRoutes(
           const expectedVersion = ifMatch(request.headers["if-match"]);
           const body = record(request.body);
           if (!Array.isArray(body["preferences"]))
-            throw new TypeError("preferences must be an array");
+            throw invalidInput("preferences must be an array");
           const preferences = body["preferences"].map(preferenceInput);
           const snapshot = await options.preferences!.patch(
             context,
@@ -96,7 +97,7 @@ export function registerNotificationRoutes(
           const context = options.readContext(response);
           const body = record(request.body);
           if (!Array.isArray(body["preferences"]))
-            throw new TypeError("preferences must be an array");
+            throw invalidInput("preferences must be an array");
           response.status(200).json({
             previews: await options.preferences!.preview(
               context,
@@ -158,7 +159,7 @@ export function registerNotificationRoutes(
       options.authenticate,
       async (request, response, next) => {
         try {
-          const body = record(request.body);
+          const body = request.body === undefined ? {} : record(request.body);
           const receipt = await options.operations!.replay(
             options.readContext(response),
             uuid(request.params["id"]),
@@ -186,7 +187,7 @@ export function registerNotificationRoutes(
           principalId: context.principalId,
           planeKey: context.planeKey,
           limit,
-          cursor: optional(request.query["cursor"]),
+          cursor: cursor(request.query["cursor"]),
           unreadOnly: boolean(request.query["unread"]),
         });
         const unreadCount = await options.inbox.countUnread({
@@ -333,7 +334,7 @@ export function registerNotificationRoutes(
       response.setHeader("Connection", "keep-alive");
       response.flushHeaders();
       const controller = new AbortController();
-      request.once("close", () => controller.abort());
+      response.once("close", () => controller.abort());
       openNotificationSseStream({
         subscriber: options.events,
         tenantId: context.tenantId,
@@ -350,11 +351,18 @@ export function registerNotificationRoutes(
       try {
         const context = options.readContext(response);
         const body = record(request.body);
+        const pushPlatform = platform(body["platform"]);
+        if (pushPlatform === "web") {
+          text(body["p256dhKey"] ?? body["p256dh_key"], "p256dhKey");
+          text(body["authKey"] ?? body["auth_key"], "authKey");
+        } else {
+          text(body["deviceToken"] ?? body["device_token"], "deviceToken");
+        }
         const subscription = await options.push.upsert({
           tenantId: context.tenantId,
           principalId: context.principalId,
           planeKey: context.planeKey,
-          platform: platform(body["platform"]),
+          platform: pushPlatform,
           deviceId: text(body["deviceId"] ?? body["device_id"], "deviceId"),
           endpoint: text(body["endpoint"], "endpoint"),
           ...(optional(body["p256dhKey"] ?? body["p256dh_key"])
@@ -531,48 +539,53 @@ const contracts = {
 } as const;
 function integer(value: unknown, fallback: number) {
   if (value === undefined) return fallback;
+  if (typeof value !== "string" || !/^[0-9]+$/.test(value))
+    throw invalidInput("limit must be an integer");
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100)
-    throw new TypeError("limit must be between 1 and 100");
+    throw invalidInput("limit must be between 1 and 100");
   return parsed;
 }
 function uuid(value: unknown) {
   const normalized = String(value ?? "");
-  if (!uuidExpression.test(normalized)) throw new TypeError("Invalid UUID");
+  if (!uuidExpression.test(normalized)) throw invalidInput("Invalid UUID");
   return normalized;
 }
 function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
-    throw new TypeError("JSON object body required");
+    throw invalidInput("JSON object body required");
   return value as Record<string, unknown>;
 }
 function text(value: unknown, name: string) {
   if (typeof value !== "string" || !value.trim())
-    throw new TypeError(`${name} is required`);
+    throw invalidInput(`${name} is required`);
   return value.trim();
 }
 function optional(value: unknown) {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  if (value === undefined) return undefined;
+  return text(value, "Optional field");
 }
 function boolean(value: unknown) {
   if (value === undefined) return false;
   if (value === "true" || value === true) return true;
   if (value === "false" || value === false) return false;
-  throw new TypeError("Boolean query value required");
+  throw invalidInput("Boolean query value required");
 }
 function platform(value: unknown) {
   const result = text(value, "platform");
   if (!["web", "android", "ios"].includes(result))
-    throw new TypeError("Invalid push platform");
+    throw invalidInput("Invalid push platform");
   return result as "web" | "android" | "ios";
 }
 function ifMatch(value: unknown) {
   if (typeof value !== "string")
-    throw new TypeError("If-Match header is required");
-  const match = /^(?:W\/)?\"?(\d+)\"?$/.exec(value.trim());
+    throw invalidInput("If-Match header is required");
+  const match = /^(?:"(\d+)"|(\d+))$/.exec(value.trim());
   if (!match)
-    throw new TypeError("If-Match must contain a numeric preference version");
-  return Number(match[1]);
+    throw invalidInput("If-Match must contain a numeric preference version");
+  const version = Number(match[1] ?? match[2]);
+  if (!Number.isSafeInteger(version)) throw invalidInput("Invalid preference version");
+  return version;
 }
 function preferenceInput(
   value: unknown,
@@ -580,15 +593,35 @@ function preferenceInput(
   const body = record(value);
   const eventCode = text(body["eventCode"], "eventCode");
   if (!/^[a-z][a-z0-9_.-]+$/.test(eventCode))
-    throw new TypeError("Invalid eventCode");
+    throw invalidInput("Invalid eventCode");
   if (!Array.isArray(body["channels"]))
-    throw new TypeError("channels must be an array");
+    throw invalidInput("channels must be an array");
   const channels = body["channels"].map(channel);
   return { eventCode, channels };
 }
 function channel(value: unknown) {
   const result = text(value, "channel");
   if (!["in_app", "email", "sms", "push", "whatsapp"].includes(result))
-    throw new TypeError("Invalid notification channel");
+    throw invalidInput("Invalid notification channel");
   return result as "in_app" | "email" | "sms" | "push" | "whatsapp";
+}
+
+function invalidInput(message: string) {
+  return new HttpError(400, "INVALID_NOTIFICATION_INPUT", message);
+}
+function cursor(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  const encoded = text(value, "cursor");
+  try {
+    if (encoded.length > 1024 || !/^[A-Za-z0-9_-]+$/.test(encoded)) throw new Error();
+    const position = record(JSON.parse(Buffer.from(encoded, "base64url").toString("utf8")));
+    uuid(position["id"]);
+    const date = text(position["createdAt"], "createdAt");
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/.test(date) ||
+        !Number.isFinite(Date.parse(date)) ||
+        new Date(date).toISOString().slice(0, 19) !== date.slice(0, 19)) throw new Error();
+    return encoded;
+  } catch {
+    throw invalidInput("Invalid inbox cursor");
+  }
 }

@@ -125,10 +125,9 @@ ALTER TABLE master.address_link
     REFERENCES master.address (tenant_id, id)
     ON DELETE RESTRICT;
 
-ALTER TABLE master.address_link
-    ADD CONSTRAINT address_link_owner_purpose_address_uq
-    UNIQUE NULLS NOT DISTINCT
-    (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id);
+CREATE UNIQUE INDEX address_link_owner_purpose_address_uq
+    ON master.address_link (tenant_id, owner_type_id, owner_id, purpose, role_qualifier, address_id)
+    NULLS NOT DISTINCT WHERE usage_status <> 'cancelled';
 
 ALTER TABLE master.address_link
     ADD CONSTRAINT address_link_one_primary_excl
@@ -144,7 +143,7 @@ ALTER TABLE master.address_link
             '[)'
         ) WITH &&
     )
-    WHERE (is_primary);
+    WHERE (is_primary AND usage_status <> 'cancelled');
 
 ALTER TABLE master.contact_link
     ADD CONSTRAINT contact_link_tenant_fk

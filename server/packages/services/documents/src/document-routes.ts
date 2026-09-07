@@ -45,6 +45,7 @@ export function registerDocumentRoutes(
     options.authenticate,
     async (request, response, next) => {
       try {
+        response.setHeader("Cache-Control", "no-store");
         response.status(200).json(
           await options.documents.createDownload({
             context: options.readContext(response),
@@ -70,7 +71,10 @@ function optional(
   key: string,
 ): string | undefined {
   const item = value[key];
-  return typeof item === "string" && item.trim() ? item.trim() : undefined;
+  if (item === undefined) return undefined;
+  if (typeof item !== "string" || !item.trim())
+    throw new DocumentError(400, "INVALID_FIELD", `${key} must be a non-empty string`);
+  return item.trim();
 }
 function text(value: Record<string, unknown>, key: string): string {
   const item = optional(value, key);
@@ -79,7 +83,10 @@ function text(value: Record<string, unknown>, key: string): string {
   return item;
 }
 function header(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !/^[\x21-\x7e]{1,128}$/.test(value))
+    throw new DocumentError(400, "INVALID_IDEMPOTENCY_KEY", "Idempotency key must be 1-128 visible ASCII characters");
+  return value;
 }
 function handle(
   error: unknown,

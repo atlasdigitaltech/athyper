@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { createBusinessPartnerAccountBankLinkageService } from "./business-partner-account-bank-linkage.js";
 
@@ -34,4 +34,53 @@ describe("native bank verification controls",()=>{
   const value=service({verification:async()=>({id:"verification",company_code_id:"company",status:"applied"}),applyVerification:async()=>{throw new Error("must not write");}});
   expect(await value.applyBankVerification({context,verificationId:"verification"})).toMatchObject({replayed:true,verification:{status:"applied"}});
  });
+});
+
+
+describe("replay authorization and coordinates",()=>{
+ const link={profile_projection_id:"projection",business_partner_id:"partner",network_relationship_id:"relationship",onboarding_request_id:null};
+ const verification={bank_projection_id:"projection",supplier_company_profile_id:"profile",company_code_id:"company"};
+ function fixture(allowed:boolean){
+   const authorize=vi.fn(async()=>({allowed}));
+   const value=createBusinessPartnerAccountBankLinkageService({repository:{linkByKey:async()=>link,verificationByKey:async()=>verification} as any,authorizer:{authorize} as any,transactions:{async run(_plane,_actor,work){return work({} as never);}}});
+   return{value,authorize};
+ }
+ it("checks relationship permission on account-link replay",async()=>{
+   const {value,authorize}=fixture(false);
+   await expect(value.requestAccountLink({context,profileProjectionId:"projection",businessPartnerId:"partner",idempotencyKey:"link-replay-review"})).rejects.toMatchObject({status:403});
+   expect(authorize).toHaveBeenCalledWith(expect.objectContaining({resource:expect.objectContaining({networkRelationshipId:"relationship"})}));
+ });
+ it("checks company permission on bank-verification replay",async()=>{
+   const {value,authorize}=fixture(false);
+   await expect(value.startBankVerification({context,bankProjectionId:"projection",supplierCompanyProfileId:"profile",idempotencyKey:"bank-replay-review"})).rejects.toMatchObject({status:403});
+   expect(authorize).toHaveBeenCalledWith(expect.objectContaining({resource:expect.objectContaining({companyCodeId:"company"})}));
+ });
+ it("rejects reuse of account-link keys with different coordinates",async()=>{
+   await expect(fixture(true).value.requestAccountLink({context,profileProjectionId:"different",businessPartnerId:"partner",idempotencyKey:"link-replay-review"})).rejects.toMatchObject({status:409});
+ });
+ it("rejects reuse of bank-verification keys with different coordinates",async()=>{
+   await expect(fixture(true).value.startBankVerification({context,bankProjectionId:"different",supplierCompanyProfileId:"profile",idempotencyKey:"bank-replay-review"})).rejects.toMatchObject({status:409});
+ });
+ it("preserves identical authorized replays",async()=>{
+   const {value}=fixture(true);
+   expect(await value.requestAccountLink({context,profileProjectionId:"projection",businessPartnerId:"partner",idempotencyKey:"link-replay-review"})).toEqual({link,replayed:true});
+   expect(await value.startBankVerification({context,bankProjectionId:"projection",supplierCompanyProfileId:"profile",idempotencyKey:"bank-replay-review"})).toEqual({verification,replayed:true});
+ });
+ it("authorizes the stored company when replaying a protected registration",async()=>{
+   const authorize=vi.fn(async(input:any)=>(input.resource.companyCodeId==="company"?{allowed:true as const}:{allowed:false as const,reason:"test"}));
+   const value=createBusinessPartnerAccountBankLinkageService({repository:{protectedRegistrationByKey:async()=>({business_partner_id:"partner",company_code_id:"other-company"})} as any,authorizer:{authorize},transactions:{async run(_plane,_actor,work){return work({} as never);}},secrets:{put:vi.fn(),resolve:vi.fn()}});
+   await expect(value.registerProtectedBankAccount({context,businessPartnerId:"partner",companyCodeId:"company",accountHolderName:"Supplier",accountIdentifier:"12345678",accountIdType:"iban",currencyCode:"MYR",bankName:"Bank",bankCountryCode:"MY",idempotencyKey:"protected-replay-review"})).rejects.toMatchObject({status:403});
+   expect(authorize).toHaveBeenCalledTimes(2);
+ });
+});
+
+
+it("checks protected registration payloads and replays without requiring the secret store",async()=>{
+  const input={context,businessPartnerId:"partner",companyCodeId:"company",accountHolderName:"Supplier",accountIdentifier:"12345678",accountIdType:"iban",currencyCode:"MYR",bankName:"Bank",bankCountryCode:"MY",idempotencyKey:"protected-details-review"};
+  const row={bank_account_link_id:"link",business_partner_id:"partner",company_code_id:"company",registration_account_fingerprint:hash({tenantId:tenant,normalized:"12345678"}),registration_account_id_type:"iban",account_holder_name:"Supplier",currency_code:"MYR",bank_name_override:"Bank",bank_country_override:"MY",bic_override:null};
+  const value=service({protectedRegistrationByKey:async()=>row});
+  expect(await value.registerProtectedBankAccount(input)).toMatchObject({replayed:true,registration:{bank_account_link_id:"link"}});
+  expect((await value.registerProtectedBankAccount(input)).registration).not.toHaveProperty("registration_account_fingerprint");
+  await expect(value.registerProtectedBankAccount({...input,accountIdentifier:"87654321"})).rejects.toMatchObject({status:409});
+  await expect(value.registerProtectedBankAccount({...input,bankName:"Different bank"})).rejects.toMatchObject({status:409});
 });

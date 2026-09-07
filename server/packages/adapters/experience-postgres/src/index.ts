@@ -15,7 +15,12 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
   constructor(private readonly database: Database, private readonly runner?: ExperienceDatabaseRunner) {}
 
   private withContext<Result>(context: VerifiedRequestContext, work: (database: Database) => Promise<Result>): Promise<Result> {
-    return this.runner ? this.runner(context, work) : work(this.database);
+    if (this.runner) return this.runner(context, work);
+    const scoped = async (transaction: Database) => {
+      await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true), set_config('app.current_principal_id',${context.principalId},true)`.execute(transaction);
+      return work(transaction);
+    };
+    return this.database.isTransaction ? scoped(this.database) : this.database.transaction().execute(scoped);
   }
 
   async readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined> {
@@ -83,6 +88,13 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     });
   }
 
+  async readEntitlementRevision(context: VerifiedRequestContext, at: Date): Promise<string> {
+    return this.withContext(context, async database => {
+      const row = (await sql<{revision:string|null}>`SELECT control.effective_tenant_entitlement(${context.tenantId}::uuid,${at}::timestamptz)->>'revision' AS revision`.execute(database)).rows[0];
+      return row?.revision ?? "no_effective_plan";
+    });
+  }
+
   async readCatalog(context: VerifiedRequestContext, subscriptionPlanId: string): Promise<ExperienceCatalogRecord | undefined> {
     return this.withContext(context, async (database) => {
     const [planResult, associationResult, permissionResult] = await Promise.all([
@@ -91,12 +103,12 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
         SELECT w.code AS "workspaceCode", w.name AS "workspaceName", w.icon_key AS "workspaceIconKey", w.sort_order AS "workspaceSortOrder", w.is_shared_infrastructure AS "workspaceSharedInfrastructure",
                m.id::text AS "moduleId", m.code AS "moduleCode", m.name AS "moduleName", m.icon_key AS "moduleIconKey",
                wm.sort_order AS "moduleSortOrder", wm.is_primary AS primary,
-               concat_ws(':', COALESCE(spm.updated_at, spm.created_at)::text, COALESCE(w.updated_at, w.created_at)::text, COALESCE(m.updated_at, m.created_at)::text, COALESCE(wm.updated_at, wm.created_at)::text) AS revision
-        FROM control.subscription_plan_module spm
-        JOIN control.module m ON m.id = spm.module_id AND m.is_active
+               concat_ws(':', effective.value->>'revision', COALESCE(w.updated_at, w.created_at)::text, COALESCE(m.updated_at, m.created_at)::text, COALESCE(wm.updated_at, wm.created_at)::text) AS revision
+        FROM (SELECT control.effective_tenant_entitlement(${context.tenantId}::uuid,statement_timestamp()) AS value) effective
+        JOIN control.module m ON (effective.value->'modules') ? m.code AND m.is_active
         JOIN control.workspace_module wm ON wm.module_id = m.id AND wm.is_active
         JOIN control.workspace w ON w.id = wm.workspace_id AND w.is_active
-        WHERE spm.subscription_plan_id = ${subscriptionPlanId}::uuid AND spm.is_active AND spm.entitlement_mode = 'included'
+        WHERE effective.value->>'planId' = ${subscriptionPlanId}
         ORDER BY w.sort_order, w.code, wm.sort_order, m.code
       `.execute(database),
       sql<{ code: string; moduleId: string; revision: string }>`
@@ -114,22 +126,26 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
     });
   }
 
+  async readFeatureRevision(context: VerifiedRequestContext, at: Date): Promise<string> {
+    return createHash("sha256").update(JSON.stringify(await this.readFeatures(context, at))).digest("hex");
+  }
+
   async readFeatures(context: VerifiedRequestContext, at: Date): Promise<readonly ExperienceFeatureRecord[]> {
     return this.withContext(context, async (database) => {
     const result = await sql<{
       id: string; code: string; moduleId: string | null; kind: "release_gate" | "kill_switch" | "experiment";
-      defaultEnabled: boolean; rolloutPct: number | null; overrideEnabled: boolean | null; metadata: Record<string, unknown>; revision: string;
+      cohortStrategy: ExperienceFeatureRecord["cohortStrategy"]; defaultEnabled: boolean; rolloutPct: number | null; overrideEnabled: boolean | null; metadata: Record<string, unknown>; revision: string;
     }>`
       SELECT f.id::text AS id, f.code, f.module_id::text AS "moduleId", f.flag_kind AS kind,
-             f.default_enabled AS "defaultEnabled", f.rollout_pct AS "rolloutPct", o.is_enabled AS "overrideEnabled",
-             f.metadata, concat_ws(':', COALESCE(f.updated_at, f.created_at)::text, COALESCE(o.updated_at, o.created_at)::text) AS revision
+             f.cohort_strategy AS "cohortStrategy", f.default_enabled AS "defaultEnabled", f.rollout_pct AS "rolloutPct", o.is_enabled AS "overrideEnabled",
+             f.metadata, concat_ws(':', f.cohort_revision::text, COALESCE(f.updated_at, f.created_at)::text, COALESCE(o.updated_at, o.created_at)::text) AS revision
       FROM control.feature_flag_catalog f
       LEFT JOIN control.feature_flag_override o ON o.feature_flag_id = f.id AND o.tenant_id = ${context.tenantId}::uuid
         AND o.is_active AND o.effective_from <= ${at} AND (o.effective_until IS NULL OR o.effective_until > ${at})
       WHERE f.is_active AND f.effective_from <= ${at} AND (f.effective_until IS NULL OR f.effective_until > ${at})
       ORDER BY f.code
     `.execute(database);
-    return result.rows.map((row) => ({ id: row.id, code: row.code, ...(row.moduleId ? { moduleId: row.moduleId } : {}), kind: row.kind, defaultEnabled: row.defaultEnabled, ...(row.rolloutPct === null ? {} : { rolloutPct: row.rolloutPct }), ...(row.overrideEnabled === null ? {} : { overrideEnabled: row.overrideEnabled }), metadata: row.metadata, revision: row.revision }));
+    return result.rows.map((row) => ({ id: row.id, code: row.code, ...(row.moduleId ? { moduleId: row.moduleId } : {}), kind: row.kind, cohortStrategy: row.cohortStrategy, defaultEnabled: row.defaultEnabled, ...(row.rolloutPct === null ? {} : { rolloutPct: row.rolloutPct }), ...(row.overrideEnabled === null ? {} : { overrideEnabled: row.overrideEnabled }), metadata: row.metadata, revision: row.revision }));
     });
   }
 

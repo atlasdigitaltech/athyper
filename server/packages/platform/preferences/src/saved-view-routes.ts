@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { Application, Request, RequestHandler, Response } from "express";
 import {
@@ -23,10 +24,13 @@ export function registerSavedViewRoutes(
       const entityCode =
         parameter(request, "entity") ?? query(request, "entity");
       const surfaceCode = query(request, "surface");
+      const includeArchived = query(request, "includeArchived");
+      if (includeArchived !== undefined && !["true", "false"].includes(includeArchived))
+        throw new TypeError("includeArchived must be true or false");
       const savedViews = await options.savedViews.list(context, {
         ...(entityCode ? { entityCode } : {}),
         ...(surfaceCode ? { surfaceCode } : {}),
-        ...(query(request, "includeArchived") === "true"
+        ...(includeArchived === "true"
           ? { includeArchived: true }
           : {}),
       });
@@ -40,25 +44,25 @@ export function registerSavedViewRoutes(
     run(response, next, async () => {
       const context = options.readContext(response),
         value = body(request.body);
-      const entityCode =
-        parameter(request, "entity") ??
-        string(value["entityCode"] ?? value["entity_code"], "entityCode");
-      const name = string(value["name"], "name");
+      const entityCode = codeString(
+        parameter(request, "entity") ?? value["entityCode"] ?? value["entity_code"],
+        "entityCode",
+      );
+      const name = nameString(value["name"]);
       const code =
-        optionalString(value["code"]) ??
-        `${slug(name)}_${Date.now().toString(36)}`;
+        value["code"] === undefined
+          ? `view_${slug(name)}_${randomUUID().replaceAll("-", "")}`
+          : codeString(value["code"], "code");
+      const viewDescription = description(value["description"]);
       const view = await options.savedViews.create(context, {
         surfaceCode:
-          optionalString(value["surfaceCode"] ?? value["surface_code"]) ??
-          "entity_list",
+          codeString(value["surfaceCode"] ?? value["surface_code"] ?? "entity_list", "surfaceCode"),
         entityCode,
         code,
         name,
-        ...(optionalString(value["description"])
-          ? { description: optionalString(value["description"]) }
-          : {}),
-        state: object(value["state"] ?? value["config"] ?? {}),
-        metadata: object(value["metadata"] ?? {}),
+        ...(viewDescription ? { description: viewDescription } : {}),
+        state: object(stateValue(value) === undefined ? {} : stateValue(value)),
+        metadata: object(value["metadata"] === undefined ? {} : value["metadata"]),
       });
       response.setHeader("ETag", `"${view.version}"`);
       response.status(201).json(view);
@@ -67,17 +71,20 @@ export function registerSavedViewRoutes(
     run(response, next, async () => {
       const context = options.readContext(response),
         value = body(request.body);
+      const partial = request.method === "PATCH";
+      const state = stateValue(value);
+      const changes = {
+        ...(!partial || value["name"] !== undefined ? { name: nameString(value["name"]) } : {}),
+        ...(!partial || state !== undefined ? { state: object(state) } : {}),
+        ...(!partial || value["description"] !== undefined ? { description: description(value["description"]) } : {}),
+      };
+      if (!Object.keys(changes).length) throw new TypeError("At least one of name, state, or description is required");
       const view = await options.savedViews.replace(
         context,
-        requiredParameter(request, "id", "viewId"),
+        viewId(request),
         match(request.headers["if-match"]),
-        {
-          name: string(value["name"], "name"),
-          state: object(value["state"] ?? value["config"] ?? {}),
-          ...(optionalString(value["description"])
-            ? { description: optionalString(value["description"]) }
-            : {}),
-        },
+        changes,
+        parameter(request, "entity"),
       );
       response.setHeader("ETag", `"${view.version}"`);
       response.status(200).json(view);
@@ -86,7 +93,8 @@ export function registerSavedViewRoutes(
     run(response, next, async () => {
       await options.savedViews.remove(
         options.readContext(response),
-        requiredParameter(request, "id", "viewId"),
+        viewId(request),
+        parameter(request, "entity"),
       );
       response.status(204).end();
     });
@@ -95,7 +103,7 @@ export function registerSavedViewRoutes(
       await options.savedViews.setDefault(
         options.readContext(response),
         requiredParameter(request, "entity"),
-        requiredParameter(request, "viewId", "id"),
+        viewId(request),
       );
       response.status(200).json({ ok: true });
     });
@@ -109,21 +117,21 @@ export function registerSavedViewRoutes(
     });
   const clone: RequestHandler = async (request, response, next) =>
     run(response, next, async () => {
-      const value =
-        request.body && typeof request.body === "object"
-          ? (request.body as Record<string, unknown>)
-          : {};
+      const value = request.body === undefined ? {} : body(request.body);
+      if (value["name"] !== undefined && typeof value["name"] !== "string")
+        throw new TypeError("name must be a string");
       const view = await options.savedViews.clone(
         options.readContext(response),
-        requiredParameter(request, "id", "viewId"),
-        optionalString(value["name"]),
+        viewId(request),
+        value["name"] as string | undefined,
       );
+      response.setHeader("ETag", `"${view.version}"`);
       response.status(201).json(view);
     });
   const action: RequestHandler = async (request, response, next) =>
     run(response, next, async () => {
       const context = options.readContext(response),
-        id = requiredParameter(request, "id", "viewId"),
+        id = viewId(request),
         actionName = requiredParameter(request, "action").toLowerCase();
       if (actionName === "pin" || actionName === "star")
         response.status(200).json({
@@ -132,6 +140,7 @@ export function registerSavedViewRoutes(
             context,
             id,
             actionName === "pin" ? "pinned" : "starred",
+            request.method === "DELETE" ? false : undefined,
           )),
         });
       else if (actionName === "share") {
@@ -192,6 +201,12 @@ export function registerSavedViewRoutes(
     options.authenticate,
     replace,
   );
+  // Register the literal default path before the generic view ID path.
+  app.delete(
+    "/api/platform/saved-views/:entity/default",
+    options.authenticate,
+    clearDefault,
+  );
   app.delete(
     "/api/platform/saved-views/:entity/:viewId",
     options.authenticate,
@@ -202,30 +217,23 @@ export function registerSavedViewRoutes(
     options.authenticate,
     setDefault,
   );
-  app.delete(
-    "/api/platform/saved-views/:entity/default",
-    options.authenticate,
-    clearDefault,
-  );
 
-  for (const namespace of ["me", "user"] as const) {
-    app.get(`/api/${namespace}/saved-views`, options.authenticate, list);
-    app.patch(
-      `/api/${namespace}/saved-views/:viewId/:action`,
-      options.authenticate,
-      action,
-    );
-    app.delete(
-      `/api/${namespace}/saved-views/:viewId/:action`,
-      options.authenticate,
-      action,
-    );
-    app.post(
-      `/api/${namespace}/saved-views/:viewId/clone`,
-      options.authenticate,
-      clone,
-    );
-  }
+  app.get("/api/me/saved-views", options.authenticate, list);
+  app.patch(
+    "/api/me/saved-views/:viewId/:action",
+    options.authenticate,
+    action,
+  );
+  app.delete(
+    "/api/me/saved-views/:viewId/:action",
+    options.authenticate,
+    action,
+  );
+  app.post(
+    "/api/me/saved-views/:viewId/clone",
+    options.authenticate,
+    clone,
+  );
 }
 
 async function run(
@@ -240,6 +248,10 @@ async function run(
       problem(response, 409, "SAVED_VIEW_VERSION_CONFLICT", error.message);
     else if (error instanceof SavedViewError)
       problem(response, error.status, error.code, error.message);
+    else if (error && typeof error === "object" && Reflect.get(error, "code") === "23505")
+      problem(response, 409, "SAVED_VIEW_CONFLICT", "A saved view with this name or code already exists in the target scope");
+    else if (error && typeof error === "object" && Reflect.get(error, "code") === "23514")
+      problem(response, 400, "SAVED_VIEW_INVALID", "Saved-view data exceeds a field limit or has an invalid format");
     else if (error instanceof TypeError)
       problem(response, 400, "SAVED_VIEW_INVALID", error.message);
     else next(error);
@@ -268,17 +280,31 @@ function body(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 function object(value: unknown): Record<string, unknown> {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : {};
+  return body(value);
+}
+function stateValue(value: Record<string, unknown>): unknown {
+  return value["state"] !== undefined ? value["state"] : value["config"];
+}
+function nameString(value: unknown): string {
+  const name = string(value, "name");
+  if (Array.from(name).length > 160) throw new TypeError("name must not exceed 160 characters");
+  return name;
+}
+function codeString(value: unknown, name: string): string {
+  const code = string(value, name);
+  if (!/^[a-z][a-z0-9_.-]{1,126}$/.test(code)) throw new TypeError(`${name} has an invalid format`);
+  return code;
+}
+function description(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "string") throw new TypeError("description must be a string or null");
+  if (Array.from(value.trim()).length > 2048) throw new TypeError("description must not exceed 2048 characters");
+  return value.trim() || undefined;
 }
 function string(value: unknown, name: string): string {
   if (typeof value !== "string" || !value.trim())
     throw new TypeError(`${name} is required`);
   return value.trim();
-}
-function optionalString(value: unknown): string | undefined {
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
 }
 function parameter(request: Request, ...names: string[]): string | undefined {
   for (const name of names) {
@@ -297,13 +323,15 @@ function requiredParameter(request: Request, ...names: string[]): string {
 }
 function query(request: Request, name: string): string | undefined {
   const value = request.query[name];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  if (value === undefined) return undefined;
+  return string(value, name);
 }
 function match(value: unknown): number {
-  const found =
-    typeof value === "string" ? /^(?:W\/)?"?(\d+)"?$/.exec(value.trim()) : null;
-  if (!found) throw new TypeError("If-Match is required");
-  return Number(found[1]);
+  const found = typeof value === "string" ? /^(?:"(\d+)"|(\d+))$/.exec(value.trim()) : null;
+  const version = found ? Number(found[1] ?? found[2]) : NaN;
+  if (!Number.isSafeInteger(version) || version <= 0 || version > 0xffffffff)
+    throw new TypeError("If-Match must contain a valid strong saved-view version");
+  return version;
 }
 function slug(value: string): string {
   return (
@@ -313,4 +341,11 @@ function slug(value: string): string {
       .replace(/^_+|_+$/g, "")
       .slice(0, 80) || "view"
   );
+}
+
+function viewId(request: Request): string {
+  const id = requiredParameter(request, "id", "viewId");
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))
+    throw new TypeError("viewId must be a UUID");
+  return id.toLowerCase();
 }

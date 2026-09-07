@@ -561,6 +561,53 @@ try {
         studio,
       )
     ).rows[0];
+  const unicodeFixture = await fixture();
+  const unicodeReason = "😀".repeat(1000);
+  const unicodeApproval = await call(
+    `identity-saga-attempts/${unicodeFixture.attemptId}/replay-approvals`,
+    { reason: unicodeReason },
+  );
+  assert.equal(unicodeApproval.status, 201);
+  assert.equal(unicodeApproval.body.reason, unicodeReason);
+  for (const decision of ["approve", "revoke"]) {
+    assert.equal(
+      (
+        await call(
+          `identity-replay-approvals/${unicodeApproval.body.id}/${decision}`,
+          { reason: unicodeReason },
+          "checker",
+        )
+      ).status,
+      200,
+    );
+  }
+  assert.equal(
+    (
+      await call(
+        `identity-saga-attempts/${unicodeFixture.attemptId}/replay-approvals`,
+        { reason: "invalid\0reason" },
+      )
+    ).status,
+    400,
+  );
+  const unicodeRead = await call(
+    `identity-replay-approvals/${unicodeApproval.body.id}`,
+  );
+  assert.equal(unicodeRead.status, 200);
+  assert.equal(unicodeRead.body.status, "revoked");
+  assert.equal(
+    (
+      await call(
+        `identity-replay-approvals/${unicodeApproval.body.id}`,
+        undefined,
+        "outsider",
+      )
+    ).status,
+    404,
+  );
+  pass(
+    "all approval routes preserve Unicode reasons, reject NUL, and isolate tenant reads",
+  );
   const expiryStart = Date.now();
   const expiresApproved = await requested(),
     expiresPending = await requested();
@@ -784,6 +831,49 @@ try {
     .execute(studio);
   assert.equal((await replay(rollback)).status, 202);
   pass("audit failure rolls back approval and replay; retry succeeds");
+  // Force expiry after the UPDATE predicate succeeds but before the production
+  // approval guard runs. The trigger exists only in this disposable database.
+  const boundary = await requested();
+  const boundaryRead = await call(`identity-replay-approvals/${boundary.approvalId}`);
+  // Wait outside the transaction so the deliberate trigger delay stays below
+  // the test pool's query timeout.
+  await pause(Math.max(0, Date.parse(boundaryRead.body.expiresAt) - Date.now() - 3000));
+  await sql
+    .raw(
+      `CREATE FUNCTION public.delay_replay_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      IF NEW.id='${boundary.approvalId}'::uuid AND NEW.status='approved' THEN
+        PERFORM pg_sleep(greatest(0,extract(epoch FROM OLD.expires_at-clock_timestamp()))::double precision+0.05);
+      END IF;
+      RETURN NEW;
+    END$$;
+    CREATE TRIGGER aa_delay_replay_approval BEFORE UPDATE ON trustiam.identity_replay_approval
+      FOR EACH ROW EXECUTE FUNCTION public.delay_replay_approval();`,
+    )
+    .execute(studio);
+  try {
+    assert.equal((await approve(boundary)).status, 409);
+    assert.equal((await state(boundary)).status, "pending");
+    assert.equal(
+      Number(
+        (
+          await sql`SELECT count(*) n FROM public.replay_audit WHERE entity_id=${boundary.approvalId}::uuid AND event_code='iam.identity_replay.approved'`.execute(
+            studio,
+          )
+        ).rows[0].n,
+      ),
+      0,
+    );
+    pass(
+      "expiry between UPDATE predicate and database guard returns 409 without mutation or audit",
+    );
+  } finally {
+    await sql
+      .raw(
+        "DROP TRIGGER aa_delay_replay_approval ON trustiam.identity_replay_approval; DROP FUNCTION public.delay_replay_approval()",
+      )
+      .execute(studio);
+  }
   await pause(Math.max(0, expiryStart + 62000 - Date.now()));
   assert.equal((await replay(expiresApproved)).status, 409);
   assert.equal((await approve(expiresPending)).status, 409);

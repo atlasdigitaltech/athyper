@@ -10,13 +10,13 @@ class Repository extends KyselyBusinessPartnerProfileMatchRepository{
   override async resolutionByKey(_tenant:string,key:string){return this.resolutions.get(key)??null;}
   override async saveResolution(input:any){const row={id:"abababab-abab-4bab-8bab-abababababab",incoming_snapshot_id:input.preview.incomingSnapshotId,business_partner_id:input.preview.businessPartnerId,operating_organization_id:input.orgId,created_by:input.principalId,preview_fingerprint:input.preview.fingerprint,decisions:input.decisions,proposed_values:input.proposed};this.resolutions.set(input.key,row);return row;}
   matches=new Map<string,any>();acceptances=new Map<string,any>();events=new Map<string,any>();sequence=0;
-  override async source(_tenant:string,id:string){return id===snapshot?{projectionId:projection,publicationId:publication,publicationVersion:3,payloadHash:"a".repeat(64),payload:{recipient:{proposedNeonRole:"supplier"},partner:{accountCode:"SUPPLIER.ONE",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Ltd",countryCode:"MY",websiteUrl:"https://supplier.example/about",description:"source"}}}:null;}
+  override async source(_tenant:string,id:string):Promise<Awaited<ReturnType<KyselyBusinessPartnerProfileMatchRepository["source"]>>>{return id===snapshot?{projectionId:projection,publicationId:publication,publicationVersion:3,payloadHash:"a".repeat(64),payload:{recipient:{proposedNeonRole:"supplier"},partner:{accountCode:"SUPPLIER.ONE",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Ltd",countryCode:"MY",websiteUrl:"https://supplier.example/about",description:"source"}}}:null;}
   override async candidates(){return[{id:candidate,code:"SUPPLIER.ONE",name:"Supplier One",displayName:"Supplier One",legalName:"Supplier One Ltd",legalForm:"Sdn Bhd",countryCode:"MY",websiteUrl:"https://supplier.example",description:"local"},{id:"88888888-8888-4888-8888-888888888888",code:"OTHER",name:"Other"}];}
   override async matchByKey(_tenant:string,key:string){return[...this.matches.values()].find(row=>row.idempotency_key===key)??null;}
   override async match(_tenant:string,id:string){return this.matches.get(id)??null;}
-  override async createMatch(input:any){const id=`99999999-9999-4999-8999-${String(++this.sequence).padStart(12,"0")}`,row={id,projection_id:input.projectionId,snapshot_id:input.snapshotId,source_payload_hash:input.payloadHash,source_publication_version:input.publicationVersion,operating_organization_id:input.operatingOrganizationId,company_code_id:input.companyCodeId,candidate_business_partner_id:input.candidateId,algorithm_code:"mesh_business_partner_candidate_v1",algorithm_version:1,algorithm_hash:input.algorithmHash,ranked_candidates:input.ranked,field_diff:input.diff,diff_hash:input.diffHash,idempotency_key:input.key,created_at:"2026-08-28T00:00:00Z"};this.matches.set(id,row);return row;}
+  override async createMatch(input:any):Promise<Awaited<ReturnType<KyselyBusinessPartnerProfileMatchRepository["createMatch"]>>>{const id=`99999999-9999-4999-8999-${String(++this.sequence).padStart(12,"0")}`,row={id,projection_id:input.projectionId,snapshot_id:input.snapshotId,source_payload_hash:input.payloadHash,source_publication_version:input.publicationVersion,operating_organization_id:input.operatingOrganizationId,company_code_id:input.companyCodeId,candidate_business_partner_id:input.candidateId,algorithm_code:"mesh_business_partner_candidate_v1",algorithm_version:1,algorithm_hash:input.algorithmHash,ranked_candidates:input.ranked,field_diff:input.diff,diff_hash:input.diffHash,idempotency_key:input.key,created_at:"2026-08-28T00:00:00Z"};this.matches.set(id,row);return row;}
   override async acceptanceByKey(_tenant:string,key:string){const row=[...this.acceptances.values()].find(value=>value.request_idempotency_key===key);return row?{...row,entity_case_id:this.events.get(row.id)?.entity_case_id}:null;}
-  override async createAcceptance(input:any){const id=`aaaaaaaa-aaaa-4aaa-8aaa-${String(++this.sequence).padStart(12,"0")}`,row={id,match_id:input.matchId,snapshot_id:input.snapshotId,accepted_field_paths:input.paths,proposed_payload:input.payload,acceptance_hash:input.hash,request_idempotency_key:input.key};this.acceptances.set(id,row);return row;}
+  override async createAcceptance(input:any):Promise<Awaited<ReturnType<KyselyBusinessPartnerProfileMatchRepository["createAcceptance"]>>>{const id=`aaaaaaaa-aaaa-4aaa-8aaa-${String(++this.sequence).padStart(12,"0")}`,row={id,match_id:input.matchId,snapshot_id:input.snapshotId,accepted_field_paths:input.paths,proposed_payload:input.payload,acceptance_hash:input.hash,request_idempotency_key:input.key};this.acceptances.set(id,row);return row;}
   override async caseEvent(_tenant:string,id:string){return this.events.get(id)??null;}
   override async appendCaseEvent(input:any){this.events.set(input.acceptanceId,{entity_case_id:input.caseId});}
 }
@@ -84,4 +84,39 @@ describe("NEON MESH Business Partner match/request adapter",()=>{
   it("accepts only explicit fields and creates a source-neutral governed request",async()=>{const value=fixture();const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"new-match-001"});const result=await value.service.createRequest({context,matchId:match.id,acceptedFieldPaths:["partner.legalName","partner.countryCode"],idempotencyKey:"accept-key-001"});expect(result.requestId).toBe("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");expect(value.commands[0]).toMatchObject({kind:"new_partner",source:{kind:"mesh",projectionId:snapshot,payloadHash:"a".repeat(64)},requestedRole:"supplier",proposedPayload:{legalName:"Supplier One Ltd",registrationCountryCode:"MY"}});expect(value.commands[0].proposedPayload).not.toHaveProperty("description");});
   it("recovers after request creation by returning the durable saga link",async()=>{const value=fixture();const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"recovery-match"});const command={context,matchId:match.id,acceptedFieldPaths:["partner.legalName"],idempotencyKey:"recovery-accept"};await value.service.createRequest(command);expect(await value.service.createRequest(command)).toMatchObject({requestId:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",replayed:true});expect(value.commands).toHaveLength(1);});
   it("rejects unsupported fields, implicit legal name and negative authorization",async()=>{const value=fixture();const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"reject-match"});await expect(value.service.createRequest({context,matchId:match.id,acceptedFieldPaths:["partner.bankAccount"],idempotencyKey:"reject-accept"})).rejects.toMatchObject({code:"MESH_PROFILE_ACCEPTANCE_INVALID"});await expect(value.service.createRequest({context,matchId:match.id,acceptedFieldPaths:["partner.description"],idempotencyKey:"reject-implicit"})).rejects.toMatchObject({code:"MESH_PROFILE_LEGAL_NAME_REQUIRED"});await expect(fixture(false).service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"denied-match"})).rejects.toBeInstanceOf(NeonProfileMatchError);});
+});
+
+
+describe("profile match review regressions",()=>{
+  it("compares accountCode to the candidate code",async()=>{
+    const value=fixture();
+    const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,candidateBusinessPartnerId:candidate,idempotencyKey:"code-diff-review"});
+    expect(match.fieldDiff.find(field=>field.path==="partner.accountCode")).toMatchObject({sourceValue:"SUPPLIER.ONE",candidateValue:"SUPPLIER.ONE",equal:true});
+  });
+  it("does not award matching points for absent names",async()=>{
+    const value=fixture();
+    const source=await value.repository.source(tenant,snapshot);
+    vi.spyOn(value.repository,"source").mockResolvedValue({...source!,payload:{partner:{}}});
+    const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"empty-names-review"});
+    expect(match.rankedCandidates.every(candidate=>candidate.score===0&&candidate.reasons.length===0)).toBe(true);
+  });
+  it("rejects a concurrent match key collision instead of returning another scope",async()=>{
+    const value=fixture();
+    const command={context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"match-race-review"};
+    const first=await value.service.create(command);
+    vi.spyOn(value.repository,"matchByKey").mockResolvedValueOnce(null);
+    vi.spyOn(value.repository,"createMatch").mockResolvedValueOnce(null);
+    await expect(value.service.create({...command,candidateBusinessPartnerId:candidate})).rejects.toMatchObject({status:409,code:"MESH_PROFILE_MATCH_KEY_COLLISION"});
+    expect(value.repository.matches.size).toBe(1);
+    expect(first.candidateBusinessPartnerId).toBeUndefined();
+  });
+  it("rejects a concurrent acceptance collision before creating or linking a case",async()=>{
+    const value=fixture();
+    const match=await value.service.create({context,snapshotId:snapshot,operatingOrganizationId:org,idempotencyKey:"accept-race-match"});
+    vi.spyOn(value.repository,"acceptanceByKey").mockResolvedValueOnce(null).mockResolvedValueOnce({id:"other-acceptance",acceptance_hash:"different"});
+    vi.spyOn(value.repository,"createAcceptance").mockResolvedValueOnce(null);
+    await expect(value.service.createRequest({context,matchId:match.id,acceptedFieldPaths:["partner.legalName"],idempotencyKey:"accept-race-review"})).rejects.toMatchObject({status:409,code:"MESH_PROFILE_ACCEPTANCE_KEY_COLLISION"});
+    expect(value.commands).toHaveLength(0);
+    expect(value.repository.events.size).toBe(0);
+  });
 });

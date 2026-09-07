@@ -722,7 +722,7 @@ CREATE TABLE control.subscription_plan_usage_limit (
     CONSTRAINT subscription_plan_usage_limit_dimension_chk
         CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
     CONSTRAINT subscription_plan_usage_limit_value_chk
-        CHECK (limit_value IS NULL OR limit_value > 0),
+        CHECK (limit_value IS NULL OR limit_value >= 0),
     CONSTRAINT subscription_plan_usage_limit_warn_chk
         CHECK (warn_at_pct BETWEEN 1 AND 100),
     CONSTRAINT subscription_plan_usage_limit_status_pair_chk
@@ -732,6 +732,8 @@ CREATE TABLE control.subscription_plan_usage_limit (
 );
 
 CREATE TABLE control.tenant_usage_limit_override (
+    subscription_plan_id uuid,
+    version integer NOT NULL DEFAULT 1 CHECK (version > 0),
     id              uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id       uuid                NOT NULL,
     usage_metric_id uuid                NOT NULL,
@@ -753,7 +755,7 @@ CREATE TABLE control.tenant_usage_limit_override (
     CONSTRAINT tenant_usage_limit_override_tenant_id_uq UNIQUE (tenant_id, id),
     CONSTRAINT tenant_usage_limit_override_dimension_chk
         CHECK (dimension_code = '*' OR dimension_code ~ '^[a-z][a-z0-9_]{1,62}$'),
-    CONSTRAINT tenant_usage_limit_override_value_chk CHECK (limit_value > 0),
+    CONSTRAINT tenant_usage_limit_override_value_chk CHECK (limit_value >= 0),
     CONSTRAINT tenant_usage_limit_override_reason_chk CHECK (btrim(reason) <> ''),
     CONSTRAINT tenant_usage_limit_override_effective_range_chk
         CHECK (effective_until IS NULL OR effective_until > effective_from),
@@ -767,6 +769,8 @@ COMMENT ON TABLE control.usage_metric_catalog IS
   'Platform-controlled catalog of usage measurements. Admin authors the catalog and publishes it unchanged to Neon and Mesh.';
 COMMENT ON TABLE control.subscription_plan_usage_limit IS
   'Plane-local subscription-plan entitlement. dimension_code = ''*'' is the fallback for a dimensioned metric; limit_value NULL means unlimited.';
+COMMENT ON COLUMN control.tenant_usage_limit_override.subscription_plan_id IS
+    'Required for API-managed overrides. NULL preserves legacy exceptions whose original plan is unknown; they remain enforced but cannot be edited through this API.';
 COMMENT ON TABLE control.tenant_usage_limit_override IS
   'Approved, time-bounded commercial exception to a plan usage limit. It cannot express unlimited access; assign an appropriate subscription plan instead.';
 
@@ -782,6 +786,9 @@ CREATE TABLE control.feature_flag_catalog (
     flag_kind         text                NOT NULL DEFAULT 'release_gate',
     default_enabled   boolean             NOT NULL DEFAULT false,
     rollout_pct       smallint,
+    cohort_strategy   text                NOT NULL DEFAULT 'principal_fnv1a_v2'
+        CONSTRAINT feature_flag_catalog_cohort_strategy_chk CHECK (cohort_strategy IN ('tenant_sha256_v1', 'principal_fnv1a_v2')),
+    cohort_revision   integer             NOT NULL DEFAULT 1 CHECK (cohort_revision > 0),
     effective_from    timestamptz         NOT NULL DEFAULT now(),
     effective_until   timestamptz,
     status            shared.ref_status_d NOT NULL DEFAULT 'active',
@@ -815,6 +822,7 @@ CREATE TABLE control.feature_flag_catalog (
 );
 
 CREATE TABLE control.feature_flag_override (
+    version integer NOT NULL DEFAULT 1 CHECK(version>0),
     id                uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id         uuid                NOT NULL,
     feature_flag_id   uuid                NOT NULL,
@@ -843,6 +851,7 @@ CREATE TABLE control.feature_flag_override (
 );
 
 CREATE TABLE control.parameter_definition (
+    revision            integer             NOT NULL DEFAULT 1 CHECK (revision > 0),
     id                  uuid                NOT NULL DEFAULT shared.uuidv7(),
     code                text                NOT NULL,
     name                text                NOT NULL,
@@ -898,6 +907,7 @@ CREATE TABLE control.parameter_definition (
 );
 
 CREATE TABLE control.tenant_parameter_value (
+    version                 integer             NOT NULL DEFAULT 1 CHECK (version > 0),
     id                      uuid                NOT NULL DEFAULT shared.uuidv7(),
     tenant_id               uuid                NOT NULL,
     parameter_definition_id uuid                NOT NULL,
@@ -1488,3 +1498,35 @@ COMMENT ON TABLE control.ui_locale_catalog IS
     'Plane-local qualification and review evidence for each platform UI catalog; locale identity is owned by shared.locale.';
 COMMENT ON TABLE master.tenant_locale_activation IS
     'Tenant activation, default, and emergency fallback selection for plane-qualified UI catalogs.';
+
+-- Tenant module exceptions never mutate the shared subscription plan.
+CREATE TABLE control.tenant_module_entitlement_override (
+    id uuid NOT NULL DEFAULT shared.uuidv7(),
+    tenant_id uuid NOT NULL,
+    subscription_plan_id uuid NOT NULL,
+    module_id uuid NOT NULL,
+    version integer NOT NULL DEFAULT 1 CHECK (version > 0),
+    reason text NOT NULL CHECK (btrim(reason) <> ''),
+    effective_from timestamptz NOT NULL,
+    effective_until timestamptz,
+    status shared.ref_status_d NOT NULL DEFAULT 'active',
+    created_at timestamptz NOT NULL DEFAULT now(),
+    created_by uuid NOT NULL,
+    updated_at timestamptz,
+    updated_by uuid,
+    status_changed_at timestamptz,
+    status_changed_by uuid,
+    CONSTRAINT tenant_module_entitlement_override_pkey PRIMARY KEY (id),
+    CONSTRAINT tenant_module_entitlement_override_tenant_uq UNIQUE (tenant_id, id),
+    CONSTRAINT tenant_module_entitlement_override_range_chk
+        CHECK (effective_until IS NULL OR effective_until > effective_from),
+    CONSTRAINT tenant_module_entitlement_override_audit_chk
+        CHECK ((updated_at IS NULL) = (updated_by IS NULL)),
+    CONSTRAINT tenant_module_entitlement_override_status_chk
+        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL))
+);
+
+COMMENT ON COLUMN control.subscription_plan_usage_limit.limit_value IS
+    'Nonnegative count/bytes quota. Zero permits no capacity; NULL means unlimited.';
+COMMENT ON COLUMN control.tenant_usage_limit_override.limit_value IS
+    'Nonnegative count/bytes exception. Zero permits no capacity; unlimited is available only through a plan NULL limit.';

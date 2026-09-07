@@ -313,6 +313,8 @@ test("runtime communication providers preserve overrides and support secret file
   assert.doesNotMatch(runtime, /export SMTP_HOST=mailtrap/u);
   for (const variable of [
     "SMTP_USER", "SMTP_PASS",
+    "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_FROM_NUMBER", "TWILIO_MESSAGING_SERVICE_SID",
+    "META_WHATSAPP_API_VERSION", "META_WHATSAPP_PHONE_NUMBER_ID", "META_WHATSAPP_ACCESS_TOKEN",
     "PUSH_FCM_PROJECT_ID", "PUSH_FCM_CLIENT_EMAIL", "PUSH_FCM_PRIVATE_KEY",
     "VAPID_SUBJECT", "VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY",
   ]) {
@@ -335,4 +337,14 @@ test("runtime communication providers preserve overrides and support secret file
   ]);
   assert.equal(providers.services.worker.environment.VAPID_PRIVATE_KEY_FILE, "/run/secrets/vapid-private-key");
   assert.match(runtime, /ATHYPER_ENV="\$\{ATHYPER_ENV:-local\}"/u);
+});
+
+ test("notification capture is an explicit local overlay for every runtime", () => {
+  const overlay = read("deploy/compose/instance/compose.notification-capture.yaml");
+  for (const service of ["api", "worker", "scheduler"]) {
+    assert.equal(overlay.services[service].environment.NOTIFICATION_CAPTURE, "true");
+    assert.equal(overlay.services[service].environment.ATHYPER_ENV, "local");
+    assert.equal(overlay.services[service].environment.SMTP_HOST, "mailtrap");
+    assert.equal(overlay.services[service].environment.EMAIL_PROVIDER, "smtp");
+  }
 });

@@ -25,6 +25,12 @@ export function normalizeContactValue(channel: ContactChannel, raw: string): str
 }
 
 export function normalizeAddress(input: AddressValue): { readonly address: AddressValue; readonly hash: string } {
+  if (!input || typeof input !== "object" || Array.isArray(input)) throw new MasterDataError(400, "ADDRESS_INVALID", "Address must be an object");
+  for (const key of ["latitude", "longitude"] as const) {
+    if (input[key] !== undefined && (typeof input[key] !== "number" || !Number.isFinite(input[key]))) {
+      throw new MasterDataError(400, "ADDRESS_COORDINATES_INVALID", "Coordinates must be finite numbers");
+    }
+  }
   const address: AddressValue = compact({
     addressType: normalizeText(input.addressType)?.toLowerCase(),
     line1: normalizeText(input.line1), line2: normalizeText(input.line2), line3: normalizeText(input.line3),
@@ -53,6 +59,6 @@ function normalizeCountry(value?: string): string | undefined {
   if (country && !/^[A-Z]{2}$/u.test(country)) throw new MasterDataError(400, "COUNTRY_CODE_INVALID", "Country code must be ISO alpha-2");
   return country;
 }
-function normalizeText(value?: string): string | undefined { const normalized = value?.trim().replace(/\s+/gu, " "); return normalized || undefined; }
+function normalizeText(value?: string): string | undefined { if (value !== undefined && typeof value !== "string") throw new MasterDataError(400, "INVALID_MASTER_DATA_REQUEST", "String required"); const normalized = value?.trim().replace(/\s+/gu, " "); return normalized || undefined; }
 function compact<T extends object>(value: T): T { return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined)) as T; }
 function invalid(kind: string): never { throw new MasterDataError(400, "CONTACT_VALUE_INVALID", `Invalid ${kind} contact value`); }

@@ -18,12 +18,20 @@
     "@athyper/server-foundation": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "express": "^5.0.0",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/server-contract-integration": "workspace:*"
   },
   "devDependencies": {
+    "@athyper/server-adapter-experience-postgres": "workspace:*",
+    "@athyper/server-platform-entitlements": "workspace:*",
+    "@athyper/server-platform-experience": "workspace:*",
+    "@athyper/server-platform-iam": "workspace:*",
     "@types/express": "^5.0.1",
     "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.20.0",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.4"
+    "vitest": "^4.1.4",
+    "@athyper/server-service-finance": "workspace:*"
   }
 }

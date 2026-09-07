@@ -155,6 +155,7 @@
     "test:service-postgres:local": "pnpm --filter @athyper/server-test-utils test:postgres:local",
     "routes:server-manifest": "node tooling/scripts/policy/generate-server-route-manifest.mjs --write",
     "routes:server-manifest:check": "node tooling/scripts/policy/generate-server-route-manifest.mjs",
+    "routes:server-manifest:refresh-legacy": "node tooling/scripts/policy/generate-server-route-manifest.mjs --refresh-legacy-baseline",
     "test:server-route-manifest": "node --test tooling/scripts/policy/generate-server-route-manifest.test.mjs",
     "policy:server-docker-workspaces": "node tooling/scripts/policy/verify-server-docker-workspaces.mjs",
     "policy:docker-toolchain": "node tooling/scripts/policy/verify-docker-toolchain.mjs",

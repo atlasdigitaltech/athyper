@@ -106,6 +106,7 @@ export interface ExperienceCatalogRecord {
 }
 
 export interface ExperienceFeatureRecord {
+  readonly cohortStrategy: "tenant_sha256_v1" | "principal_fnv1a_v2";
   readonly id: string;
   readonly code: string;
   readonly moduleId?: string;
@@ -118,6 +119,9 @@ export interface ExperienceFeatureRecord {
 }
 
 export interface ExperiencePlaneRepository {
+  readFeatureRevision?(context: VerifiedRequestContext, at: Date): Promise<string>;
+  /** Read before cache lookup; changes across commits and effective-date boundaries. */
+  readEntitlementRevision?(context: VerifiedRequestContext, at: Date): Promise<string>;
   readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined>;
   readProfile(context: VerifiedRequestContext): Promise<ExperienceProfileRecord>;
   readCatalog(context: VerifiedRequestContext, subscriptionPlanId: string): Promise<ExperienceCatalogRecord | undefined>;

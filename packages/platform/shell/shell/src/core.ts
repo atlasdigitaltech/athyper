@@ -232,6 +232,11 @@ export function deriveShellNavigation(
   });
 }
 
+/** Shared activity pages use the authenticated shell and server-scoped data. */
+export function isShellActivityRoute(pathname: string): boolean {
+  return pathname === "/inbox" || pathname === "/notifications";
+}
+
 export function canAccessRoute(
   navigation: DerivedShellNavigation,
   pathname: string,

@@ -11,13 +11,13 @@ class TestStore implements SessionStore {
   async health() { this.check(); }
   async create(id: string, session: StoredSession) { this.check(); this.sessions.set(id, session); }
   async read(_binding: SessionBinding, id: string) { this.check(); return this.sessions.get(id); }
-  async rotate(_binding: SessionBinding, oldId: string | undefined, newId: string, session: StoredSession) { this.check(); if (oldId) this.sessions.delete(oldId); this.sessions.set(newId, session); }
+  async rotate(_binding: SessionBinding, oldId: string, newId: string, session: StoredSession, expectedSessionVersion: number) { this.check(); if (this.locks.has(oldId) || this.sessions.get(oldId)?.sessionVersion !== expectedSessionVersion || this.sessions.has(newId)) return false; this.sessions.delete(oldId); this.sessions.set(newId, session); return true; }
   async revoke(_binding: SessionBinding, id: string) { this.check(); return this.sessions.delete(id); }
   async revokePrincipal(_binding: SessionBinding, principalId: string) { this.check(); let count = 0; for (const [key, value] of this.sessions) if (value.principalId === principalId) { this.sessions.delete(key); count++; } return count; }
   async revokeProviderSession(_binding: SessionBinding, providerSessionId: string) { this.check(); let count = 0; for (const [key, value] of this.sessions) if (value.providerSessionId === providerSessionId) { this.sessions.delete(key); count++; } return count; }
   async putOneTimeState(_binding: SessionBinding, key: string, value: string) { this.check(); this.states.set(key, value); this.lastState = value; }
   async consumeOneTimeState(_binding: SessionBinding, key: string) { this.check(); const value = this.states.get(key); this.states.delete(key); return value; }
-  async claimLogoutToken(_binding: SessionBinding, key: string) { this.check(); if (this.states.has(`logout:${key}`)) return false; this.states.set(`logout:${key}`, "1"); return true; }
+  async completeBackchannelLogout(_binding: SessionBinding, providerSessionId: string, key: string) { this.check(); if (this.states.get(`logout:${key}`) === "completed") return { replayed: true, revokedSessions: 0 }; let revokedSessions = 0; for (const [id, session] of this.sessions) if (session.providerSessionId === providerSessionId) { this.sessions.delete(id); revokedSessions++; } this.states.set(`logout:${key}`, "completed"); return { replayed: false, revokedSessions }; }
   async touch(_binding: SessionBinding, id: string, idleTtlMs: number) { this.check(); const current = this.sessions.get(id); if (!current) return undefined; const touched = { ...current, lastSeenAt: Date.now(), idleExpiresAt: Math.min(Date.now() + idleTtlMs, current.absoluteExpiresAt) }; this.sessions.set(id, touched); return touched; }
   async acquireRefreshLock(_binding: SessionBinding, id: string, owner: string) { this.check(); if (this.locks.has(id)) return false; this.locks.set(id, owner); return true; }
   async releaseRefreshLock(_binding: SessionBinding, id: string, owner: string) { this.check(); if (this.locks.get(id) === owner) this.locks.delete(id); }
@@ -304,5 +304,95 @@ it("restores the exact deep link from server-side OAuth state in all three plane
     assert.equal(callback.status, 303);
     assert.equal(callback.headers.get("location"), destination);
     assert.equal(value.store.states.size, 0, "OAuth state is consumed once");
+  }
+});
+
+it("rejects a context rotation lost to revocation without issuing session cookies", async () => {
+  const value = await authenticate();
+  value.store.rotate = async (_binding, oldId) => { value.store.sessions.delete(oldId); return false; };
+  const response = await value.handlers.context(new Request(`${value.origin}/api/auth/session/context`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe", "content-type": "application/json" }, body: JSON.stringify({ tenantId: "tenant-2" }) }));
+  assert.equal(response.status, 409);
+  assert.equal(response.headers.has("set-cookie"), false);
+  assert.equal(value.store.sessions.size, 0);
+});
+
+it("rejects a step-up rotation lost to revocation without issuing session cookies", async () => {
+  const value = await authenticate(setup({ authenticationMethods: ["otp"] }));
+  const started = await value.handlers.stepUpStart(new Request(`${value.origin}/api/auth/step-up/start`, { method: "POST", headers: { cookie: value.cookie, origin: value.origin, "x-csrf-token": "csrf-safe" } }));
+  const state = new URL(started.headers.get("location")!).searchParams.get("state")!;
+  value.store.rotate = async (_binding, oldId) => { value.store.sessions.delete(oldId); return false; };
+  const response = await value.handlers.callback(new Request(`${value.origin}/api/auth/callback?code=step-up&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; ${value.cookie}` } }));
+  assert.equal(response.status, 409);
+  assert.ok(response.headers.getSetCookie().every((cookie) => cookie.startsWith("__Host-athyper-oauth=")));
+  assert.equal(value.store.sessions.size, 0);
+});
+
+it("fresh login succeeds with an expired predecessor cookie", async () => {
+  const value = setup();
+  const started = await value.handlers.login(new Request(`${value.origin}/api/auth/login`));
+  const state = new URL(started.headers.get("location")!).searchParams.get("state")!;
+  const response = await value.handlers.callback(new Request(`${value.origin}/api/auth/callback?code=login&state=${state}`, { headers: { cookie: `${oauthCookie(started)}; __Host-athyper-session=expired` } }));
+  assert.equal(response.status, 303);
+  assert.equal(value.store.sessions.size, 1);
+});
+
+it("retries backchannel logout after storage failure without consuming the delivery", async () => {
+  const value = await authenticate();
+  const request = () => new Request(`${value.origin}/api/auth/backchannel-logout`, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" }, body: "logout_token=valid" });
+  value.store.unavailable = true;
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 503);
+  value.store.unavailable = false;
+  assert.equal(value.store.sessions.size, 1);
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 204);
+  assert.equal(value.store.sessions.size, 0);
+  assert.equal((await value.handlers.backchannelLogout(request())).status, 204);
+});
+
+for (const plane of ["neon", "mesh", "studio"] as const) {
+  it(`${plane}: malformed context bodies return 400 without changing the session`, async () => {
+    const origin = `https://${plane}.example`;
+    const value = await authenticate(setup({}, 0, [{ tenantId: "tenant-1", tenantCode: "ONE", tenantName: "One", principalId: "principal-1", authEpoch: 1 }], { plane, clientId: `${plane}-web`, authorizedRole: "AUTHORIZED", origin }));
+    const before = [...value.store.sessions.entries()];
+    const headers = { cookie: value.cookie, origin, "x-csrf-token": "csrf-safe", "content-type": "application/json" };
+    const request = (body: string, suppliedHeaders = headers) => new Request(`${origin}/api/auth/session/context`, { method: "POST", headers: suppliedHeaders, body });
+    for (const body of ["", "{", "null", "[]", '"tenant-1"', "42", "true", "{}", '{"tenantId":null}', '{"tenantId":[]}', '{"tenantId":{}}', '{"tenantId":42}', '{"tenantId":false}', '{"tenantId":""}', '{"tenantId":"  \\t\\n"}']) {
+      const response = await value.handlers.context(request(body));
+      assert.equal(response.status, 400, body);
+      assert.match(response.headers.get("content-type")!, /application\/problem\+json/);
+      const problem = await response.json() as { code: string; status: number };
+      assert.equal(problem.code, "auth.invalid_request");
+      assert.equal(problem.status, 400);
+      assert.equal(response.headers.has("set-cookie"), false);
+      assert.deepEqual([...value.store.sessions.entries()], before);
+    }
+    // Authentication and CSRF checks still precede request parsing.
+    assert.equal((await value.handlers.context(request("null", { ...headers, cookie: "" }))).status, 401);
+    assert.equal((await value.handlers.context(request("null", { ...headers, "x-csrf-token": "wrong" }))).status, 403);
+    assert.equal((await value.handlers.context(request('{"tenantId":"not-a-member"}'))).status, 403);
+    assert.deepEqual([...value.store.sessions.entries()], before);
+    const valid = await value.handlers.context(request('{"tenantId":"tenant-1"}'));
+    assert.equal(valid.status, 200);
+    assert.equal((await valid.json() as { tenantId: string }).tenantId, "tenant-1");
+    assert.ok(valid.headers.has("set-cookie"));
+  });
+}
+
+it("rejects malformed logout bodies as client errors without clearing cookies", async () => {
+  const value = setup();
+  for (const endpoint of ["logout", "backchannelLogout"] as const) {
+    for (const body of ["null", "[]", "1", '"text"', "{"]) {
+      const response = await value.handlers[endpoint](new Request(`${value.origin}/api/auth/logout`, {
+        method: "POST", headers: { "content-type": "application/json", origin: value.origin, "sec-fetch-site": "same-origin" }, body,
+      }));
+      assert.equal(response.status, 400, `${endpoint}: ${body}`);
+      assert.equal((await response.json()).code, "auth.invalid_request");
+      assert.deepEqual(response.headers.getSetCookie(), []);
+    }
+  }
+  for (const logout_token of [null, 123, {}, [], "", " "]) {
+    const response = await value.handlers.backchannelLogout(new Request(`${value.origin}/api/auth/backchannel-logout`, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ logout_token }),
+    }));
+    assert.equal(response.status, 400);
   }
 });

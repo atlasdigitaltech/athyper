@@ -1168,6 +1168,7 @@ function registerIdentityContextDiscovery(
       method: "get",
       path: "/api/iam/contexts",
       operationId: "iam.listIdentityContexts",
+      authenticated: true,
       summary:
         "List active exact-plane tenant memberships for the verified identity",
       tags: ["IAM"],

@@ -1,3 +1,5 @@
+import { AtlasServiceError } from "./errors.js";
+import { hasPermission } from "./context.js";
 import { createHash, randomUUID } from "node:crypto";
 import type {
   AtlasKnowledgeChunkInput,
@@ -141,11 +143,13 @@ export class AtlasKnowledgeService {
   async retract(input: {
     context: VerifiedRequestContext;
     sourceId: string;
+    sourceKind?: string;
     delete?: boolean;
   }): Promise<void> {
     const revisions = await this.options.repository.retract({
       context: input.context,
       sourceId: input.sourceId,
+      ...(input.sourceKind === undefined ? {} : { sourceKind: input.sourceKind }),
       delete: input.delete === true,
       at: this.now(),
     });
@@ -169,7 +173,7 @@ export class AtlasKnowledgeService {
     });
     return candidates
       .filter((item) =>
-        input.context.permissions.allowed.includes(item.permissionCode),
+        hasPermission(input.context, item.permissionCode),
       )
       .map((item) => ({ citation: item.citation, score: item.score }));
   }
@@ -308,17 +312,22 @@ export class KyselyAtlasKnowledgeRepository implements AtlasKnowledgeRepository 
   retract(input: {
     context: VerifiedRequestContext;
     sourceId: string;
+    sourceKind?: string;
     delete: boolean;
     at: string;
   }): Promise<readonly string[]> {
     return this.tx(input.context, async (tx) => {
+      const sources = await sql<{ id: string }>`SELECT id FROM ai.atlas_knowledge_source WHERE tenant_id=${input.context.tenantId}::uuid AND source_id=${input.sourceId} AND (${input.sourceKind ?? null}::text IS NULL OR source_kind=${input.sourceKind ?? null}) FOR UPDATE`.execute(tx);
+      if (sources.rows.length > 1) throw new AtlasServiceError("VERSION_CONFLICT", "Knowledge sourceId is ambiguous; provide sourceKind.");
+      const sourceId = sources.rows[0]?.id;
+      if (!sourceId) return [];
       const ids = await sql<{
         id: string;
-      }>`SELECT r.id FROM ai.atlas_knowledge_revision r JOIN ai.atlas_knowledge_source s ON s.id=r.source_id AND s.tenant_id=r.tenant_id WHERE s.tenant_id=${input.context.tenantId}::uuid AND s.source_id=${input.sourceId} AND r.status<>'deleted'`.execute(
+      }>`SELECT r.id FROM ai.atlas_knowledge_revision r WHERE r.tenant_id=${input.context.tenantId}::uuid AND r.source_id=${sourceId}::uuid`.execute(
         tx,
       );
       const status = input.delete ? "deleted" : "disabled";
-      await sql`UPDATE ai.atlas_knowledge_source SET status=${status},updated_at=${input.at}::timestamptz,updated_by=${input.context.principalId}::uuid WHERE tenant_id=${input.context.tenantId}::uuid AND source_id=${input.sourceId}`.execute(
+      await sql`UPDATE ai.atlas_knowledge_source SET status=${status},updated_at=${input.at}::timestamptz,updated_by=${input.context.principalId}::uuid WHERE tenant_id=${input.context.tenantId}::uuid AND id=${sourceId}::uuid`.execute(
         tx,
       );
       await sql`UPDATE ai.atlas_knowledge_revision SET status='deleted' WHERE tenant_id=${input.context.tenantId}::uuid AND id=ANY(${sql`ARRAY[${sql.join(ids.rows.map((row) => sql`${row.id}::uuid`))}]::uuid[]`})`.execute(
