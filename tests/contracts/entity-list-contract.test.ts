@@ -158,3 +158,17 @@ describe("entity list browser contract", () => {
     assert.equal(describeFilter({ field: "status", operator: "in", value: ["active", "draft"] }, descriptor), "Status is any of active, draft");
   });
 });
+
+it("accepts complete country catalogs and retains the 500-choice bound", () => {
+  const payload = (count: number) => ({
+    ...descriptorPayload,
+    fields: descriptorPayload.fields.map((field, index) => index === 0 ? {
+      ...field,
+      filterOptions: Array.from({ length: count }, (_, i) => ({ value: `country_${i}`, label: `Country ${i}` })),
+    } : field),
+  });
+  for (const count of [247, 500]) {
+    assert.equal(parseEntityListDescriptor(payload(count)).fields[0]?.filterOptions?.length, count);
+  }
+  assert.throws(() => parseEntityListDescriptor(payload(501)), /exceeds 500 choices/);
+});

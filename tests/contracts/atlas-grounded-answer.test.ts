@@ -74,3 +74,16 @@ test("Atlas history renders in chronological sequence without mutating newest-fi
   assert.deepEqual(newestFirst.map(item=>item.messageId),["answer","question"]);
   assert.equal(page.nextCursor,"older-page");
 });
+
+test("Atlas preserves whitespace token chunks instead of failing a successful answer", async () => {
+  const parts = ["Partner", " ", "summary:", "\n\n", "", "Active", "\t", "record", "\n"];
+  const client = { async request(operation: { path: unknown }) {
+    if (operation.path === "/api/atlas/admission") return {schema:"atlas-plane-admission/1",chatAllowed:true,persistenceAllowed:true,allowedPublicModelIds:["atlas-local"],allowedDataClasses:["internal"],policyRevision:"p1"};
+    if (operation.path === "/api/atlas/threads") return {threadId:"thread-1"};
+    return stream([event("run.started",{publicModelId:"atlas-local"}), ...parts.map(text=>event("message.delta",{text})), event("run.completed",{reason:"stop"})]);
+  }} as unknown as HttpClient;
+  const deltas: string[] = [];
+  const answer = await createAtlasAnswerClient({client}).answer("Summarize the partner", {onProgress(progress){if(progress.kind==="text")deltas.push(progress.text);}});
+  assert.equal(answer.text, parts.join(""));
+  assert.deepEqual(deltas, parts);
+});

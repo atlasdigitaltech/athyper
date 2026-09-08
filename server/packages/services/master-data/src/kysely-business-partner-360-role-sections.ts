@@ -1,3 +1,4 @@
+import { businessPartnerDisplayReferences } from "./business-partner-display-references.js";
 import { sql, type Transaction } from "kysely";
 import type {
   BusinessPartner360CustomerCompanyData,
@@ -18,9 +19,8 @@ export async function readBusinessPartner360RoleCompanySection(
   input: Input,
   tx: Tx,
 ): Promise<BusinessPartner360RoleCompanyRead> {
-  if (input.sectionCode === "roles-scope") return roles(input, tx);
-  if (input.sectionCode === "supplier-company") return supplier(input, tx);
-  return customer(input, tx);
+  const result = input.sectionCode === "roles-scope" ? await roles(input, tx) : input.sectionCode === "supplier-company" ? await supplier(input, tx) : await customer(input, tx);
+  return {...result, data: await businessPartnerDisplayReferences(result.data, input.tenantId, tx)};
 }
 async function roles(
   input: Input,

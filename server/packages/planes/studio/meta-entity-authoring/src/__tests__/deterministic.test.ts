@@ -48,3 +48,19 @@ describe("deterministic meta entity pipeline", () => {
     expect(compileGraph(authored).descriptor).toHaveProperty("listPresentation");
   });
 });
+
+
+describe("published record presentation", () => {
+  const recordGraph = (): MetaEntityGraph => ({ ...graph(), surfaces: [{ surfaceKey: "detail", surfaceKind: "detail", title: "Invoice", layoutConfig: { recordPresentation: { schemaVersion: 1, titleField: "id", contextFields: ["total"], sections: [{ key: "overview", label: "Overview", fields: ["id", "total"] }] } } }] });
+  it("includes record field bindings in the deterministic artifact", () => {
+    const result = compileGraph(recordGraph());
+    expect(result.descriptor["recordPresentation"]).toMatchObject({ titleField: "id", contextFields: ["total"] });
+    expect(compileGraph(recordGraph()).descriptorHash).toBe(result.descriptorHash);
+  });
+  it("rejects record bindings to unknown fields or operations", () => {
+    const source = recordGraph();
+    const invalid = (presentation: unknown) => ({ ...source, surfaces: [{ ...source.surfaces![0]!, layoutConfig: { recordPresentation: presentation } }] });
+    expect(() => compileGraph(invalid({ schemaVersion: 1, titleField: "missing" }))).toThrow(/Unknown record presentation field/);
+    expect(() => compileGraph(invalid({ schemaVersion: 1, titleField: "id", actions: [{ key: "destroy", label: "Destroy", operationKey: "destroy" }] }))).toThrow(/Unknown record presentation operation/);
+  });
+});

@@ -12,8 +12,28 @@ import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata"
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { PlaneTransactionCoordinator } from "@athyper/server-foundation/transaction";
 
+export type StandardViewRelationshipConstraint = Readonly<{
+ readonly kind: "workflow.actionable_documents.v1";
+ readonly principalId: string;
+ readonly sourceEntityCode: string;
+ readonly workflowKeys: readonly string[];
+ readonly workTypeCodes: readonly string[];
+ readonly link: "workflow_request" | "work_item_revision";
+}> | Readonly<{
+ readonly kind: "document.case_requests.v1";
+ readonly principalId?: string;
+ readonly operationCodes?: readonly string[];
+ readonly role?: {readonly field: "requestedRole" | "roleCode"; readonly values: readonly string[]};
+}>;
+
 export type RecordCollectionScopeConstraint = Readonly<{
-  readonly kind: "neon.business_partner.operating_organization.v1";
+  readonly kind: "neon.business_partner.directory.v1";
+  readonly partnerRole?: "supplier" | "customer";
+  readonly eligibleIds?: readonly string[];
+  readonly organizationIds?: readonly string[];
+  readonly companyIds?: readonly string[];
+}> | Readonly<{
+  readonly kind: "neon.business_partner.operating_organization.v1" | "platform.document_relationship.v1";
   readonly operatingOrganizationId: string;
 }> | Readonly<{
   readonly kind: "mesh.network_relationship.actor_account.v1";
@@ -97,6 +117,7 @@ export interface RecordRepositoryListInput {
   readonly cursorScope: string;
   /** Trusted constraints emitted only by a registered server-side scope resolver. */
   readonly collectionScope: readonly RecordCollectionScopeConstraint[];
+  readonly viewRelationships?: readonly StandardViewRelationshipConstraint[];
 }
 
 export interface RecordRepository<Transaction = unknown> {

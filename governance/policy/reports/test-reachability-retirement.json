@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
-  "activeWorkspacePackageCount": 175,
+  "activeWorkspacePackageCount": 176,
   "rootTests": [
     {
       "path": "deploy/compose/tests/structure.test.mjs",
@@ -204,6 +204,10 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/entity-breadcrumbs.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/entity-list-columns.test.ts",
       "runner": "test:foundation"
     },
@@ -213,6 +217,18 @@
     },
     {
       "path": "tests/foundation/entity-list-scope-control.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-overview-favourites.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-overview.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-record-header.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -353,6 +369,10 @@
     },
     {
       "path": "tooling/scripts/release/promote-image-set.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
       "runner": "test:operations"
     },
     {

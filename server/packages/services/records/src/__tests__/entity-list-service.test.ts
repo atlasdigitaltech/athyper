@@ -5,7 +5,7 @@ import type { EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-co
 import type { RecordCollectionScopeResolver } from "@athyper/server-contract-records";
 import { createEntityListService } from "../entity-list-service.js";
 import { createInMemoryRecordPersistence } from "../in-memory-record-repository.js";
-import { createRecordListExecutor } from "../query-service.js";
+import { createRecordListExecutor, createRecordQueryService } from "../query-service.js";
 
 const descriptor: EntityRuntimeDescriptor = {
   schema: "athyper.entity-runtime-descriptor/1.0", entityCode: "business_partner", planeKey: "neon", releaseId: "release-7", releaseNo: 7, contractHash: "a".repeat(64), compiledHash: "b".repeat(64),
@@ -183,3 +183,62 @@ function createTestListService(options: {
     ...(options.collectionScopes ? { collectionScopes: options.collectionScopes } : {}),
   });
 }
+
+it("filters record header bindings and checks record identity before offering edit", async () => {
+  const calls: unknown[] = [];
+  const recordDescriptor: EntityRuntimeDescriptor = { ...descriptor,
+    operations: { ...descriptor.operations, patch: { code: "patch", permissionCode: "partner.patch" } },
+    recordPresentation: { schemaVersion: 1, titleField: "name", codeField: "tax_id", subtitleFields: ["tax_id"], contextFields: ["tax_id"], badges: [], sections: [{ key: "overview", label: "Overview", fields: ["name", "tax_id"], placement: "direct" }], actions: [{ key: "edit", label: "Edit partner", operationKey: "patch", placement: "primary" }] },
+  };
+  const get = vi.fn(async () => ({ data: { partner_uuid: "partner-1", name: "Acme" } }));
+  const lists = createEntityListService({ metadata: { getEntityDescriptor: async () => recordDescriptor }, listExecutor: {} as never, queries: { get } as never,
+    authorizer: { authorize: async input => { calls.push(input); return input.permissionCode === "partner.tax.read" ? { allowed: false, reason: "missing_permission" } : { allowed: true }; } },
+  });
+  const detail = await lists.detailDescriptor(context, "business_partner", "partner-1");
+  expect(get).toHaveBeenCalledWith({ context, entityCode: "business_partner", recordId: "partner-1" });
+  expect(calls).toContainEqual(expect.objectContaining({ permissionCode: "partner.patch", resource: expect.objectContaining({ recordId: "partner-1" }) }));
+  expect(detail.presentation).toMatchObject({ titleField: "name", subtitleFields: [], contextFields: [], sections: [{ fields: ["name"] }] });
+  expect(detail.presentation?.codeField).toBeUndefined();
+  expect(detail.presentation?.actions[0]?.label).toBe("Edit partner");
+});
+
+it("resolves country choices only for authorized fields and removes text operators", async () => {
+  const country = { key: "country", storagePath: "country_code", type: "string" as const, required: false, writableOn: [] as const, filterable: true, list: { semanticRole: "country_code" } };
+  const published = { ...descriptor, fields: [...descriptor.fields, country, { ...country, key: "private_country", readPermissionCode: "partner.tax.read" }], listPresentation: { filterPresentation: { quickFields: [{ field: "country", defaultOperator: "contains" as const }] } } };
+  const filterChoices = vi.fn(async (_context: VerifiedRequestContext, fields: readonly { key: string }[]) => {
+    expect(fields.map(field => field.key)).not.toContain("private_country");
+    return { country: [{ value: "MY", label: "Malaysia" }, { value: "SG", label: "Singapore" }] };
+  });
+  const persistence = createInMemoryRecordPersistence();
+  const lists = createEntityListService({ metadata: { getEntityDescriptor: async () => published }, authorizer: allowReadOnly(), filterChoices, listExecutor: createRecordListExecutor({ metadata: { getEntityDescriptor: async () => published }, authorizer: allowReadOnly(), repository: persistence.repository, transactions: persistence.transactions }) });
+  await lists.descriptor(context, descriptor.entityCode);
+  expect(filterChoices).not.toHaveBeenCalled();
+  const compiled = parseEntityListDescriptor(await lists.descriptor(context, descriptor.entityCode, undefined, "country"));
+  expect(compiled.fields.find(field => field.key === "country")).toMatchObject({ valueKind: "reference", filterOptions: [{ value: "MY", label: "Malaysia" }, { value: "SG", label: "Singapore" }], filterOperators: ["eq", "ne", "in", "is_null", "is_not_null"] });
+  expect(compiled.surface.filterPresentation.quickFields[0]?.defaultOperator).toBe("eq");
+  expect(filterChoices).toHaveBeenCalledOnce();
+});
+
+it("direct record reads enforce directory membership and retain record authorization",async()=>{
+ const execute=vi.fn(async()=>({result:{data:[]}})),get=vi.fn();
+ const options={metadata:{getEntityDescriptor:async()=>({...descriptor,directoryScope:{schemaVersion:1 as const,mode:"organization" as const}})},authorizer:allowReadOnly(),repository:{get} as never,transactions:{} as never};
+ const service=createRecordQueryService(options,{execute} as never);
+ await expect(service.get({context,entityCode:descriptor.entityCode,recordId:"partner-1"})).resolves.toEqual({data:null});
+ expect(execute).toHaveBeenCalledWith(expect.objectContaining({recordIds:["partner-1"],limit:1}));expect(get).not.toHaveBeenCalled();
+ execute.mockClear();const denied=createRecordQueryService({...options,authorizer:{authorize:async()=>({allowed:false as const,reason:"denied"})}},{execute} as never);
+ await expect(denied.get({context,entityCode:descriptor.entityCode,recordId:"partner-1"})).rejects.toMatchObject({statusCode:403});expect(execute).not.toHaveBeenCalled();
+});
+
+it("opens and searches a tenant directory with organization-scoped permission evidence and no filters", async () => {
+  const published: EntityRuntimeDescriptor = { ...descriptor, directoryScope: { schemaVersion: 1, mode: "tenant" } };
+  const scope = { permissionCode: "partner.read", tenantWide: false, legalEntityIds: [], companyCodeIds: [], operatingOrganizationIds: ["org-1"], networkMembershipIds: [], visibility: "team" as const };
+  const lists = createTestListService({ descriptor: published, metadata: { getEntityDescriptor: async () => published }, authorizer: {
+    authorize: async ({ permissionCode, resource }) => permissionCode !== "partner.read"
+      ? { allowed: false, reason: "missing_permission" }
+      : resource ? { allowed: false, reason: "scope_not_contained" } : { allowed: true, scope },
+  } });
+  await expect(lists.descriptor(context, published.entityCode)).resolves.toMatchObject({ scope: { status: "ready" } });
+  const page = await lists.list({ context, entityCode: published.entityCode, search: "Acme" });
+  expect(page.rows).toHaveLength(1);
+  expect(page.rows[0]?.values).not.toHaveProperty("tax_id");
+});

@@ -7,6 +7,12 @@ type Row = Record<string, unknown>;
 
 export function createKyselySavedViewRepository(transactions: PlaneTransactionCoordinator<Tx>): SavedViewRepository {
   return {
+    async getSharedDefault(scope,entityCode,surfaceCode) {
+      return transactions.run(scope.planeKey,scope,async tx=>(await sql<{view_id:string}>`SELECT view_id FROM master.saved_view_default WHERE tenant_id=${scope.tenantId}::uuid AND entity_code=${entityCode} AND surface_code=${surfaceCode}`.execute(tx)).rows[0]?.view_id);
+    },
+    async setSharedDefault(scope,entityCode,surfaceCode,id) {
+      await transactions.run(scope.planeKey,scope,async tx=>{await sql`INSERT INTO master.saved_view_default(tenant_id,entity_code,surface_code,view_id,created_by,updated_by) VALUES(${scope.tenantId}::uuid,${entityCode},${surfaceCode},${id},${scope.principalId}::uuid,${scope.principalId}::uuid) ON CONFLICT(tenant_id,entity_code,surface_code) DO UPDATE SET view_id=EXCLUDED.view_id,updated_at=now(),updated_by=EXCLUDED.updated_by`.execute(tx);});
+    },
     async list(query) {
       return transactions.run(query.planeKey, query, async (transaction) => (await sql<Row>`
         SELECT id, tenant_id, owner_principal_id, created_by, scope, surface_code, entity_code,
@@ -34,16 +40,18 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
       });
     },
     async create(planeKey, view) { return writeView(transactions, planeKey, view, false); },
-    async replace(planeKey, view, expectedVersion) {
-      return transactions.run(planeKey, actor(view), async (transaction) => {
+    async replace(planeKey, view, expectedVersion, writer) {
+      const context=writer??actor(view);
+      return transactions.run(planeKey, context, async (transaction) => {
+        await sharedWrite(transaction,writer?.sharedWrite);
         const row = (await sql<{ version: number }>`
           UPDATE master.saved_view
              SET name = ${view.name}, description = ${view.description ?? null},
                  state_json = ${JSON.stringify(view.state)}::jsonb,
-                 updated_at = now(), updated_by = ${(view.ownerPrincipalId ?? view.createdBy)!}::uuid
+                 updated_at = now(), updated_by = ${context.principalId}::uuid
            WHERE tenant_id = ${view.tenantId}::uuid AND id = ${view.id}::uuid
              AND ((scope = 'personal' AND owner_principal_id = ${(view.ownerPrincipalId ?? view.createdBy)!}::uuid)
-               OR (scope = 'shared' AND created_by = ${view.createdBy!}::uuid))
+               OR (scope = 'shared' AND ${writer?.sharedWrite??false}))
              AND status = 'active' AND xmin::text::bigint = ${expectedVersion}
        RETURNING xmin::text::bigint version
         `.execute(transaction)).rows[0];
@@ -51,21 +59,21 @@ export function createKyselySavedViewRepository(transactions: PlaneTransactionCo
       });
     },
     async archive(scope, id) {
-      return transactions.run(scope.planeKey, scope, async (transaction) => ((await sql`
+      return transactions.run(scope.planeKey, scope, async (transaction) => {await sharedWrite(transaction,scope.sharedWrite);return ((await sql`
         UPDATE master.saved_view SET status = 'archived', status_changed_at = now(),
                status_changed_by = ${scope.principalId}::uuid, updated_at = now(), updated_by = ${scope.principalId}::uuid
          WHERE tenant_id = ${scope.tenantId}::uuid AND id = ${id}::uuid AND status = 'active'
-           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND created_by = ${scope.principalId}::uuid))
-      `.execute(transaction)).numAffectedRows ?? 0n) > 0n);
+           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND (${scope.sharedWrite??false} OR created_by = ${scope.principalId}::uuid)))
+      `.execute(transaction)).numAffectedRows ?? 0n) > 0n;});
     },
     async setScope(scope, id, nextScope) {
-      return transactions.run(scope.planeKey, scope, async (transaction) => ((await sql`
+      return transactions.run(scope.planeKey, scope, async (transaction) => {await sharedWrite(transaction,scope.sharedWrite);return ((await sql`
         UPDATE master.saved_view SET scope = ${nextScope}::master.saved_view_scope_d,
                owner_principal_id = ${nextScope === "personal" ? scope.principalId : null}::uuid,
                updated_at = now(), updated_by = ${scope.principalId}::uuid
          WHERE tenant_id = ${scope.tenantId}::uuid AND id = ${id}::uuid AND status = 'active'
-           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND created_by = ${scope.principalId}::uuid))
-      `.execute(transaction)).numAffectedRows ?? 0n) > 0n);
+           AND scope <> 'system' AND (owner_principal_id = ${scope.principalId}::uuid OR (scope = 'shared' AND (${scope.sharedWrite??false} OR created_by = ${scope.principalId}::uuid)))
+      `.execute(transaction)).numAffectedRows ?? 0n) > 0n;});
     },
     async clone(scope, _source, clone) { return writeView(transactions, scope.planeKey, clone, true); },
     async updateFlag(scope, id, flag, enabled) {
@@ -143,3 +151,5 @@ function map(row: Row): SavedView {
   return { id: String(row["id"]), tenantId: String(row["tenant_id"]), ...(row["owner_principal_id"] ? { ownerPrincipalId: String(row["owner_principal_id"]) } : {}), createdBy: String(row["created_by"]), scope: row["scope"] as SavedView["scope"], surfaceCode: String(row["surface_code"]), entityCode: String(row["entity_code"]), code: String(row["code"]), name: String(row["name"]), ...(row["description"] ? { description: String(row["description"]) } : {}), state: object(row["state_json"]), metadata: object(row["metadata"]), status: row["status"] as SavedView["status"], version: Number(row["version"]) };
 }
 function object(value: unknown): Record<string, unknown> { if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>; return typeof value === "string" ? JSON.parse(value) as Record<string, unknown> : {}; }
+
+async function sharedWrite(tx:Tx,allowed?:boolean){await sql`SELECT set_config('app.saved_view_shared_write',${allowed?"true":"false"},true)`.execute(tx);}

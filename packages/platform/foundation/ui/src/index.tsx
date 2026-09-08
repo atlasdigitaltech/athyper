@@ -97,7 +97,7 @@ export function Menu({ open, defaultOpen = false, onOpenChange, children }: { re
     };
   }, [shown, setShown]);
   return <MenuContext.Provider value={{ open: shown, setOpen: setShown, root, content }}><div ref={root} className="a-menu" onKeyDown={(event) => {
-    if (event.key === "Escape") { event.preventDefault(); setShown(false); (event.currentTarget.querySelector('[aria-haspopup="menu"]') as HTMLElement | null)?.focus(); return; }
+    if (event.key === "Escape" && shown) { event.preventDefault(); setShown(false); (event.currentTarget.querySelector('[aria-haspopup="menu"]') as HTMLElement | null)?.focus(); return; }
     if (!shown || !["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
     const items = Array.from(content.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not(:disabled)') ?? []);
     if (!items.length) return;
@@ -166,6 +166,7 @@ export function DrawerPanel({ size = "standard", variant = "task", mobilePresent
     document.body.style.overflow = "hidden";
     (closeButton.current ?? firstFocusable(panel.current))?.focus();
     const key = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       if (event.key === "Escape") { event.preventDefault(); dialog.setOpen(false); return; }
       if (event.key !== "Tab" || !panel.current) return;
       const items = focusableElements(panel.current), first = items[0], last = items.at(-1);
@@ -206,7 +207,7 @@ export function DrawerTabPanel(props: Parameters<typeof TabsContent>[0]) { retur
 
 export const Drawer = Object.freeze({ Root: DrawerRoot, Trigger: DrawerTrigger, Close: DrawerClose, Panel: DrawerPanel, Header: DrawerHeader, Navigation: DrawerNavigation, Toolbar: DrawerToolbar, Context: DrawerContext, Metric: DrawerMetric, Body: DrawerBody, Footer: DrawerFooter, FooterSummary: DrawerFooterSummary, FooterActions: DrawerFooterActions, Tabs: DrawerTabs, TabList: DrawerTabList, Tab: DrawerTab, TabPanel: DrawerTabPanel });
 
-function focusableElements(owner: HTMLElement): HTMLElement[] { return [...owner.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')]; }
+function focusableElements(owner: HTMLElement): HTMLElement[] { return [...owner.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')].filter(element => !element.closest('[hidden], [inert]')); }
 function firstFocusable(owner: HTMLElement | null): HTMLElement | null { return owner ? focusableElements(owner)[0] ?? null : null; }
 function ModalContent({ title, description, children, className, variant }: { readonly title: string; readonly description?: string; readonly children: ReactNode; readonly className?: string; readonly variant: "dialog" | "drawer" }) {
   const c = useContext(DialogContext); if (!c) throw new Error("DialogContent must be inside Dialog"); const titleId = useId(); const descriptionId = useId(); const panel = useRef<HTMLDivElement>(null); const restore = useRef<HTMLElement | null>(null); const [portalReady, setPortalReady] = useState(false);
@@ -228,3 +229,4 @@ export function Skeleton({ label = "Loading", ...props }: HTMLAttributes<HTMLDiv
 export function VisuallyHidden(props: HTMLAttributes<HTMLSpanElement>) { return <span {...props} className={cx("a-visually-hidden", props.className)} />; }
 export function FocusGuard({ onFocus }: { readonly onFocus?: () => void }) { return <span tabIndex={0} aria-hidden="true" className="a-focus-guard" onFocus={onFocus} />; }
 export * from "./presentation";
+export { ScopePickerToolbar, CompanyGroups, type CompanyChoice } from "./company-groups";

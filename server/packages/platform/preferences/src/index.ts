@@ -33,13 +33,17 @@ export interface SavedViewScopeContext {
   readonly planeKey: PlatformPlane;
   readonly tenantId: string;
   readonly principalId: string;
+  /** Server-issued after shared-view authorization. */
+  readonly sharedWrite?: boolean;
 }
 
 export interface SavedViewRepository {
+  getSharedDefault?(scope:SavedViewScopeContext,entityCode:string,surfaceCode:string):Promise<string|undefined>;
+  setSharedDefault?(scope:SavedViewScopeContext,entityCode:string,surfaceCode:string,id:string):Promise<void>;
   list(query: SavedViewScopeContext & { surfaceCode?: string; entityCode?: string; includeArchived?: boolean }): Promise<readonly SavedView[]>;
   get(query: SavedViewScopeContext & { id: string; includeArchived?: boolean }): Promise<SavedView | undefined>;
   create(planeKey: PlatformPlane, view: SavedView): Promise<SavedView | void>;
-  replace(planeKey: PlatformPlane, view: SavedView, expectedVersion: number): Promise<number | undefined>;
+  replace(planeKey: PlatformPlane, view: SavedView, expectedVersion: number, writer?: SavedViewScopeContext): Promise<number | undefined>;
   archive?(scope: SavedViewScopeContext, id: string): Promise<boolean>;
   setScope?(scope: SavedViewScopeContext, id: string, nextScope: Exclude<SavedViewScope, "system">): Promise<boolean>;
   clone?(scope: SavedViewScopeContext, source: SavedView, clone: SavedView): Promise<SavedView | void>;
@@ -58,7 +62,10 @@ export class SavedViewError extends Error {
   constructor(readonly status: number, readonly code: string, message: string) { super(message); this.name = "SavedViewError"; }
 }
 
-export function createSavedViewService(repository: SavedViewRepository, ids: () => string = () => crypto.randomUUID()) {
+export type SharedViewOperation = "create_shared" | "manage_shared" | "set_shared_default";
+export function createSavedViewService(repository: SavedViewRepository, ids: () => string = () => crypto.randomUUID(), authorize: (scope:SavedViewScopeContext,operation:SharedViewOperation,entityCode:string,surfaceCode:string)=>Promise<boolean> = async()=>false) {
+  const requireShared=async(scope:SavedViewScopeContext,operation:SharedViewOperation,view:Pick<SavedView,"entityCode"|"surfaceCode">)=>{if(!await authorize(scope,operation,view.entityCode,view.surfaceCode))throw new SavedViewError(403,"SAVED_VIEW_SHARED_FORBIDDEN","Shared-view permission is required");};
+  const preferenceKey=(entity:string,surface:string)=>`saved_view.default.${entity}`;
   const requireMethod = <Key extends keyof SavedViewRepository>(key: Key): NonNullable<SavedViewRepository[Key]> => {
     const method = repository[key];
     if (!method) throw new SavedViewError(503, "SAVED_VIEW_CAPABILITY_UNAVAILABLE", `Saved-view ${String(key)} capability is unavailable`);
@@ -69,8 +76,8 @@ export function createSavedViewService(repository: SavedViewRepository, ids: () 
     if (!view) throw new SavedViewError(404, "SAVED_VIEW_NOT_FOUND", "Saved view was not found");
     return view;
   };
-  const requireOwner = (scope: SavedViewScopeContext, view: SavedView) => {
-    // Sharing clears owner_principal_id; created_by retains write authority.
+  const requireOwner = async (scope: SavedViewScopeContext, view: SavedView) => {
+    if(view.scope==="shared"){await requireShared(scope,"manage_shared",view);return;}
     const writer = view.scope === "personal" ? view.ownerPrincipalId : view.createdBy;
     if (view.scope === "system" || writer !== scope.principalId) {
       throw new SavedViewError(403, "SAVED_VIEW_FORBIDDEN", "Saved view is not writable by this principal");
@@ -85,6 +92,20 @@ export function createSavedViewService(repository: SavedViewRepository, ids: () 
     return { pinned: idSet(pinned), starred: idSet(starred) };
   };
   return {
+    async collection(scope:SavedViewScopeContext,entityCode:string,surfaceCode:string) {
+      const [views,personal,shared,create,manage,setDefault]=await Promise.all([repository.list({...scope,entityCode,surfaceCode}),repository.getPreference?.(scope,preferenceKey(entityCode,surfaceCode),surfaceCode),repository.getSharedDefault?.(scope,entityCode,surfaceCode),authorize(scope,"create_shared",entityCode,surfaceCode),authorize(scope,"manage_shared",entityCode,surfaceCode),authorize(scope,"set_shared_default",entityCode,surfaceCode)]);
+      return {views,personalDefault:preferenceViewId(personal),sharedDefault:shared,capabilities:{createShared:create,manageShared:manage,setSharedDefault:setDefault}};
+    },
+    async collectionDefault(scope:SavedViewScopeContext,entityCode:string,surfaceCode:string,id:string,target:"personal"|"shared",standardIds:readonly string[] = []) {
+      if(id!=="system"&&!standardIds.includes(id)) {const view=await load(scope,id);if(view.entityCode!==entityCode||view.surfaceCode!==surfaceCode)throw new SavedViewError(409,"SAVED_VIEW_COLLECTION_MISMATCH","View belongs to another collection");if(target==="shared"&&view.scope!=="shared")throw new SavedViewError(400,"SAVED_VIEW_INVALID","Tenant default must be a shared view");}
+      if(target==="shared"){await requireShared(scope,"set_shared_default",{entityCode,surfaceCode});await requireMethod("setSharedDefault")(scope,entityCode,surfaceCode,id);}
+      else await requireMethod("setPreference")(scope,preferenceKey(entityCode,surfaceCode),surfaceCode,{viewId:id});
+    },
+    async createShared(scope:SavedViewScopeContext,input:Omit<SavedView,"id"|"tenantId"|"ownerPrincipalId"|"createdBy"|"version"|"scope"|"status"|"metadata">) {
+      await requireShared(scope,"create_shared",input);
+      const view:SavedView={...input,id:ids(),tenantId:scope.tenantId,createdBy:scope.principalId,scope:"shared",status:"active",metadata:{},version:1};
+      return await repository.create(scope.planeKey,view)??view;
+    },
     async list(scope: SavedViewScopeContext, query: { surfaceCode?: string; entityCode?: string; includeArchived?: boolean } = {}): Promise<readonly SavedViewPresentation[]> {
       const [views, currentFlags] = await Promise.all([repository.list({ ...scope, ...query }), flags(scope)]);
       const defaults = repository.getPreference
@@ -97,16 +118,16 @@ export function createSavedViewService(repository: SavedViewRepository, ids: () 
       return await repository.create(scope.planeKey, view) ?? view;
     },
     async replace(scope: SavedViewScopeContext, id: string, expectedVersion: number, changes: Partial<Pick<SavedView, "name" | "state" | "description">>, entityCode?: string) {
-      const current = await load(scope, id); requireOwner(scope, current);
+      const current = await load(scope, id); await requireOwner(scope, current);
       requireEntity(current, entityCode);
-      const version = await repository.replace(scope.planeKey, { ...current, ...changes }, expectedVersion);
+      const version = await repository.replace(scope.planeKey, { ...current, ...changes }, expectedVersion, {...scope,sharedWrite:current.scope==="shared"});
       if (version === undefined) throw new SavedViewVersionConflict();
       return { ...current, ...changes, version };
     },
     async remove(scope: SavedViewScopeContext, id: string, entityCode?: string): Promise<void> {
-      const current = await load(scope, id); requireOwner(scope, current);
+      const current = await load(scope, id); await requireOwner(scope, current);
       requireEntity(current, entityCode);
-      if (!await requireMethod("archive")(scope, id)) throw new SavedViewError(404, "SAVED_VIEW_NOT_FOUND", "Saved view was not found");
+      if (!await requireMethod("archive")({...scope,sharedWrite:current.scope==="shared"}, id)) throw new SavedViewError(404, "SAVED_VIEW_NOT_FOUND", "Saved view was not found");
       if (repository.clearDefaultIfMatches) {
         await repository.clearDefaultIfMatches(scope, current.entityCode, id);
         return;
@@ -134,8 +155,11 @@ export function createSavedViewService(repository: SavedViewRepository, ids: () 
       return { enabled };
     },
     async setShared(scope: SavedViewScopeContext, id: string, shared: boolean): Promise<void> {
-      const current = await load(scope, id); requireOwner(scope, current);
-      if (!await requireMethod("setScope")(scope, id, shared ? "shared" : "personal")) throw new SavedViewError(409, "SAVED_VIEW_SCOPE_CONFLICT", "Saved view scope could not be changed");
+      const current = await load(scope, id);
+      if(current.scope==="personal" && current.ownerPrincipalId!==scope.principalId)throw new SavedViewError(403,"SAVED_VIEW_FORBIDDEN","Only the owner can share a personal view");
+      if(current.scope==="system")throw new SavedViewError(403,"SAVED_VIEW_FORBIDDEN","System views cannot be changed");
+      await requireShared(scope,shared?"create_shared":"manage_shared",current);
+      if (!await requireMethod("setScope")({...scope,sharedWrite:current.scope==="shared"}, id, shared ? "shared" : "personal")) throw new SavedViewError(409, "SAVED_VIEW_SCOPE_CONFLICT", "Saved view scope could not be changed");
     },
     async archive(scope: SavedViewScopeContext, id: string): Promise<void> { await this.remove(scope, id); },
     async clone(scope: SavedViewScopeContext, sourceId: string, name?: string) {
@@ -161,3 +185,5 @@ function requireEntity(view: SavedView, entityCode?: string): void {
   if (entityCode !== undefined && view.entityCode !== entityCode)
     throw new SavedViewError(409, "SAVED_VIEW_ENTITY_MISMATCH", "Saved view belongs to another entity");
 }
+
+export {registerEntityViewRoutes} from "./entity-views-routes.js";

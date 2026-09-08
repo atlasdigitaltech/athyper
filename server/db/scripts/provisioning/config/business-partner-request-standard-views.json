@@ -1,0 +1,168 @@
+{
+  "entityCode": "business_partner_request",
+  "standardViews": [
+    {
+      "key": "my_requests",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "My requests"
+        }
+      },
+      "position": 10,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "requester": "initiator_or_submitter"
+      }
+    },
+    {
+      "key": "awaiting_my_approval",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Awaiting my approval"
+        }
+      },
+      "position": 20,
+      "entityCode": "business_partner_request",
+      "provider": "approval_tasks",
+      "providerKey": "workflow.actionable_documents.v1",
+      "approvalBinding": {
+        "sourceEntityCode": "business_partner_case",
+        "workflowKeys": [
+          "neon.business_partner.supplier.onboarding",
+          "neon.business_partner.customer.onboarding",
+          "neon.business_partner.governance.onboarding"
+        ],
+        "workTypeCodes": [
+          "business_partner_case.approval"
+        ],
+        "link": "workflow_request",
+        "permissionCode": "workflow.work_item.read"
+      }
+    },
+    {
+      "key": "supplier_requests",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Supplier requests"
+        }
+      },
+      "position": 30,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "operationCodes": [
+          "new_partner"
+        ],
+        "role": {
+          "field": "requestedRole",
+          "values": [
+            "supplier"
+          ]
+        }
+      }
+    },
+    {
+      "key": "customer_requests",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Customer requests"
+        }
+      },
+      "position": 40,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "operationCodes": [
+          "new_partner"
+        ],
+        "role": {
+          "field": "requestedRole",
+          "values": [
+            "customer"
+          ]
+        }
+      }
+    },
+    {
+      "key": "supplier_extensions",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Supplier extensions"
+        }
+      },
+      "position": 50,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "operationCodes": [
+          "add_supplier"
+        ],
+        "role": {
+          "field": "requestedRole",
+          "values": [
+            "supplier"
+          ]
+        }
+      }
+    },
+    {
+      "key": "customer_extensions",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Customer extensions"
+        }
+      },
+      "position": 60,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "operationCodes": [
+          "add_customer"
+        ],
+        "role": {
+          "field": "requestedRole",
+          "values": [
+            "customer"
+          ]
+        }
+      }
+    },
+    {
+      "key": "scope_extensions",
+      "label": {
+        "defaultLocale": "en",
+        "values": {
+          "en": "Organization & company extensions"
+        }
+      },
+      "position": 70,
+      "entityCode": "business_partner_request",
+      "provider": "request_documents",
+      "providerKey": "document.case_requests.v1",
+      "requestBinding": {
+        "sourceRef": "entity_case",
+        "operationCodes": [
+          "assign_organization",
+          "configure_company"
+        ]
+      }
+    }
+  ]
+}

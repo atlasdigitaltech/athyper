@@ -137,6 +137,7 @@ import {
   createKyselySavedViewRepository,
   createSavedViewService,
   registerSavedViewRoutes,
+  registerEntityViewRoutes,
 } from "@athyper/server-platform-preferences";
 import {
   createCollaborationService,
@@ -486,6 +487,7 @@ import {
   registerRecordSnapshotRoutes,
   registerRecordsRoutes,
   registerEntityListRoutes,
+  parseEntityListScopeCoordinate,
   registerRecordBookmarkRoutes,
   KyselyRecordTransferStore,
   createMetadataImportRowValidator,
@@ -2728,7 +2730,14 @@ export function registerServices(
               meshTimeoutMs: config?.businessPartner360.meshTimeoutMs,
             }
           : {}),
+        admitDirectoryRecord: async query => {
+          const records=container.services.records;
+          if(!records) throw new MasterDataError(503,"DIRECTORY_UNAVAILABLE","Record directory admission is unavailable");
+          const result=await records.queries.get({context:query.context,entityCode:"business_partner",recordId:query.businessPartnerId});
+          if(!result.data) throw new MasterDataError(404,"BP_360_NOT_FOUND","Business Partner is unavailable");
+        },
         definitions: businessPartner360Definitions,
+        metadata,
         businessActivityProviders:
           createUnavailableBusinessPartner360ActivityProviders(),
       });
@@ -3141,6 +3150,10 @@ export function registerServices(
         authenticate: createIamAuthenticationMiddleware(iam),
         readContext: readVerifiedRequestContext,
         service: businessPartner360,
+        createComment: async (context, businessPartnerId, text, idempotencyKey) => {
+          if (!container.services.collaboration) throw new Error("Collaboration is unavailable");
+          return container.services.collaboration.create({context,entityType:"master.business_partner",entityId:businessPartnerId,contextType:"entity",text,visibility:"internal",idempotencyKey});
+        },
         telemetry: (event) => {
           const labels = {
             operation: event.operation,
@@ -3667,6 +3680,8 @@ export function registerServices(
   }
   const savedViews = createSavedViewService(
     createKyselySavedViewRepository(transactions),
+    undefined,
+    async(scope,operation,entityCode,surfaceCode)=>{const decision=await authorizer.authorize({context:scope as VerifiedRequestContext,permissionCode:`${scope.planeKey}.ui.saved_view.${operation}`,resource:{tenantId:scope.tenantId,entityCode,surfaceCode,operationKey:operation}});return decision.allowed&&(!decision.scope||decision.scope.tenantWide);},
   );
   container.platform.httpRegistrars.push((application) =>
     registerSavedViewRoutes(application, {
@@ -3996,6 +4011,25 @@ export function registerServices(
       ? combineRecordCollectionScopeResolvers(
           createNeonRecordCollectionScopeResolver(
             container.platform.experience.service,
+            async (context, coordinate) => {
+              const records=container.services.records, eligibility=container.services.businessPartnerEligibility;
+              if(!records || !eligibility) throw new Error("Eligibility directory adapter unavailable");
+              const {eligibleOperation,...scopeCoordinate}=coordinate;
+              const ids:string[]=[];
+              let cursor:string|undefined, examined=0;
+              do {
+                const page=await records.queries.list({context,entityCode:"business_partner",scopeCoordinate,limit:100,...(cursor?{cursor}:{})});
+                examined+=page.data.length;
+                if(examined>10000) throw new Error("Narrow directory scope before checking transaction eligibility");
+                for(const row of page.data) {
+                  const id=String(row["id"]);
+                  const decision=await eligibility.resolve({context,businessPartnerId:id,role:coordinate.partnerRole!,operatingOrganizationId:coordinate.operatingOrganizationId!,companyCodeId:coordinate.companyCodeId!,operationCode:eligibleOperation!,businessDate:new Date().toISOString().slice(0,10)});
+                  if(decision.eligible)ids.push(id);
+                }
+                cursor=page.pagination.nextCursor;
+              } while(cursor);
+              return ids;
+            },
           ),
           createMeshRecordCollectionScopeResolver(
             container.platform.experience.service,
@@ -4014,12 +4048,23 @@ export function registerServices(
       listExecutor,
     );
     const lists = createEntityListService({
+      filterChoices: async (context, fields) => {
+        const countries = fields.filter(field => field.list?.semanticRole === "country_code");
+        if (!countries.length) return {};
+        const database = metadataDatabases[context.planeKey];
+        if (!database) return {};
+        // Shared reference data is global; only already-authorized fields reach this resolver.
+        const result = await sql<{ code: string; name: string }>`SELECT code, name FROM shared.country ORDER BY name LIMIT 500`.execute(database);
+        const choices = result.rows.map(row => ({ value: row.code.trim(), label: row.name }));
+        return Object.fromEntries(countries.map(field => [field.key, choices]));
+      },
       metadata: listMetadata,
       authorizer,
       listExecutor,
       queries,
       ...(collectionScopes ? { collectionScopes } : {}),
     });
+    container.platform.httpRegistrars.push(application=>registerEntityViewRoutes(application,{authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,service:savedViews,descriptor:(context,entity,query)=>lists.descriptor(context,entity,parseEntityListScopeCoordinate(query))}));
     const bookmarks = createRecordBookmarkService({
       transactions,
       listExecutor,

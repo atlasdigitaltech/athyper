@@ -31,7 +31,7 @@ describe("workflow PostgreSQL query regressions", () => {
       expect(decodeInboxCursor(result.nextCursor!)).toEqual({ createdAt: "2026-09-06T00:00:00.123456Z", id });
       expect(f.queries[0]!.parameters.at(-1)).toBe(2);
       for (const query of f.queries) {
-        expect(query.sql).toContain("membership.tenant_id = work_item.tenant_id");
+        expect(query.sql.replaceAll('"', "")).toContain("membership.tenant_id = work_item.tenant_id");
         expect(query.sql).toContain("membership.left_at IS NULL");
         expect(query.sql).toContain("jsonb_typeof");
         expect(query.parameters).toContain(tenant); expect(query.parameters).toContain(principal);
@@ -62,7 +62,7 @@ describe("workflow PostgreSQL query regressions", () => {
       expect(query.parameters).toContain(7); expect(query.parameters).toContain(tenant);
       expect(query.sql).toContain("claimant_principal_id IS NULL OR claimant_principal_id =");
       expect(query.sql).toContain("available_at <= clock_timestamp()");
-      expect(query.sql).toContain("membership.tenant_id = work_item.tenant_id");
+      expect(query.sql.replaceAll('"', "")).toContain("membership.tenant_id = work_item.tenant_id");
       expect(query.sql).toContain("status_changed_at = clock_timestamp()");
     } finally { await f.db.destroy(); }
   });

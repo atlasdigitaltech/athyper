@@ -1,3 +1,4 @@
+import { businessLabel } from "../display-values";
 import {
   useApiClient,
   useSessionIdentity,
@@ -63,7 +64,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
   }, [client, key]);
   if (failed)
     return (
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Scoped section unavailable</h2>
         <p>The global identity view remains available.</p>
       </Card>
@@ -74,7 +75,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
     readOnly = Boolean(data["readOnly"]);
   if (state === "missing_scope")
     return (
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Select organization and company</h2>
         <p>This section never infers company configuration from row order.</p>
       </Card>
@@ -82,13 +83,13 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
   return (
     <div className="bp360-section-list">
       {state === "global" ? (
-        <Card>
+        <Card className="bp360-section-card">
           <strong>Global identity view</strong>
           <p>Select an authorized scope to narrow assignments.</p>
         </Card>
       ) : null}
       {state === "historical" ? (
-        <Card>
+        <Card className="bp360-section-card">
           <strong>Historical read-only view</strong>
           <p>Governed actions are disabled for an explicit as-of date.</p>
         </Card>
@@ -104,7 +105,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
     </div>
   );
 }
-function Roles({ data }: { data: Readonly<Record<string, unknown>> }) {
+export function Roles({ data }: { data: Readonly<Record<string, unknown>> }) {
   return (
     <>
       <Cards
@@ -131,7 +132,11 @@ function Roles({ data }: { data: Readonly<Record<string, unknown>> }) {
     </>
   );
 }
-function Supplier({ data }: { data: Readonly<Record<string, unknown>> }) {
+export function Supplier({
+  data,
+}: {
+  data: Readonly<Record<string, unknown>>;
+}) {
   return (
     <>
       <ObjectCard
@@ -204,30 +209,33 @@ function Customer({ data }: { data: Readonly<Record<string, unknown>> }) {
     </>
   );
 }
-function Actions({ id, code }: { id: string; code: RoleCompanySectionCode }) {
+function Actions({ code }: { id: string; code: RoleCompanySectionCode }) {
+  const { summary } = useBusinessPartner360();
+  const keys =
+    code === "roles-scope"
+      ? ["add_role", "assign_organization"]
+      : ["add_role", "assign_organization", "configure_company"];
+  const actions = summary.completeness.readOnly
+    ? []
+    : (summary.recordHeader?.actions.filter(
+        (action) =>
+          keys.includes(action.key) && action.href && !action.disabledReason,
+      ) ?? []);
+  if (!actions.length) return null;
   return (
-    <Card>
+    <Card className="bp360-section-card">
       <h2>Governed actions</h2>
       <div className="bp-actions">
-        <a href={`/mdg/business-partner/${encodeURIComponent(id)}/roles/new`}>
-          Add role
-        </a>
-        <a
-          href={`/mdg/business-partner/${encodeURIComponent(id)}/scope/new?kind=assign_organization`}
-        >
-          Assign organization
-        </a>
-        {code !== "roles-scope" ? (
-          <a
-            href={`/mdg/business-partner/${encodeURIComponent(id)}/scope/new?kind=configure_company&role=${code === "supplier-company" ? "supplier" : "customer"}`}
-          >
-            Configure company
+        {actions.map((action) => (
+          <a key={action.key} href={action.href}>
+            {action.label}
           </a>
-        ) : null}
+        ))}
       </div>
     </Card>
   );
 }
+
 function Cards({
   title,
   rows,
@@ -238,15 +246,15 @@ function Cards({
   fields: readonly string[];
 }) {
   return (
-    <Card>
+    <Card className="bp360-section-card">
       <h2>{title}</h2>
       {rows.length ? (
         rows.map((row, index) => (
           <dl key={String(row["id"] ?? index)}>
             {fields.map((field) => (
               <div key={field}>
-                <dt>{label(field)}</dt>
-                <dd>{show(row[field])}</dd>
+                <dt>{label(field.replace(/Id$/, ""))}</dt>
+                <dd>{fieldValue(row, field)}</dd>
               </div>
             ))}
           </dl>
@@ -257,7 +265,13 @@ function Cards({
     </Card>
   );
 }
-function asRows(value:unknown):readonly Readonly<Record<string,unknown>>[]{return Array.isArray(value)?value.filter((item):item is Readonly<Record<string,unknown>>=>Boolean(item&&typeof item==="object"&&!Array.isArray(item))):[];}
+function asRows(value: unknown): readonly Readonly<Record<string, unknown>>[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is Readonly<Record<string, unknown>> =>
+        Boolean(item && typeof item === "object" && !Array.isArray(item)),
+      )
+    : [];
+}
 function ObjectCard({
   title,
   value,
@@ -268,14 +282,14 @@ function ObjectCard({
   fields: readonly string[];
 }) {
   return (
-    <Card>
+    <Card className="bp360-section-card">
       <h2>{title}</h2>
       {value ? (
         <dl>
           {fields.map((field) => (
             <div key={field}>
-              <dt>{label(field)}</dt>
-              <dd>{show(value[field])}</dd>
+              <dt>{label(field.replace(/Id$/, ""))}</dt>
+              <dd>{fieldValue(value, field)}</dd>
             </div>
           ))}
         </dl>
@@ -284,6 +298,23 @@ function ObjectCard({
       )}
     </Card>
   );
+}
+function fieldValue(row: Readonly<Record<string, unknown>>, field: string) {
+  if (field.endsWith("Id") && typeof row[field] === "string") {
+    const name = record(row["displayValues"])?.[field];
+    return (
+      <>
+        {typeof name === "string" ? name : "Name unavailable"}
+        <details>
+          <summary>Technical details</summary>
+          {show(row[field])}
+        </details>
+      </>
+    );
+  }
+  return ["role", "partnerRole", "status", "type"].includes(field)
+    ? businessLabel(String(row[field] ?? "")) || "—"
+    : show(row[field]);
 }
 function array(value: unknown) {
   return Array.isArray(value)

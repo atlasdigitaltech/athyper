@@ -1,9 +1,11 @@
 "use client";
+import { parseEntityRecordPresentation, resolveRecordHeader } from "@athyper/contract-platform-entity-runtime";
+import { EntityRecordHeader } from "./record-header";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EntityDetailDescriptorV1, EntityFormDescriptorV1, EntityRecordV1, EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
-import { PageFrame, PageHeader } from "@athyper/platform-shell";
-import { useApiClient } from "@athyper/platform-shell-app-foundation";
+import { PageFrame, PageHeader, useRecordPage } from "@athyper/platform-shell";
+import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { Button, Card, Checkbox, Input, Label, Select } from "@athyper/platform-ui";
 
 export function EntityFormRuntime({ entityCode, recordId, onCommitted }: { readonly entityCode: string; readonly recordId?: string; readonly onCommitted?: (recordId: string) => void }) {
@@ -16,10 +18,32 @@ export function EntityFormRuntime({ entityCode, recordId, onCommitted }: { reado
 }
 
 export function EntityDetailRuntime({ entityCode, recordId, editHref }: { readonly entityCode: string; readonly recordId: string; readonly editHref?: string }) {
-  const client = useApiClient(), [descriptor, setDescriptor] = useState<EntityDetailDescriptorV1>(), [record, setRecord] = useState<EntityRecordV1>(), [status, setStatus] = useState("Loading governed record…");
-  useEffect(() => { let active = true; Promise.all([entityDescriptorClient.detail(client, entityCode), entityDescriptorClient.record(client, entityCode, recordId)]).then(([nextDescriptor, nextRecord]) => { if (!active) return; setDescriptor(nextDescriptor); setRecord(nextRecord); setStatus(""); }).catch((error) => active && setStatus(safeError(error))); return () => { active = false; }; }, [client, entityCode, recordId]);
-  if (!descriptor || !record) return <PageFrame><PageHeader level="collection" context="Published metadata" title={humanize(entityCode)}/><Card><p role="status">{status}</p></Card></PageFrame>;
-  return <PageFrame><PageHeader level="collection" context={`${descriptor.entity.label} · Detail`} title={String(record.values[descriptor.titleField] ?? record.id)} metadata={<><span>Release {descriptor.revision.release}</span>{record.version !== undefined ? <span>Version {record.version}</span> : null}</>} actions={editHref && descriptor.actions.some((action) => action.kind === "edit") ? <a className="a-button a-button--secondary" href={editHref}>Edit</a> : undefined}/><Card><dl>{descriptor.fields.map((field) => <div key={field.key}><dt>{field.label}</dt><dd>{display(record.values[field.key])}</dd></div>)}</dl></Card><p role="status">{status}</p></PageFrame>;
+  useRecordPage();
+  const client = useApiClient(), identity = useSessionIdentity();
+  const [loaded, setLoaded] = useState<{ key: string; descriptor: EntityDetailDescriptorV1; record: EntityRecordV1 }>();
+  const [status, setStatus] = useState("Loading record…"), [activeSection, setActiveSection] = useState("overview");
+  const key = `${identity.scope?.tenantId}:${identity.scope?.principalId}:${identity.scope?.authEpoch}:${entityCode}:${recordId}`;
+  useEffect(() => {
+    let active = true; setStatus("Loading record…"); setActiveSection("overview");
+    Promise.all([entityDescriptorClient.detail(client, entityCode, recordId), entityDescriptorClient.record(client, entityCode, recordId)])
+      .then(([descriptor, record]) => { if (active) { setLoaded({ key, descriptor, record }); setStatus(""); } })
+      .catch(error => { if (active) setStatus(safeError(error)); });
+    return () => { active = false; };
+  }, [client, entityCode, recordId, key]);
+  if (!loaded || loaded.key !== key) return <PageFrame><PageHeader level="collection" title={humanize(entityCode)}/><Card><p role="status">{status}</p></Card></PageFrame>;
+  const { descriptor, record } = loaded;
+  const presentation = descriptor.presentation ?? parseEntityRecordPresentation({ schemaVersion: 1, titleField: descriptor.titleField, sections: [{ key: "overview", label: "Overview", fields: descriptor.fields.map(field => field.key) }], actions: [{ key: "edit", label: "Edit", operationKey: "patch", placement: "primary" }] });
+  const section = presentation.sections.find(item => item.key === activeSection) ?? presentation.sections[0];
+  const header = resolveRecordHeader(presentation, record.values, { entityLabel: descriptor.entity.label, fallbackTitle: descriptor.entity.label,
+    labels: Object.fromEntries(descriptor.fields.map(field => [field.key, field.label])),
+    actions: presentation.actions.flatMap(action => action.operationKey === "patch" && editHref && descriptor.actions.some(item => item.kind === "edit") ? [{ key: action.key, label: action.label, placement: action.placement, href: editHref }] : []),
+  });
+  const fields = section ? descriptor.fields.filter(field => section.fields.includes(field.key)) : descriptor.fields;
+  return <PageFrame width="wide"><EntityRecordHeader header={header} activeSection={section?.key} onSelectSection={setActiveSection}
+    technicalDetails={<dl><div><dt>Record ID</dt><dd>{record.id}</dd></div><div><dt>Release</dt><dd>{descriptor.revision.release}</dd></div>{record.version === undefined ? null : <div><dt>Version</dt><dd>{record.version}</dd></div>}</dl>}/>
+    <Card className="a-record-detail-content"><h2>{section?.label ?? "Details"}</h2><dl className="a-record-detail-fields">{fields.map(field => <div key={field.key}><dt>{field.label}</dt><dd>{display(record.values[field.key])}</dd></div>)}</dl></Card>
+    {status ? <p role="status">{status}</p> : null}
+  </PageFrame>;
 }
 
 function Field({ field, value, onChange }: { readonly field: EntitySurfaceFieldV1; readonly value: unknown; readonly onChange: (value: unknown) => void }) { const id = `entity-field-${field.key}`; if (field.kind === "boolean") return <Label htmlFor={id}><Checkbox id={id} checked={value === true} disabled={field.readOnly} onChange={(event) => onChange(event.currentTarget.checked)}/>{field.label}</Label>; if (field.options?.length) return <Label htmlFor={id}><span>{field.label}</span><Select id={id} value={String(value ?? "")} required={field.required} disabled={field.readOnly} onChange={(event) => onChange(event.currentTarget.value)}><option value="">Select…</option>{field.options.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</Select></Label>; return <Label htmlFor={id}><span>{field.label}</span><Input id={id} value={String(value ?? "")} required={field.required} readOnly={field.readOnly} type={inputType(field.kind)} onChange={(event) => onChange(event.currentTarget.value)}/></Label>; }
@@ -28,3 +52,6 @@ function normalize(value: unknown, field: EntitySurfaceFieldV1): unknown { if ([
 function display(value: unknown): string { if (value === null || value === undefined || value === "") return "—"; if (typeof value === "object") return JSON.stringify(value); return String(value); }
 function humanize(value: string): string { return value.replace(/[_.-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase()); }
 function safeError(error: unknown): string { return error instanceof Error && error.message ? error.message : "The governed entity surface is unavailable."; }
+export { EntityRecordHeader } from "./record-header";
+
+export { EntityRecord360Panel, type Record360Section } from "./record-360-panel";

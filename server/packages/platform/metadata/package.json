@@ -14,7 +14,9 @@
   "dependencies": {
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/contract-platform-entity-list": "workspace:*",
+    "@athyper/contract-platform-entity-runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

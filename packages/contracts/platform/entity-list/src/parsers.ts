@@ -1,3 +1,6 @@
+import { parseEntityScopeFilters } from "./scope-filters";
+import { parseEffectiveEntitySections, parseEntityApplication } from "./experience";
+import { parseEntityListHeader, parseEntityLocalizedText, parseEntityNavigationHref } from "./experience";
 import { ENTITY_LIST_MAX_FILTERS, ENTITY_LIST_MAX_SORT_LEVELS, ENTITY_LIST_MAX_VISIBLE_COLUMNS } from "./types";
 import type {
   EffectiveListActionV1,
@@ -82,15 +85,20 @@ export function parseEntityListDescriptor(value: unknown): EntityListDescriptorV
     return Object.freeze({ key: code(item.key, `scope.labels[${index}].key`), label: text(item.label, `scope.labels[${index}].label`), value: text(item.value, `scope.labels[${index}].value`) });
   }), "scope label keys", (item) => item.key);
   return Object.freeze({
+    ...(record.serverViews===true?{serverViews:true}:{}),
+    ...(Array.isArray(record.standardViews)?{standardViews:Object.freeze(record.standardViews.map((raw:unknown)=>{const value=object(raw,"standardView");return {key:code(value.key,"standardView.key"),label:parseEntityLocalizedText(value.label),position:integer(value.position,"standardView.position",0,10000)};}))}:{}),
     schemaVersion: 1,
     plane: oneOf(record.plane, ["neon", "mesh", "studio"] as const, "plane"),
     entity,
     revision: Object.freeze({ release: integer(revisionRecord.release, "revision.release", 1), descriptorHash: digest(revisionRecord.descriptorHash, "revision.descriptorHash"), surfaceHash: digest(revisionRecord.surfaceHash, "revision.surfaceHash") }),
-    surface: Object.freeze({ key: code(surfaceRecord.key, "surface.key"), title: text(surfaceRecord.title, "surface.title"), ...(optionalText(surfaceRecord.description, "surface.description") ? { description: optionalText(surfaceRecord.description, "surface.description") } : {}), defaultState, supportedModes, search: Object.freeze({ ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey") ? { profileKey: optionalCode(searchRecord.profileKey, "surface.search.profileKey") } : {}), minimumQueryLength: searchRecord.minimumQueryLength === undefined ? 1 : integer(searchRecord.minimumQueryLength, "surface.search.minimumQueryLength", 1, 64) }), filterPresentation: Object.freeze({ quickFields: resolvedQuickFields, source: quickFields.length ? "metadata" : "fallback", allowUserPinning: filterPresentationRecord?.allowUserPinning === true }) }),
+    surface: Object.freeze({ key: code(surfaceRecord.key, "surface.key"), title: text(surfaceRecord.title, "surface.title"), ...(surfaceRecord.header === undefined ? {} : { header: parseEntityListHeader(surfaceRecord.header) }), ...(optionalText(surfaceRecord.description, "surface.description") ? { description: optionalText(surfaceRecord.description, "surface.description") } : {}), defaultState, supportedModes, search: Object.freeze({ ...(optionalCode(searchRecord.profileKey, "surface.search.profileKey") ? { profileKey: optionalCode(searchRecord.profileKey, "surface.search.profileKey") } : {}), minimumQueryLength: searchRecord.minimumQueryLength === undefined ? 1 : integer(searchRecord.minimumQueryLength, "surface.search.minimumQueryLength", 1, 64) }), filterPresentation: Object.freeze({ quickFields: resolvedQuickFields, source: quickFields.length ? "metadata" : "fallback", allowUserPinning: filterPresentationRecord?.allowUserPinning === true }) }),
     fields,
     actions,
+    ...(record.application === undefined ? {} : {application:parseEntityApplication(record.application)}),
+    ...(record.navigation === undefined ? {} : { navigation: parseEffectiveEntitySections(record.navigation) }),
+    ...(record.currentSurfaceKey === undefined ? {} : { currentSurfaceKey: code(record.currentSurfaceKey, "currentSurfaceKey") }),
     ...(dataOperations ? { dataOperations } : {}),
-    scope: Object.freeze({ status: oneOf(scopeRecord.status, ["ready", "context_required"] as const, "scope.status"), labels, fingerprint: digest(scopeRecord.fingerprint, "scope.fingerprint") }),
+    scope: Object.freeze({ ...(scopeRecord.quickFilters === undefined ? {} : { quickFilters: parseEntityScopeFilters(scopeRecord.quickFilters) }), ...(scopeRecord.filterKinds === undefined ? {} : { filterKinds: uniqueEnums(scopeRecord.filterKinds, ["organization", "company"] as const, "scope.filterKinds") }), status: oneOf(scopeRecord.status, ["ready", "context_required"] as const, "scope.status"), labels, fingerprint: digest(scopeRecord.fingerprint, "scope.fingerprint") }),
     limits: Object.freeze({ defaultPageSize, allowedPageSizes, maxSortLevels, countMode: oneOf(limitsRecord.countMode, COUNT_MODES, "limits.countMode") }),
   });
 }
@@ -252,6 +260,7 @@ function parseState(value: unknown, rules: StateRules): SaveableListStateV1 | Li
   const group = groupCandidate && rules.fields.get(groupCandidate)?.groupable ? groupCandidate : undefined;
   const spreadsheet = record.spreadsheet === undefined ? undefined : parseSpreadsheet(record.spreadsheet, rules.fields);
   const base = {
+    ...(optionalCode(record.standardViewKey, "standardViewKey") ? { standardViewKey: optionalCode(record.standardViewKey, "standardViewKey") } : {}),
     ...(optionalQuery(record.query) ? { query: optionalQuery(record.query) } : {}),
     filters: Object.freeze(filters),
     sort: Object.freeze(sort),
@@ -277,7 +286,7 @@ function parseField(candidate: unknown, index: number): ListFieldDescriptorV1 {
   const field = object(candidate, `fields[${index}]`);
   const defaultWidth = optionalInteger(field.defaultWidth, `fields[${index}].defaultWidth`, 48, 1200);
   const filterOptionCandidates = field.filterOptions === undefined ? undefined : array(field.filterOptions, `fields[${index}].filterOptions`);
-  if (filterOptionCandidates && filterOptionCandidates.length > 200) throw new TypeError(`fields[${index}].filterOptions exceeds 200 choices`);
+  if (filterOptionCandidates && filterOptionCandidates.length > 500) throw new TypeError(`fields[${index}].filterOptions exceeds 500 choices`);
   const filterOptions = filterOptionCandidates === undefined ? undefined : freezeUnique(filterOptionCandidates.map((candidate, optionIndex) => {
     const option = object(candidate, `fields[${index}].filterOptions[${optionIndex}]`);
     if (!["string", "number", "boolean"].includes(typeof option.value)) throw new TypeError(`fields[${index}].filterOptions[${optionIndex}].value must be scalar`);
@@ -317,6 +326,9 @@ function parseAction(candidate: unknown, index: number): EffectiveListActionV1 {
   return Object.freeze({
     key: code(action.key, `actions[${index}].key`),
     label: text(action.label, `actions[${index}].label`),
+    ...(action.localizedLabel === undefined ? {} : { localizedLabel: parseEntityLocalizedText(action.localizedLabel) }),
+    ...(action.href === undefined ? {} : { href: parseEntityNavigationHref(action.href) }),
+    ...(action.disabledMessage === undefined ? {} : { disabledMessage: parseEntityLocalizedText(action.disabledMessage) }),
     ...(optionalCode(action.iconKey, `actions[${index}].iconKey`) ? { iconKey: optionalCode(action.iconKey, `actions[${index}].iconKey`) } : {}),
     placement: oneOf(action.placement, ["primary", "secondary", "toolbar", "row", "selection", "overflow"] as const, `actions[${index}].placement`),
     selection: oneOf(action.selection, ["none", "single", "multiple"] as const, `actions[${index}].selection`),
@@ -395,3 +407,9 @@ function freezeUnique<T>(items: readonly T[], name: string, key: (item: T) => st
 
 export const listContractValues = Object.freeze({ modes: MODES, densities: DENSITIES, countModes: COUNT_MODES, filterOperators: FILTER_OPERATORS });
 export type { ListCountMode, ListFilterOperator, ListViewMode };
+
+export function parseEntityApplicationDescriptor(raw: unknown): import("./types").EntityApplicationDescriptorV1 {
+  const value=object(raw,"application descriptor"),entity=object(value.entity,"entity"),surface=object(value.surface,"surface"),revision=object(value.revision,"revision"),scope=object(value.scope,"scope");
+  if(value.schemaVersion!==1)throw new TypeError("Unsupported application descriptor");
+  return Object.freeze({schemaVersion:1,plane:oneOf(value.plane,["neon","mesh","studio"] as const,"plane"),entity:Object.freeze({code:code(entity.code,"entity.code"),label:text(entity.label,"entity.label"),pluralLabel:text(entity.pluralLabel,"entity.pluralLabel")}),surface:Object.freeze({key:code(surface.key,"surface.key"),title:text(surface.title,"surface.title"),...(surface.header===undefined?{}:{header:parseEntityListHeader(surface.header)}),...(surface.description===undefined?{}:{description:text(surface.description,"surface.description")})}),revision:Object.freeze({release:integer(revision.release,"release",1),descriptorHash:digest(revision.descriptorHash,"descriptorHash"),surfaceHash:digest(revision.surfaceHash,"surfaceHash")}),scope:Object.freeze({status:oneOf(scope.status,["ready","context_required"] as const,"scope.status"),fingerprint:digest(scope.fingerprint,"scope.fingerprint"),labels:Object.freeze(array(scope.labels,"labels").map(raw=>{const item=object(raw,"label");return Object.freeze({key:code(item.key,"key"),label:text(item.label,"label"),value:text(item.value,"value")});}))}),actions:Object.freeze(array(value.actions,"actions").map(parseAction)),navigation:parseEffectiveEntitySections(value.navigation??[]),...(value.application===undefined?{}:{application:parseEntityApplication(value.application)})});
+}

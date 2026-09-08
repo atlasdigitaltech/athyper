@@ -25,7 +25,8 @@
     "@athyper/server-runtime-http": "workspace:*",
     "exceljs": "^4.4.0",
     "express": "^5.0.0",
-    "kysely": "^0.28.17"
+    "kysely": "^0.28.17",
+    "@athyper/server-platform-workflow": "workspace:*"
   },
   "devDependencies": {
     "@athyper/contract-platform-entity-list": "workspace:*",

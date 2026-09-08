@@ -1,5 +1,4 @@
-import { BusinessPartnerNavigation } from "./module-navigation";
-
+import { EntityApplicationLayout } from "@/lib/entity-application-layout";
 export default function BusinessPartnerLayout({children}:{readonly children:React.ReactNode}) {
-  return <div className="athyper-module-page"><BusinessPartnerNavigation/>{children}</div>;
+  return <EntityApplicationLayout entityCode="business_partner">{children}</EntityApplicationLayout>;
 }

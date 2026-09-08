@@ -1,14 +1,16 @@
+import type {EntityViewCatalog} from "@athyper/contract-platform-entity-list";
 import { parseInstant } from "@athyper/platform-temporal";
-import { parseEntityListDescriptor, parseEntityListResult, type EntityListDescriptorV1, type EntityListResultV1, type EntityListScopeCoordinateV1, type ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
+import { parseEntityApplicationDescriptor, type EntityApplicationDescriptorV1, parseEntityListDescriptor, parseEntityListResult, type EntityListDescriptorV1, type EntityListResultV1, type EntityListScopeCoordinateV1, type ListLocationStateV1 } from "@athyper/contract-platform-entity-list";
 import type { Operation, RequestOptions } from "./index";
 
 type EntityListParams = Readonly<Record<string, string | number>>;
 
+export const entityApplicationDescriptorOperation: Operation<EntityApplicationDescriptorV1> = Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/application-descriptor`,parse:parseEntityApplicationDescriptor,requestClass:"interactive",idempotency:"forbidden",response:"json"});
 export const entityListDescriptorOperation: Operation<EntityListDescriptorV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list-descriptor`, parse: parseEntityListDescriptor, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 export const entityListOperation: Operation<EntityListResultV1> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/entity-runtime/${entityCode(params)}/list`, parse: parseEntityListResult, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 
-export interface RecordBookmarkItemV1 { readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
-export interface RecordBookmarkMutationV1 { readonly records: readonly { readonly id: string; readonly label?: string }[]; readonly companyCodeId?: string; readonly legalEntityId?: string; readonly operatingOrganizationId?: string; readonly networkAccountId?: string; }
+export interface RecordBookmarkItemV1 { readonly description?: string; readonly id: string; readonly entityCode: string; readonly recordId: string; readonly label?: string; readonly createdAt: string; }
+export interface RecordBookmarkMutationV1 { readonly companyCodeIds?: string; readonly operatingOrganizationIds?: string; readonly partnerRole?: "supplier" | "customer"; readonly eligibleOperation?: "order" | "invoice" | "payment"; readonly records: readonly { readonly id: string; readonly label?: string }[]; readonly companyCodeId?: string; readonly legalEntityId?: string; readonly operatingOrganizationId?: string; readonly networkAccountId?: string; }
 export const recordBookmarksOperation: Operation<readonly RecordBookmarkItemV1[]> = Object.freeze({ method: "GET", path: "/api/record-bookmarks", parse: parseBookmarks, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 export const recordBookmarkMembershipOperation: Operation<ReadonlySet<string>> = Object.freeze({ method: "GET", path: (params: EntityListParams) => `/api/record-bookmarks/${entityCode(params)}/membership`, parse: parseBookmarkMembership, requestClass: "interactive", idempotency: "forbidden", response: "json" });
 export const addRecordBookmarksOperation: Operation<readonly string[], RecordBookmarkMutationV1> = Object.freeze({ method: "PUT", path: (params: EntityListParams) => `/api/record-bookmarks/${entityCode(params)}`, parse: parseBookmarkMutation, requestClass: "interactive", idempotency: "required", response: "json" });
@@ -48,9 +50,10 @@ export const downloadRecordExportOperation:Operation<{readonly url:string}>=Obje
 
 export interface RecordImportPreviewReceipt { readonly sessionId: string; readonly validCount: number; readonly invalidCount: number; readonly rows: readonly { readonly rowNumber: number; readonly valid: boolean; readonly errors: readonly string[] }[]; }
 
-export function entityListQuery(state: Pick<ListLocationStateV1, "query" | "filters" | "sort" | "group" | "columns" | "cursor" | "pageSize">, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
+export function entityListQuery(state: Pick<ListLocationStateV1, "standardViewKey" | "query" | "filters" | "sort" | "group" | "columns" | "cursor" | "pageSize">, descriptor: EntityListDescriptorV1, scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
   const query = state.query?.trim();
   return Object.freeze({
+    ...(state.standardViewKey?{standardView:state.standardViewKey}:{}),
     limit: state.pageSize ?? descriptor.limits.defaultPageSize,
     ...(state.cursor ? { cursor: state.cursor } : {}),
     ...(query && query.length >= descriptor.surface.search.minimumQueryLength ? { search: query } : {}),
@@ -65,6 +68,10 @@ export function entityListQuery(state: Pick<ListLocationStateV1, "query" | "filt
 
 export function entityListScopeQuery(scope?: EntityListScopeCoordinateV1): NonNullable<RequestOptions["query"]> {
   return Object.freeze({
+    ...(scope?.companyCodeIds?.length ? { companyCodeIds: [...new Set(scope.companyCodeIds)].sort().join(",") } : {}),
+    ...(scope?.operatingOrganizationIds?.length ? { operatingOrganizationIds: [...new Set(scope.operatingOrganizationIds)].sort().join(",") } : {}),
+    ...(scope?.partnerRole ? {partnerRole:scope.partnerRole} : {}),
+    ...(scope?.eligibleOperation ? {eligibleOperation:scope.eligibleOperation} : {}),
     ...(scope?.companyCodeId ? { companyCodeId: scope.companyCodeId } : {}),
     ...(scope?.legalEntityId ? { legalEntityId: scope.legalEntityId } : {}),
     ...(scope?.operatingOrganizationId ? { operatingOrganizationId: scope.operatingOrganizationId } : {}),
@@ -79,7 +86,7 @@ function entityCode(params: EntityListParams): string {
 }
 
 function parseObject(value: unknown): Readonly<Record<string, unknown>> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new TypeError("record transfer response must be an object"); return Object.freeze({ ...(value as Record<string, unknown>) }); }
-function parseBookmarks(value: unknown): readonly RecordBookmarkItemV1[] { const source = parseObject(value).items; if (!Array.isArray(source)) throw new TypeError("bookmark items are required"); return Object.freeze(source.map((candidate) => { const item = parseObject(candidate); const createdAt = requiredText(item, "createdAt"); if (Number.isNaN(parseInstant(createdAt))) throw new TypeError("bookmark createdAt is invalid"); return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), recordId: requiredText(item, "recordId"), ...(typeof item.label === "string" && item.label.trim() ? { label: item.label.trim() } : {}), createdAt }); })); }
+function parseBookmarks(value: unknown): readonly RecordBookmarkItemV1[] { const source = parseObject(value).items; if (!Array.isArray(source)) throw new TypeError("bookmark items are required"); return Object.freeze(source.map((candidate) => { const item = parseObject(candidate); const createdAt = requiredText(item, "createdAt"); if (Number.isNaN(parseInstant(createdAt))) throw new TypeError("bookmark createdAt is invalid"); return Object.freeze({ id: requiredText(item, "id"), entityCode: requiredText(item, "entityCode"), recordId: requiredText(item, "recordId"), ...(typeof item.description === "string" && item.description.trim() ? {description:item.description.trim()} : {}), ...(typeof item.label === "string" && item.label.trim() ? { label: item.label.trim() } : {}), createdAt }); })); }
 function parseBookmarkMembership(value: unknown): ReadonlySet<string> { return new Set(bookmarkIds(parseObject(value), "bookmarkedRecordIds")); }
 function parseBookmarkMutation(value: unknown): readonly string[] { return Object.freeze(bookmarkIds(parseObject(value), "recordIds")); }
 function bookmarkIds(item: Readonly<Record<string, unknown>>, key: string): readonly string[] { const source = item[key]; if (!Array.isArray(source) || source.some((id) => typeof id !== "string")) throw new TypeError(`bookmark ${key} is invalid`); return source as readonly string[]; }
@@ -97,3 +104,11 @@ function parseDownload(value:unknown){return Object.freeze({url:requiredText(par
 function parseDownloadWithExpiry(value:unknown){const item=parseObject(value);return Object.freeze({url:requiredText(item,"url"),expiresInSeconds:requiredCount(item,"expiresInSeconds")});}
 function uuidParam(params: EntityListParams, key: string): string { const value = String(params[key] ?? ""); if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)) throw new TypeError(`${key} must be a UUID`); return encodeURIComponent(value); }
 function integerParam(params: EntityListParams, key: string): string { const value = Number(params[key]); if (!Number.isSafeInteger(value) || value < 0) throw new TypeError(`${key} must be a non-negative integer`); return String(value); }
+
+function parseViewCatalog(value:unknown):EntityViewCatalog {
+ const item=parseObject(value),caps=parseObject(item.capabilities);
+ if(!Array.isArray(item.views))throw new TypeError("Invalid view catalog");
+ return {views:item.views.map(raw=>{const view=parseObject(raw);if(!["personal","shared","system"].includes(String(view.scope))||typeof view.version!=="number")throw new TypeError("Invalid saved view");return {id:requiredText(view,"id"),name:requiredText(view,"name"),scope:view.scope as "personal"|"shared"|"system",version:view.version,compatible:view.compatible===true,state:view.state as EntityViewCatalog["views"][number]["state"]};}),...(typeof item.personalDefault==="string"?{personalDefault:item.personalDefault}:{}),...(typeof item.sharedDefault==="string"?{sharedDefault:item.sharedDefault}:{}),...(typeof item.createdId==="string"?{createdId:item.createdId}:{}),capabilities:{createShared:caps.createShared===true,manageShared:caps.manageShared===true,setSharedDefault:caps.setSharedDefault===true}};
+}
+export const entityViewsOperation:Operation<EntityViewCatalog>=Object.freeze({method:"GET",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/views`,parse:parseViewCatalog,requestClass:"interactive",idempotency:"forbidden",response:"json"});
+export const entityViewCommandOperation:Operation<EntityViewCatalog>=Object.freeze({method:"POST",path:(params:EntityListParams)=>`/api/entity-runtime/${entityCode(params)}/views`,parse:parseViewCatalog,requestClass:"interactive",idempotency:"forbidden",response:"json"});

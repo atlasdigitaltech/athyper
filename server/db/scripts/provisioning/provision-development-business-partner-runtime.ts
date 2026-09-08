@@ -89,7 +89,7 @@ export function buildDevelopmentBusinessPartnerProjection(permissionId: string) 
       },
       supportedModes: ["table", "compact"],
       search: { minimumQueryLength: 1 },
-      filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }, { field: "partner_category", defaultOperator: "eq" }, { field: "registration_country_code", defaultOperator: "contains" }, { field: "updated_at", defaultOperator: "relative" }], allowUserPinning: true },
+      filterPresentation: { quickFields: [{ field: "status", defaultOperator: "eq" }, { field: "partner_category", defaultOperator: "eq" }, { field: "registration_country_code", defaultOperator: "in" }, { field: "updated_at", defaultOperator: "relative" }], allowUserPinning: true },
       limits: { defaultPageSize: 10, allowedPageSizes: [10, 25, 50, 100], maxSortLevels: 3, countMode: "exact" },
       dataOperations:{exportFormats:["xlsx","csv","json","ndjson"],importAdapterKey:"neon.business_partner.operating_organization.v1",importOperations:["create","update","upsert","delete","replace"],importOperationPermissions:{create:[IMPORT_PERMISSION_CODE],update:["neon.relationship.business_partner.update"],upsert:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"],delete:["neon.relationship.business_partner.update"],replace:[IMPORT_PERMISSION_CODE,"neon.relationship.business_partner.update"]},importFormats:["xlsx","csv","json"],importMaxRows:50000,importMaxFileBytes:26214400,allowTemplateDownload:true},
     },

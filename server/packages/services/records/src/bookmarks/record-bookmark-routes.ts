@@ -24,11 +24,18 @@ export function registerRecordBookmarkRoutes(
     application,
     contracts.list,
     options.authenticate,
-    async (_request, response, next) => {
+    async (request, response, next) => {
       try {
         noStore(response);
         response.json({
-          items: await options.bookmarks.list(options.readContext(response)),
+          items:
+            request.query["entityCode"] === undefined
+              ? await options.bookmarks.list(options.readContext(response))
+              : await options.bookmarks.list(
+                  options.readContext(response),
+                  entityCode(request.query["entityCode"]),
+                  parseEntityListScopeCoordinate(request.query),
+                ),
         });
       } catch (error) {
         next(asHttpError(error));
@@ -122,6 +129,7 @@ const item = {
     entityCode: { type: "string" },
     recordId: uuid,
     label: { type: "string", maxLength: 240 },
+    description: { type: "string", maxLength: 480 },
     createdAt: { type: "string", format: "date-time" },
   },
 } as const;
@@ -162,6 +170,10 @@ const record = {
   },
 } as const;
 const scope = {
+  companyCodeIds: { type: "string", maxLength: 3699 },
+  operatingOrganizationIds: { type: "string", maxLength: 3699 },
+  partnerRole: { type: "string", enum: ["supplier", "customer"] },
+  eligibleOperation: { type: "string", enum: ["order", "invoice", "payment"] },
   companyCodeId: uuid,
   legalEntityId: uuid,
   operatingOrganizationId: uuid,
@@ -192,6 +204,23 @@ const contracts = {
       "List the authenticated principal's 200 most recent record favourites",
     tags: ["Record favourites"],
     authenticated: true,
+    request: {
+      query: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          entityCode: params.properties.entityCode,
+          ...scope,
+          companyCodeIds: { type: "string", maxLength: 3699 },
+          operatingOrganizationIds: { type: "string", maxLength: 3699 },
+          partnerRole: { type: "string", enum: ["supplier", "customer"] },
+          eligibleOperation: {
+            type: "string",
+            enum: ["order", "invoice", "payment"],
+          },
+        },
+      },
+    },
     responses: {
       200: { description: "Record favourites", body: listBody },
       ...errors,
@@ -258,8 +287,9 @@ const contracts = {
 function noStore(response: Response) {
   response.setHeader("Cache-Control", "private, no-store");
 }
-function entityCode(value: string | string[] | undefined): string {
-  const code = Array.isArray(value) ? value[0] : value;
+function entityCode(value: unknown): string {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  const code = typeof candidate === "string" ? candidate : undefined;
   validateEntityCode(code ?? "");
   return code!;
 }

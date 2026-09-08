@@ -1,3 +1,7 @@
+import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
+import { parseEntityRecordPresentation, validateRecordPresentationReferences } from "@athyper/contract-platform-entity-runtime";
+import { parseCollectionRelationship } from "@athyper/server-contract-metadata";
+import { compileListExperience } from "./list-experience.js";
 import { createHash } from "node:crypto";
 import type { CompiledMetaEntityArtifact, ContractTestReport, MetaEntityGraph, ValidationIssue, ValidationReport } from "@athyper/server-contract-meta-entity-authoring";
 import { entityFieldFilterOperators, type EntityFieldType, type EntityListFilterOperator } from "@athyper/server-contract-metadata";
@@ -77,7 +81,18 @@ export function compileGraph(graph: MetaEntityGraph): CompiledMetaEntityArtifact
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
   const listPresentation = compileListPresentation(graph);
+  const recordSurfaces = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.["recordPresentation"] !== undefined);
+  if (recordSurfaces.length > 1) throw new Error("Only one record presentation may be published per entity");
+  const recordPresentation = recordSurfaces[0] ? parseEntityRecordPresentation(recordSurfaces[0].layoutConfig!["recordPresentation"]) : undefined;
+  if (recordPresentation) validateRecordPresentationReferences(recordPresentation, graph.fields.map(field => field.fieldKey), graph.operations.filter(operation => operation.status !== "deprecated").map(operation => operation.operationKey));
+  const directoryRules=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.["directoryScope"]===undefined?[]:[parseEntityDirectoryScope(surface.layoutConfig["directoryScope"])]);
+  if(directoryRules.length>1) throw new TypeError("Only one directory scope rule is allowed");
+  const relationshipBindings=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.["collectionRelationship"]===undefined?[]:[parseCollectionRelationship(surface.layoutConfig["collectionRelationship"])]);
+  if(relationshipBindings.length>1)throw new Error("Only one collection relationship may be published per entity");
   const descriptor = canonicalValue({
+    ...(directoryRules[0]?{directoryScope:directoryRules[0]}:{}),
+    ...(relationshipBindings[0]?{collectionRelationship:relationshipBindings[0]}:{}),
+    ...(recordPresentation ? { recordPresentation } : {}),
     entity: graph.entity,
     fields:graph.fields,keys:graph.keys??[],keyFields:graph.keyFields??[],searchProfiles:graph.searchProfiles??[],searchFields:graph.searchFields??[],relations:graph.relations??[],relationTargets:graph.relationTargets??[],relationFields:graph.relationFields??[],operations:graph.operations,operationPermissions:graph.operationPermissions??[],operationRules:graph.operationRules??[],operationScopeBindings:graph.operationScopeBindings??[],surfaces:graph.surfaces??[],surfaceSections:graph.surfaceSections??[],surfaceFieldBindings:graph.surfaceFieldBindings??[],surfaceOperations:graph.surfaceOperations??[],flows:graph.flows??[],flowSteps:graph.flowSteps??[],lifecycleBindings:graph.lifecycleBindings??[],lifecycleOperationBindings:graph.lifecycleOperationBindings??[],policyBindings:graph.policyBindings??[],fieldPolicyBindings:graph.fieldPolicyBindings??[],numberingBindings:graph.numberingBindings??[],classProfiles:graph.classProfiles??[],runtimeProfiles:graph.runtimeProfiles??[],...(listPresentation?{listPresentation}:{}),
   }) as Readonly<Record<string, unknown>>;
@@ -115,6 +130,7 @@ export function compileListPresentation(graph: MetaEntityGraph): Readonly<Record
   };
   return {
     schemaVersion: 1,
+    experience: compileListExperience(graph, surface),
     title: surface.title,
     ...(surface.description ? { description: surface.description } : {}),
     identityField: typeof config["identityField"] === "string" ? config["identityField"] : columns[0],
@@ -200,6 +216,7 @@ function validateListSurfaces(graph:MetaEntityGraph,issues:ValidationIssue[]){
   const profiles=new Set((graph.searchProfiles??[]).filter(profile=>profile.status!=="deprecated").map(profile=>profile.searchKey));
   for(const [surfaceIndex,surface] of (graph.surfaces??[]).entries()){
     if(surface.surfaceKind!=="list"||surface.status==="deprecated")continue;
+    try { compileListExperience(graph, surface); } catch (cause) { issues.push({code:"LIST_EXPERIENCE_INVALID",path:`surfaces.${surfaceIndex}.layoutConfig.experience`,message:cause instanceof Error ? cause.message : "Invalid list experience"}); }
     if(!surface.id){issues.push({code:"LIST_SURFACE_ID_REQUIRED",path:`surfaces.${surfaceIndex}.id`,message:"List surfaces require an identity before compilation"});continue;}
     const bindings=(graph.surfaceFieldBindings??[]).filter(binding=>binding.entitySurfaceId===surface.id&&binding.status!=="deprecated");
     const keys=bindings.flatMap(binding=>{const field=fieldsById.get(binding.entityFieldId);return field?[field.fieldKey]:[];});

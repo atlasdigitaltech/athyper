@@ -101,3 +101,9 @@ node tooling/scripts/atlas/set-local-stage.mjs history
 Validate history and service readiness after each step. Restore a qualified stage with `node tooling/scripts/atlas/set-local-stage.mjs mutation`. This helper never recreates the database or inference container, removes volumes, changes QA, or rolls back schema/data.
 
 If version rollback is necessary, restore the recorded prior API image in the backed-up overlay, or restore the previous pinned inference image/model lock and verify its existing artifacts before generation is enabled. Keep conversation databases, immutable audit/command evidence, the model volume, and offline artifacts. Never use `docker compose down -v` or delete proposal evidence to recover an uncertain command.
+
+## Streaming client correction (2026-09-07)
+
+The shared browser client incorrectly validated `message.delta.text` as a non-empty, trimmed string. Ollama can emit a valid chunk containing only a space or newline. That threw a client `TypeError` and replaced the visible answer with a generic failure card even when the server recorded `run.completed`. Raw relay/SSE acceptance did not catch this browser parsing failure.
+
+Text chunks now require string type but preserve all whitespace and empty chunks. Identifier validation remains strict. Seven client contract tests and the shared runtime typecheck passed. The fix was built and deployed to all three DEV web applications. A real authenticated Neon UI request for the qualified Business Partner completed with a citation and **seven whitespace-only chunks**, without an error card. Private screenshot and evidence: `~/.athyper/instances/dev/receipts/atlas-whitespace/`. Refresh existing browser tabs to load the updated client.

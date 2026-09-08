@@ -35,7 +35,7 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
       if (collectionScope.status === "context_required") throw new RecordServiceError(409, "RECORD_LIST_SCOPE_REQUIRED", "Select a validated work context before listing scoped records");
       if (collectionScope.status === "forbidden") throw new RecordServiceError(403, collectionScope.code, collectionScope.message);
       const authorization = await authorizeRecordListRead(options.authorizer, query.context, descriptor, collectionScope.authorizationResource);
-      if (authorization.scope && !authorization.scope.tenantWide && !collectionScope.constraints.length) throw new RecordServiceError(409, "RECORD_LIST_SCOPE_REQUIRED", "The selected work context has no registered collection-scope resolver");
+      if (authorization.scope && !authorization.scope.tenantWide && !collectionScope.constraints.length && descriptor.directoryScope?.mode !== "tenant") throw new RecordServiceError(409, "RECORD_LIST_SCOPE_REQUIRED", "The selected work context has no registered collection-scope resolver");
       const readableFields = await readableRecordFields(options.authorizer, query.context, descriptor);
       const readableKeys = new Set(readableFields.map((field) => field.key));
       validateQueryFields(descriptor.fields, query, readableKeys);
@@ -51,7 +51,7 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
       const minimumQueryLength = descriptor.listPresentation?.search?.minimumQueryLength ?? 1;
       if (query.search && query.search.trim().length < minimumQueryLength) throw new RecordServiceError(400, "SEARCH_TOO_SHORT", `Record search must contain at least ${minimumQueryLength} characters`);
       if (query.hydrateReferences) throw new RecordServiceError(409, "REFERENCE_HYDRATION_UNAVAILABLE", "Reference hydration is not available for this list endpoint");
-      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.list({ descriptor, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.recordIds?.length ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) }, transaction));
+      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.list({ descriptor, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.viewRelationships?{viewRelationships:query.viewRelationships}:{}), ...(query.recordIds !== undefined ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) }, transaction));
       const result = restrictResponseProjection(repositoryResult, descriptor, responseFields);
       return Object.freeze({ descriptor, collectionScope, authorization, readableFields, responseFields, result });
     },
@@ -76,6 +76,11 @@ export function createRecordQueryService<Transaction = unknown>(options: RecordQ
     async list(query) { return (await listExecutor.execute(query)).result; },
     async get(query) {
       const descriptor = await descriptorFor(options.metadata, query.context, query.entityCode);
+      if (descriptor.directoryScope) {
+        await authorizeRecordListRead(options.authorizer, query.context, descriptor, { recordId: query.recordId });
+        const result = await listExecutor.execute({ context: query.context, entityCode: query.entityCode, recordIds: [query.recordId], limit: 1 });
+        return { data: result.result.data[0] ?? null };
+      }
       await authorize(options.authorizer, query.context, descriptor.operations["read"]?.permissionCode, {
         tenantId: query.context.tenantId,
         entityCode: query.entityCode,
@@ -95,6 +100,7 @@ function cursorScope(context: ListRecordsQuery["context"], scope: Extract<Record
 
 async function resolveCollectionScope(resolver: RecordCollectionScopeResolver | undefined, query: ListRecordsQuery, descriptor: Awaited<ReturnType<typeof descriptorFor>>): Promise<RecordCollectionScopeResolution> {
   if (resolver) return resolver.resolve({ context: query.context, descriptor, operationCode: "read", ...(query.scopeCoordinate ? { coordinate: query.scopeCoordinate } : {}) });
+  if(descriptor.directoryScope && descriptor.directoryScope.mode!=="tenant") throw new RecordServiceError(409,"DIRECTORY_SCOPE_RESOLVER_REQUIRED","Directory scope resolver is required");
   return Object.freeze({ status: "ready", authorizationResource: Object.freeze({}), constraints: Object.freeze([]), labels: Object.freeze([]), fingerprintMaterial: Object.freeze({ mode: "tenant" }) });
 }
 

@@ -20,7 +20,9 @@
     "@athyper/platform-surface-kit": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
     "@athyper/platform-ui": "workspace:*",
-    "@athyper/product-neon-shell": "workspace:*"
+    "@athyper/product-neon-shell": "workspace:*",
+    "@athyper/platform-entity-form-detail": "workspace:*",
+    "@athyper/platform-shell": "workspace:*"
   },
   "peerDependencies": {
     "react": "^19.2.5"

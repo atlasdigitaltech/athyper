@@ -42,7 +42,9 @@ export async function readBusinessPartner360CommonSection(
   if (!businessPartnerOwnerType)
     throw new Error("BP_360_OWNER_TYPE_MISSING:business_partner");
   const positioned =
-    input.sectionCode === "identity"
+    input.sectionCode === "comments" || input.sectionCode === "attachments"
+      ? await resources(input, transaction)
+      : input.sectionCode === "identity"
       ? await identity(input, businessPartnerOwnerType, transaction)
       : input.sectionCode === "contacts"
         ? await contacts(
@@ -123,7 +125,7 @@ async function identity(
     sql<Row>`SELECT bp.id::text,bp.code,bp.name,bp.display_name,bp.legal_name,COALESCE((SELECT array_agg(alias.alias_name ORDER BY alias.is_primary DESC,alias.alias_name) FROM master.business_partner_alias alias WHERE alias.tenant_id=bp.tenant_id AND alias.business_partner_id=bp.id AND alias.status='active' AND alias.effective_from<=${input.asOf}::date AND(alias.effective_until IS NULL OR alias.effective_until>${input.asOf}::date)),'{}'::text[]) aliases,bp.partner_category::text,bp.ownership_class::text,bp.legal_classification::text,bp.legal_form,bp.registration_country_code::text,bp.incorporation_date,bp.website_url,bp.status::text,bp.created_at,parent.id::text parent_id,parent.code parent_code,COALESCE(parent.display_name,parent.name) parent_name FROM master.business_partner bp LEFT JOIN master.business_partner parent ON parent.tenant_id=bp.tenant_id AND parent.id=bp.parent_business_partner_id WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid AND bp.partner_category='organization' AND bp.created_at<=${input.cursor.snapshotAt}::timestamptz AND ${!input.cursor.afterAt}`.execute(
       transaction,
     ),
-    sql<Row>`SELECT id::text,industry_domain_code,industry_code_id::text,assignment_kind,is_primary,verified_at,effective_from,effective_until,created_at FROM master.business_partner_industry_classification WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
+    sql<Row>`SELECT id::text,(SELECT code FROM shared.industry_code WHERE id=classification.industry_code_id) industry_code,(SELECT name FROM shared.industry_code WHERE id=classification.industry_code_id) industry_name,industry_domain_code,industry_code_id::text,assignment_kind,is_primary,verified_at,effective_from,effective_until,created_at FROM master.business_partner_industry_classification classification WHERE tenant_id=${input.tenantId}::uuid AND business_partner_id=${input.businessPartnerId}::uuid AND status='active' AND effective_from<=${input.asOf}::date AND(effective_until IS NULL OR effective_until>${input.asOf}::date) AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     ),
     sql<Row>`SELECT id::text,source_system_code,external_entity_code,external_id,external_code,created_at FROM master.external_reference WHERE tenant_id=${input.tenantId}::uuid AND owner_type_id=${ownerType}::uuid AND owner_id=${input.businessPartnerId}::uuid AND status='active' AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
@@ -181,6 +183,8 @@ async function identity(
         id: text(row, "id"),
         industryDomainCode: text(row, "industry_domain_code"),
         industryCodeId: text(row, "industry_code_id"),
+        industryCode: optional(row, "industry_code"),
+        industryName: optional(row, "industry_name"),
         assignmentKind: text(row, "assignment_kind"),
         primary: Boolean(row["is_primary"]),
         verified: Boolean(row["verified_at"]),
@@ -474,6 +478,31 @@ async function identifiers(
   ];
 }
 
+async function resources(input: Input, transaction: Tx): Promise<Positioned<unknown>[]> {
+  if (input.sectionCode === "comments") {
+    const result = await sql<Row>`SELECT comment.id::text,principal.name author_name,comment.comment_text,comment.visibility,comment.status,comment.created_at,comment.parent_comment_id::text
+      FROM document.comment comment LEFT JOIN master.principal principal ON principal.tenant_id=comment.tenant_id AND principal.id=comment.commenter_id
+      WHERE comment.tenant_id=${input.tenantId}::uuid AND comment.context_type='entity'
+        AND comment.entity_type IN ('business_partner','master.business_partner') AND comment.entity_id=${input.businessPartnerId}
+        AND comment.status<>'deleted' AND (comment.visibility<>'private' OR comment.commenter_id=${input.principalId ?? null}::uuid)
+        AND comment.created_at<=${input.cursor.snapshotAt}::timestamptz AND comment.created_at::date<=${input.asOf}::date
+        ${after(input, "comment.created_at", "comment.id")}
+      ORDER BY comment.created_at DESC,comment.id DESC LIMIT ${input.limit + 1}`.execute(transaction);
+    return result.rows.map(row => position(row, { id: text(row, "id"), text: text(row, "comment_text"), authorName: optional(row, "author_name"), visibility: text(row, "visibility"), status: text(row, "status"), createdAt: iso(row["created_at"]), ...(optional(row, "parent_comment_id") ? { parentCommentId: optional(row, "parent_comment_id") } : {}) }));
+  }
+  const result = await sql<Row>`SELECT attachment.id::text,attachment.file_name,attachment.content_type,attachment.size_bytes,attachment.created_at
+    FROM document.attachment attachment
+    JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id
+    WHERE attachment.tenant_id=${input.tenantId}::uuid AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active'
+      AND (attachment.expires_at IS NULL OR attachment.expires_at>clock_timestamp())
+      AND attachment.created_at<=${input.cursor.snapshotAt}::timestamptz AND attachment.created_at::date<=${input.asOf}::date
+      AND (EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.entity_type IN ('business_partner','master.business_partner') AND link.entity_id=${input.businessPartnerId} AND link.attachment_series_id=attachment.series_id AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id))
+        OR (${input.certificateVisible === true} AND EXISTS(SELECT 1 FROM master.certification certification WHERE certification.tenant_id=attachment.tenant_id AND certification.owner_type='business_partner' AND certification.owner_id=${input.businessPartnerId}::uuid AND certification.document_attachment_id=attachment.id AND (certification.company_code_id IS NULL OR certification.company_code_id=${input.companyCodeId ?? null}::uuid) AND (certification.effective_from IS NULL OR certification.effective_from<=${input.asOf}::date))))
+      ${after(input, "attachment.created_at", "attachment.id")}
+    ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${input.limit + 1}`.execute(transaction);
+  return result.rows.map(row => position(row, { id: text(row, "id"), attachmentId: text(row, "id"), fileName: text(row, "file_name"), contentType: optional(row, "content_type"), sizeBytes: row["size_bytes"] == null ? undefined : Number(row["size_bytes"]), createdAt: iso(row["created_at"]) }));
+}
+
 function after(input: Input, at = "created_at", id = "id") {
   return input.cursor.afterAt && input.cursor.afterId
     ? sql`AND (${sql.raw(at)},${sql.raw(id)})<(${input.cursor.afterAt}::timestamptz,${input.cursor.afterId}::uuid)`
@@ -489,6 +518,8 @@ function position<T>(row: Row, item: T): Positioned<T> {
 function source(section: Input["sectionCode"]) {
   return (
     {
+      comments: "document.comment",
+      attachments: "document.attachment",
       identity: "master.business_partner",
       contacts: "master.contact_person",
       addresses: "master.address_link",

@@ -552,6 +552,9 @@ importers:
       '@athyper/tsconfig':
         specifier: workspace:*
         version: link:../../../../tooling/tsconfig
+      esbuild:
+        specifier: ^0.27.7
+        version: 0.27.7
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -662,6 +665,12 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
+      '@athyper/platform-entity-form-detail':
+        specifier: workspace:*
+        version: link:../../../platform/entity/runtime/form-detail
+      '@athyper/platform-shell':
+        specifier: workspace:*
+        version: link:../../../platform/shell/shell
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../platform/shell/app-foundation
@@ -770,6 +779,9 @@ importers:
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../platform/shell/app-foundation
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/ui
       '@athyper/product-neon-navigation':
         specifier: workspace:*
         version: link:../navigation
@@ -1006,6 +1018,9 @@ importers:
       '@athyper/platform-entity-descriptor-client':
         specifier: workspace:*
         version: link:../descriptor-client
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../foundation/icons
       '@athyper/platform-shell':
         specifier: workspace:*
         version: link:../../../shell/shell
@@ -1037,6 +1052,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../foundation/api-client
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../../foundation/i18n
       '@athyper/platform-icons':
         specifier: workspace:*
         version: link:../../../foundation/icons
@@ -1056,9 +1074,15 @@ importers:
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
       react:
         specifier: ^19.2.5
         version: 19.2.8
+      react-dom:
+        specifier: ^19.2.5
+        version: 19.2.8(react@19.2.8)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -2641,6 +2665,9 @@ importers:
 
   server/packages/contracts/master-data:
     dependencies:
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-runtime
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../auth
@@ -2676,6 +2703,12 @@ importers:
 
   server/packages/contracts/metadata:
     dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-list
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-runtime
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../auth
@@ -3013,6 +3046,12 @@ importers:
 
   server/packages/planes/studio/meta-entity-authoring:
     dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../../packages/contracts/platform/entity-list
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../../packages/contracts/platform/entity-runtime
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../../contracts/auth
@@ -3467,6 +3506,12 @@ importers:
 
   server/packages/platform/metadata:
     dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-list
+      '@athyper/contract-platform-entity-runtime':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-runtime
       '@athyper/server-contract-metadata':
         specifier: workspace:*
         version: link:../../contracts/metadata
@@ -3569,6 +3614,9 @@ importers:
 
   server/packages/platform/preferences:
     dependencies:
+      '@athyper/contract-platform-entity-list':
+        specifier: workspace:*
+        version: link:../../../../packages/contracts/platform/entity-list
       '@athyper/server-contract-auth':
         specifier: workspace:*
         version: link:../../contracts/auth
@@ -4232,6 +4280,9 @@ importers:
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      '@athyper/server-platform-workflow':
+        specifier: workspace:*
+        version: link:../../platform/workflow
       '@athyper/server-runtime-http':
         specifier: workspace:*
         version: link:../../runtime/http

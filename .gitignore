@@ -209,3 +209,6 @@ packages-backup/
 # Claude Code artifacts
 # =========================
 .codex/
+
+# Customer-specific docs (local only)
+docs/customer/

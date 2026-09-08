@@ -18,6 +18,13 @@ describe("metadata service", () => {
     expect(parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: descriptor })).toEqual(descriptor);
   });
 
+  it("preserves the versioned localized header through descriptor storage parsing", () => {
+    const experience = { schemaVersion: 1, header: { title: { defaultLocale: "en", values: { en: "Partners", ms: "Rakan" } } }, routes: [], actions: [] };
+    const parsed = parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: { ...descriptor, listPresentation: { experience } } });
+    expect(parsed.listPresentation?.experience).toEqual(experience);
+    expect(() => parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: { ...descriptor, listPresentation: { experience: { ...experience, schemaVersion: 2 } } } })).toThrow();
+  });
+
   it("parses and validates canonical list defaults against field capabilities", () => {
     const compiled = {
       ...descriptor,
@@ -63,4 +70,12 @@ describe("metadata generation events", () => {
     expect(await cache.get(coordinate)).toBeUndefined();
     expect(await handle(event)).toBe(false);
   });
+});
+
+
+it("validates record presentation references in stored runtime metadata", () => {
+  const parse = (recordPresentation: unknown) => parseEntityRuntimeDescriptor({ entity_code: descriptor.entityCode, release_id: descriptor.releaseId, release_no: 1, entity_contract_hash: descriptor.contractHash, plane_code: descriptor.planeKey, compiled_hash: descriptor.compiledHash, compiled_json: { ...descriptor, recordPresentation } });
+  expect(parse({ schemaVersion: 1, titleField: "name", iconKey: "contact" }).recordPresentation).toMatchObject({ titleField: "name", iconKey: "contact" });
+  expect(() => parse({ schemaVersion: 1, titleField: "secret" })).toThrow(/Unknown record presentation field/);
+  expect(() => parse({ schemaVersion: 1, titleField: "name", actions: [{ key: "delete", label: "Delete", operationKey: "delete" }] })).toThrow(/Unknown record presentation operation/);
 });

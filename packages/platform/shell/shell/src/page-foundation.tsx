@@ -10,7 +10,7 @@ export interface PageFrameProps extends HTMLAttributes<HTMLElement> {
 
 export interface PageHeaderProps extends Omit<HTMLAttributes<HTMLElement>, "title"> {
   readonly level: PageHeaderLevel;
-  readonly context: ReactNode;
+  readonly context?: ReactNode;
   readonly title: ReactNode;
   readonly description?: ReactNode;
   readonly icon?: ReactNode;
@@ -38,7 +38,7 @@ export function PageHeader({ level, context, title, description, icon, metadata,
   return <header className={["athyper-page-header", `athyper-page-header--${level}`, className].filter(Boolean).join(" ")} data-slot="page-header" aria-labelledby={titleId} {...props}>
     {icon ? <span className="athyper-page-header__icon" aria-hidden="true">{icon}</span> : null}
     <div className="athyper-page-header__body">
-      <p className="athyper-page-header__context">{context}</p>
+      {context ? <p className="athyper-page-header__context">{context}</p> : null}
       <div className="athyper-page-header__heading">
         <h1 id={titleId}>{title}</h1>
         {metadata ? <div className="athyper-page-header__metadata">{metadata}</div> : null}

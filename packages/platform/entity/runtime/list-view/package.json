@@ -21,15 +21,19 @@
     "@athyper/platform-icons": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-temporal": "workspace:*",
-    "@athyper/platform-ui": "workspace:*"
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-i18n": "workspace:*"
   },
   "peerDependencies": {
-    "react": "^19.2.5"
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
   },
   "devDependencies": {
     "@athyper/config": "workspace:*",
     "@types/react": "^19.2.14",
     "react": "^19.2.5",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "@types/react-dom": "^19.2.3",
+    "react-dom": "^19.2.5"
   }
 }

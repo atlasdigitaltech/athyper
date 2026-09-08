@@ -168,3 +168,19 @@ describe("record bookmark HTTP contracts", () => {
     },
   );
 });
+
+it("passes the entity and multiple organization scope to scoped favourite reads", async () => {
+  const { url, bookmarks } = await fixture();
+  const response = await fetch(
+    `${url}?entityCode=business_partner&operatingOrganizationIds=${ID}&partnerRole=supplier`,
+  );
+  expect(response.status).toBe(200);
+  expect(bookmarks.list).toHaveBeenCalledWith({}, "business_partner", {
+    operatingOrganizationIds: [ID],
+    partnerRole: "supplier",
+  });
+  const invalid = await fetch(
+    `${url}?entityCode=business_partner&operatingOrganizationIds=invalid`,
+  );
+  expect(invalid.status).toBe(400);
+});

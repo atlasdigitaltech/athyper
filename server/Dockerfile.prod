@@ -31,6 +31,7 @@ COPY tooling/tools/scripts/prepare-server-runtime-packages.mjs /tmp/prepare-serv
 RUN pnpm --filter "@athyper/platform-i18n" run build
 RUN pnpm --filter "@athyper/platform-temporal" run build
 RUN pnpm --filter "@athyper/contract-platform-entity-runtime" run build
+RUN pnpm --filter "@athyper/contract-platform-entity-list" run build
 RUN pnpm --filter "@athyper/contract-athyper-onboarding" run build
 RUN pnpm --filter "@athyper/contract-platform-dashboard" run build
 RUN pnpm --filter "@athyper/server-adapter-db-neon" run --if-present codegen
@@ -40,6 +41,7 @@ RUN pnpm --filter "@athyper/server-platform-host" run build
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/temporal
+RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-list
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding
 RUN node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard
@@ -52,6 +54,7 @@ RUN --mount=type=cache,id=athyper-server-pnpm-store-v2,target=/pnpm/store,sharin
     node /tmp/prepare-server-runtime-packages.mjs /repo/server/packages /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/i18n /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/platform/foundation/temporal /runtime && \
+    node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-list /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/entity-runtime /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/athyper/onboarding /runtime && \
     node /tmp/prepare-server-runtime-packages.mjs /repo/packages/contracts/platform/dashboard /runtime

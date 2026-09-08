@@ -5,15 +5,27 @@
   "type": "module",
   "main": "./src/index.tsx",
   "types": "./src/index.tsx",
-  "exports": { ".": "./src/index.tsx" },
-  "scripts": { "typecheck": "tsc --noEmit" },
+  "exports": {
+    ".": "./src/index.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/platform-entity-descriptor-client": "workspace:*",
     "@athyper/platform-shell": "workspace:*",
     "@athyper/platform-shell-app-foundation": "workspace:*",
-    "@athyper/platform-ui": "workspace:*"
+    "@athyper/platform-ui": "workspace:*",
+    "@athyper/platform-icons": "workspace:*"
   },
-  "peerDependencies": { "react": "^19.2.5" },
-  "devDependencies": { "@athyper/config": "workspace:*", "@types/react": "^19.2.14", "react": "^19.2.5", "typescript": "^6.0.3" }
+  "peerDependencies": {
+    "react": "^19.2.5"
+  },
+  "devDependencies": {
+    "@athyper/config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.5",
+    "typescript": "^6.0.3"
+  }
 }

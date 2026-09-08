@@ -1,34 +1,126 @@
 "use client";
-import type { EntityListScopeCoordinateV1 } from "@athyper/contract-platform-entity-list";
-import { EntityListRuntime, ListScopeControl, type EntityListPageAction } from "@athyper/platform-entity-list-view";
-import { useApiClient, usePermissions } from "@athyper/platform-shell-app-foundation";
-import { useNeonOperatingOrganization, useNeonWorkContext } from "@athyper/product-neon-shell";
-import { useEffect, useMemo, useState } from "react";
+import type {
+  EntityListScopeCoordinateV1,
+  ListDensity,
+} from "@athyper/contract-platform-entity-list";
+import {
+  EntityListRuntime,
+  EntityApplicationSection,
+  useEntityApplication,
+  ListScopeControl,
+  DirectoryFilterContext,
+} from "@athyper/platform-entity-list-view";
+import {
+  useApiClient,
+  useApplicationNavigation,
+} from "@athyper/platform-shell-app-foundation";
+import {
+  useNeonOperatingOrganization,
+  useNeonWorkContext,
+} from "@athyper/product-neon-shell";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-export function NeonEntityList({ entityCode }: { readonly entityCode: string }) {
+export function NeonEntityList({
+  entityCode,
+  initialDensity,
+  navigationOnly,
+}: {
+  readonly entityCode: string;
+  readonly navigationOnly?: boolean;
+  readonly initialDensity?: ListDensity;
+}) {
   const client = useApiClient();
-  const permissions = usePermissions();
-  if (entityCode !== "business_partner") return <EntityListRuntime client={client} entityCode={entityCode}/>;
-  const pageActions: readonly EntityListPageAction[] = [
-    { href: "/mdg/business-partner/requests", label: "Onboarding requests" },
-    ...(permissions.has("neon.relationship.entity_case.create") ? [{ href: "/mdg/business-partner/new", label: "New supplier request", variant: "primary" as const }] : []),
-  ];
-  return <ScopedBusinessPartnerList client={client} entityCode={entityCode} pageActions={pageActions}/>;
+  const app = useEntityApplication();
+  if (app)
+    return (
+      <EntityListRuntime
+        client={client}
+        entityCode={entityCode}
+        scopeCoordinate={app.scopeCoordinate}
+        scopeControl={app.scopeControl}
+        contentOnly
+        initialDensity={initialDensity}
+      />
+    );
+  return (
+    <ScopedNeonEntityList
+      client={client}
+      entityCode={entityCode}
+      initialDensity={initialDensity}
+      navigationOnly={navigationOnly}
+    />
+  );
 }
 
-function ScopedBusinessPartnerList({ client, entityCode, pageActions }: { readonly client: ReturnType<typeof useApiClient>; readonly entityCode: string; readonly pageActions: readonly EntityListPageAction[] }) {
+function ScopedNeonEntityList({
+  client,
+  entityCode,
+  initialDensity,
+  navigationOnly,
+  applicationOnly,
+  children,
+  onNavigate,
+  activePath,
+}: {
+  readonly activePath?: string;
+  readonly onNavigate?: (href: string) => void;
+  readonly applicationOnly?: boolean;
+  readonly children?: ReactNode;
+  readonly client: ReturnType<typeof useApiClient>;
+  readonly entityCode: string;
+  readonly navigationOnly?: boolean;
+  readonly initialDensity?: ListDensity;
+}) {
   const work = useNeonWorkContext();
   const operating = useNeonOperatingOrganization();
-  const [organizationId, setOrganizationId] = useState<string>();
-  const company = work.selection.mode === "company" ? work.selection : undefined;
-  const compatible = useMemo(() => operating.organizations.filter((organization) => !company || organization.companyAssignments.some((assignment) => assignment.companyCodeId === company.companyCodeId)), [operating.organizations, company?.companyCodeId]);
-  useEffect(() => {
-    setOrganizationId((current) => {
-      if (current && compatible.some((organization) => organization.id === current)) return current;
-      return compatible.length === 1 ? compatible[0]!.id : undefined;
-    });
-  }, [compatible]);
-  const coordinate = useMemo<EntityListScopeCoordinateV1 | undefined>(() => organizationId ? Object.freeze({ ...(company ? { companyCodeId: company.companyCodeId, legalEntityId: company.legalEntityId } : {}), operatingOrganizationId: organizationId }) : undefined, [company?.companyCodeId, company?.legalEntityId, organizationId]);
-  const control = <ListScopeControl id="neon-list-operating-organization" label="Organization" value={organizationId} options={compatible.map((organization) => ({ value: organization.id, label: `${organization.code} · ${organization.displayName}` }))} status={operating.status} loadingLabel="Loading operating organizations…" emptyLabel="No compatible operating organizations" selectLabel="Select an operating organization" summaryLabel="Authorized operating organization" summaryDetails={company ? ["Company access is applied"] : undefined} accessLabel="Read-only access" onChange={setOrganizationId}/>;
-  return <EntityListRuntime client={client} entityCode={entityCode} scopeCoordinate={coordinate} scopeControl={control} headerDescription="Organization-scoped partner master and governed onboarding." pageActions={pageActions}/>;
+  const [organizationIds, setOrganizationIds] = useState<readonly string[]>([]);
+  const [companyIds, setCompanyIds] = useState<readonly string[]>([]);
+  const [partnerRole, setPartnerRole] = useState<"supplier" | "customer">();
+  const [eligibleOperation, setEligibleOperation] = useState<"order" | "invoice" | "payment">();
+  const coordinate = useMemo<EntityListScopeCoordinateV1 | undefined>(() => {
+    if (!organizationIds.length && !companyIds.length && !partnerRole && !eligibleOperation) return undefined;
+    const company = companyIds.length === 1 ? work.companies.find(item => item.companyCodeId === companyIds[0]) : undefined;
+    if (eligibleOperation && organizationIds.length === 1 && company && partnerRole) return {partnerRole, eligibleOperation, operatingOrganizationId:organizationIds[0], companyCodeId:company.companyCodeId, legalEntityId:company.legalEntityId};
+    return {
+      ...(partnerRole ? {partnerRole} : {}),
+      ...(organizationIds.length ? { operatingOrganizationIds: organizationIds } : {}),
+      ...(companyIds.length ? { companyCodeIds: companyIds } : {}),
+    };
+  }, [organizationIds, companyIds, partnerRole, eligibleOperation, work.companies]);
+  return (
+    <DirectoryFilterContext.Provider value={{
+      value: { partnerRole, eligibleOperation, operatingOrganizationIds: organizationIds, companyCodeIds: companyIds },
+      organizations: operating.organizations, companies: work.companies,
+      unavailable: work.status !== "ready" || operating.status !== "ready",
+      apply: value => { setOrganizationIds(value.operatingOrganizationIds ?? []); setCompanyIds(value.companyCodeIds ?? []); setPartnerRole(value.partnerRole);
+        const compatible = value.operatingOrganizationIds?.length === 1 && value.companyCodeIds?.length === 1 && operating.organizations.find(org => org.id === value.operatingOrganizationIds?.[0])?.companyAssignments.some(item => item.companyCodeId === value.companyCodeIds?.[0]);
+        setEligibleOperation(value.partnerRole && compatible ? value.eligibleOperation : undefined); },
+    }}><EntityListRuntime
+      client={client}
+      entityCode={entityCode}
+      scopeCoordinate={coordinate}
+      initialDensity={initialDensity}
+      navigationOnly={navigationOnly}
+      applicationOnly={applicationOnly}
+      onNavigate={onNavigate}
+      activePath={activePath}
+      children={children}
+      scopePending={work.status === "loading" || operating.status === "loading"}
+    /></DirectoryFilterContext.Provider>
+  );
 }
+
+export function NeonEntityApplication({
+  entityCode,
+  children,
+  activePath,
+}: {
+  readonly entityCode: string;
+  readonly children: ReactNode;
+  readonly activePath?: string;
+}) {
+  const client = useApiClient(),
+    navigation = useApplicationNavigation();
+  return <ScopedNeonEntityList client={client} entityCode={entityCode} applicationOnly onNavigate={navigation.push} activePath={activePath}>{children}</ScopedNeonEntityList>;
+}
+export { EntityApplicationSection as NeonEntityApplicationSection };

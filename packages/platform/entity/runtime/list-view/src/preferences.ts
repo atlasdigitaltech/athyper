@@ -1,6 +1,9 @@
 import { parseSaveableListState, type EntityListDescriptorV1, type ListLocationStateV1, type SaveableListStateV1 } from "@athyper/contract-platform-entity-list";
 
 export interface SavedListView {
+  readonly scope?: "personal"|"shared"|"system";
+  readonly version?:number;
+  readonly compatible?:boolean;
   readonly id: string;
   readonly name: string;
   readonly state: SaveableListStateV1;
@@ -12,6 +15,7 @@ export type DisplayPreferences = Readonly<Pick<SaveableListStateV1, "density" | 
 
 export function saveableViewState(state: ListLocationStateV1): SaveableListStateV1 {
   return Object.freeze({
+    ...(state.standardViewKey?{standardViewKey:state.standardViewKey}:{}),
     filters: state.filters,
     sort: state.sort,
     ...(state.group ? { group: state.group } : {}),
@@ -23,7 +27,7 @@ export function saveableViewState(state: ListLocationStateV1): SaveableListState
 }
 
 export function savedViewStorageKey(descriptor: EntityListDescriptorV1): string {
-  return `athyper.entity-list.views.${descriptor.plane}.${descriptor.entity.code}`;
+  return `athyper.entity-list.views.${descriptor.plane}.${descriptor.viewNamespace ?? descriptor.entity.code}`;
 }
 
 export function readSavedViews(key: string, descriptor: EntityListDescriptorV1): readonly SavedListView[] {
@@ -44,10 +48,10 @@ export function readSavedViews(key: string, descriptor: EntityListDescriptorV1):
         return [];
       }
     });
-    return Object.freeze(views.slice(0, 50));
+    return Object.freeze([...(descriptor.viewCatalog?.views.filter(view=>view.compatible)??[]),...views.filter(view=>!descriptor.viewCatalog?.views.some(item=>item.id===view.id))].slice(0,100));
   } catch {
     removeStorageItem(key);
-    return [];
+    return descriptor.viewCatalog?.views.filter(view=>view.compatible)??[];
   }
 }
 

@@ -1,11 +1,13 @@
 "use client";
+import { RecordFooterSource } from "./record-footer";
 
 import { BellIcon, Building2Icon, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, CloseIcon, HistoryIcon, HomeIcon, InboxIcon, LogOutIcon, MenuIcon, NetworkIcon, RefreshCwIcon, resolveIcon, SearchIcon, SparklesIcon, StarIcon, UserIcon } from "@athyper/platform-icons";
 import { createEffectiveLocalization, createIntlRuntime, localeDefinition, type SupportedLocale } from "@athyper/platform-i18n";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { canAccessRoute, deriveBreadcrumbs, isShellActivityRoute, type DerivedShellNavigation } from "./core";
+import { deriveEntityBreadcrumbs,useShellRoute } from "./route-state";
+import { canAccessRoute, isShellActivityRoute, type DerivedShellNavigation } from "./core";
 import { ShellActivityCenter, type ShellActivityDataSource, type ShellActivityTab } from "./activity-center";
 import { ShellQuickAccess, type ShellQuickAccessDataSource, type ShellQuickAccessTab } from "./quick-access";
 import { shellEnglishMessages } from "./messages";
@@ -23,7 +25,8 @@ interface ShellNavigationPeek { readonly label: string; readonly workspace: stri
 export interface ShellChromeProps { readonly currentLocale?:string;readonly localePolicy?:Readonly<{enabledLocales:readonly SupportedLocale[]}>;readonly onLocaleChange?:(localeCode:SupportedLocale)=>Promise<void>; readonly applicationName: string; readonly planeDescriptor?: string; readonly planeIconSrc?: string; readonly planeWordmarkSrc?: string; readonly persistentDesktopBrand?: boolean; readonly homeHref?: string; readonly initialCollapsed?: boolean; readonly tenantId: string; readonly tenantLabel: string; readonly tenantSecondaryLabel?: string; readonly tenantCountryCode?: string; readonly tenantLogoAssetRef?: string; readonly contextLabel?: string; readonly showOrganizationContext?: boolean; readonly accountLabel: string; readonly accountInitials?: string; readonly accountLoginId?: string; readonly accountEmail?: string; readonly accountSecondaryLabel?: string; readonly transactionContext?: ShellTransactionContext; readonly workContextControl?: ReactNode; readonly navigation: DerivedShellNavigation; readonly experienceState?: "ready" | "context_not_ready"; readonly contexts?: readonly ShellContextOption[]; readonly quickAccess?: ShellQuickAccessDataSource; readonly activity?: ShellActivityDataSource; readonly children: ReactNode; }
 export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,applicationName, planeDescriptor = "Business workspace", planeIconSrc, planeWordmarkSrc, persistentDesktopBrand = false, homeHref = "/home", initialCollapsed = false, tenantId, tenantLabel, tenantSecondaryLabel, tenantCountryCode, tenantLogoAssetRef, contextLabel = "Business context", showOrganizationContext = true, accountLabel, accountInitials, accountLoginId, accountEmail, accountSecondaryLabel, transactionContext, workContextControl, navigation, experienceState = "ready", contexts, quickAccess, activity, children }: ShellChromeProps) {
   const t=useShellI18n().message;
-  const [drawerOpen, setDrawerOpen] = useState(false), [collapsed, setCollapsed] = useState(initialCollapsed), [path, setPath] = useState("/");
+  const [drawerOpen, setDrawerOpen] = useState(false), [collapsed, setCollapsed] = useState(initialCollapsed), [observedPath, setPath] = useState("/");
+  const routeState=useShellRoute(), path=routeState?.pathname??observedPath;
   const [atlasOpen,setAtlasOpen]=useState(false),[atlasPinned,setAtlasPinned]=useState(false);
   const [navigationPeek, setNavigationPeek] = useState<ShellNavigationPeek>(), [quickAccessTab, setQuickAccessTab] = useState<ShellQuickAccessTab>(), [headerAction, setHeaderAction] = useState<HeaderActionKind>();
   const menuButton = useRef<HTMLButtonElement>(null), firstLink = useRef<HTMLAnchorElement>(null);
@@ -37,7 +40,7 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
   const changeHeaderAction = useCallback((next?: HeaderActionKind) => { setQuickAccessTab(undefined); setHeaderAction(next); }, []);
   const openQuickAccess = (tab: ShellQuickAccessTab, opener: HTMLButtonElement) => { quickAccessOpener.current = opener; setNavigationPeek(undefined); setDrawerOpen(false); setHeaderAction(undefined); setQuickAccessTab((current) => current === tab ? undefined : tab); };
   const openNavigation = () => { setQuickAccessTab(undefined); setHeaderAction(undefined); setDrawerOpen(true); };
-  const crumbs = deriveBreadcrumbs(navigation, path);
+  const crumbs = deriveEntityBreadcrumbs(navigation, path, routeState?.binding, routeState?.record);
   const homeRoute = path === "/" || path === homeHref,atlasRoute=path==="/atlas"||path.startsWith("/atlas/");
   const systemRoute = homeRoute || atlasRoute || isShellActivityRoute(path) || path === "/select-context" || path.startsWith("/auth/"), routeAllowed = systemRoute || canAccessRoute(navigation, path);
   const changeAtlasPin=(next:boolean)=>{setAtlasPinned(next);localStorage.setItem("athyper.atlas.pinned",String(next));};
@@ -70,7 +73,7 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
     <div className="athyper-shell__body">
       {homeRoute ? null : atlasRoute?<nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}><ol><li><a href={homeHref}>Home</a></li><li><span aria-current="page">Atlas AI</span></li></ol></nav>: <nav className="athyper-shell__breadcrumbs" aria-label={t("shell.navigation.breadcrumb")}>{crumbs.length ? <ol>{crumbs.map((crumb, index) => <li key={`${crumb.label}-${index}`}>{crumb.href && index < crumbs.length - 1 ? <a href={crumb.href}>{crumb.label}</a> : <span aria-current={index === crumbs.length - 1 ? "page" : undefined}>{crumb.label}</span>}</li>)}</ol> : null}</nav>}
       <main id="main-content" tabIndex={-1} className="athyper-shell__main">{experienceState === "context_not_ready" ? <ContextNotReady /> : !navigation.routes.length ? <EmptyEntitlement /> : routeAllowed ? children : <ForbiddenRoute />}</main>
-      <footer className="athyper-shell__footer"><span>© 2026 Atlas Digital Technology Solutions</span></footer>
+      <footer className="athyper-shell__footer"><span>© 2026 Atlas Digital Technology Solutions</span><RecordFooterSource /></footer>
     </div>
   </div>;
 }

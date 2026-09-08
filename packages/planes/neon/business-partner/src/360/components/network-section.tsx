@@ -54,7 +54,7 @@ export function NetworkSection() {
   }, [client, key]);
   if (failed)
     return (
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Network unavailable</h2>
         <p>
           The core Business Partner view and its local sections remain
@@ -67,7 +67,7 @@ export function NetworkSection() {
     live = record(value.data["live"]);
   if (!local)
     return (
-      <Card>
+      <Card className="bp360-section-card">
         <h2>No governed network relationship</h2>
         <p>
           A valid NEON account link is required before live MESH access is
@@ -78,7 +78,7 @@ export function NetworkSection() {
   return (
     <div className="bp360-section-list">
       {value.state === "stale" ? (
-        <Card>
+        <Card className="bp360-section-card">
           <strong>Stale network evidence</strong>
           <p>
             Local evidence remains visible with its observed time. Other
@@ -104,7 +104,7 @@ function LocalEvidence({
     bank = record(value["bankDisclosure"]);
   return (
     <>
-      <Card>
+      <Card className="bp360-section-card">
         <h2>NEON network account link</h2>
         <Fields
           value={link}
@@ -120,7 +120,7 @@ function LocalEvidence({
           ]}
         />
       </Card>
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Received publication</h2>
         <Fields
           value={received}
@@ -138,7 +138,7 @@ function LocalEvidence({
           do not assert full identity parity.
         </p>
       </Card>
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Match and selective acceptance</h2>
         {match ? (
           <Fields
@@ -178,7 +178,7 @@ function LocalEvidence({
           <p>No fields have been selectively accepted.</p>
         )}
       </Card>
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Bank disclosure</h2>
         <Fields
           value={bank}
@@ -209,7 +209,7 @@ function LiveEvidence({
     publication = record(summary?.["publication"]),
     authorization = record(summary?.["authorization"]);
   return (
-    <Card>
+    <Card className="bp360-section-card">
       <h2>Live MESH summary</h2>
       <p>
         Status: {label(state)}
@@ -262,7 +262,7 @@ function Provenance({
   values: readonly Readonly<Record<string, unknown>>[];
 }) {
   return (
-    <Card>
+    <Card className="bp360-section-card">
       <h2>Authority and provenance</h2>
       {values.length ? (
         values.map((item, index) => (

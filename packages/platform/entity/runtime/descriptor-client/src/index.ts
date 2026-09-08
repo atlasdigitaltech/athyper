@@ -10,7 +10,7 @@ const recordPatch = createOperation<RecordMutationReceipt, Readonly<Record<strin
 export interface RecordMutationReceipt { readonly kind: "Committed"; readonly action: "create" | "patch"; readonly entityCode: string; readonly recordId: string; readonly version?: number; readonly replayed: boolean; }
 export const entityDescriptorClient = Object.freeze({
   form: (client: HttpClient, entityCode: string, mode: "create" | "edit") => client.request(formDescriptor, { params: { entityCode }, query: { mode } }),
-  detail: (client: HttpClient, entityCode: string) => client.request(detailDescriptor, { params: { entityCode } }),
+  detail: (client: HttpClient, entityCode: string, recordId?: string) => client.request(detailDescriptor, { params: { entityCode }, ...(recordId ? { query: { recordId } } : {}) }),
   record: (client: HttpClient, entityCode: string, recordId: string) => client.request(recordRead, { params: { entityCode, recordId } }),
   create: (client: HttpClient, entityCode: string, values: Readonly<Record<string, unknown>>, idempotencyKey: string) => client.request(recordCreate, { params: { entityCode }, body: values, idempotencyKey }),
   patch: (client: HttpClient, entityCode: string, recordId: string, values: Readonly<Record<string, unknown>>, version: number, idempotencyKey: string) => client.request(recordPatch, { params: { entityCode, recordId }, body: values, headers: { "If-Match": String(version) }, idempotencyKey }),

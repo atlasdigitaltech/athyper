@@ -40,6 +40,7 @@ export function registerBusinessPartner360Routes(
     readonly authenticate: RequestHandler;
     readonly readContext: (response: Response) => VerifiedRequestContext;
     readonly service: BusinessPartner360Service;
+    readonly createComment?: (context: VerifiedRequestContext, businessPartnerId: string, text: string, idempotencyKey: string) => Promise<unknown>;
     readonly telemetry?: (event: BusinessPartner360TelemetryEvent) => void;
   },
 ) {
@@ -93,6 +94,20 @@ export function registerBusinessPartner360Routes(
     route("summary", (request, context) =>
       options.service.summary(query(request, context)),
     ),
+  );
+  registerContractRoute(
+    app, contracts.createComment,
+    options.authenticate,
+    route("comment-create", async (request, context) => {
+      const coordinate = query(request, context);
+      if (coordinate.asOf) throw new MasterDataError(409, "BP_360_HISTORICAL_READ_ONLY", "Historical records are read-only");
+      const summary = await options.service.summary(coordinate);
+      if (!summary.collaboration?.canComment) throw new MasterDataError(403, "BP_360_SECTION_FORBIDDEN", "Adding comments is not authorized");
+      if (!options.createComment) throw new MasterDataError(503, "BP_360_PROVIDER_UNAVAILABLE", "Comments are unavailable");
+      const value = body(request), content = text(value["text"], "text");
+      if (!content.trim() || content.length > 10000) throw new MasterDataError(400, "BP_360_SCOPE_INVALID", "Comment must contain 1 to 10000 characters");
+      return options.createComment(context, coordinate.businessPartnerId, content, uuid(value["idempotencyKey"], "idempotencyKey"));
+    }),
   );
   registerContractRoute(
     app, contracts.taxReveal,

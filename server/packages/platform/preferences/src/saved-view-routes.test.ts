@@ -10,7 +10,7 @@ const scope = { planeKey: "neon" as const, tenantId: "00000000-0000-4000-8000-00
 const source: SavedView = { id, ...scope, ownerPrincipalId: scope.principalId, createdBy: scope.principalId, scope: "personal", surfaceCode: "entity_list", entityCode: "supplier", code: "all", name: "All", state: {}, metadata: {}, status: "active", version: 321 };
 const servers: Server[] = [];
 afterEach(async () => { await Promise.all(servers.splice(0).map(server => new Promise<void>((resolve, reject) => { server.close(error => error ? reject(error) : resolve()); server.closeAllConnections(); }))); });
-async function createFixture(view = source, base = "/api/me/saved-views") {
+async function createFixture(view = source, base = "/api/me/saved-views",sharedAllowed=true) {
   const preferences = new Map<string, unknown>();
   const repo: SavedViewRepository = {
     list: vi.fn(async () => [view]), get: vi.fn(async () => view), create: vi.fn(async () => {}), replace: vi.fn(async () => 322),
@@ -21,7 +21,7 @@ async function createFixture(view = source, base = "/api/me/saved-views") {
     clearPreference: vi.fn(async (_scope, code) => { preferences.delete(code); }),
   };
   const app = express(); app.use(express.json());
-  registerSavedViewRoutes(app, { authenticate: (req, res, next) => { if (req.headers["x-test-unauthenticated"]) { res.status(401).end(); return; } res.locals["authenticated"] = true; next(); }, readContext: res => { expect(res.locals["authenticated"]).toBe(true); return scope as VerifiedRequestContext; }, savedViews: createSavedViewService(repo) });
+  registerSavedViewRoutes(app, { authenticate: (req, res, next) => { if (req.headers["x-test-unauthenticated"]) { res.status(401).end(); return; } res.locals["authenticated"] = true; next(); }, readContext: res => { expect(res.locals["authenticated"]).toBe(true); return scope as VerifiedRequestContext; }, savedViews: createSavedViewService(repo,undefined,async()=>sharedAllowed) });
   const server = app.listen(0, "127.0.0.1"); servers.push(server);
   await new Promise<void>(resolve => server.on("listening", resolve));
   const address = server.address(); if (!address || typeof address === "string") throw new Error("No address");
@@ -47,14 +47,14 @@ describe("/api/me/saved-views", () => {
     }
   });
   it.each(["archive", "delete", "share"])("blocks another principal's shared-view %s mutation", async action => {
-    const { request, repo } = await fixture({ ...source, scope: "shared", ownerPrincipalId: undefined, createdBy: "another-principal" });
+    const { request, repo } = await createFixture({ ...source, scope: "shared", ownerPrincipalId: undefined, createdBy: "another-principal" },"/api/me/saved-views",false);
     for (const method of ["PATCH", "DELETE"]) expect((await request(`/${id}/${action}`, method)).status).toBe(403);
     expect(repo.archive).not.toHaveBeenCalled(); expect(repo.setScope).not.toHaveBeenCalled();
   });
   it("allows the creator to unshare a shared view", async () => {
     const { request, repo } = await fixture({ ...source, scope: "shared", ownerPrincipalId: undefined });
     expect((await request(`/${id}/share`, "DELETE")).status).toBe(200);
-    expect(repo.setScope).toHaveBeenCalledWith(scope, id, "personal");
+    expect(repo.setScope).toHaveBeenCalledWith({...scope,sharedWrite:true}, id, "personal");
   });
   it("clones a shared view personally and returns the persisted version", async () => {
     const { request, repo } = await fixture({ ...source, scope: "shared", ownerPrincipalId: undefined, createdBy: "someone-else", code: "a".repeat(127), name: "😀".repeat(160) });
@@ -147,7 +147,7 @@ describe("platform saved-view routes", () => {
     const response = await request(`/supplier/${id}`, "PATCH", { name: "Renamed" }, versionHeader);
     expect(response.status).toBe(200); expect(response.headers.get("etag")).toBe('"322"');
     expect(await response.json()).toMatchObject({ name: "Renamed", state, description: "Keep me" });
-    expect(repo.replace).toHaveBeenCalledWith("neon", expect.objectContaining({ state, description: "Keep me" }), 321);
+    expect(repo.replace).toHaveBeenCalledWith("neon", expect.objectContaining({ state, description: "Keep me" }), 321,expect.objectContaining({principalId:scope.principalId,sharedWrite:false}));
   });
   it("allows state-only PATCH and explicit description clearing", async () => {
     const { request } = await createFixture({ ...source, description: "Remove me" }, entityBase);

@@ -1,3 +1,4 @@
+import { workItemEligibilitySql as inboxEligibility } from "./work-item-eligibility-sql.js";
 import { decodeInboxCursor, encodeInboxCursor } from "./inbox-cursor.js";
 import type { WorkflowRepository, WorkItem, WorkItemStatus } from "@athyper/server-contract-workflow";
 import { sql, type Kysely, type Transaction } from "kysely";
@@ -111,15 +112,3 @@ function eligibilityEvidence(payload: Readonly<Record<string, unknown>>): WorkIt
 function requiredRow(row: WorkItemRow | undefined): WorkItemRow { if (!row) throw new Error("Workflow insert did not return a work item"); return row; }
 function object(value: unknown): Readonly<Record<string, unknown>> { const parsed = typeof value === "string" ? JSON.parse(value) as unknown : value; return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as Readonly<Record<string, unknown>> : {}; }
 function iso(value: Date | string): string { return value instanceof Date ? value.toISOString() : new Date(value).toISOString(); }
-
-function inboxEligibility(principalId: string) {
-  return sql`(assignee_principal_id = ${principalId}::uuid OR claimant_principal_id = ${principalId}::uuid
-    OR (claimant_principal_id IS NULL AND (EXISTS (
-      SELECT 1 FROM master.team_member membership
-      WHERE membership.tenant_id = work_item.tenant_id AND membership.team_id = work_item.assignee_team_id
-        AND membership.principal_id = ${principalId}::uuid AND membership.joined_at <= clock_timestamp()
-        AND (membership.left_at IS NULL OR membership.left_at > clock_timestamp())) OR EXISTS (
-      SELECT 1 FROM jsonb_array_elements(CASE WHEN jsonb_typeof(payload->'eligibility_evidence'->'candidates') = 'array'
-        THEN payload->'eligibility_evidence'->'candidates' ELSE '[]'::jsonb END) candidate
-      WHERE candidate->>'principalId' = ${principalId}))))`;
-}

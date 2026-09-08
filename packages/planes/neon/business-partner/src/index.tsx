@@ -612,9 +612,12 @@ export function BusinessPartnerAggregateDetail({ businessPartnerId }: { readonly
       title={aggregate?.businessPartner.displayName ?? aggregate?.businessPartner.name ?? "Business Partner"}
       description={aggregate ? `${aggregate.businessPartner.code} · ${label(aggregate.businessPartner.partnerCategory)}` : "Scoped partner aggregate"}
       actions={
-        <a className="a-button a-button--secondary" href="/mdg/business-partner">
-          Back to partners
-        </a>
+        <div className="bp-actions">
+          <a className="a-button a-button--secondary" href="/mdg/business-partner">Back to partners</a>
+          <a className="a-button a-button--secondary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/scope/new`}>Assign organization / configure company</a>
+          <a className="a-button a-button--secondary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/customer`}>Customer credit &amp; lifecycle</a>
+          <a className="a-button a-button--primary" href={`/mdg/business-partner/${encodeURIComponent(businessPartnerId)}/roles/new`}>Add supplier/customer role</a>
+        </div>
       }
     >
       <Card className="bp-filter-bar">
@@ -1176,3 +1179,5 @@ export function AuthorizedNewBusinessPartnerRequest() {
     );
   return <NewBusinessPartnerRequest />;
 }
+
+export { BusinessPartnerTransactionSelector } from "./transaction-selector";

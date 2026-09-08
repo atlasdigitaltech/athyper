@@ -1,0 +1,24 @@
+import { readFileSync } from "node:fs";
+import { build } from "esbuild";
+import { test, expect } from "@playwright/test";
+const styles = ["packages/platform/foundation/theme/src/styles.css","packages/platform/foundation/ui/src/styles.css","packages/platform/entity/runtime/list-view/src/styles.css"].map(p=>readFileSync(p,"utf8").replace(/@import[^;]+;/g,"")).join("\n");
+const script=build({stdin:{resolveDir:process.cwd(),loader:"tsx",contents:`import React,{useState}from'react';import{createRoot}from'react-dom/client';import{AppliedFilters}from'./packages/platform/entity/runtime/list-view/src/applied-filters';function App(){const[values,setValues]=useState(Array.from({length:14},(_,i)=>i));return <main><div className="a-entity-list__query-row">View　 <input placeholder="Search partners"/>　Filters　Controls</div><AppliedFilters chips={values.map(i=>({key:String(i),label:i===0?'Company: ACFB':'Organization: Regional Operations '+i,title:i===0?'ACFB · Athyper Canada Food & Beverage Manufacturing':undefined,onRemove:()=>setValues(values.filter(v=>v!==i))}))} onClear={()=>setValues([])}/></main>}createRoot(document.getElementById('root')).render(<App/>);`},bundle:true,write:false,format:"iife",platform:"browser",jsx:"automatic"});
+for(const width of [1100,430])test(`applied filters wrap and expand at ${width}`,async({page})=>{
+ await page.setViewportSize({width,height:850});
+ await page.setContent(`<style>${styles}body{margin:0;padding:16px;font-family:Arial;background:#f6f8fa}main{background:white;border:1px solid #ccd6e6;border-radius:12px}*{box-sizing:border-box}</style><div id="root"></div>`);
+ await page.addScriptTag({content:(await script).outputFiles[0]!.text});
+ const summary=page.getByRole('region',{name:'Applied filters'});
+ await expect(summary).toBeVisible();
+ await expect(page.getByRole('button',{name:'Show all (14)'})).toBeVisible();
+ const hidden=page.locator('.a-applied-filters__list > button[aria-hidden=true]');
+ expect(await hidden.count()).toBeGreaterThan(0);
+ await expect(hidden.first()).toHaveAttribute('tabindex','-1');
+ await expect(page.getByRole('button',{name:'Remove Company: ACFB filter'})).toHaveAttribute('title','ACFB · Athyper Canada Food & Beverage Manufacturing');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:test.info().outputPath('applied-filters.png')});
+ await page.getByRole('button',{name:'Show all (14)'}).click();await expect(hidden).toHaveCount(0);
+ await page.getByRole('button',{name:'Remove Company: ACFB filter'}).click();
+ await expect(page.locator('.a-applied-filters__list>button')).toHaveCount(13);
+ await page.getByRole('button',{name:'Show less'}).click();expect(await hidden.count()).toBeGreaterThan(0);
+ await page.getByRole('button',{name:'Clear all'}).click();await expect(summary).toHaveCount(0);
+});

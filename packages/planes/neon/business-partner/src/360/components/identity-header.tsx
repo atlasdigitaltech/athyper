@@ -1,2 +1,41 @@
-import {Badge} from "@athyper/platform-ui";import {useBusinessPartner360} from "../business-partner-360-context";
-export function IdentityHeader(){const{summary}=useBusinessPartner360();return <header className="bp360-identity"><div><span className="bp360-eyebrow">{summary.identity.code}</span><h1>{summary.identity.displayName}</h1><p>{summary.identity.category} · as of {summary.asOf}</p></div><div className="bp360-role-badges">{summary.roles.map(role=><Badge key={role.id}>{role.code}</Badge>)}<Badge>{summary.identity.lifecycleStatus}</Badge></div></header>;}
+import type { EntityRecordHeaderV1 } from "@athyper/contract-platform-entity-runtime";
+import { EntityRecordHeader } from "@athyper/platform-entity-form-detail";
+import { useBusinessPartner360 } from "../business-partner-360-context";
+import { sectionLabel } from "../section-registry";
+
+export function IdentityHeader() {
+  const { summary, section, selectSection } =
+    useBusinessPartner360();
+  // Older summary versions remain readable; actions require the new server-resolved header.
+  const base: EntityRecordHeaderV1 = summary.recordHeader ?? {
+    title: summary.identity.displayName,
+    code: summary.identity.code,
+    entityLabel: "Business Partner",
+    iconKey: "contact",
+    badges: [{ label: summary.identity.lifecycleStatus, tone: "neutral" }],
+    context: [],
+    actions: [],
+    readOnly: summary.completeness.readOnly,
+    sections: summary.sections.map((item, index) => ({
+      key: item.code,
+      label: sectionLabel(item.code),
+      placement: index < 5 ? "direct" : "overflow",
+      ...(item.authorization === "granted" && item.count !== undefined
+        ? { count: item.count }
+        : {}),
+    })),
+  };
+  const header = {
+    ...base,
+    context: [],
+    sections: [],
+  };
+  return (
+    <EntityRecordHeader
+      header={header}
+      activeSection={section}
+      onSelectSection={selectSection}
+
+    />
+  );
+}

@@ -27,7 +27,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
   const repository: RecordRepository<MemoryRecordTransaction> = {
     async list(input, transaction) {
       let rows = [...table(input.descriptor, input.tenantId, transaction?.state).values()].filter((row) => visible(input.descriptor, row));
-      if (input.recordIds?.length) { const ids = new Set(input.recordIds); rows = rows.filter((row) => ids.has(String(row[input.descriptor.storage.idField]))); }
+      if (input.viewRelationships?.length) throw new Error("Standard-view relationships require the database adapter");
+      if (input.recordIds !== undefined) { const ids = new Set(input.recordIds); rows = rows.filter((row) => ids.has(String(row[input.descriptor.storage.idField]))); }
       rows = rows.filter((row) => input.collectionScope.every((constraint) => collectionScopeMatches(input.descriptor, row, constraint)));
       rows = rows.filter((row) => (input.filters ?? []).every((filter) => matches(row, input.descriptor, filter)));
       if (input.search) { const needle = input.search.toLowerCase(); const fields = input.descriptor.fields.filter((field) => field.searchable); rows = rows.filter((row) => fields.some((field) => String(row[field.storagePath] ?? "").toLowerCase().includes(needle))); }
@@ -89,6 +90,8 @@ export function createInMemoryRecordPersistence(): InMemoryRecordPersistence {
 function toStorage(descriptor: EntityRuntimeDescriptor, input: Readonly<Row>): Row { const fields = new Map(descriptor.fields.map((field) => [field.key, field.storagePath])); return Object.fromEntries(Object.entries(input).map(([key, value]) => [fields.get(key) ?? key, value])); }
 function visible(descriptor: EntityRuntimeDescriptor, row: Row): boolean { return !descriptor.storage.softDeleteField || row[descriptor.storage.softDeleteField] === null || row[descriptor.storage.softDeleteField] === undefined; }
 function collectionScopeMatches(descriptor: EntityRuntimeDescriptor, row: Row, constraint: RecordRepositoryListInput["collectionScope"][number]): boolean {
+  if (constraint.kind === "neon.business_partner.directory.v1") return false; // Relationship admission requires the database adapter.
+  if (constraint.kind === "platform.document_relationship.v1") return false; // Registered document relationships require the database adapter.
   if (constraint.kind === "neon.business_partner.operating_organization.v1") {
     if (descriptor.planeKey !== "neon" || descriptor.storage.schema !== "master" || descriptor.storage.object !== "business_partner") throw new Error("Business-partner collection scope cannot be applied to this descriptor");
     return Array.isArray(row["__operatingOrganizationIds"]) && (row["__operatingOrganizationIds"] as unknown[]).includes(constraint.operatingOrganizationId);

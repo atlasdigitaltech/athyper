@@ -5,7 +5,7 @@ import { gzipSync } from "node:zlib";
 import { clearedAuthSessionCookies } from "../../packages/platform/iam/auth-bff/src/index";
 import { describe, it } from "node:test";
 import ts from "typescript";
-import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
+import { ATLAS_ANSWER_RELAY_OPERATIONS, ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS, createRelayHandler, ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION, IAM_ME_OPERATION, NEON_BP_INVITATION_CREATE_OPERATION, RECORD_TRANSFER_RELAY_OPERATIONS, type RelayDiagnostic, type RelayOperation, type RelaySessionAuthority, type RelaySessionContext } from "../../packages/platform/gateway/bff-relay/src/index";
 
 const context = (...path: string[]) => ({ params: Promise.resolve({ path }) });
 // Inspect the actual relay configuration. Conditional pilot arrays can contain
@@ -144,6 +144,8 @@ describe("Phase 4 hardened BFF relay", () => {
       assert.match(source, /ENTITY_LIST_DESCRIPTOR_OPERATION/);
       assert.match(source, /ENTITY_LIST_QUERY_OPERATION/);
       const operations = registeredOperations(source);
+      assert.ok(operations.has("ENTITY_VIEWS_RELAY_OPERATIONS"), `${plane} must register entity view operations`);
+      assert.ok(operations.has("ENTITY_APPLICATION_DESCRIPTOR_OPERATION"), `${plane} must register application descriptor reads`);
       assert.ok(operations.has("ENTITY_LIST_DESCRIPTOR_OPERATION"), `${plane} must register descriptor reads`);
       assert.ok(operations.has("ENTITY_LIST_QUERY_OPERATION"), `${plane} must register list queries`);
     }
@@ -177,9 +179,13 @@ describe("Phase 4 hardened BFF relay", () => {
 
   it("allowlists only the declared entity-list read paths and preserves bounded query parameters", async () => {
     let upstream = "";
-    const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION], session: authority(), fetch: async (url) => { upstream = String(url); return new Response("{}", { headers: { "content-type": "application/json" } }); } });
+    const handler = createRelayHandler({ plane: "neon", runtimeApiUrl: "http://platform-host:4000/api", appOrigin: "https://neon.example", operations: [ENTITY_APPLICATION_DESCRIPTOR_OPERATION, ENTITY_LIST_DESCRIPTOR_OPERATION, ENTITY_LIST_QUERY_OPERATION], session: authority(), fetch: async (url) => { upstream = String(url); return new Response("{}", { headers: { "content-type": "application/json" } }); } });
     assert.equal((await handler(new Request("https://neon.example/api/relay/entity-runtime/invoice/list?limit=25"), context("entity-runtime", "invoice", "list"))).status, 200);
     assert.equal(upstream, "http://platform-host:4000/api/entity-runtime/invoice/list?limit=25");
+    const query="companyCodeId=company&legalEntityId=legal&operatingOrganizationId=org";
+    assert.equal((await handler(new Request(`https://neon.example/api/relay/entity-runtime/business_partner/application-descriptor?${query}`), context("entity-runtime", "business_partner", "application-descriptor"))).status, 200);
+    assert.equal(upstream, `http://platform-host:4000/api/entity-runtime/business_partner/application-descriptor?${query}`);
+    assert.equal((await handler(new Request("https://neon.example/api/relay/entity-runtime/business_partner/application-descriptor", {method:"POST"}), context("entity-runtime", "business_partner", "application-descriptor"))).status, 404);
     assert.equal((await handler(new Request("https://neon.example/api/relay/records/invoice"), context("records", "invoice"))).status, 404);
   });
 

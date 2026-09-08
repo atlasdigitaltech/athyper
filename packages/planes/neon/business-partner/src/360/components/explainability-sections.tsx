@@ -68,7 +68,7 @@ function Section({ code }: { code: ExplainabilitySectionCode }) {
   }, [client, key]);
   if (failed && !value)
     return (
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Section unavailable</h2>
         <p>Other Business Partner sections remain available.</p>
       </Card>
@@ -95,7 +95,7 @@ function Requests({ data }: { data: Readonly<Record<string, unknown>> }) {
   const summary = record(data["openWork"]);
   return (
     <>
-      <Card>
+      <Card className="bp360-section-card">
         <h2>Open work</h2>
         <p>
           {show(summary?.["active"])} active ·{" "}
@@ -105,7 +105,7 @@ function Requests({ data }: { data: Readonly<Record<string, unknown>> }) {
         </p>
       </Card>
       {rows(data["items"]).map((item) => (
-        <Card key={String(item["id"])}>
+        <Card className="bp360-section-card" key={String(item["id"])}>
           <h2>
             {show(item["requestNo"])} · {show(item["status"])}
           </h2>
@@ -130,10 +130,11 @@ function Requests({ data }: { data: Readonly<Record<string, unknown>> }) {
   );
 }
 function Activity({ data }: { data: Readonly<Record<string, unknown>> }) {
+  if (!rows(data["items"]).length) return <Card><h2>Activity</h2><p>No activity available for this partner and date.</p></Card>;
   return (
     <>
       {rows(data["items"]).map((item) => (
-        <Card key={String(item["id"])}>
+        <Card className="bp360-section-card" key={String(item["id"])}>
           <h2>{show(item["title"])}</h2>
           <p>
             {show(item["occurredAt"])} · {show(item["sourceService"])} ·{" "}
@@ -160,10 +161,11 @@ function Activity({ data }: { data: Readonly<Record<string, unknown>> }) {
   );
 }
 function Business({ data }: { data: Readonly<Record<string, unknown>> }) {
+  if (!rows(data["providers"]).length) return <Card><h2>Business Transactions</h2><p>No transaction providers are available in this context.</p></Card>;
   return (
     <>
       {rows(data["providers"]).map((item) => (
-        <Card key={String(item["provider"])}>
+        <Card className="bp360-section-card" key={String(item["provider"])}>
           <h2>{show(item["provider"])}</h2>
           <p>
             {show(item["state"])}

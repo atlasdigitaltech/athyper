@@ -40,3 +40,31 @@ describe("three-plane collection-scope SQL", () => {
     expect(compiled.parameters).toEqual(["11111111-1111-4111-8111-111111111111"]);
   });
 });
+
+it("pins request rows to Business Partner, tenant, current snapshot and authorized organization",()=>{
+  const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{} as never})});
+  const requests={...descriptor,entityCode:"business_partner_request",collectionRelationship:{schemaVersion:1 as const,sourceRef:"entity_case" as const,subject:{fieldRef:"subject_entity" as const,value:"master.business_partner"},scope:{fieldRef:"current_snapshot.organization" as const,contextRef:"operatingOrganizationId" as const}},storage:{schema:"document",object:"entity_case",idField:"id",tenantField:"tenant_id"}};
+  const constraint={kind:"platform.document_relationship.v1" as const,operatingOrganizationId:"33333333-3333-4333-8333-333333333333"};
+  const compiled=compileRecordCollectionScopeCondition(requests,"11111111-1111-4111-8111-111111111111",constraint).compile(database);
+  expect(compiled.sql).toContain('"entity_case"."entity_code" = $1');
+  expect(compiled.sql).toContain('"list_scope_related"."snapshot_id" = "entity_case"."current_snapshot_id"');
+  expect(compiled.sql).toContain('"list_scope_related"."tenant_id" = "entity_case"."tenant_id"');
+  expect(compiled.parameters).toEqual(["master.business_partner","11111111-1111-4111-8111-111111111111","operatingOrganizationId",constraint.operatingOrganizationId]);
+  expect(()=>compileRecordCollectionScopeCondition(descriptor,"tenant",constraint)).toThrow();
+  const alternate={...requests,entityCode:"purchase_request",collectionRelationship:{...requests.collectionRelationship,subject:{...requests.collectionRelationship.subject,value:"procurement.purchase_order"}}};
+  const other=compileRecordCollectionScopeCondition(alternate,"tenant",constraint).compile(database);
+  expect(other.sql).toEqual(compiled.sql);
+  expect(other.parameters[0]).toBe("procurement.purchase_order");
+});
+
+it("intersects directory restrictions and keeps eligibility IDs server-bound",()=>{
+ const database=new Kysely<Record<string,never>>({dialect:new PostgresDialect({pool:{} as never})});
+ const compiled=compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",organizationIds:["org"],companyIds:["company"],partnerRole:"supplier",eligibleIds:["partner"]}).compile(database);
+ expect(compiled.sql).toContain("company_code_supplier_profile");
+ expect(compiled.sql).toContain("company_code_customer_profile");
+ expect(compiled.sql).toContain("business_partner_operating_organization_assignment");
+ expect(compiled.sql).not.toContain("'partner'");
+ expect(compiled.parameters).toContain("partner");
+ expect(compiled.parameters).toContain("company");
+ expect(compileRecordCollectionScopeCondition(descriptor,"tenant",{kind:"neon.business_partner.directory.v1",organizationIds:[]}).compile(database).sql).toContain("FALSE");
+});

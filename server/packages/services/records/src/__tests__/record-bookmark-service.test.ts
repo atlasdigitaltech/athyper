@@ -295,3 +295,101 @@ describe("record bookmark persistence regressions", () => {
     expect(db.run).toHaveBeenCalledOnce();
   });
 });
+
+it("lists only the current entity's readable favourites and passes work scope to row authorization", async () => {
+  const db = databaseHarness(
+    [ID_A, ID_B].map((id, index) => ({
+      id,
+      record_id: id,
+      entity_code: "business_partner",
+      label_snapshot: `Partner ${index}`,
+      created_at: "2026-09-08T10:00:00Z",
+    })),
+  );
+  const execute = vi.fn(async () => ({
+    descriptor: { storage: { idField: "id" } },
+    result: { data: [{ id: ID_B }] },
+  }));
+  const service = createRecordBookmarkService({
+    transactions: db.transactions,
+    listExecutor: { execute } as never,
+  });
+  const scopeCoordinate = {
+    operatingOrganizationIds: [ID_A],
+    partnerRole: "supplier" as const,
+  };
+  const rows = await service.list(context, "business_partner", scopeCoordinate);
+  expect(rows.map((row) => row.recordId)).toEqual([ID_B]);
+  expect(execute).toHaveBeenCalledWith(
+    expect.objectContaining({
+      context,
+      entityCode: "business_partner",
+      recordIds: [ID_A, ID_B],
+      scopeCoordinate,
+      countMode: "none",
+    }),
+  );
+  expect(db.query.mock.calls[0]![0]).toContain("AND entity_code=$3");
+  expect(db.query.mock.calls[0]![1]).toContain("business_partner");
+});
+
+it("does not return stored labels when scoped favourite authorization fails", async () => {
+  const db = databaseHarness([
+    {
+      id: ID_A,
+      record_id: ID_A,
+      entity_code: "business_partner",
+      label_snapshot: "Restricted partner",
+      created_at: "2026-09-08T10:00:00Z",
+    },
+  ]);
+  const service = createRecordBookmarkService({
+    transactions: db.transactions,
+    listExecutor: {
+      execute: vi.fn(async () => {
+        throw new Error("Scope unavailable");
+      }),
+    } as never,
+  });
+  await expect(service.list(context, "business_partner")).rejects.toThrow(
+    "Scope unavailable",
+  );
+});
+
+it("uses current readable title, code and status instead of a stored label snapshot", async () => {
+  const db = databaseHarness([
+    {
+      id: ID_A,
+      record_id: ID_A,
+      entity_code: "asset",
+      label_snapshot: "Old restricted name",
+      created_at: "2026-09-08T10:00:00Z",
+    },
+  ]);
+  const execute = vi.fn(async () => ({
+    descriptor: {
+      storage: { idField: "id" },
+      listPresentation: { identityField: "code" },
+    },
+    responseFields: [
+      { key: "name", list: { semanticRole: "title" } },
+      { key: "code" },
+      { key: "state", list: { semanticRole: "status" } },
+    ],
+    result: {
+      data: [
+        { id: ID_A, name: "Current name", code: "AS-001", state: "Active" },
+      ],
+    },
+  }));
+  const service = createRecordBookmarkService({
+    transactions: db.transactions,
+    listExecutor: { execute } as never,
+  });
+  expect(await service.list(context, "asset")).toEqual([
+    expect.objectContaining({
+      label: "Current name",
+      description: "AS-001 · Active",
+    }),
+  ]);
+});

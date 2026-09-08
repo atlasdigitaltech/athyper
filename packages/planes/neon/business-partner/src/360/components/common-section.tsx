@@ -1,3 +1,5 @@
+import { businessLabel, countryName } from "../display-values";
+import { useRecordFooterSources } from "@athyper/platform-shell";
 import { parseInstant } from "@athyper/platform-temporal";
 import {
   useApiClient,
@@ -69,6 +71,11 @@ export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
       });
     return () => controller.abort();
   }, [client, key]);
+  useRecordFooterSources(
+    !loading && !error && section?.sectionCode === code
+      ? section.provenance
+      : [],
+  );
   if (loading && !section) return <Skeleton className="bp360-shell-skeleton" />;
   if (error && !section)
     return (
@@ -84,29 +91,25 @@ export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
         <p>
           No current records are available for this section and effective date.
         </p>
-        <ChangeLink id={summary.identity.id} section={code} />
       </Card>
     );
   return (
     <div className="bp360-section-list">
-      <div className="bp360-section-toolbar">
-        <ChangeLink id={summary.identity.id} section={code} />
-        {section.provenance[0] ? (
-          <small>
-            Source: {section.provenance[0].sourceObject} · observed{" "}
-            {new Date(section.provenance[0].observedAt).toLocaleString()}
-          </small>
-        ) : null}
-      </div>
-      {section.data.items.map((item) => (
-        <ItemCard
-          key={`${item.kind ?? code}:${item.id}`}
-          item={item}
-          section={code}
-          client={client}
-          businessPartnerId={summary.identity.id}
-        />
-      ))}
+      {[...section.data.items]
+        .sort(
+          (left, right) =>
+            Number(right.kind === "canonical") -
+            Number(left.kind === "canonical"),
+        )
+        .map((item) => (
+          <ItemCard
+            key={`${item.kind ?? code}:${item.id}`}
+            item={item}
+            section={code}
+            client={client}
+            businessPartnerId={summary.identity.id}
+          />
+        ))}
       {section.data.nextCursor ? (
         <button
           disabled={loading}
@@ -118,16 +121,7 @@ export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
     </div>
   );
 }
-function ChangeLink({ id, section }: { id: string; section: string }) {
-  return (
-    <a
-      href={`/mdg/business-partner/requests?targetBusinessPartnerId=${encodeURIComponent(id)}&requestKind=amend_partner&section=${encodeURIComponent(section)}`}
-    >
-      Propose change
-    </a>
-  );
-}
-function ItemCard({
+export function ItemCard({
   item,
   section,
   client,
@@ -138,6 +132,11 @@ function ItemCard({
   client: ReturnType<typeof createBusinessPartner360SectionClient>;
   businessPartnerId: string;
 }) {
+  const [showEmpty, setShowEmpty] = useState(false);
+  const entries = fields(item, section);
+  const hasValue = (value: unknown) =>
+    value !== undefined && value !== null && value !== "";
+  const emptyCount = entries.filter(([, value]) => !hasValue(value)).length;
   const [reveal, setReveal] = useState(false),
     [value, setValue] = useState<string>(),
     [failed, setFailed] = useState(false);
@@ -163,13 +162,24 @@ function ItemCard({
     <Card className="bp360-section-card">
       <h2>{title(item, section)}</h2>
       <dl>
-        {fields(item, section).map(([label, value]) => (
-          <div key={label}>
-            <dt>{label}</dt>
-            <dd>{display(value)}</dd>
-          </div>
-        ))}
+        {entries
+          .filter(([, value]) => showEmpty || hasValue(value))
+          .map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{display(value)}</dd>
+            </div>
+          ))}
       </dl>
+      {emptyCount ? (
+        <button
+          type="button"
+          className="bp360-empty-toggle"
+          onClick={() => setShowEmpty((value) => !value)}
+        >
+          {showEmpty ? "Hide" : "Show"} {emptyCount} empty fields
+        </button>
+      ) : null}
       {item.channels?.length ? (
         <ul>
           {item.channels.map((channel, index) => (
@@ -188,6 +198,12 @@ function ItemCard({
             </li>
           ))}
         </ul>
+      ) : null}
+      {item.industryCodeId ? (
+        <details>
+          <summary>Technical details</summary>
+          <p>Classification ID: {item.industryCodeId}</p>
+        </details>
       ) : null}
       {item.kind === "tax" && item.revealable ? (
         <div>
@@ -224,6 +240,10 @@ function ItemCard({
   );
 }
 function title(item: CommonSectionItem, section: CommonSectionCode) {
+  if (section === "identity") {
+    if (item.kind === "classification") return "Industry classification";
+    if (item.kind === "external_reference") return "External reference";
+  }
   return (
     item.displayName ??
     item.formattedAddress ??
@@ -240,23 +260,36 @@ function fields(
   section: CommonSectionCode,
 ): readonly (readonly [string, unknown])[] {
   if (section === "identity")
-    return [
-      ["Code", item.code],
-      ["Legal name", item.legalName],
-      ["Aliases", item.aliases?.join(", ")],
-      ["Lifecycle", item.lifecycleStatus],
-      ["Ownership", item.ownershipClass],
-      ["Legal form", item.legalForm],
-      ["Country", item.registrationCountryCode],
-      [
-        "Industry",
-        item.industryDomainCode && item.industryCodeId
-          ? `${item.industryDomainCode}: ${item.industryCodeId}`
-          : undefined,
-      ],
-      ["External system", item.sourceSystemCode],
-      ["External ID", item.externalId],
-    ];
+    if (item.kind === "classification")
+      return [
+        ["Classification system", businessLabel(item.industryDomainCode)],
+        ["Industry", item.industryName],
+        ["Industry code", item.industryCode],
+        ["Assignment", businessLabel(item.assignmentKind)],
+        ["Primary", item.primary],
+        ["Verified", item.verified],
+        ["Effective from", item.effectiveFrom],
+        ["Effective until", item.effectiveUntil],
+      ];
+    else if (item.kind === "external_reference")
+      return [
+        ["External system", item.sourceSystemCode],
+        ["External entity", item.externalEntityCode],
+        ["External ID", item.externalId],
+        ["External code", item.externalCode],
+      ];
+    else
+      return [
+        ["Code", item.code],
+        ["Legal name", item.legalName],
+        ["Aliases", item.aliases?.join(", ")],
+        ["Lifecycle", businessLabel(item.lifecycleStatus)],
+        ["Ownership", businessLabel(item.ownershipClass)],
+        ["Legal form", businessLabel(item.legalForm)],
+        ["Country", countryName(item.registrationCountryCode)],
+        ["Incorporation date", item.incorporationDate],
+        ["Website", item.websiteUrl],
+      ];
   if (section === "contacts")
     return [
       ["Title", item.businessTitle],
@@ -267,30 +300,30 @@ function fields(
     ];
   if (section === "addresses")
     return [
-      ["Purpose", item.purpose],
+      ["Purpose", businessLabel(item.purpose)],
       ["Address", item.lines?.join(", ")],
       ["Locality", item.locality],
       ["Region", item.region],
       ["Postal code", item.postalCode],
-      ["Country", item.countryCode],
+      ["Country", countryName(item.countryCode)],
       ["Primary", item.primary],
-      ["Validation", item.validationStatus],
+      ["Validation", businessLabel(item.validationStatus)],
       ["Effective from", item.effectiveFrom],
       ["Effective until", item.effectiveUntil],
     ];
   if (section === "governance")
     return [
-      ["Role", item.relationTypeCode],
+      ["Role", businessLabel(item.relationTypeCode)],
       ["Member", item.memberName],
-      ["Member type", item.memberType],
+      ["Member type", businessLabel(item.memberType)],
       ["Business title", item.businessTitle],
-      ["Country", item.memberCountryCode],
+      ["Country", countryName(item.memberCountryCode)],
       ["Ownership", percentage(item.ownershipPercent)],
       ["Voting rights", percentage(item.votingPercent)],
       ["Beneficial ownership", percentage(item.beneficialOwnershipPercent)],
       ["Appointed", item.appointedDate],
       ["End of term", item.endOfTerm],
-      ["Status", item.status],
+      ["Status", businessLabel(item.status)],
     ];
   return [
     ["Type", item.kind],

@@ -39,6 +39,8 @@ function binding(input: RecordRepositoryListInput): string {
     tenantId: input.tenantId,
     cursorScope: input.cursorScope,
     filters: input.filters ?? [],
+    ...(input.viewRelationships?{viewRelationships:input.viewRelationships}:{}),
+    ...(input.recordIds!==undefined?{recordIds:[...input.recordIds].sort()}:{}),
     sort: input.sort ?? [],
     group: input.group ?? null,
     search: input.search ?? null,

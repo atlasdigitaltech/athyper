@@ -1,6 +1,10 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 
 export interface RecordListScopeCoordinate {
+  readonly companyCodeIds?: readonly string[];
+  readonly operatingOrganizationIds?: readonly string[];
+  readonly partnerRole?: "supplier" | "customer";
+  readonly eligibleOperation?: "order" | "invoice" | "payment";
   readonly companyCodeId?: string;
   readonly legalEntityId?: string;
   readonly operatingOrganizationId?: string;
@@ -23,6 +27,9 @@ export interface RecordSort {
 }
 
 export interface ListRecordsQuery {
+  readonly standardViewKey?: string;
+  /** Trusted, server-produced relationship predicates. Never accepted from HTTP. */
+  readonly viewRelationships?: readonly import("./ports.js").StandardViewRelationshipConstraint[];
   readonly context: VerifiedRequestContext;
   readonly entityCode: string;
   readonly limit?: number;

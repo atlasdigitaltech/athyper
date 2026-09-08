@@ -1,0 +1,280 @@
+{
+  "entityCode": "business_partner",
+  "recordPresentation": {
+    "schemaVersion": 1,
+    "titleField": "display_name",
+    "iconKey": "contact",
+    "codeField": "code",
+    "subtitleFields": [],
+    "contextFields": [],
+    "badges": [
+      {
+        "field": "status",
+        "tones": {
+          "active": "success",
+          "blocked": "danger",
+          "inactive": "neutral"
+        }
+      }
+    ],
+    "sections": [
+      {
+        "key": "overview",
+        "label": "Overview",
+        "fields": [],
+        "placement": "direct"
+      },
+      {
+        "key": "identity",
+        "label": "Identity",
+        "fields": [],
+        "placement": "direct"
+      },
+      {
+        "key": "contacts",
+        "label": "Contacts",
+        "fields": [],
+        "placement": "direct"
+      },
+      {
+        "key": "addresses",
+        "label": "Addresses",
+        "fields": [],
+        "placement": "direct"
+      },
+      {
+        "key": "identifiers-tax",
+        "label": "Identifiers & tax",
+        "fields": [],
+        "placement": "direct"
+      },
+      {
+        "key": "governance",
+        "label": "Governance & ownership",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "roles-scope",
+        "label": "Roles & scope",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "supplier-company",
+        "label": "Procurement & AP",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "customer-company",
+        "label": "Sales & AR",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "banking",
+        "label": "Banking",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "qualifications-certificates",
+        "label": "Qualifications & certificates",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "credit",
+        "label": "Credit review",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "requests",
+        "label": "Requests",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "activity",
+        "label": "Activity",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "business-activity",
+        "label": "Business activity",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "network",
+        "label": "MESH Network",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "comments",
+        "label": "Comments",
+        "fields": [],
+        "placement": "overflow"
+      },
+      {
+        "key": "attachments",
+        "label": "Attachments",
+        "fields": [],
+        "placement": "overflow"
+      }
+    ],
+    "actions": [
+      {
+        "key": "amend_partner",
+        "label": "Propose change",
+        "operationKey": "amend_partner",
+        "placement": "primary"
+      },
+      {
+        "key": "add_role",
+        "label": "Add supplier/customer role",
+        "operationKey": "add_role",
+        "placement": "overflow"
+      },
+      {
+        "key": "assign_organization",
+        "label": "Assign organization",
+        "operationKey": "assign_organization",
+        "placement": "overflow"
+      },
+      {
+        "key": "configure_company",
+        "label": "Configure company",
+        "operationKey": "configure_company",
+        "placement": "overflow"
+      }
+    ],
+    "panel": {
+      "schemaVersion": 1,
+      "kind": "360",
+      "sections": [
+        "overview",
+        "identity",
+        "contacts",
+        "addresses",
+        "identifiers-tax",
+        "governance",
+        "banking",
+        "qualifications-certificates",
+        "roles-scope",
+        "supplier-company",
+        "customer-company",
+        "credit",
+        "network"
+      ],
+      "tabs": [
+        {
+          "key": "360",
+          "label": "360 View",
+          "provider": "360"
+        },
+        {
+          "key": "requests",
+          "label": "Requests",
+          "provider": "section",
+          "sectionKey": "requests"
+        },
+        {
+          "key": "transactions",
+          "label": "Business Transactions",
+          "provider": "section",
+          "sectionKey": "business-activity"
+        },
+        {
+          "key": "activity",
+          "label": "Activity",
+          "provider": "section",
+          "sectionKey": "activity"
+        },
+        {
+          "key": "comments",
+          "label": "Comments",
+          "provider": "section",
+          "sectionKey": "comments"
+        },
+        {
+          "key": "attachments",
+          "label": "Attachments",
+          "provider": "section",
+          "sectionKey": "attachments"
+        }
+      ],
+      "sidebar": [
+        {
+          "key": "contact",
+          "label": "Primary Contact",
+          "provider": "primary-contact"
+        },
+        {
+          "key": "address",
+          "label": "Primary Address",
+          "provider": "primary-address"
+        }
+      ]
+    }
+  },
+  "operationPermissions": {
+    "amend_partner": "neon.relationship.entity_case.create",
+    "add_role": "neon.relationship.entity_case.create",
+    "assign_organization": "neon.relationship.entity_case.create",
+    "configure_company": "neon.relationship.entity_case.create"
+  },
+  "directoryScope": {
+    "schemaVersion": 1,
+    "mode": "tenant",
+    "filters": [
+      "organization",
+      "company"
+    ],
+    "quickFilters": [
+      {
+        "key": "partnerRole",
+        "label": "Role",
+        "emptyLabel": "All partners",
+        "options": [
+          {
+            "value": "supplier",
+            "label": "Suppliers"
+          },
+          {
+            "value": "customer",
+            "label": "Customers"
+          }
+        ]
+      },
+      {
+        "key": "eligibleOperation",
+        "label": "Eligible for transactions",
+        "emptyLabel": "Any eligibility",
+        "options": [
+          {
+            "value": "order",
+            "label": "Eligible for orders"
+          },
+          {
+            "value": "invoice",
+            "label": "Eligible for invoices"
+          },
+          {
+            "value": "payment",
+            "label": "Eligible for payments"
+          }
+        ],
+        "requires": [
+          "partnerRole",
+          "organization",
+          "company"
+        ]
+      }
+    ]
+  }
+}

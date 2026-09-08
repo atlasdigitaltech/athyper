@@ -3,7 +3,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const root = process.cwd();
 const sources = ['business-partner-360.ts', 'business-partner-360-sections.ts', 'business-partner-360-commercial-controls.ts'].map((file) => resolve(root, 'server/packages/contracts/master-data/src', file));
-const program = ts.createProgram(sources, { strict: true, target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.NodeNext, moduleResolution: ts.ModuleResolutionKind.NodeNext, skipLibCheck: true });
+// Response contracts also reference browser workspace contracts with extensionless imports.
+const program = ts.createProgram(sources, { strict: true, target: ts.ScriptTarget.ESNext, module: ts.ModuleKind.ESNext, moduleResolution: ts.ModuleResolutionKind.Bundler, skipLibCheck: true });
 const checker = program.getTypeChecker();
 const diagnostics = sources.flatMap((file) => [...program.getSyntacticDiagnostics(program.getSourceFile(file)), ...program.getSemanticDiagnostics(program.getSourceFile(file))]);
 if (diagnostics.length) throw new Error(diagnostics.map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n')).join('\n'));

@@ -30,6 +30,7 @@ export function decodeListLocationState(input: URLSearchParams | string, descrip
   const spreadsheet = decodeSpreadsheet(parameters, base.spreadsheet);
   const group = parameters.get("group.clear") === "1" ? undefined : parameters.has("group") ? parameters.get("group") ?? undefined : base.group;
   return parseListLocationState({
+    standardViewKey: parameters.has("standardView") ? parameters.get("standardView") || undefined : base.standardViewKey,
     ...(parameters.has("q") ? parameters.get("q") ? { query: parameters.get("q") } : {} : base.query ? { query: base.query } : {}),
     filters: hasFilterParameter ? filters : [...base.filters],
     sort,
@@ -50,6 +51,7 @@ export function encodeListLocationState(state: ListLocationStateV1, descriptor: 
   const normalized = parseListLocationState(state, descriptor);
   const base = normalizedBase(descriptor, options.baseState);
   const parameters = new URLSearchParams();
+  if (normalized.standardViewKey !== base.standardViewKey) parameters.set("standardView",normalized.standardViewKey??"");
   if ((normalized.query ?? "") !== (base.query ?? "")) parameters.set("q", normalized.query ?? "");
   if (!equal(normalized.filters, base.filters)) {
     if (!normalized.filters.length) parameters.set("filters", "none");
@@ -76,6 +78,7 @@ export function encodeListLocationState(state: ListLocationStateV1, descriptor: 
 
 export function toSaveableListState(state: ListLocationStateV1): SaveableListStateV1 {
   return Object.freeze({
+    ...(state.standardViewKey ? { standardViewKey: state.standardViewKey } : {}),
     ...(state.query ? { query: state.query } : {}), filters: state.filters, sort: state.sort,
     ...(state.group ? { group: state.group } : {}), columns: state.columns, density: state.density, mode: state.mode,
     ...(state.spreadsheet ? { spreadsheet: state.spreadsheet } : {}),

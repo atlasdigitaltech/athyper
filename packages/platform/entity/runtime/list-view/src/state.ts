@@ -16,10 +16,13 @@ export function visibleListFields(descriptor: EntityListDescriptorV1, state: Lis
   return descriptor.fields.filter((field) => order.has(field.key)).sort((left, right) => (order.get(left.key) ?? 0) - (order.get(right.key) ?? 0));
 }
 
-export function filterValueFromInput(operator: ListFilterOperator, raw: string, valueKind?: EntityListDescriptorV1["fields"][number]["valueKind"]): JsonValue | undefined {
+export function filterValueFromInput(operator: ListFilterOperator, raw: string, valueKind?: EntityListDescriptorV1["fields"][number]["valueKind"], options?: EntityListDescriptorV1["fields"][number]["filterOptions"]): JsonValue | undefined {
   if (operator === "is_null" || operator === "is_not_null") return undefined;
+  if (operator === "relative") return raw.trim();
   const convert = (value: string): JsonValue => {
     if (!value) return "";
+    const option = options?.find(item => String(item.value) === value);
+    if (option) return option.value;
     if (valueKind === "integer" || valueKind === "decimal" || valueKind === "money") return Number(value);
     if (valueKind === "boolean") return value === "true";
     if (valueKind === "datetime") { const timestamp = new Date(value); return Number.isNaN(timestamp.valueOf()) ? value : timestamp.toISOString(); }
@@ -30,6 +33,7 @@ export function filterValueFromInput(operator: ListFilterOperator, raw: string, 
 }
 
 export function filterInputValue(filter: ListFilterV1, valueKind?: EntityListDescriptorV1["fields"][number]["valueKind"]): string {
+  if (filter.operator === "relative") return String(filter.value ?? "");
   const inputValue = (value: JsonValue | undefined): string => {
     if (value === undefined || value === null) return "";
     const text = String(value);
@@ -47,6 +51,7 @@ export function filterInputValue(filter: ListFilterV1, valueKind?: EntityListDes
 export function describeFilter(filter: ListFilterV1, descriptor: EntityListDescriptorV1): string {
   const field = descriptor.fields.find((candidate) => candidate.key === filter.field), label = field?.label ?? filter.field;
   const operator: Record<ListFilterOperator, string> = { eq: "is", ne: "is not", in: "is any of", contains: "contains", starts_with: "starts with", gt: "is greater than", gte: "is at least", lt: "is less than", lte: "is at most", between: "is between", is_null: "is empty", is_not_null: "is not empty", relative: "is" };
-  const value = filterInputValue(filter, field?.valueKind);
+  const raw = filterInputValue(filter, field?.valueKind);
+  const value = filter.operator === "relative" ? raw.replaceAll("_", " ") : (Array.isArray(filter.value) ? filter.value : [filter.value]).map(item => field?.filterOptions?.find(option => option.value === item)?.label ?? (field?.valueKind === "boolean" && typeof item === "boolean" ? item ? "Yes" : "No" : filterInputValue({ ...filter, value: item }, field?.valueKind))).join(filter.operator === "between" ? " – " : ", ");
   return `${label} ${operator[filter.operator]}${value ? ` ${value}` : ""}`;
 }

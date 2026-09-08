@@ -3,6 +3,11 @@
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import {
+  buildDevelopmentBusinessPartnerProfile,
+  DEVELOPMENT_BUSINESS_PARTNER_COUNTRIES,
+  type DevelopmentBusinessPartnerCountry,
+} from "./development-business-partner-profiles.js";
 
 const CONFIRMATION = "LOCAL-NEON-BUSINESS-PARTNER-FIXTURES";
 const FIXTURE_PACK = "development.business-partner-two-tenant.v2";
@@ -212,7 +217,32 @@ export function buildDevelopmentBusinessPartnerFixtures(): Readonly<{
       "Saxon Engineering",
     ],
   );
+  const saudiFixtures = [
+    partner(
+      "athyper",
+      "athyper.admin",
+      "ATH-BP-SA",
+      "Najd Industrial Supply",
+      "Najd Industrial Supply",
+      "Najd Industrial Supply LLC",
+      "SA",
+      "active",
+      ["athyper.procurement.emea"],
+    ),
+    partner(
+      "cirrusatlantic",
+      "catl.admin",
+      "CATL-BP-SA",
+      "Red Sea Technical Services",
+      "Red Sea Technical Services",
+      "Red Sea Technical Services LLC",
+      "SA",
+      "active",
+      ["catl.operations"],
+    ),
+  ];
   const definitions = [
+    ...saudiFixtures,
     ...core,
     ...catlPageFixtures,
     ...athyperApacFixtures,
@@ -335,7 +365,8 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       const metadata = JSON.stringify({
         _seed: {
           pack: FIXTURE_PACK,
-          version: "2.0.0",
+          version: "3.0.0",
+          profile: "business_partner_360",
           environment: "disposable_local",
         },
       });
@@ -368,10 +399,11 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
         id: string;
         code: string;
         status: string;
+        seed_pack: string | null;
       }>(
         client,
         `
-        SELECT id::text,code,status::text FROM master.business_partner
+        SELECT id::text,code,status::text,metadata->'_seed'->>'pack' seed_pack FROM master.business_partner
         WHERE tenant_id=$1::uuid AND lower(code)=lower($2)
       `,
         [coordinate.tenantId, fixture.code],
@@ -379,7 +411,10 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       if (
         actualPartner.id !== fixture.id ||
         actualPartner.code !== fixture.code ||
-        actualPartner.status !== fixture.status
+        actualPartner.status !== fixture.status ||
+        ![FIXTURE_PACK, "development.business-partner-two-tenant.v1"].includes(
+          actualPartner.seed_pack ?? "",
+        )
       ) {
         throw new Error(
           `business-partner fixture conflict: ${fixture.tenantCode}/${fixture.code}`,
@@ -390,8 +425,8 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       await client.query(
         `
         UPDATE master.business_partner
-        SET metadata=$3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid
-        WHERE tenant_id=$1::uuid AND id=$2::uuid AND metadata IS DISTINCT FROM $3::jsonb
+        SET metadata=metadata || $3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid
+        WHERE tenant_id=$1::uuid AND id=$2::uuid AND NOT metadata @> $3::jsonb
       `,
         [coordinate.tenantId, fixture.id, metadata, coordinate.actorId],
       );
@@ -436,8 +471,8 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       await client.query(
         `
         UPDATE master.supplier
-        SET metadata=$3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid
-        WHERE tenant_id=$1::uuid AND id=$2::uuid AND metadata IS DISTINCT FROM $3::jsonb
+        SET metadata=metadata || $3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid
+        WHERE tenant_id=$1::uuid AND id=$2::uuid AND NOT metadata @> $3::jsonb
       `,
         [
           coordinate.tenantId,
@@ -511,16 +546,13 @@ export async function provisionDevelopmentBusinessPartnerFixtures(options: {
       }
     }
 
-    const northwind = fixtures.partners.find(
-      (item) =>
-        item.tenantCode === "cirrusatlantic" && item.code === "CATL-BP-001",
-    );
-    if (!northwind) throw new Error("missing CATL-BP-001 fixture definition");
-    await provisionDevelopmentBusinessPartner360Details(
-      client,
-      northwind,
-      catl,
-    );
+    for (const fixture of fixtures.partners) {
+      await provisionDevelopmentBusinessPartner360Details(
+        client,
+        fixture,
+        requiredCoordinate(coordinates, fixture.tenantCode),
+      );
+    }
 
     const visibility = [];
     for (const expected of fixtures.expectations) {
@@ -583,10 +615,11 @@ async function provisionDevelopmentBusinessPartner360Details(
   fixture: DevelopmentBusinessPartnerFixture,
   coordinate: { tenantId: string; actorId: string },
 ): Promise<void> {
+  const profile = buildDevelopmentBusinessPartnerProfile(fixture);
   const metadata = JSON.stringify({
     _seed: {
       pack: FIXTURE_PACK,
-      version: "2.1.0",
+      version: "3.0.0",
       profile: "business_partner_360",
       environment: "disposable_local",
     },
@@ -613,10 +646,17 @@ async function provisionDevelopmentBusinessPartner360Details(
     CROSS JOIN control.owner_type business_partner_owner
     CROSS JOIN control.owner_type contact_person_owner
     CROSS JOIN shared.industry_code industry
-    WHERE organization.tenant_id=$1::uuid AND organization.code='catl.operations' AND business_partner_owner.code='business_partner' AND business_partner_owner.tenant_id IS NULL
+    WHERE organization.tenant_id=$1::uuid AND organization.code=$2 AND business_partner_owner.code='business_partner' AND business_partner_owner.tenant_id IS NULL
       AND contact_person_owner.code='contact_person' AND contact_person_owner.tenant_id IS NULL AND industry.domain_code='isic' AND industry.code='4690'
-    ORDER BY assignment.created_at LIMIT 1`,
-    [coordinate.tenantId],
+    AND assignment.effective_from<=CURRENT_DATE AND (assignment.effective_until IS NULL OR assignment.effective_until>CURRENT_DATE)
+    ORDER BY assignment.created_at,assignment.company_code_id LIMIT 1`,
+    [
+      coordinate.tenantId,
+      fixture.assignments[0]?.organizationCode ??
+        (fixture.tenantCode === "athyper"
+          ? "athyper.procurement.apac"
+          : "catl.operations"),
+    ],
   );
   const addressId = deterministicUuid(
       `360:address:${fixture.tenantCode}:${fixture.code}`,
@@ -629,7 +669,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     ),
     addressHash = createHash("sha256")
       .update(
-        "Northwind Industrial Supplies|1 Merchant Square|London|E14 9GE|GB",
+        `${fixture.code}|${profile.line1}|${profile.city}|${profile.postalCode}|${fixture.countryCode}`,
       )
       .digest("hex");
   const contactPersonId = deterministicUuid(
@@ -648,7 +688,7 @@ async function provisionDevelopmentBusinessPartner360Details(
       `360:identifier:${fixture.tenantCode}:${fixture.code}`,
     ),
     jurisdictionId = deterministicUuid(
-      `360:tax-jurisdiction:${fixture.tenantCode}:GB`,
+      `360:tax-jurisdiction:${fixture.tenantCode}:${fixture.countryCode}`,
     ),
     taxId = deterministicUuid(
       `360:tax-registration:${fixture.tenantCode}:${fixture.code}`,
@@ -696,16 +736,40 @@ async function provisionDevelopmentBusinessPartner360Details(
       `360:certification:${fixture.tenantCode}:${fixture.code}`,
     );
   await client.query(
-    `UPDATE master.business_partner SET legal_form='private_limited',incorporation_date='2008-04-15',website_url='https://northwind.example.test',metadata=$3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid`,
-    [coordinate.tenantId, fixture.id, metadata, coordinate.actorId],
+    `UPDATE master.business_partner SET legal_form='private_limited',incorporation_date='2008-04-15',website_url=$5,metadata=metadata || $3::jsonb,updated_at=clock_timestamp(),updated_by=$4::uuid WHERE tenant_id=$1::uuid AND id=$2::uuid AND (legal_form IS DISTINCT FROM 'private_limited' OR incorporation_date IS DISTINCT FROM '2008-04-15'::date OR website_url IS DISTINCT FROM $5 OR NOT metadata @> $3::jsonb OR updated_at IS NULL)`,
+    [
+      coordinate.tenantId,
+      fixture.id,
+      metadata,
+      coordinate.actorId,
+      profile.website,
+    ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_alias(tenant_id,business_partner_id,alias_name,alias_kind,created_by) VALUES($1::uuid,$2::uuid,'Northwind Industrial','trading',$3::uuid),($1::uuid,$2::uuid,'Northwind Supplies','search',$3::uuid) ON CONFLICT DO NOTHING`,
-    [coordinate.tenantId, fixture.id, coordinate.actorId],
+    `INSERT INTO master.business_partner_alias(tenant_id,business_partner_id,alias_name,alias_kind,created_by) VALUES($1::uuid,$2::uuid,$4,'trading',$3::uuid),($1::uuid,$2::uuid,$5,'search',$3::uuid) ON CONFLICT DO NOTHING`,
+    [
+      coordinate.tenantId,
+      fixture.id,
+      coordinate.actorId,
+      fixture.name,
+      fixture.displayName,
+    ],
   );
   await client.query(
-    `INSERT INTO master.address(id,tenant_id,address_type,address_kind,line1,city,region,postal_code,country_code,normalized_hash,formatted_address,validation_status,validation_provider,validation_confidence,validated_at,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'registered','street','1 Merchant Square','London','Greater London','E14 9GE','GB',$3,'1 Merchant Square, London E14 9GE, United Kingdom','valid','development_fixture',100,clock_timestamp(),$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
-    [addressId, coordinate.tenantId, addressHash, metadata, coordinate.actorId],
+    `INSERT INTO master.address(id,tenant_id,address_type,address_kind,line1,city,region,postal_code,country_code,normalized_hash,formatted_address,validation_status,validation_provider,validation_confidence,validated_at,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'registered','street',$6,$7,$8,$9,$10,$3,$11,'valid','development_fixture',100,clock_timestamp(),$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    [
+      addressId,
+      coordinate.tenantId,
+      addressHash,
+      metadata,
+      coordinate.actorId,
+      profile.line1,
+      profile.city,
+      profile.region,
+      profile.postalCode,
+      fixture.countryCode,
+      profile.formattedAddress,
+    ],
   );
   await client.query(
     `INSERT INTO master.address_link(id,tenant_id,owner_type_id,owner_id,address_id,purpose,is_primary,effective_from,metadata,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,'default',true,$6::date,$7::jsonb,$8::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
@@ -732,7 +796,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     ],
   );
   await client.query(
-    `INSERT INTO master.contact_person(id,tenant_id,owner_type_id,owner_id,contact_name,business_title,department_name,is_primary,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'Amelia Hart','Supplier Account Manager','Customer Operations',true,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.contact_person(id,tenant_id,owner_type_id,owner_id,contact_name,business_title,department_name,is_primary,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$7,'Supplier Account Manager','Customer Operations',true,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       contactPersonId,
       coordinate.tenantId,
@@ -740,6 +804,7 @@ async function provisionDevelopmentBusinessPartner360Details(
       fixture.id,
       metadata,
       coordinate.actorId,
+      profile.contactName,
     ],
   );
   await client.query(
@@ -757,14 +822,14 @@ async function provisionDevelopmentBusinessPartner360Details(
     {
       id: emailId,
       type: "email",
-      value: "amelia.hart@northwind.example.test",
+      value: profile.email,
       purpose: "business",
       signature: "fixture-email",
     },
     {
       id: phoneId,
       type: "phone",
-      value: "+442079460180",
+      value: profile.phone,
       purpose: "business",
       signature: "fixture-phone",
     },
@@ -795,7 +860,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     [phoneId, coordinate.tenantId, metadata, coordinate.actorId],
   );
   await client.query(
-    `INSERT INTO master.business_partner_identifier(id,tenant_id,business_partner_id,scheme_code,identifier_value,issuing_authority,issuing_country_code,issued_at,is_primary,verified_at,verified_by,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'business_registration','08765432','Companies House','GB','2008-04-15',true,'2026-08-30T00:00:00Z',$4::uuid,$5::jsonb,'active',$4::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_identifier(id,tenant_id,business_partner_id,scheme_code,identifier_value,issuing_authority,issuing_country_code,issued_at,is_primary,verified_at,verified_by,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'business_registration',$7,$8,$6,'2008-04-15',true,'2026-08-30T00:00:00Z',$4::uuid,$5::jsonb,'active',$4::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       identifierId,
       coordinate.tenantId,
@@ -803,22 +868,34 @@ async function provisionDevelopmentBusinessPartner360Details(
       coordinate.actorId,
       JSON.stringify({
         ...JSON.parse(metadata),
-        maskedValue: "••••5432",
+        maskedValue: `••••${profile.registrationNumber.slice(-4)}`,
         protected: true,
       }),
+      fixture.countryCode,
+      profile.registrationNumber,
+      profile.registrationAuthority,
     ],
   );
   await client.query(
-    `INSERT INTO master.tax_jurisdiction(id,tenant_id,code,name,jurisdiction_type,country_code,authority_name,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'GB-HMRC','United Kingdom','country','GB','HM Revenue & Customs',$3::jsonb,'active',$4::uuid) ON CONFLICT(tenant_id,code) DO NOTHING`,
-    [jurisdictionId, coordinate.tenantId, metadata, coordinate.actorId],
+    `INSERT INTO master.tax_jurisdiction(id,tenant_id,code,name,jurisdiction_type,country_code,authority_name,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$6,$7,'country',$5,$8,$3::jsonb,'active',$4::uuid) ON CONFLICT(tenant_id,code) DO NOTHING`,
+    [
+      jurisdictionId,
+      coordinate.tenantId,
+      metadata,
+      coordinate.actorId,
+      fixture.countryCode,
+      profile.jurisdictionCode,
+      profile.countryName,
+      profile.taxAuthority,
+    ],
   );
   const jurisdiction = await one<{ id: string }>(
     client,
-    "SELECT id::text FROM master.tax_jurisdiction WHERE tenant_id=$1::uuid AND code='GB-HMRC'",
-    [coordinate.tenantId],
+    "SELECT id::text FROM master.tax_jurisdiction WHERE tenant_id=$1::uuid AND code=$2",
+    [coordinate.tenantId, profile.jurisdictionCode],
   );
   await client.query(
-    `INSERT INTO master.business_partner_tax_registration(id,tenant_id,business_partner_id,jurisdiction_id,registration_type_code,registration_number,effective_from,is_primary,verified_at,verified_by,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'vat','GB123456789',$5::date,true,'2026-08-30T00:00:00Z',$6::uuid,$7::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_tax_registration(id,tenant_id,business_partner_id,jurisdiction_id,registration_type_code,registration_number,effective_from,is_primary,verified_at,verified_by,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$8,$9,$5::date,true,'2026-08-30T00:00:00Z',$6::uuid,$7::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       taxId,
       coordinate.tenantId,
@@ -828,9 +905,11 @@ async function provisionDevelopmentBusinessPartner360Details(
       coordinate.actorId,
       JSON.stringify({
         ...JSON.parse(metadata),
-        maskedValue: "GB••••••789",
+        maskedValue: `${fixture.countryCode}••••${profile.taxNumber.slice(-3)}`,
         protected: true,
       }),
+      profile.taxType,
+      profile.taxNumber,
     ],
   );
   await client.query(
@@ -855,7 +934,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_industry_classification(id,tenant_id,business_partner_id,industry_domain_code,industry_code_id,assignment_kind,is_primary,confidence,effective_from,verified_at,verified_by,source_system,source_reference,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'isic',$4::uuid,'verified',true,100,$5::date,'2026-08-30T00:00:00Z',$6::uuid,'development_fixture','CATL-BP-001',$7::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_industry_classification(id,tenant_id,business_partner_id,industry_domain_code,industry_code_id,assignment_kind,is_primary,confidence,effective_from,verified_at,verified_by,source_system,source_reference,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'isic',$4::uuid,'verified',true,100,$5::date,'2026-08-30T00:00:00Z',$6::uuid,'development_fixture',$8,$7::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       classificationId,
       coordinate.tenantId,
@@ -864,11 +943,28 @@ async function provisionDevelopmentBusinessPartner360Details(
       EFFECTIVE_FROM,
       coordinate.actorId,
       metadata,
+      fixture.code,
     ],
   );
+  if (fixture.assignments.length === 0) return;
+
   await client.query(
-    `INSERT INTO master.bank_account(id,tenant_id,code,name,account_holder_name,account_id_type,account_id_value,account_last4,currency_code,bank_name_override,bank_country_override,is_verified,verified_at,verified_by,verification_method,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'northwind_gbp','Northwind GBP remittance','Northwind Industrial Supplies Ltd','iban','GB29NWBK60161331926819','6819','GBP','Northwind Bank','GB',true,'2026-08-30T00:00:00Z',$3::uuid,'manual_document',$4::jsonb,'active',$3::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
-    [bankId, coordinate.tenantId, coordinate.actorId, metadata],
+    `INSERT INTO master.bank_account(id,tenant_id,code,name,account_holder_name,account_id_type,account_id_value,account_last4,currency_code,bank_name_override,bank_country_override,is_verified,verified_at,verified_by,verification_method,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$6,$7,$8,$9,$10,$11,$12,$13,$5,true,'2026-08-30T00:00:00Z',$3::uuid,'manual_document',$4::jsonb,'active',$3::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    [
+      bankId,
+      coordinate.tenantId,
+      coordinate.actorId,
+      metadata,
+      fixture.countryCode,
+      profile.bankCode,
+      profile.bankLabel,
+      fixture.legalName,
+      profile.accountType,
+      profile.accountNumber,
+      profile.accountLast4,
+      profile.currency,
+      profile.bankName,
+    ],
   );
   await client.query(
     `INSERT INTO master.bank_account_link(id,tenant_id,owner_type_id,owner_type,owner_id,relationship_role,bank_account_id,company_code_id,purpose,is_primary,effective_from,metadata,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'business_partner',$4::uuid,'beneficiary',$5::uuid,$6::uuid,'disbursement',true,$7::date,$8::jsonb,$9::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
@@ -885,7 +981,7 @@ async function provisionDevelopmentBusinessPartner360Details(
     ],
   );
   await client.query(
-    `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,preferred_remittance_bank_link_id,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'GBP',$5::uuid,$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,supplier_id,company_code_id) DO NOTHING`,
+    `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,preferred_remittance_bank_link_id,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$8,$5::uuid,$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,supplier_id,company_code_id) DO NOTHING`,
     [
       profileId,
       coordinate.tenantId,
@@ -894,15 +990,25 @@ async function provisionDevelopmentBusinessPartner360Details(
       bankLinkId,
       metadata,
       coordinate.actorId,
+      profile.currency,
     ],
   );
   const related = await one<{ id: string }>(
     client,
-    "SELECT id::text FROM master.business_partner WHERE tenant_id=$1::uuid AND code='CATL-BP-002'",
-    [coordinate.tenantId],
+    "SELECT id::text FROM master.business_partner WHERE tenant_id=$1::uuid AND code=$2",
+    [
+      coordinate.tenantId,
+      fixture.tenantCode === "athyper"
+        ? fixture.code === "ATH-BP-GLOBAL"
+          ? "ATH-BP-APAC"
+          : "ATH-BP-GLOBAL"
+        : fixture.code === "CATL-BP-002"
+          ? "CATL-BP-001"
+          : "CATL-BP-002",
+    ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_relationship(id,tenant_id,source_business_partner_id,target_business_partner_id,relationship_type_code,country_code,effective_from,notes,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'distributor','GB',$5::date,'Regional distribution relationship',$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_relationship(id,tenant_id,source_business_partner_id,target_business_partner_id,relationship_type_code,country_code,effective_from,notes,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,'distributor',$8,$5::date,'Regional distribution relationship',$6::jsonb,'active',$7::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       relationshipId,
       coordinate.tenantId,
@@ -911,92 +1017,203 @@ async function provisionDevelopmentBusinessPartner360Details(
       EFFECTIVE_FROM,
       metadata,
       coordinate.actorId,
+      fixture.countryCode,
     ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,business_title,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'director','Eleanor North','individual','GB','Managing Director','2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO UPDATE SET ownership_pct=NULL,updated_at=clock_timestamp(),updated_by=EXCLUDED.created_by`,
+    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,business_title,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'director',$7,'individual',$6,'Managing Director','2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO UPDATE SET ownership_pct=NULL,updated_at=clock_timestamp(),updated_by=EXCLUDED.created_by WHERE business_partner_governance_relation.ownership_pct IS NOT NULL`,
     [
       governanceId,
       coordinate.tenantId,
       fixture.id,
       metadata,
       coordinate.actorId,
+      fixture.countryCode,
+      profile.directorName,
     ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,ownership_pct,voting_pct,beneficial_ownership_pct,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'shareholder','Eleanor North','individual','GB',35,35,35,'2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,ownership_pct,voting_pct,beneficial_ownership_pct,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'shareholder',$7,'individual',$6,35,35,35,'2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       individualShareholderId,
       coordinate.tenantId,
       fixture.id,
       metadata,
       coordinate.actorId,
+      fixture.countryCode,
+      profile.directorName,
     ],
   );
   await client.query(
-    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,ownership_pct,voting_pct,beneficial_ownership_pct,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'shareholder','Northwind Holdings Ltd','organization','GB',65,65,65,'2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.business_partner_governance_relation(id,tenant_id,business_partner_id,relation_type_code,member_name,member_type,member_country_code,ownership_pct,voting_pct,beneficial_ownership_pct,appointed_date,metadata,status,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'shareholder',$7,'organization',$6,65,65,65,'2018-05-01',$4::jsonb,'active',$5::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       corporateShareholderId,
       coordinate.tenantId,
       fixture.id,
       metadata,
       coordinate.actorId,
+      fixture.countryCode,
+      profile.holdingName,
     ],
   );
-  const fingerprint = createHash("sha256")
-    .update(`${FIXTURE_PACK}:${fixture.code}:approved`)
-    .digest("hex");
-  const reviewer = await one<{ id: string }>(
-    client,
-    "SELECT id::text FROM master.principal WHERE tenant_id=$1::uuid AND code='catl.owner' AND status='active' AND id<>$2::uuid",
-    [coordinate.tenantId, coordinate.actorId],
-  );
-  await client.query(
-    `INSERT INTO master.party_risk_assessment(id,tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
+  if (fixture.status === "active") {
+    const fingerprint = createHash("sha256")
+      .update(`${FIXTURE_PACK}:${fixture.code}:approved`)
+      .digest("hex");
+    const reviewer = await one<{ id: string }>(
+      client,
+      "SELECT id::text FROM master.principal WHERE tenant_id=$1::uuid AND code=$3 AND status='active' AND id<>$2::uuid",
+      [
+        coordinate.tenantId,
+        coordinate.actorId,
+        fixture.tenantCode === "athyper" ? "athyper.owner" : "catl.owner",
+      ],
+    );
+    await client.query(
+      `INSERT INTO master.party_risk_assessment(id,tenant_id,subject_type,subject_id,business_partner_id,assessment_context,model_code,model_version,overall_score,risk_band,status,assessed_at,assessed_by,approved_at,approved_by,next_review_at,review_frequency,version,notes,created_by)
      VALUES($1::uuid,$2::uuid,'supplier',$3::uuid,$4::uuid,'supplier_role','standard_supplier','1.0',84,'low','approved','2026-08-30T00:00:00Z',$5::uuid,'2026-08-30T01:00:00Z',$6::uuid,'2027-08-30','annually',1,'Synthetic development readiness fixture; assessed and approved independently',$5::uuid)
      ON CONFLICT(tenant_id,id) DO NOTHING`,
-    [
-      riskAssessmentId,
-      coordinate.tenantId,
-      fixture.supplierId,
-      fixture.id,
-      coordinate.actorId,
-      reviewer.id,
-    ],
+      [
+        riskAssessmentId,
+        coordinate.tenantId,
+        fixture.supplierId,
+        fixture.id,
+        coordinate.actorId,
+        reviewer.id,
+      ],
+    );
+    await client.query(
+      `INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,qualification_type_code,idempotency_key,decision,decision_reason,effective_from,reviewed_at,reviewed_by,approved_at,approved_by,next_review_at,decision_idempotency_key,decision_fingerprint,metadata,created_by,risk_assessment_id)
+       VALUES($1::uuid,$2::uuid,$3::uuid,'supplier','compliance',$4,'approved','Synthetic development acceptance evidence',$5::date,'2026-08-30T00:00:00Z',$6::uuid,'2026-08-30T00:00:00Z',$6::uuid,'2027-08-30',$7,$8,$9::jsonb,$10::uuid,$11::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+      [
+        qualificationId,
+        coordinate.tenantId,
+        fixture.id,
+        `${fixture.code}:qualification:v1`,
+        EFFECTIVE_FROM,
+        reviewer.id,
+        `${fixture.code}:qualification-decision:v1`,
+        fingerprint,
+        metadata,
+        coordinate.actorId,
+        riskAssessmentId,
+      ],
+    );
+  }
+
+  if (fixture.status === "active") {
+    await client.query(
+      `INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,effective_from,rationale,status,idempotency_key,metadata,created_by)
+       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::date,'Synthetic development supplier preference','pending',$6,$7::jsonb,$8::uuid)
+       ON CONFLICT(tenant_id,id) DO NOTHING`,
+      [
+        preferenceId,
+        coordinate.tenantId,
+        fixture.id,
+        fixture.supplierId,
+        EFFECTIVE_FROM,
+        `${fixture.code}:preference:v1`,
+        metadata,
+        coordinate.actorId,
+      ],
+    );
+  }
+
+  // Populate every company in the partner's existing operating-organization scope.
+  const scopes = await client.query<{
+    organization_id: string;
+    company_code_id: string;
+  }>(
+    `SELECT o.id::text organization_id,a.company_code_id::text
+     FROM master.operating_organization o
+     JOIN master.operating_organization_company_assignment a ON a.tenant_id=o.tenant_id AND a.operating_organization_id=o.id
+     WHERE o.tenant_id=$1::uuid AND o.code=ANY($2::text[]) AND o.status='active' AND a.status='active'
+       AND a.effective_from<=CURRENT_DATE AND (a.effective_until IS NULL OR a.effective_until>CURRENT_DATE)
+     ORDER BY o.code,a.company_code_id`,
+    [coordinate.tenantId, fixture.assignments.map((a) => a.organizationCode)],
   );
-  await client.query(
-    `INSERT INTO control.business_partner_qualification(id,tenant_id,business_partner_id,partner_role,operating_organization_id,company_code_id,commodity_capability_id,qualification_type_code,idempotency_key,decision,decision_reason,effective_from,reviewed_at,reviewed_by,approved_at,approved_by,next_review_at,decision_idempotency_key,decision_fingerprint,metadata,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,'supplier',$4::uuid,$5::uuid,$6::uuid,'compliance','northwind-qualification-v1','approved','Development acceptance evidence',$7::date,'2026-08-30T00:00:00Z',$8::uuid,'2026-08-30T00:00:00Z',$8::uuid,'2027-08-30','northwind-qualification-decision-v1',$9,$10::jsonb,$11::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
-    [
-      qualificationId,
-      coordinate.tenantId,
-      fixture.id,
-      context.organization_id,
-      context.company_code_id,
-      capabilityId,
-      EFFECTIVE_FROM,
-      reviewer.id,
-      fingerprint,
-      metadata,
-      coordinate.actorId,
-    ],
+  const paymentTerm = await one<{ id: string }>(
+    client,
+    "SELECT id::text FROM master.payment_term WHERE tenant_id=$1::uuid AND code='PT-NET30' AND status='active'",
+    [coordinate.tenantId],
   );
+  for (const [index, scope] of scopes.rows.entries()) {
+    const linkId =
+      scope.company_code_id === context.company_code_id
+        ? bankLinkId
+        : deterministicUuid(
+            `360:bank-link:${fixture.tenantCode}:${fixture.code}:${scope.company_code_id}`,
+          );
+    await client.query(
+      `INSERT INTO master.bank_account_link(id,tenant_id,owner_type_id,owner_type,owner_id,relationship_role,bank_account_id,company_code_id,purpose,is_primary,effective_from,metadata,created_by)
+       VALUES($1::uuid,$2::uuid,$3::uuid,'business_partner',$4::uuid,'beneficiary',$5::uuid,$6::uuid,'disbursement',true,$7::date,$8::jsonb,$9::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+      [
+        linkId,
+        coordinate.tenantId,
+        context.business_partner_owner_type_id,
+        fixture.id,
+        bankId,
+        scope.company_code_id,
+        EFFECTIVE_FROM,
+        metadata,
+        coordinate.actorId,
+      ],
+    );
+    await client.query(
+      `INSERT INTO master.company_code_supplier_profile(id,tenant_id,supplier_id,company_code_id,currency_code,payment_term_id,preferred_remittance_bank_link_id,metadata,status,created_by)
+       VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6::uuid,$7::uuid,$8::jsonb,'active',$9::uuid)
+       ON CONFLICT(tenant_id,supplier_id,company_code_id) DO UPDATE SET payment_term_id=EXCLUDED.payment_term_id,updated_by=EXCLUDED.created_by
+       WHERE company_code_supplier_profile.metadata->'_seed'->>'pack'=$10 AND company_code_supplier_profile.payment_term_id IS NULL`,
+      [
+        scope.company_code_id === context.company_code_id
+          ? profileId
+          : deterministicUuid(
+              `360:supplier-profile:${fixture.tenantCode}:${fixture.code}:${scope.company_code_id}`,
+            ),
+        coordinate.tenantId,
+        fixture.supplierId,
+        scope.company_code_id,
+        profile.currency,
+        paymentTerm.id,
+        linkId,
+        metadata,
+        coordinate.actorId,
+        FIXTURE_PACK,
+      ],
+    );
+    if (fixture.status !== "active") continue;
+    for (const authority of ["qualification", "preference"] as const) {
+      for (const kind of [
+        "operating_organization",
+        "company_code",
+        "commodity_category",
+      ] as const) {
+        await client.query(
+          `INSERT INTO control.business_partner_decision_scope(id,tenant_id,qualification_id,supplier_preference_id,scope_group,scope_kind,operating_organization_id,company_code_id,commodity_category_id,effective_from,metadata,created_by)
+           SELECT $1::uuid,$2::uuid,$3::uuid,$4::uuid,$5,$6,$7::uuid,$8::uuid,$9::uuid,$10::date,$11::jsonb,$12::uuid WHERE NOT EXISTS (SELECT 1 FROM control.business_partner_decision_scope WHERE tenant_id=$2::uuid AND id=$1::uuid) ON CONFLICT DO NOTHING`,
+          [
+            deterministicUuid(
+              `360:scope:${fixture.tenantCode}:${fixture.code}:${authority}:${scope.organization_id}:${scope.company_code_id}:${kind}`,
+            ),
+            coordinate.tenantId,
+            authority === "qualification" ? qualificationId : null,
+            authority === "preference" ? preferenceId : null,
+            index + 1,
+            kind,
+            kind === "operating_organization" ? scope.organization_id : null,
+            kind === "company_code" ? scope.company_code_id : null,
+            kind === "commodity_category" ? commodity.id : null,
+            EFFECTIVE_FROM,
+            metadata,
+            coordinate.actorId,
+          ],
+        );
+      }
+    }
+  }
+
   await client.query(
-    `INSERT INTO control.supplier_preference_designation(id,tenant_id,business_partner_id,supplier_id,operating_organization_id,company_code_id,commodity_category_id,effective_from,rationale,status,idempotency_key,metadata,created_by) VALUES($1::uuid,$2::uuid,$3::uuid,$4::uuid,$5::uuid,$6::uuid,$7::uuid,$8::date,'Preferred development supplier for industrial supplies','pending','northwind-preference-v1',$9::jsonb,$10::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
-    [
-      preferenceId,
-      coordinate.tenantId,
-      fixture.id,
-      fixture.supplierId,
-      context.organization_id,
-      context.company_code_id,
-      commodity.id,
-      EFFECTIVE_FROM,
-      metadata,
-      coordinate.actorId,
-    ],
-  );
-  await client.query(
-    `INSERT INTO master.certification(id,tenant_id,owner_type,owner_id,custom_name,certificate_number,certified_by,certified_location,effective_from,effective_until,company_code_id,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'business_partner',$3::uuid,'ISO 9001:2015','QMS-GB-2026-001','British Standards Institution','London','2026-01-01','2029-12-31',$4::uuid,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
+    `INSERT INTO master.certification(id,tenant_id,owner_type,owner_id,custom_name,certificate_number,certified_by,certified_location,effective_from,effective_until,company_code_id,metadata,status,created_by) VALUES($1::uuid,$2::uuid,'business_partner',$3::uuid,'ISO 9001:2015',$8,$9,$7,'2026-01-01','2029-12-31',$4::uuid,$5::jsonb,'active',$6::uuid) ON CONFLICT(tenant_id,id) DO NOTHING`,
     [
       certificationId,
       coordinate.tenantId,
@@ -1004,6 +1221,9 @@ async function provisionDevelopmentBusinessPartner360Details(
       context.company_code_id,
       metadata,
       coordinate.actorId,
+      profile.city,
+      `QMS-${fixture.code}-2026`,
+      "Development Certification Authority (synthetic)",
     ],
   );
   const coverage = await one<{
@@ -1026,9 +1246,15 @@ async function provisionDevelopmentBusinessPartner360Details(
     (SELECT count(*)::int FROM master.party_risk_assessment WHERE tenant_id=$1::uuid AND business_partner_id=$2::uuid AND subject_type='supplier' AND assessment_context='supplier_role' AND status='approved') risk_assessments`,
     [coordinate.tenantId, fixture.id, fixture.supplierId],
   );
-  if (Object.values(coverage).some((value) => Number(value) < 1))
+  if (
+    Object.entries(coverage).some(
+      ([key, value]) =>
+        !(key === "risk_assessments" && fixture.status === "draft") &&
+        Number(value) < 1,
+    )
+  )
     throw new Error(
-      `CATL-BP-001 360 fixture coverage is incomplete: ${JSON.stringify(coverage)}`,
+      `${fixture.tenantCode}/${fixture.code} 360 fixture coverage is incomplete: ${JSON.stringify(coverage)}`,
     );
 }
 
@@ -1087,7 +1313,7 @@ function fixtureSeries(
         code,
         name,
         name,
-        `${name} ${countryCode === "GB" ? "Limited" : countryCode === "DE" ? "GmbH" : "Sdn Bhd"}`,
+        `${name} ${DEVELOPMENT_BUSINESS_PARTNER_COUNTRIES[countryCode as DevelopmentBusinessPartnerCountry].legalSuffix}`,
         countryCode,
         index % 7 === 0 ? "draft" : "active",
         organizationCodes,

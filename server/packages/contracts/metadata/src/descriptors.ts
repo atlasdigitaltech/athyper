@@ -77,6 +77,7 @@ export interface EntityListLimitsDescriptor {
 }
 
 export interface EntityListPresentationDescriptor {
+  readonly experience?: import("@athyper/contract-platform-entity-list").PublishedListExperienceV1;
   readonly schemaVersion?: 1;
   readonly title?: string;
   readonly description?: string;
@@ -164,6 +165,9 @@ export interface EntityPolicyBindingDescriptor {
 }
 
 export interface EntityRuntimeDescriptor {
+  readonly recordPresentation?: import("@athyper/contract-platform-entity-runtime").EntityRecordPresentationV1;
+  readonly directoryScope?: import("./directory-scope.js").EntityDirectoryScopeV1;
+  readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;
   readonly schema: "athyper.entity-runtime-descriptor/1.0";
   readonly entityCode: string;
   readonly detailRouteTemplate?: string;

@@ -1,3 +1,4 @@
+import type { EffectiveEntitySectionV1 } from "./experience";
 export type ListPlane = "neon" | "mesh" | "studio";
 export type ListViewMode = "table" | "compact" | "board" | "dashboard" | "spreadsheet";
 export type ListDensity = "compact" | "comfortable" | "spacious";
@@ -41,6 +42,10 @@ export interface ListSortV1 {
  * validate every value against the current principal snapshot before use.
  */
 export interface EntityListScopeCoordinateV1 {
+  readonly companyCodeIds?: readonly string[];
+  readonly operatingOrganizationIds?: readonly string[];
+  readonly partnerRole?: "supplier" | "customer";
+  readonly eligibleOperation?: "order" | "invoice" | "payment";
   readonly companyCodeId?: string;
   readonly legalEntityId?: string;
   readonly operatingOrganizationId?: string;
@@ -53,6 +58,7 @@ export interface SpreadsheetStateV1 {
 }
 
 export interface SaveableListStateV1 {
+  readonly standardViewKey?: string;
   readonly query?: string;
   readonly filters: readonly ListFilterV1[];
   readonly sort: readonly ListSortV1[];
@@ -94,6 +100,9 @@ export interface ListFieldDescriptorV1 {
 export interface EffectiveListActionV1 {
   readonly key: string;
   readonly label: string;
+  readonly localizedLabel?: import("./experience").EntityLocalizedTextV1;
+  readonly href?: string;
+  readonly disabledMessage?: import("./experience").EntityLocalizedTextV1;
   readonly iconKey?: string;
   readonly placement: "primary" | "secondary" | "toolbar" | "row" | "selection" | "overflow";
   readonly selection: "none" | "single" | "multiple";
@@ -144,6 +153,10 @@ export interface EntityListDataOperationsV1 {
 }
 
 export interface EntityListDescriptorV1 {
+  readonly standardViews?: readonly import("./standard-views.js").EffectiveStandardViewV1[];
+  readonly serverViews?: boolean;
+  /** Client-resolved catalog, never persisted as record metadata. */
+  readonly viewCatalog?: EntityViewCatalog;
   readonly schemaVersion: 1;
   readonly plane: ListPlane;
   readonly entity: {
@@ -161,6 +174,7 @@ export interface EntityListDescriptorV1 {
   readonly surface: {
     readonly key: string;
     readonly title: string;
+    readonly header?: import("./experience").EntityListHeaderV1;
     readonly description?: string;
     readonly defaultState: SaveableListStateV1;
     readonly supportedModes: readonly ListViewMode[];
@@ -176,8 +190,14 @@ export interface EntityListDescriptorV1 {
   };
   readonly fields: readonly ListFieldDescriptorV1[];
   readonly actions: readonly EffectiveListActionV1[];
+  readonly navigation?: readonly EffectiveEntitySectionV1[];
+  readonly application?: import("./experience").EntityApplicationV1;
+  readonly viewNamespace?: string;
+  readonly currentSurfaceKey?: string;
   readonly dataOperations?: EntityListDataOperationsV1;
   readonly scope: {
+    readonly quickFilters?: readonly import("./scope-filters").EntityScopeFilterV1[];
+    readonly filterKinds?: readonly ("organization" | "company")[];
     readonly status: "ready" | "context_required";
     readonly labels: readonly { readonly key: string; readonly label: string; readonly value: string }[];
     readonly fingerprint: string;
@@ -221,3 +241,18 @@ export interface EntityListResultV1 {
   readonly facets?: Readonly<Record<string, readonly { readonly value: JsonValue; readonly label: string; readonly count?: number }[]>>;
   readonly groups?: readonly { readonly value: JsonValue; readonly label: string; readonly count?: number }[];
 }
+
+export interface EntityApplicationDescriptorV1 {
+  readonly schemaVersion: 1;
+  readonly plane: EntityListDescriptorV1["plane"];
+  readonly entity: Pick<EntityListDescriptorV1["entity"], "code" | "label" | "pluralLabel">;
+  readonly revision: EntityListDescriptorV1["revision"];
+  readonly surface: Pick<EntityListDescriptorV1["surface"], "key" | "title" | "header" | "description">;
+  readonly actions: EntityListDescriptorV1["actions"];
+  readonly scope: EntityListDescriptorV1["scope"];
+  readonly navigation?: EntityListDescriptorV1["navigation"];
+  readonly application?: EntityListDescriptorV1["application"];
+}
+
+export interface EntitySavedView {readonly id:string;readonly name:string;readonly scope:"personal"|"shared"|"system";readonly state:SaveableListStateV1;readonly version:number;readonly compatible:boolean;}
+export interface EntityViewCatalog {readonly views:readonly EntitySavedView[];readonly personalDefault?:string;readonly sharedDefault?:string;readonly createdId?:string;readonly capabilities:{readonly createShared:boolean;readonly manageShared:boolean;readonly setSharedDefault:boolean};}

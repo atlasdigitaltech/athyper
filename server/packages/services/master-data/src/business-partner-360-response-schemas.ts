@@ -3,6 +3,349 @@ export const bp360ResponseSchemas = {
   "BusinessPartner360Summary": {
     "type": "object",
     "properties": {
+      "collaboration": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "canComment": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "canComment"
+            ],
+            "additionalProperties": true
+          }
+        ]
+      },
+      "directoryScope": {
+        "anyOf": [
+          {
+            "const": "company",
+            "type": "string"
+          },
+          {
+            "const": "organization",
+            "type": "string"
+          },
+          {
+            "const": "organization_company",
+            "type": "string"
+          },
+          {
+            "const": "tenant",
+            "type": "string"
+          }
+        ]
+      },
+      "recordHeader": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "panel": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "schemaVersion": {
+                        "const": 1,
+                        "type": "number"
+                      },
+                      "kind": {
+                        "const": "360",
+                        "type": "string"
+                      },
+                      "sections": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "tabs": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "anyOf": [
+                                {
+                                  "const": "360",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "section",
+                                  "type": "string"
+                                }
+                              ]
+                            },
+                            "sectionKey": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "provider"
+                          ],
+                          "additionalProperties": true
+                        }
+                      },
+                      "sidebar": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "key": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            },
+                            "provider": {
+                              "anyOf": [
+                                {
+                                  "const": "primary-address",
+                                  "type": "string"
+                                },
+                                {
+                                  "const": "primary-contact",
+                                  "type": "string"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "key",
+                            "label",
+                            "provider"
+                          ],
+                          "additionalProperties": true
+                        }
+                      }
+                    },
+                    "required": [
+                      "schemaVersion",
+                      "kind",
+                      "sections",
+                      "tabs",
+                      "sidebar"
+                    ],
+                    "additionalProperties": true
+                  }
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "entityLabel": {
+                "type": "string"
+              },
+              "iconKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "code": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "description": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "badges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string"
+                    },
+                    "tone": {
+                      "anyOf": [
+                        {
+                          "const": "danger",
+                          "type": "string"
+                        },
+                        {
+                          "const": "neutral",
+                          "type": "string"
+                        },
+                        {
+                          "const": "success",
+                          "type": "string"
+                        },
+                        {
+                          "const": "warning",
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "tone"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "context": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "value"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "actions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "href": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "placement": {
+                      "anyOf": [
+                        {
+                          "const": "overflow",
+                          "type": "string"
+                        },
+                        {
+                          "const": "primary",
+                          "type": "string"
+                        },
+                        {
+                          "const": "secondary",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "disabledReason": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "placement"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "sections": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "placement": {
+                      "anyOf": [
+                        {
+                          "const": "direct",
+                          "type": "string"
+                        },
+                        {
+                          "const": "overflow",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "count": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "placement"
+                  ],
+                  "additionalProperties": true
+                }
+              },
+              "readOnly": {
+                "anyOf": [
+                  {
+                    "const": false,
+                    "type": "boolean"
+                  },
+                  {
+                    "const": true,
+                    "type": "boolean"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "title",
+              "entityLabel",
+              "badges",
+              "context",
+              "actions",
+              "sections"
+            ],
+            "additionalProperties": true
+          }
+        ]
+      },
       "schemaVersion": {
         "const": 1,
         "type": "number"
@@ -178,6 +521,16 @@ export const bp360ResponseSchemas = {
           {
             "type": "object",
             "properties": {
+              "lines": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
               "id": {
                 "type": "string"
               },
@@ -408,11 +761,19 @@ export const bp360ResponseSchemas = {
                       "type": "string"
                     },
                     {
+                      "const": "attachments",
+                      "type": "string"
+                    },
+                    {
                       "const": "banking",
                       "type": "string"
                     },
                     {
                       "const": "business-activity",
+                      "type": "string"
+                    },
+                    {
+                      "const": "comments",
                       "type": "string"
                     },
                     {
@@ -598,11 +959,19 @@ export const bp360ResponseSchemas = {
                       "type": "string"
                     },
                     {
+                      "const": "attachments",
+                      "type": "string"
+                    },
+                    {
                       "const": "banking",
                       "type": "string"
                     },
                     {
                       "const": "business-activity",
+                      "type": "string"
+                    },
+                    {
+                      "const": "comments",
                       "type": "string"
                     },
                     {
@@ -836,11 +1205,19 @@ export const bp360ResponseSchemas = {
                       "type": "string"
                     },
                     {
+                      "const": "attachments",
+                      "type": "string"
+                    },
+                    {
                       "const": "banking",
                       "type": "string"
                     },
                     {
                       "const": "business-activity",
+                      "type": "string"
+                    },
+                    {
+                      "const": "comments",
                       "type": "string"
                     },
                     {
@@ -1135,11 +1512,19 @@ export const bp360ResponseSchemas = {
                   "type": "string"
                 },
                 {
+                  "const": "attachments",
+                  "type": "string"
+                },
+                {
                   "const": "banking",
                   "type": "string"
                 },
                 {
                   "const": "business-activity",
+                  "type": "string"
+                },
+                {
+                  "const": "comments",
                   "type": "string"
                 },
                 {
@@ -1327,6 +1712,14 @@ export const bp360ResponseSchemas = {
                       },
                       "permission": {
                         "anyOf": [
+                          {
+                            "const": "collaboration.comment.read",
+                            "type": "string"
+                          },
+                          {
+                            "const": "document.attachment.read",
+                            "type": "string"
+                          },
                           {
                             "const": "neon.relationship.business_partner.read",
                             "type": "string"
@@ -1517,11 +1910,19 @@ export const bp360ResponseSchemas = {
             "type": "string"
           },
           {
+            "const": "attachments",
+            "type": "string"
+          },
+          {
             "const": "banking",
             "type": "string"
           },
           {
             "const": "business-activity",
+            "type": "string"
+          },
+          {
+            "const": "comments",
             "type": "string"
           },
           {

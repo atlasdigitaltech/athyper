@@ -22,3 +22,43 @@ describe("Business Partner 360 secure core",()=>{
   it("does not expose person or workforce records through Business Partner 360",async()=>{const service=fixture(core("person",["workforce"]));await expect(service.summary({context,businessPartnerId:ids.bp})).rejects.toMatchObject({status:404,code:"BP_360_NOT_FOUND"});await expect(service.section({context,businessPartnerId:ids.bp,sectionCode:"workforce"})).rejects.toMatchObject({status:404,code:"BP_360_NOT_FOUND"});});
   it("returns the local safe network projection when the live MESH adapter is unavailable",async()=>{const result=await fixture(core("organization",["supplier"])).section<Record<string,unknown>>({context,businessPartnerId:ids.bp,operatingOrganizationId:ids.org,sectionCode:"network"});expect(result).toMatchObject({state:"partial",data:{local:{received:{state:"received"},acceptance:{acceptedFields:["partner.displayName"],ignoredFields:["partner.websiteUrl"]},bankDisclosure:{present:true,status:"available"}},live:{state:"unavailable",reasonCode:"MESH_ADAPTER_UNAVAILABLE"}}});expect(JSON.stringify(result)).not.toMatch(/accountLast4|accountNumber|proposedPayload|fieldDiff|rankedCandidates|person|workforce/i);});
 });
+
+describe("360 metadata directory admission",()=>{
+ const make=(reason:string,baseAllowed=true,admitted=true,published=true,admissionFails=false)=>{
+  let baseCalls=0;
+  const service=createBusinessPartner360Service({
+   authorizer:{async authorize(input:{permissionCode:string;resource?:unknown}){if(input.permissionCode!==BUSINESS_PARTNER_360_PERMISSIONS.record)return{allowed:false,reason:"missing_permission"};if(input.resource)return{allowed:false,reason};baseCalls++;return baseAllowed?{allowed:true}:{allowed:false,reason:"denied_by_grant"};}} as never,
+   repository:new MemoryRepository(core("organization",["supplier"])),
+   transactions:{async run(_plane,_actor,work){return work({});}},
+   definitions:{async resolve(){throw new Error("Unavailable");}},
+   metadata:{async getEntityDescriptor(){return published?{directoryScope:{schemaVersion:1,mode:"tenant"}}:{};}} as never,
+   ...(admitted?{admitDirectoryRecord:async()=>{if(admissionFails)throw new Error("Directory denied");}}:{})
+  });
+  return{service,baseCalls:()=>baseCalls};
+ };
+ it("accepts a record admitted by the contract without inheriting organization scope",async()=>{
+  const fixture=make("scope_not_contained");
+  const result=await fixture.service.summary({context,businessPartnerId:ids.bp});
+  expect(result.identity.id).toBe(ids.bp);
+  expect(fixture.baseCalls()).toBe(1);
+  expect(result.sections).toEqual([]); // section grants are not widened
+ });
+ it.each(["denied_by_grant","missing_permission","mfa_required","hard_policy_failed"])("preserves %s",async reason=>{
+  const fixture=make(reason);
+  await expect(fixture.service.summary({context,businessPartnerId:ids.bp})).rejects.toMatchObject({code:"BP_360_NOT_FOUND"});
+  expect(fixture.baseCalls()).toBe(0);
+ });
+ it("requires published policy, successful row admission and a coarse permission grant",async()=>{
+  for(const args of [[true,false,true,false],[true,true,false,false],[false,true,true,false]] as const){
+   const fixture=make("scope_not_contained",...args);
+   await expect(fixture.service.summary({context,businessPartnerId:ids.bp})).rejects.toMatchObject({code:"BP_360_NOT_FOUND"});
+  }
+  const fixture=make("scope_not_contained",true,true,true,true);
+  await expect(fixture.service.summary({context,businessPartnerId:ids.bp})).rejects.toThrow("Directory denied");
+  expect(fixture.baseCalls()).toBe(0);
+ });
+});
+it("does not read a transaction section without an explicit scope",async()=>{
+ const service=fixture({...core("organization",["supplier"]),scopeResolved:false});
+ await expect(service.section({context,businessPartnerId:ids.bp,sectionCode:"banking"})).rejects.toMatchObject({code:"BP_360_SCOPE_REQUIRED",status:409});
+});

@@ -26,6 +26,12 @@ export async function authorizeRecordListRead(
     },
   });
   if (effective.allowed) return effective;
+  // Published directory contracts own row scope; coarse permission admission
+  // still enforces denials, entitlements, and policy gates. Never retry a deny.
+  if (descriptor.directoryScope && effective.reason === "scope_not_contained") {
+    const base = await authorizer.authorize({ context, permissionCode });
+    if (base.allowed) return base;
+  }
   if (!permissionOnly && effective.reason === "scope_coordinate_missing") {
     const base = await authorizer.authorize({ context, permissionCode });
     if (base.allowed && base.scope && !base.scope.tenantWide) return base;

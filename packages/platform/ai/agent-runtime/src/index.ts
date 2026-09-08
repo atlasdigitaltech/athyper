@@ -103,7 +103,7 @@ async function consumeAnswerStream(stream: ReadableStream<Uint8Array>, threadId:
       for (const frame of frames) {
         const envelope = parseFrame(frame); if (!envelope) continue; runId = envelope.runId;
         if (envelope.event.type === "run.started") onProgress?.({ kind: "started", publicModelId: textValue(envelope.event.publicModelId, "publicModelId") });
-        else if (envelope.event.type === "message.delta") { const delta = textValue(envelope.event.text, "text"); answerText += delta; onProgress?.({ kind: "text", text: delta }); }
+        else if (envelope.event.type === "message.delta") { const delta = streamText(envelope.event.text); answerText += delta; onProgress?.({ kind: "text", text: delta }); }
         else if (envelope.event.type === "source.cited") { const citation = parseCitation(envelope.event); if (!citations.some((item) => sameCitation(item, citation))) { citations.push(citation); onProgress?.({ kind: "citation", citation }); } }
         else if(envelope.event.type==="attachment.cited"){const citation=parseAttachmentCitation(envelope.event);if(!attachmentCitations.some((item)=>item.attachmentId===citation.attachmentId)){attachmentCitations.push(citation);onProgress?.({kind:"attachment-citation",citation});}}
         else if (envelope.event.type === "tool.previewed" && envelope.event.confirmationRequired === true) { const action = parseGovernedAction(envelope.event); if (!actions.some((item) => item.proposalId === action.proposalId)) { actions.push(action); onProgress?.({ kind: "action", action }); } }
@@ -145,3 +145,6 @@ function textValue(value: unknown, label: string): string { if (typeof value !==
 function integer(value: unknown, label: string): number { if (!Number.isSafeInteger(value) || Number(value) < 0) throw new TypeError(`Atlas ${label} must be a non-negative integer`); return Number(value); }
 function enumValue<const Values extends readonly string[]>(value: unknown, values: Values, label: string): Values[number] { if (typeof value !== "string" || !values.includes(value as Values[number])) throw new TypeError(`Atlas ${label} is invalid`); return value as Values[number]; }
 function browserCsrf(): string | undefined { if (typeof document === "undefined") return undefined; const values = document.cookie.split(";").map((part) => part.trim()); return values.find((part) => part.startsWith("__Host-athyper-csrf="))?.split("=").slice(1).join("=") ?? values.find((part) => part.startsWith("athyper-csrf="))?.split("=").slice(1).join("="); }
+
+// Token boundaries may contain only spaces, newlines, or an empty string.
+function streamText(value: unknown): string { if (typeof value !== "string") throw new TypeError("Atlas text delta must be a string"); return value; }

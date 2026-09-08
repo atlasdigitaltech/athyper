@@ -17,6 +17,7 @@ export interface RecordBookmarkInput {
   readonly label?: string;
 }
 export interface RecordBookmarkItem {
+  readonly description?: string;
   readonly id: string;
   readonly entityCode: string;
   readonly recordId: string;
@@ -33,7 +34,11 @@ export interface RecordBookmarkCache {
   delete(key: string): Promise<unknown>;
 }
 export interface RecordBookmarkService {
-  list(context: VerifiedRequestContext): Promise<readonly RecordBookmarkItem[]>;
+  list(
+    context: VerifiedRequestContext,
+    entityCode?: string,
+    scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
+  ): Promise<readonly RecordBookmarkItem[]>;
   membership(
     context: VerifiedRequestContext,
     entityCode: string,
@@ -110,17 +115,77 @@ export function createRecordBookmarkService(options: {
     }
   };
   const service: RecordBookmarkService = {
-    async list(context: VerifiedRequestContext) {
-      return options.transactions.run(
+    async list(
+      context: VerifiedRequestContext,
+      entityCode?: string,
+      scopeCoordinate?: ListRecordsQuery["scopeCoordinate"],
+    ) {
+      if (entityCode) validateEntityCode(entityCode);
+      const items = await options.transactions.run(
         context.planeKey,
         actor(context),
         async (transaction) => {
           const result =
-            await sql<Row>`SELECT id, entity_code, record_id, label_snapshot, created_at FROM master.record_bookmark WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid ORDER BY created_at DESC, id DESC LIMIT 200`.execute(
+            await sql<Row>`SELECT id, entity_code, record_id, label_snapshot, created_at FROM master.record_bookmark WHERE tenant_id=${context.tenantId}::uuid AND principal_id=${context.principalId}::uuid ${entityCode ? sql`AND entity_code=${entityCode}` : sql``} ORDER BY created_at DESC, id DESC LIMIT 200`.execute(
               transaction,
             );
           return Object.freeze(result.rows.map(bookmarkItem));
         },
+      );
+      if (!entityCode || !items.length) return items;
+      const readable = new Map<
+        string,
+        { label: string; description?: string }
+      >();
+      // Revalidate stored favourites through the same scope and row-policy boundary as Manage.
+      for (let start = 0; start < items.length; start += 100) {
+        const batch = items.slice(start, start + 100);
+        const execution = await options.listExecutor.execute({
+          context,
+          entityCode,
+          recordIds: batch.map((item) => item.recordId),
+          limit: batch.length,
+          countMode: "none",
+          ...(scopeCoordinate ? { scopeCoordinate } : {}),
+        });
+        const fields = execution.responseFields ?? [];
+        const title = fields.find(
+          (field) => field.list?.semanticRole === "title",
+        );
+        const identity = fields.find(
+          (field) =>
+            field.key ===
+              execution.descriptor.listPresentation?.identityField ||
+            field.list?.semanticRole === "identity",
+        );
+        const status = fields.find(
+          (field) => field.list?.semanticRole === "status",
+        );
+        const display = (value: unknown) =>
+          typeof value === "string" || typeof value === "number"
+            ? String(value).slice(0, 240)
+            : undefined;
+        for (const row of execution.result.data) {
+          const id = String(row[execution.descriptor.storage.idField]);
+          const name = title ? display(row[title.key]) : undefined;
+          const code = identity ? display(row[identity.key]) : undefined;
+          const state = status ? display(row[status.key]) : undefined;
+          const label = name || code || id;
+          const description = [code !== label ? code : undefined, state]
+            .filter(Boolean)
+            .join(" · ");
+          readable.set(id, {
+            label,
+            ...(description ? { description: description.slice(0, 480) } : {}),
+          });
+        }
+      }
+      return Object.freeze(
+        items
+          .filter((item) => readable.has(item.recordId))
+          .map((item) =>
+            Object.freeze({ ...item, ...readable.get(item.recordId)! }),
+          ),
       );
     },
     async membership(

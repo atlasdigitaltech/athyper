@@ -660,3 +660,8 @@ FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
 CREATE TRIGGER trg_customer_credit_review_scope_rows
 AFTER INSERT ON control.customer_credit_review
 FOR EACH ROW EXECUTE FUNCTION control.trg_materialize_legacy_decision_scope();
+
+DROP TRIGGER IF EXISTS trg_business_partner_decision_scope_preference_guard ON control.business_partner_decision_scope;
+CREATE TRIGGER trg_business_partner_decision_scope_preference_guard
+BEFORE INSERT OR UPDATE OR DELETE ON control.business_partner_decision_scope
+FOR EACH ROW EXECUTE FUNCTION control.trg_guard_supplier_preference_scope();

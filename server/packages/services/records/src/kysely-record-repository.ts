@@ -1,3 +1,5 @@
+import { compileStandardViewRelationship } from "./standard-view-relationship-sql.js";
+import { documentCollectionRegistry, parseCollectionRelationship, DOCUMENT_RELATIONSHIP_RESOLVER } from "@athyper/server-contract-metadata";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import type { RecordFilter, RecordRepository, RecordRepositoryListInput } from "@athyper/server-contract-records";
@@ -22,8 +24,10 @@ export function createKyselyRecordRepository(options: KyselyRecordRepositoryOpti
     async list(input, transaction) {
       const executor = transaction ?? databaseFor(input.descriptor);
       const conditions = baseConditions(input.descriptor, input.tenantId);
+      if (input.recordIds !== undefined && !input.recordIds.length) conditions.push(sql`FALSE`);
       if (input.recordIds?.length) conditions.push(sql`${sql.ref(input.descriptor.storage.idField)} IN (${sql.join(input.recordIds.map((id) => sql`${id}::uuid`))})`);
       for (const constraint of input.collectionScope) conditions.push(compileRecordCollectionScopeCondition(input.descriptor, input.tenantId, constraint));
+      for (const relationship of input.viewRelationships ?? []) conditions.push(compileStandardViewRelationship(input.descriptor, input.tenantId, relationship));
       for (const filter of input.filters ?? []) conditions.push(filterCondition(input.descriptor, filter));
       if (input.search) conditions.push(searchCondition(input.descriptor, input.search));
       const order = orderBy(input);
@@ -91,6 +95,27 @@ function projection(descriptor: EntityRuntimeDescriptor, keys: readonly string[]
 function baseConditions(descriptor: EntityRuntimeDescriptor, tenantId: string): RawBuilder<unknown>[] { const conditions: RawBuilder<unknown>[] = []; if (descriptor.storage.tenantField) conditions.push(sql`${sql.ref(descriptor.storage.tenantField)} = ${tenantId}::uuid`); if (descriptor.storage.softDeleteField) conditions.push(sql`${sql.ref(descriptor.storage.softDeleteField)} IS NULL`); return conditions.length ? conditions : [sql`TRUE`]; }
 /** @internal Exported for SQL contract verification; callers must use resolver-issued constraints. */
 export function compileRecordCollectionScopeCondition(descriptor: EntityRuntimeDescriptor, tenantId: string, constraint: RecordRepositoryListInput["collectionScope"][number]): RawBuilder<unknown> {
+  if (constraint.kind === "neon.business_partner.directory.v1") {
+    if(descriptor.planeKey!=="neon" || descriptor.storage.schema!=="master" || descriptor.storage.object!=="business_partner") throw new Error("Directory scope storage mismatch");
+    const root=sql.ref(`business_partner.${descriptor.storage.idField}`), conditions:RawBuilder<unknown>[]=[];
+    if(constraint.partnerRole) conditions.push(sql`EXISTS(SELECT 1 FROM ${sql.table(`master.${constraint.partnerRole}`)} r WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root})`);
+    if(constraint.eligibleIds) conditions.push(constraint.eligibleIds.length ? sql`${root} IN (${sql.join(constraint.eligibleIds.map(id=>sql`${id}::uuid`))})` : sql`FALSE`);
+    if(constraint.organizationIds) conditions.push(constraint.organizationIds.length ? sql`EXISTS(SELECT 1 FROM master.business_partner_operating_organization_assignment a WHERE a.tenant_id=${tenantId}::uuid AND a.business_partner_id=${root} AND a.operating_organization_id IN (${sql.join(constraint.organizationIds.map(id=>sql`${id}::uuid`))}) AND a.status='active' AND a.effective_from<=CURRENT_DATE AND(a.effective_until IS NULL OR a.effective_until>CURRENT_DATE))` : sql`FALSE`);
+    if(constraint.companyIds) conditions.push(constraint.companyIds.length ? sql`(EXISTS(SELECT 1 FROM master.supplier r JOIN master.company_code_supplier_profile p ON p.tenant_id=r.tenant_id AND p.supplier_id=r.id WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})) OR EXISTS(SELECT 1 FROM master.customer r JOIN master.company_code_customer_profile p ON p.tenant_id=r.tenant_id AND p.customer_id=r.id WHERE r.tenant_id=${tenantId}::uuid AND r.business_partner_id=${root} AND p.company_code_id IN (${sql.join(constraint.companyIds.map(id=>sql`${id}::uuid`))})))` : sql`FALSE`);
+    return conditions.length ? sql`(${sql.join(conditions,sql` AND `)})` : sql`TRUE`;
+  }
+  if (constraint.kind === DOCUMENT_RELATIONSHIP_RESOLVER) {
+    const binding = parseCollectionRelationship(descriptor.collectionRelationship, descriptor.storage);
+    const source = documentCollectionRegistry[binding.sourceRef], scope = source.scopeFields[binding.scope.fieldRef];
+    const root = (column:string) => sql.ref(`${source.object}.${column}`), related = (column:string) => sql.ref(`list_scope_related.${column}`);
+    return sql`(${root(source.subjectFields[binding.subject.fieldRef])} = ${binding.subject.value} AND EXISTS (
+      SELECT 1 FROM ${sql.table(`${scope.schema}.${scope.object}`)} AS list_scope_related
+      WHERE ${related(scope.tenantField)} = ${tenantId}::uuid
+        AND ${related(scope.tenantField)} = ${root(source.tenantField)}
+        AND ${related(scope.targetField)} = ${root(scope.sourceField)}
+        AND NULLIF(${related(scope.column)}->>${scope.jsonKey},'')::uuid = ${constraint.operatingOrganizationId}::uuid
+    ))`;
+  }
   if (constraint.kind === "neon.business_partner.operating_organization.v1") {
     if (descriptor.planeKey !== "neon" || descriptor.storage.schema !== "master" || descriptor.storage.object !== "business_partner") throw new Error("Business-partner collection scope cannot be applied to this descriptor");
     return sql`EXISTS (

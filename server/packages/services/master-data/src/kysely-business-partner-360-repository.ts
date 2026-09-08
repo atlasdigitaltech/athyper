@@ -146,14 +146,14 @@ export class KyselyBusinessPartner360Repository implements BusinessPartner360Rep
       )?.id;
     const [address, contact, identifiers, work, recent] = await Promise.all([
       can(BUSINESS_PARTNER_360_PERMISSIONS.address) && ownerType
-        ? sql<Row>`SELECT address.id::text,link.purpose,address.line1,COALESCE(address.city,address.dependent_locality) locality,address.region,address.postal_code,address.country_code::text,link.is_primary,address.validation_status,link.effective_from,link.effective_until FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.core.id}::uuid AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND (link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) ORDER BY link.is_primary DESC,link.effective_from DESC,link.id LIMIT 1`.execute(
+        ? sql<Row>`SELECT address.id::text,link.purpose,address.line1,address.line2,address.line3,COALESCE(address.city,address.dependent_locality) locality,address.region,address.postal_code,address.country_code::text,link.is_primary,address.validation_status,link.effective_from,link.effective_until FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.core.id}::uuid AND link.is_primary AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND (link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) ORDER BY link.is_primary DESC,link.effective_from DESC,link.id LIMIT 1`.execute(
             transaction,
           )
         : Promise.resolve({ rows: [] } as { rows: Row[] }),
       can(BUSINESS_PARTNER_360_PERMISSIONS.contact) &&
       ownerType &&
       contactOwnerType
-        ? sql<Row>`SELECT person.id::text,person.contact_name display_name,person.is_primary,link.purpose,link.channel_type,link.value,link.is_verified,link.effective_from,link.effective_until FROM master.contact_person person LEFT JOIN master.contact_link link ON link.tenant_id=person.tenant_id AND link.owner_type_id=${contactOwnerType}::uuid AND link.owner_id=person.id AND link.status='active' AND link.effective_from<=${input.asOf}::date AND (link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) WHERE person.tenant_id=${input.tenantId}::uuid AND person.owner_type_id=${ownerType}::uuid AND person.owner_id=${input.core.id}::uuid AND person.status='active' ORDER BY person.is_primary DESC,link.is_primary DESC,person.id LIMIT 2`.execute(
+        ? sql<Row>`SELECT person.id::text,person.contact_name display_name,person.is_primary,link.purpose,link.channel_type,link.value,link.is_verified,link.effective_from,link.effective_until FROM master.contact_person person LEFT JOIN master.contact_link link ON link.tenant_id=person.tenant_id AND link.owner_type_id=${contactOwnerType}::uuid AND link.owner_id=person.id AND link.status='active' AND link.effective_from<=${input.asOf}::date AND (link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) WHERE person.tenant_id=${input.tenantId}::uuid AND person.owner_type_id=${ownerType}::uuid AND person.owner_id=${input.core.id}::uuid AND person.status='active' AND person.is_primary AND person.id=(SELECT primary_person.id FROM master.contact_person primary_person WHERE primary_person.tenant_id=person.tenant_id AND primary_person.owner_type_id=person.owner_type_id AND primary_person.owner_id=person.owner_id AND primary_person.status='active' AND primary_person.is_primary ORDER BY primary_person.id LIMIT 1) ORDER BY link.is_primary DESC,link.channel_type,link.id LIMIT 10`.execute(
             transaction,
           )
         : Promise.resolve({ rows: [] } as { rows: Row[] }),
@@ -444,6 +444,7 @@ async function readSummarySectionCounts(
 }
 function mapAddress(row: Row): BusinessPartner360AddressSummary {
   return {
+    lines: [optional(row,"line1"),optional(row,"line2"),optional(row,"line3")].filter((value): value is string => Boolean(value)),
     id: text(row, "id"),
     purpose: text(row, "purpose"),
     ...(optional(row, "line1") ? { line1: optional(row, "line1") } : {}),

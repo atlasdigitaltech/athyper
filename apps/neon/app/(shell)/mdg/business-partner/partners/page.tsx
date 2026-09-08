@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
-import { NeonEntityList } from "@athyper/product-neon-list-view";
-export const metadata: Metadata = { title: "Business Partners" };
-export default function BusinessPartnersPage(){return <NeonEntityList entityCode="business_partner"/>;}
+import { redirect } from "next/navigation";
+import { entityRouteAlias } from "@/lib/entity-route-alias";
+export default async function BusinessPartnerListAlias({searchParams}:{readonly searchParams:Promise<Record<string,string|string[]|undefined>>}):Promise<never>{
+  redirect(entityRouteAlias("/mdg/business-partner/manage",await searchParams));
+}
