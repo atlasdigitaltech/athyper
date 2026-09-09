@@ -1,0 +1,187 @@
+{
+  "schema": "bp-ai-build-evidence/1",
+  "capturedAt": "2026-09-09T09:01:39.462Z",
+  "package": "BP-AI-09",
+  "status": "local-build-verified-target-qualification-pending",
+  "releaseQualified": false,
+  "targetIntent": "DEV",
+  "source": {
+    "head": "b239aada64bcaa37f2a849cb30f13a07d36b19db",
+    "dirtyWorkingTree": true,
+    "files": [
+      {
+        "path": "tooling/scripts/verification/qualify-business-partner-ai.mjs",
+        "sha256": "bf3c535ca353292032b5103ef2a8ff8538fa9cad0c36a76bfb48b73ed1bd4f97"
+      },
+      {
+        "path": "tooling/scripts/verification/business-partner-ai-qualification.test.mjs",
+        "sha256": "540715ed34960ffc26d38a15efed4c1f768000815ea50e5a8b0e2cdb7cd851ee"
+      },
+      {
+        "path": "governance/config/governance/business-partner-ai-qualification.v1.json",
+        "sha256": "baf037190c000673f2e7ea0020bbb35f77483fa53f183d88c76499f69f5b2d90"
+      },
+      {
+        "path": "docs/runbooks/business-partner-ai-qualification.md",
+        "sha256": "70c09ee152b4d697ce69f9c33fe6ab7a7348915e330d8588088789d030eef298"
+      }
+    ]
+  },
+  "checks": [
+    {
+      "command": "pnpm test:business-partner-ai-qualification",
+      "passed": true,
+      "tests": 12
+    },
+    {
+      "command": "pnpm qualify:business-partner-r9",
+      "passed": true,
+      "tests": 103,
+      "logSha256": "d6fbbcd3d5671f6ef4f31bc3a0555220bfc5818725eb8162578a8dd464cd8e96"
+    },
+    {
+      "command": "pnpm --filter @athyper/server-platform-ai exec vitest run src/__tests__/business-context.test.ts src/__tests__/business-context-http.test.ts src/__tests__/business-partner-insight-tools.test.ts src/__tests__/business-partner-list-insights.test.ts src/__tests__/business-partner-case-tools.test.ts src/__tests__/insight-disclosure.test.ts src/__tests__/insight-history.test.ts src/__tests__/durable-message-lineage.test.ts src/__tests__/local-page-answer-budget.test.ts",
+      "passed": true,
+      "tests": 81,
+      "logSha256": "6cbcf6245098fe22f126a49206bacc65a12c1f6b718ac6db95c005a89b64cbd7"
+    },
+    {
+      "command": "pnpm exec tsx --tsconfig tooling/config/tsconfig-react.json --test tests/contracts/atlas-answer-envelope.test.ts tests/contracts/atlas-grounded-answer.test.ts tests/foundation/atlas-answer.test.tsx tests/foundation/atlas-business-context.test.tsx tests/foundation/atlas-history-interactions.test.tsx",
+      "passed": true,
+      "tests": 32,
+      "logSha256": "81ab2c1a26fdc2f7a9296746d1f0dd16b386f8a64dd12d92536539997cc8f7a0"
+    },
+    {
+      "command": "pnpm test:reachability",
+      "passed": true,
+      "note": "Generated report refreshed; 118 root tests, zero excluded legacy tests."
+    }
+  ],
+  "releaseGate": {
+    "command": "pnpm qualify:business-partner-ai",
+    "exitCode": 1,
+    "expected": true,
+    "schema": "bp-ai-release-result/1",
+    "target": "DEV",
+    "runId": null,
+    "enabledPackages": [
+      "BP-AI-00",
+      "BP-AI-01",
+      "BP-AI-02",
+      "BP-AI-03",
+      "BP-AI-04",
+      "BP-AI-05",
+      "BP-AI-06",
+      "BP-AI-07"
+    ],
+    "qualified": false,
+    "requiredGates": 85,
+    "failures": [
+      "Missing immutable binding: sourceTreeSha256",
+      "Missing immutable binding: deploymentSha256",
+      "Missing immutable binding: modelSha256",
+      "Missing immutable binding: promptSha256",
+      "Missing immutable binding: toolsSha256",
+      "Missing immutable binding: descriptorSha256",
+      "Missing immutable binding: policySha256",
+      "Missing immutable binding: contractsSha256",
+      "Missing immutable binding: fixtureSetSha256",
+      "runId required",
+      "Qualification must be complete, nonfuture and at most seven days old"
+    ],
+    "missing": [
+      "changed-package-checks",
+      "r9",
+      "deployment",
+      "performance",
+      "operations",
+      "human-review",
+      "package:BP-AI-00",
+      "package:BP-AI-01",
+      "package:BP-AI-02",
+      "package:BP-AI-03",
+      "package:BP-AI-04",
+      "package:BP-AI-05",
+      "package:BP-AI-06",
+      "package:BP-AI-07",
+      "browser:persona:directory-reader",
+      "live-model:persona:directory-reader",
+      "browser:persona:scoped-onboarding",
+      "live-model:persona:scoped-onboarding",
+      "browser:persona:submitter",
+      "live-model:persona:submitter",
+      "browser:persona:independent-reviewer",
+      "live-model:persona:independent-reviewer",
+      "browser:persona:sensitive-field-restricted",
+      "live-model:persona:sensitive-field-restricted",
+      "browser:persona:record-denied",
+      "live-model:persona:record-denied",
+      "browser:persona:other-tenant",
+      "live-model:persona:other-tenant",
+      "browser:persona:revoked-during-run",
+      "live-model:persona:revoked-during-run",
+      "accessibility:desktop-dock",
+      "accessibility:desktop-fullscreen",
+      "accessibility:mobile-dock",
+      "accessibility:mobile-fullscreen",
+      "service:A01",
+      "browser:A01",
+      "live-model:A01",
+      "service:A02",
+      "browser:A02",
+      "live-model:A02",
+      "service:A03",
+      "browser:A03",
+      "live-model:A03",
+      "service:A04",
+      "browser:A04",
+      "live-model:A04",
+      "service:A05",
+      "browser:A05",
+      "live-model:A05",
+      "service:A06",
+      "browser:A06",
+      "live-model:A06",
+      "service:A07",
+      "browser:A07",
+      "live-model:A07",
+      "service:A08",
+      "browser:A08",
+      "live-model:A08",
+      "service:A09",
+      "browser:A09",
+      "live-model:A09",
+      "service:A10",
+      "browser:A10",
+      "live-model:A10",
+      "service:A11",
+      "browser:A11",
+      "live-model:A11",
+      "service:A12",
+      "browser:A12",
+      "live-model:A12",
+      "service:A13",
+      "browser:A13",
+      "live-model:A13",
+      "service:A14",
+      "browser:A14",
+      "live-model:A14",
+      "service:A15",
+      "browser:A15",
+      "live-model:A15",
+      "service:A16",
+      "browser:A16",
+      "live-model:A16",
+      "service:A18",
+      "browser:A18",
+      "live-model:A18"
+    ]
+  },
+  "limitations": [
+    "No deployment, permission changes, persona browser execution, live-model trial collection or rollback rehearsal performed in this build.",
+    "Historical BP-AI-00/03/05 single-principal evidence is not imported as full qualification.",
+    "Pending receipts need actual existing persona bindings, target/revision inventory, acceptance execution and reviewed sanitized results.",
+    "BP-AI-08 owner prerequisites and BP-AI-10 separate capability qualification remain open.",
+    "Receipt verification validates attestations and hashes; it does not independently prove live execution."
+  ]
+}

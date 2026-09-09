@@ -712,7 +712,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_link',
+        'bank_account', 'bank_account_link',
         'bank_account_house_config'
     ]
     LOOP
@@ -733,7 +733,7 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperadmin') THEN
         FOREACH v_table IN ARRAY ARRAY[
-            'bank_party', 'bank_account', 'bank_account_link',
+            'bank_account', 'bank_account_link',
             'bank_account_house_config'
         ]
         LOOP
@@ -1137,3 +1137,8 @@ CREATE POLICY external_worker_seed_write ON master.external_worker FOR ALL TO CU
 CREATE POLICY publication_service_principal_read ON master.principal
   FOR SELECT TO athyper_publication_service
   USING (tenant_id=shared.current_tenant_id_soft() AND principal_type='service_account');
+
+ALTER TABLE master.bank_provisional_reference ENABLE ROW LEVEL SECURITY;
+ALTER TABLE master.bank_provisional_reference FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON master.bank_provisional_reference FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON master.bank_provisional_reference FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

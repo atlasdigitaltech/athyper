@@ -26,3 +26,7 @@ export * from "./business-partner-definition-consumer-routes.js";
 
 export * from "./business-partner-case-contract-service.js";
 export * from "./business-partner-case-contract-routes.js";
+export { BankDirectoryService,BankDirectoryError,type DirectoryPlaneStatus } from "./bank-directory-service.js";
+export { registerBankDirectoryRoutes } from "./bank-directory-routes.js";
+export { normalizeBankDirectoryImport } from "./bank-directory-import.js";
+export { resolveBankDirectoryReference,reconcileBankDirectoryReferences,registerBankDirectoryReferenceRoute } from "./bank-directory-reader.js";

@@ -17,6 +17,7 @@ export async function runBusinessPartner360OperationalReadiness(options) {
   const scenarios = [];
   scenarios.push(run("studio-mesh-cursor-reveal", "pnpm", ["--filter", "@athyper/server-service-master-data", "exec", "vitest", "run", "src/__tests__/business-partner-360-production-integrations.test.ts", "src/__tests__/business-partner-360-mesh-network-adapter.test.ts", "src/__tests__/business-partner-360-service.test.ts", "src/__tests__/business-partner-360-commercial-controls.test.ts"]));
   scenarios.push(run("permission-epoch-client-invalidation", "pnpm", ["--filter", "@athyper/product-neon-business-partner", "exec", "vitest", "run", "src/360/business-partner-360-client.test.ts", "src/360/business-partner-360-section-client.test.ts", "src/360/business-partner-360-role-client.test.ts", "src/360/business-partner-360-network-client.test.ts"]));
+  scenarios.push(run("runtime-role-section-reads", "pnpm", ["--filter", "@athyper/server-db", "exec", "tsx", "scripts/business-partner-360/verify-business-partner-360-reads.ts"], { env: { ...process.env, NEON_DATABASE_URL: options.neonDatabaseUrl } }));
   const materialization = run("failed-materialization-rollback", "pnpm", ["--filter", "@athyper/server-db", "exec", "tsx", "scripts/business-partner-360/run-business-partner-360-security-evidence.ts", `--neon-database-url=${options.neonDatabaseUrl}`, "--confirm=RUN-BS360-SECURITY-EVIDENCE"]);
   scenarios.push(materialization);
   const materializationDocument = lastJson(materialization.stdout);
@@ -103,8 +104,8 @@ async function validateRunbook() {
   return { passed: true, scenarios };
 }
 
-function run(code, command, args) {
-  const started = Date.now(), result = spawnSync(command, args, { cwd: root, encoding: "utf8", env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" }, maxBuffer: 20 * 1024 * 1024 });
+function run(code, command, args, options = {}) {
+  const started = Date.now(), result = spawnSync(command, args, { cwd: root, encoding: "utf8", env: { ...process.env, ...options.env, NO_COLOR: "1", FORCE_COLOR: "0" }, maxBuffer: 20 * 1024 * 1024 });
   if (result.status !== 0) throw new Error(`${code} failed\n${result.stdout}\n${result.stderr}`);
   return { code, passed: true, durationMs: Date.now() - started, stdout: result.stdout, stderr: result.stderr };
 }

@@ -19,6 +19,7 @@ export default function BusinessPartnerPublicationPage() {
         icon={<LinkIcon />}
         metadata={<span>{businessPartnerDefinition.publicationKey}</span>}
       />
+      <p><a href="/mdg/bank-directory">Manage shared bank directory publication</a></p>
       <BusinessPartnerCaseContractAuthoring />
       <BusinessPartnerAuthoringWorkspace />
     </PageFrame>

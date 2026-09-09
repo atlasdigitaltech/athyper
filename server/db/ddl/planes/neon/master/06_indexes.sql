@@ -502,17 +502,6 @@ CREATE INDEX company_code_gl_account_default_cost_idx
     WHERE default_cost_center_id IS NOT NULL;
 
 -- Neon operational banking access paths.
-CREATE UNIQUE INDEX bank_party_active_bic_uq
-    ON master.bank_party (tenant_id, country_code, bic)
-    WHERE bic IS NOT NULL AND status = 'active';
-CREATE UNIQUE INDEX bank_party_active_national_code_uq
-    ON master.bank_party (
-        tenant_id, country_code, national_bank_code_type,
-        national_bank_code, COALESCE(branch_code, '')
-    )
-    WHERE national_bank_code IS NOT NULL AND status = 'active';
-CREATE INDEX bank_party_type_status_idx
-    ON master.bank_party (tenant_id, institution_type, status, name);
 
 CREATE UNIQUE INDEX bank_account_active_iban_uq
     ON master.bank_account (tenant_id, account_id_value)
@@ -521,7 +510,7 @@ CREATE UNIQUE INDEX bank_account_active_iban_uq
 CREATE UNIQUE INDEX bank_account_active_local_uq
     ON master.bank_account (
         tenant_id,
-        COALESCE(bank_party_id, '00000000-0000-0000-0000-000000000000'::uuid),
+        COALESCE(bank_institution_id, '00000000-0000-0000-0000-000000000000'::uuid),
         COALESCE(bank_country_override, '  '::character(2)),
         COALESCE(lower(bank_name_override), ''),
         account_id_value,
@@ -529,12 +518,12 @@ CREATE UNIQUE INDEX bank_account_active_local_uq
     )
     WHERE account_id_type = 'local'
       AND status NOT IN ('closed', 'retired');
-CREATE INDEX bank_account_bank_party_idx
-    ON master.bank_account (tenant_id, bank_party_id, status)
-    WHERE bank_party_id IS NOT NULL;
+CREATE INDEX bank_account_bank_institution_idx
+    ON master.bank_account (tenant_id, bank_institution_id, status)
+    WHERE bank_institution_id IS NOT NULL;
 CREATE INDEX bank_account_correspondent_idx
-    ON master.bank_account (tenant_id, correspondent_bank_party_id)
-    WHERE correspondent_bank_party_id IS NOT NULL;
+    ON master.bank_account (tenant_id, correspondent_bank_institution_id)
+    WHERE correspondent_bank_institution_id IS NOT NULL;
 CREATE INDEX bank_account_provider_ref_idx
     ON master.bank_account (tenant_id, provider_account_ref)
     WHERE provider_account_ref IS NOT NULL;

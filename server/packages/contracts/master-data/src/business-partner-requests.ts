@@ -334,6 +334,11 @@ export interface BusinessPartnerRequestValidationResult {
 export interface BusinessPartnerRequestView {
   readonly request: BusinessPartnerRequest;
   readonly validationFindings: readonly BusinessPartnerRequestValidationFinding[];
+  /** Whether the persisted evaluation belongs to the current saved snapshot. */
+  readonly validationCurrent?: boolean;
+  readonly snapshotId?: string;
+  /** Owner-only previous saved snapshot; consumers must authorize its scope. */
+  readonly previousSnapshot?: { readonly id: string; readonly revision: number; readonly payload: Readonly<Record<string, unknown>> };
   readonly materializationProof?: BusinessPartnerRequestMaterializationProof;
   readonly onboardingCycle?: BusinessPartnerOnboardingCycleView;
   readonly workflow?: Readonly<{
@@ -662,4 +667,22 @@ export interface BusinessPartnerAggregate {
     effectiveUntil?: string;
   }>[];
   readonly onboardingRequests: readonly BusinessPartnerRequest[];
+}
+
+export interface BusinessPartnerCaseExplanation {
+  readonly caseId: string;
+  readonly rowVersion: number;
+  readonly snapshotId: string;
+  readonly descriptorHash: string;
+  readonly status: string;
+  readonly validation: "passed" | "failed" | "not_evaluated";
+  readonly findings: readonly { readonly code: string; readonly message: string }[];
+  readonly coverage: "partial";
+  readonly diff: {
+    readonly state: "partial" | "unavailable";
+    readonly baseline: "previous_saved_snapshot";
+    readonly baselineSnapshotId?: string;
+    readonly baselineRevision?: number;
+    readonly changes: readonly { readonly field: string; readonly before: string | null; readonly after: string | null }[];
+  };
 }

@@ -1,3 +1,5 @@
+import { atlasEvidenceHash, createAtlasMessageLineage } from "./message-lineage.js";
+import type { AtlasMessageLineage, AtlasReplayCompletion } from "@athyper/server-contract-ai";
 import { createHash } from "node:crypto";
 import type {
   AtlasRunRepository,
@@ -146,10 +148,17 @@ export class KyselyAtlasRunRepository
           tx,
         )
       ).rows[0]!;
-      await sql`INSERT INTO ai.atlas_message(id,tenant_id,conversation_id,plane,role,status,content_blocks,run_id,terminal_at,created_by) VALUES(${input.inputMessageId}::uuid,${c.tenantId}::uuid,${input.threadId}::uuid,${c.planeKey},'user','completed',${JSON.stringify(input.userContent)}::jsonb,${input.runId}::uuid,clock_timestamp(),${c.principalId}::uuid)`.execute(
+      // Capture the predecessor under the thread lock, including history excluded
+      // from the model budget. New user quotations inherit all prior disclosure.
+      const predecessor = (await sql<{ id: string }>`SELECT id FROM ai.atlas_message
+        WHERE tenant_id=${c.tenantId}::uuid AND conversation_id=${input.threadId}::uuid AND plane=${c.planeKey}
+        ORDER BY sequence DESC LIMIT 1`.execute(tx)).rows[0]?.id ?? null;
+      const inputLineage = input.replayInput ? [createAtlasMessageLineage(c, input.userContent, predecessor, input.replayInput)] : [];
+      const pendingLineage = input.replayInput ? [createAtlasMessageLineage(c, [], input.inputMessageId, input.replayInput, [], false)] : [];
+      await sql`INSERT INTO ai.atlas_message(id,tenant_id,conversation_id,plane,role,status,content_blocks,run_id,terminal_at,created_by,citation_refs) VALUES(${input.inputMessageId}::uuid,${c.tenantId}::uuid,${input.threadId}::uuid,${c.planeKey},'user','completed',${JSON.stringify(input.userContent)}::jsonb,${input.runId}::uuid,clock_timestamp(),${c.principalId}::uuid,${JSON.stringify(inputLineage)}::jsonb)`.execute(
         tx,
       );
-      await sql`INSERT INTO ai.atlas_message(id,tenant_id,conversation_id,plane,role,status,run_id,parent_message_id,created_by) VALUES(${input.outputMessageId}::uuid,${c.tenantId}::uuid,${input.threadId}::uuid,${c.planeKey},'assistant','pending',${input.runId}::uuid,${input.inputMessageId}::uuid,${c.principalId}::uuid)`.execute(
+      await sql`INSERT INTO ai.atlas_message(id,tenant_id,conversation_id,plane,role,status,run_id,parent_message_id,created_by,citation_refs) VALUES(${input.outputMessageId}::uuid,${c.tenantId}::uuid,${input.threadId}::uuid,${c.planeKey},'assistant','pending',${input.runId}::uuid,${input.inputMessageId}::uuid,${c.principalId}::uuid,${JSON.stringify(pendingLineage)}::jsonb)`.execute(
         tx,
       );
       return { replayed: false, run: map(row) };
@@ -168,6 +177,7 @@ export class KyselyAtlasRunRepository
       "completed",
       input.assistantContent,
       null,
+      input.replayCompletion,
     );
   }
   cancel(input: Parameters<AtlasRunRepository["cancel"]>[0]) {
@@ -194,12 +204,13 @@ export class KyselyAtlasRunRepository
     status: string,
     content: readonly AtlasContentBlock[],
     error: string | null,
+    replayCompletion?: AtlasReplayCompletion,
   ) {
     return this.tx(c, async (tx) => {
       const r = await this.read(tx, c, id, true);
       if (!r) return null;
       if (r.status !== "started") return map(r);
-      return map(await this.finish(tx, c, r, status, content, error));
+      return map(await this.finish(tx, c, r, status, content, error, replayCompletion));
     });
   }
   private async read(
@@ -242,6 +253,7 @@ export class KyselyAtlasRunRepository
     status: string,
     content: readonly AtlasContentBlock[],
     error: string | null,
+    replayCompletion?: AtlasReplayCompletion,
   ): Promise<Row> {
     const calls = (
       await sql<{
@@ -257,7 +269,26 @@ export class KyselyAtlasRunRepository
       (v) =>
         v.usage.inputTokens !== undefined || v.usage.outputTokens !== undefined,
     );
-    if (status === "completed" && !available)
+    // A direct section answer has no provider usage. Require a durable read
+    // invocation matching its persisted tool result before admitting completion.
+    let directRead = false;
+    if (status === "completed" && !available && calls.length === 0) {
+      const results = content.filter(block => block.type === "tool_result");
+      const result = results.length === 1 ? results[0] : undefined;
+      if (result?.type === "tool_result" && !result.isError &&
+          content.some(block => block.type === "text" && block.text.trim()) &&
+          content.some(block => block.type === "tool_use" && block.callId === result.callId && block.toolName === result.toolName)) {
+        const read = await sql<{ present: boolean }>`SELECT EXISTS(
+          SELECT 1 FROM ai.ai_tool_invocation
+          WHERE tenant_id=${c.tenantId}::uuid AND run_id=${r.id}::uuid
+            AND principal_id=${c.principalId}::uuid AND plane=${c.planeKey}
+            AND tool_call_id=${result.callId} AND tool_code=${result.toolName}
+            AND operation_class='read' AND status='completed'
+        ) AS present`.execute(tx);
+        directRead = read.rows[0]?.present === true;
+      }
+    }
+    if (status === "completed" && !available && !directRead)
       throw new AtlasServiceError(
         "PROVIDER_PROTOCOL_ERROR",
         "Completion requires recorded provider usage.",
@@ -270,8 +301,8 @@ export class KyselyAtlasRunRepository
       await sql<{ at: Date }>`SELECT clock_timestamp() AS at`.execute(tx)
     ).rows[0]!.at;
     const cfg = r.generation_config;
-    await sql`INSERT INTO ai.ai_agent_run(id,tenant_id,principal_id,thread_id,client_request_id,response_message_id,plane,policy_revision,requested_model_id,resolved_binding_id,resolved_provider_id,actual_model_id,adapter_version,provider_region,provider_account_class,prompt_version,outcome,finish_reason,error_category,usage_source,input_tokens,cache_read_tokens,output_tokens,model_call_count,cost_amount,cost_basis,price_version,duration_ms,started_at,completed_at,created_by)
-      VALUES(${r.id}::uuid,${c.tenantId}::uuid,${c.principalId}::uuid,${r.conversation_id}::uuid,${r.client_request_id}::uuid,${r.output_message_id}::uuid,${c.planeKey},${cfg.policyRevision ?? null},${cfg.publicModelId ?? "unknown"},${cfg.bindingId ?? null},${last?.providerId ?? null},${last?.actualModelId ?? null},${last?.adapterVersion ?? null},${last?.providerRegion ?? null},${last?.providerId === "ollama" ? "local" : null},${cfg.promptRevision ?? null},${status},${status === "completed" ? (last?.finishReason ?? "stop") : status === "cancelled" ? "cancelled" : "error"},${error},${available ? (status === "completed" ? "provider_final" : "provider_stream") : "unavailable"},${available ? tokens("inputTokens") : null},${available ? tokens("cacheReadTokens") : null},${available ? tokens("outputTokens") : null},${calls.length},${cost},${cost === null ? null : "catalog_estimate"},${cost === null ? null : (last?.priceVersion ?? null)},${Math.max(0, at.getTime() - new Date(r.started_at).getTime())},${r.started_at}::timestamptz,${at}::timestamptz,${c.principalId}::uuid)`.execute(
+    await sql`INSERT INTO ai.ai_agent_run(id,tenant_id,principal_id,thread_id,client_request_id,response_message_id,plane,policy_revision,requested_model_id,resolved_binding_id,resolved_provider_id,actual_model_id,adapter_version,provider_region,provider_account_class,prompt_version,outcome,finish_reason,error_category,usage_source,input_tokens,cache_read_tokens,output_tokens,model_call_count,tool_call_count,cost_amount,cost_basis,price_version,duration_ms,started_at,completed_at,created_by)
+      VALUES(${r.id}::uuid,${c.tenantId}::uuid,${c.principalId}::uuid,${r.conversation_id}::uuid,${r.client_request_id}::uuid,${r.output_message_id}::uuid,${c.planeKey},${cfg.policyRevision ?? null},${cfg.publicModelId ?? "unknown"},${cfg.bindingId ?? null},${last?.providerId ?? null},${last?.actualModelId ?? null},${last?.adapterVersion ?? null},${last?.providerRegion ?? null},${last?.providerId === "ollama" ? "local" : null},${cfg.promptRevision ?? null},${status},${status === "completed" ? (last?.finishReason ?? "stop") : status === "cancelled" ? "cancelled" : "error"},${error},${available ? (status === "completed" ? "provider_final" : "provider_stream") : "unavailable"},${available ? tokens("inputTokens") : null},${available ? tokens("cacheReadTokens") : null},${available ? tokens("outputTokens") : null},${calls.length},${directRead ? 1 : 0},${cost},${cost === null ? null : "catalog_estimate"},${cost === null ? null : (last?.priceVersion ?? null)},${Math.max(0, at.getTime() - new Date(r.started_at).getTime())},${r.started_at}::timestamptz,${at}::timestamptz,${c.principalId}::uuid)`.execute(
       tx,
     );
     for (const [i, call] of calls.entries()) {
@@ -289,7 +320,11 @@ export class KyselyAtlasRunRepository
         tx,
       );
     }
-    await sql`UPDATE ai.atlas_message SET status=${status},content_blocks=${JSON.stringify(content)}::jsonb,terminal_error_class=${error},terminal_at=${at}::timestamptz,updated_by=${c.principalId}::uuid WHERE tenant_id=${c.tenantId}::uuid AND id=${r.output_message_id}::uuid AND status='pending'`.execute(
+    const pending = (await sql<{ citation_refs: AtlasMessageLineage[] }>`SELECT citation_refs FROM ai.atlas_message
+      WHERE tenant_id=${c.tenantId}::uuid AND id=${r.output_message_id}::uuid AND status='pending'`.execute(tx)).rows[0];
+    const base = pending?.citation_refs.find(value => value.type === "atlas_message_lineage");
+    const lineage = base && replayCompletion ? [{ ...base, contentHash: atlasEvidenceHash(content), reads: replayCompletion.reads, complete: status === "completed" && replayCompletion.complete }] : [];
+    await sql`UPDATE ai.atlas_message SET citation_refs=${JSON.stringify(lineage)}::jsonb,status=${status},content_blocks=${JSON.stringify(content)}::jsonb,terminal_error_class=${error},terminal_at=${at}::timestamptz,updated_by=${c.principalId}::uuid WHERE tenant_id=${c.tenantId}::uuid AND id=${r.output_message_id}::uuid AND status='pending'`.execute(
       tx,
     );
     return (

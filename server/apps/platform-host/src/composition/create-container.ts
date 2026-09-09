@@ -120,6 +120,7 @@ export interface Container {
   readonly services: {
     masterData?: MasterDataServices;
     records?: {
+      readonly lists: Pick<import("@athyper/server-service-records").EntityListService, "list">;
       readonly queries: RecordQueryService;
       readonly mutations: RecordMutationService;
       readonly snapshots?: RecordSnapshotService;
@@ -137,6 +138,7 @@ export interface Container {
     businessPartnerRequests?: BusinessPartnerRequestService;
     workforce?: WorkforceService;
     businessPartnerInvitations?: BusinessPartnerInvitationService;
+    businessPartnerAtlasInsights?: import("@athyper/server-contract-ai").AtlasBusinessPartnerInsightOwner;
     businessPartnerEligibility?: BusinessPartnerEligibilityService;
     businessPartnerProfilePublications?: BusinessPartnerProfilePublicationService;
     businessPartnerProfileProjections?: BusinessPartnerProfileProjectionService;

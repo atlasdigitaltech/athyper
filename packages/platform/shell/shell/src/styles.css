@@ -1,6 +1,6 @@
 @import "@athyper/platform-ui/styles.css";
 .athyper-shell{
-  --shell-rail:17.5rem;--shell-topbar:3.5rem;--shell-crumbs:2.25rem;
+  --shell-rail:17.5rem;--shell-topbar:3.5rem;--shell-crumbs:2.25rem;--atlas-panel:clamp(26rem,32vw,34rem);
   min-height:100vh;overflow-x:clip;background:var(--a-background);color:var(--a-foreground);font-family:var(--a-font-sans,ui-sans-serif,system-ui,sans-serif)
 }
 .athyper-shell *{box-sizing:border-box}
@@ -318,7 +318,7 @@
 .athyper-home__composer{position:relative}.athyper-home__composer[data-dragging=true]{border-color:var(--a-brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--a-ring) 22%,transparent),var(--a-shadow-prominent)}.athyper-home__composer-drop{position:absolute;z-index:4;inset:0;display:grid;align-content:center;justify-items:center;gap:.25rem;padding:1rem;border-radius:inherit;background:color-mix(in srgb,var(--a-brand-soft) 92%,var(--a-surface));color:var(--a-brand);pointer-events:none;text-align:center}.athyper-home__composer-drop strong{font-size:var(--a-font-size-sm)}.athyper-home__composer-drop small{color:var(--a-muted-foreground);font-size:var(--a-font-size-2xs)}
 
 /* Atlas conversation workspace */
-.athyper-atlas-workspace{--atlas-panel:clamp(26rem,32vw,34rem);display:flex;flex-direction:column;overflow:hidden;background:var(--a-background);color:var(--a-foreground);font-family:var(--a-font-sans);box-shadow:var(--a-shadow-overlay)}
+.athyper-atlas-workspace{display:flex;flex-direction:column;overflow:hidden;background:var(--a-background);color:var(--a-foreground);font-family:var(--a-font-sans);box-shadow:var(--a-shadow-overlay)}
 .athyper-atlas-workspace--dock{position:fixed;z-index:calc(var(--a-z-overlay) - 1);top:var(--shell-topbar);right:0;bottom:0;width:var(--atlas-panel);border-left:var(--a-border-width) solid var(--a-border);animation:athyper-atlas-dock-in .18s var(--a-easing) both}
 .athyper-atlas-workspace__scrim{position:fixed;z-index:calc(var(--a-z-overlay) - 2);inset:var(--shell-topbar) 0 0;border:0;background:var(--a-scrim);backdrop-filter:blur(1px)}
 .athyper-shell[data-atlas-pinned=true] .athyper-shell__body{margin-right:var(--atlas-panel)}
@@ -555,3 +555,28 @@
 .athyper-shell__record-source summary { cursor:pointer; text-decoration:underline; text-underline-offset:.2em; }
 .athyper-shell__record-source ul { position:absolute; bottom:100%; inset-inline-end:0; width:max-content; max-width:min(30rem,80vw); margin:0 0 .5rem; padding:.75rem 1.25rem; background:var(--a-surface); border:1px solid var(--a-border); border-radius:.5rem; overflow-wrap:anywhere; }
 @media(max-width:700px) { .athyper-shell__record-source { flex-basis:100%; } .athyper-shell__record-source ul { inset-inline-start:0; inset-inline-end:auto; } }
+
+.athyper-atlas-answer__prose p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.athyper-atlas-answer [role="group"], .athyper-atlas-answer__coverage { margin-block-start: .75rem; font-size: .875rem; }
+.athyper-atlas-answer details { margin-block: .375rem; }
+.athyper-atlas-answer a { text-decoration: underline; overflow-wrap: anywhere; }
+.athyper-atlas-workspace__empty nav { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: center; }
+.athyper-atlas-workspace__empty nav button { padding: .625rem; border: 1px solid currentColor; border-radius: .5rem; font: inherit; color: inherit; background: transparent; cursor: pointer; }
+.athyper-atlas-workspace :is(button, a, summary):focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.athyper-atlas-answer { min-width: 0; overflow-wrap: anywhere; }
+.athyper-atlas-workspace__context > span { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.athyper-atlas-workspace__context > small { flex-shrink: 0; }
+.athyper-atlas-workspace__header nav > .a-tooltip .a-tooltip__content { inset-inline-start: auto; inset-inline-end: 0; transform: none; }
+
+.athyper-atlas-workspace--fullscreen { position: relative; height: calc(100dvh - var(--shell-topbar) - var(--shell-crumbs)); min-height: 0; }
+
+.a-management-navigation{overflow:visible;display:flex;align-items:center;gap:var(--a-space-1);padding:var(--a-space-1);min-height:3rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface);box-shadow:var(--a-shadow-raised);flex-wrap:wrap}
+.a-management-navigation a,.a-management-navigation summary{display:flex;align-items:center;gap:var(--a-space-2);padding:.7rem .85rem;border-radius:var(--a-radius-md);color:var(--a-muted-foreground);font-weight:600;font-size:var(--a-font-size-sm);text-decoration:none;cursor:pointer;white-space:nowrap}
+.a-management-navigation a[aria-current=page],.a-management-navigation summary.is-current{background:var(--a-brand-soft);color:var(--a-brand);box-shadow:inset 0 -2px var(--a-brand)}
+.a-management-navigation a:hover,.a-management-navigation summary:hover{background:var(--a-brand-soft)}
+.a-management-navigation a:focus-visible,.a-management-navigation summary:focus-visible{outline:2px solid var(--a-brand);outline-offset:2px}
+.a-management-navigation__more{position:relative}.a-management-navigation summary{list-style:none}.a-management-navigation summary::-webkit-details-marker{display:none}
+.a-management-navigation__overflow{position:absolute;z-index:20;right:0;min-width:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-raised)}
+.a-management-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-on-brand,#fff);font-size:.75rem}
+.a-management-workspace{min-width:0}.a-management-toolbar{display:flex;align-items:center;gap:var(--a-space-2);padding:var(--a-space-2);min-width:0;flex-wrap:wrap}.a-management-toolbar>[data-slot=search]{flex:1;min-width:12rem}.a-management-toolbar>[data-slot=actions]{display:flex;gap:var(--a-space-2);margin-inline-start:auto}
+.a-management-navigation{box-sizing:border-box;max-width:100%}

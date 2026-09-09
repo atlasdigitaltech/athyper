@@ -100,7 +100,6 @@ BEGIN
             mesh.network_account_commodity_capability,
             mesh.network_account_industry_classification,
             mesh.network_account_tax_registration,
-            mesh.bank_party,
             mesh.bank_account_link,
             mesh.bank_account_disclosure,
             mesh.bank_account_disclosure_event
@@ -109,7 +108,7 @@ BEGIN
         GRANT EXECUTE ON FUNCTION mesh.profile_publication_payload_is_safe(jsonb),mesh.profile_publication_is_visible(uuid),mesh.lock_profile_publication_relationship(uuid,uuid,uuid) TO athyperapp;
         GRANT INSERT, UPDATE ON mesh.bank_account TO athyperapp;
         GRANT SELECT (
-            id, tenant_id, network_account_id, code, name, bank_party_id,
+            id, tenant_id, network_account_id, code, name, bank_institution_id, bank_branch_id, provisional_bank_reference_id,
             account_holder_name, account_id_type, account_last4,
             currency_code, bic_override, bank_name_override,
             bank_country_override, provider_account_ref,
@@ -124,7 +123,6 @@ BEGIN
             mesh.network_account_commodity_capability,
             mesh.network_account_industry_classification,
             mesh.network_account_tax_registration,
-            mesh.bank_party,
             mesh.bank_account,
             mesh.bank_account_link,
             mesh.bank_account_disclosure,
@@ -1972,17 +1970,13 @@ ALTER TABLE mesh.network_command_evidence DROP CONSTRAINT network_command_eviden
 CREATE OR REPLACE FUNCTION mesh.trg_normalize_bank_identity()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,mesh AS $$
 BEGIN
-  IF TG_TABLE_NAME='bank_party' THEN
-    NEW.code:=lower(btrim(NEW.code));NEW.name:=btrim(NEW.name);
-    NEW.bic:=nullif(upper(regexp_replace(NEW.bic,'\s+','','g')),'');
-  ELSE
     NEW.code:=nullif(lower(btrim(NEW.code)),'');NEW.name:=nullif(btrim(NEW.name),'');
     NEW.account_holder_name:=btrim(NEW.account_holder_name);
     NEW.protected_value_token:=btrim(NEW.protected_value_token);
     NEW.identifier_fingerprint:=lower(NEW.identifier_fingerprint);
     NEW.account_last4:=upper(btrim(NEW.account_last4));
     NEW.bic_override:=nullif(upper(regexp_replace(NEW.bic_override,'\s+','','g')),'');
-  END IF;RETURN NEW;
+  RETURN NEW;
 END $$;
 
 DROP TRIGGER IF EXISTS trg_mesh_bank_account_normalize ON mesh.bank_account;
@@ -1995,6 +1989,11 @@ CREATE OR REPLACE FUNCTION mesh.trg_guard_bank_account_identity()
 RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,mesh AS $$
 DECLARE v_evidence uuid;
 BEGIN
+  IF (OLD.is_verified OR EXISTS(SELECT 1 FROM mesh.bank_account_link l WHERE l.tenant_id=OLD.tenant_id AND l.bank_account_id=OLD.id))
+  AND ROW(NEW.bank_institution_id,NEW.bank_branch_id,NEW.provisional_bank_reference_id)
+      IS DISTINCT FROM ROW(OLD.bank_institution_id,OLD.bank_branch_id,OLD.provisional_bank_reference_id) THEN
+    RAISE EXCEPTION 'Verified or linked bank routing identity is immutable; create a replacement account';
+  END IF;
   IF NEW.id IS DISTINCT FROM OLD.id OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
      OR NEW.network_account_id IS DISTINCT FROM OLD.network_account_id
      OR NEW.account_id_type IS DISTINCT FROM OLD.account_id_type
@@ -2145,3 +2144,9 @@ GRANT SELECT, INSERT ON mesh.business_partner_delivery_acknowledgement TO athype
 
 REVOKE ALL ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) TO athyperapp, athyperadmin;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+ GRANT SELECT,INSERT ON mesh.bank_provisional_reference TO athyperapp;
+ END IF;
+END $$;

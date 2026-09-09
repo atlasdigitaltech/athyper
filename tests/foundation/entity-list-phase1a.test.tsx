@@ -763,7 +763,7 @@ test("entity navigation renders one active section, localized overflow and posit
   const document=new JSDOM(renderToStaticMarkup(<EntityNavigation sections={sections} currentSurfaceKey="list"/>)).window.document;
   assert.equal(document.querySelectorAll('[aria-current="page"]').length,1);
   assert.equal(document.querySelector('[aria-current="page"]')?.textContent,"Manage");
-  assert.equal(document.querySelectorAll('.a-entity-navigation__count').length,1);
+  assert.equal(document.querySelectorAll('.a-management-navigation__count').length,1);
   assert.equal(document.querySelector('details a')?.getAttribute("href"),"/review");
   assert.equal(renderToStaticMarkup(<EntityNavigation/>),"");
 });

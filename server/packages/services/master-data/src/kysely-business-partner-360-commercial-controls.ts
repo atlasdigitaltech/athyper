@@ -1,3 +1,4 @@
+import { receivedBankDisclosureCard } from "./business-partner-bank-disclosure-card.js";
 import { sql, type Transaction } from "kysely";
 import type {
   BusinessPartner360BankingData,
@@ -138,20 +139,29 @@ function commodityCodes(
   });
 }
 async function banking(input: Input, tx: Tx) {
-  if (!input.companyCodeId)
-    return result(
-      {
-        readOnly: true,
-        scopeState: input.historical ? "historical" : "missing_scope",
-        accounts: [],
-        manageHref: href(input, "banking"),
-        verifyHref: href(input, "bank-verification"),
-      } satisfies BusinessPartner360BankingData,
-      "empty",
-      "master.bank_account_link",
-    );
+  let authorizedCompanyIds = input.authorizedCompanyIds;
+  if(input.authorizeCompany && !input.companyCodeId){
+    const candidates=(await sql<Row>`SELECT DISTINCT u.company_code_id::text FROM master.bank_account_company_usage u
+      JOIN master.bank_account_link l ON l.tenant_id=u.tenant_id AND l.id=u.bank_account_link_id
+      WHERE l.tenant_id=${input.tenantId}::uuid AND l.owner_type='business_partner' AND l.owner_id=${input.businessPartnerId}::uuid`.execute(tx)).rows;
+    const decisions=await Promise.all(candidates.map(async row=>({id:String(row["company_code_id"]),allowed:await input.authorizeCompany!(String(row["company_code_id"]))})));
+    authorizedCompanyIds=decisions.filter(value=>value.allowed).map(value=>value.id);
+  }
   const rows = (
-    await sql<Row>`SELECT link.id::text link_id,account.id::text account_id,account.account_last4,account.account_holder_name,account.currency_code::text,COALESCE(bank.display_name,account.bank_name_override) bank_name,account.bank_country_override::text bank_country_code,link.purpose,link.relationship_role::text,link.company_code_id::text,link.is_primary,account.status::text account_status,account.is_verified,account.verification_method::text,account.verified_at,link.effective_from,link.effective_until,verification.id::text verification_id,verification.status verification_status,verification.created_at verification_created_at FROM control.owner_type owner_type JOIN master.bank_account_link link ON link.owner_type_id=owner_type.id JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id LEFT JOIN master.business_partner bank ON bank.tenant_id=account.tenant_id AND bank.id=account.bank_party_id LEFT JOIN LATERAL(SELECT item.id,item.status,item.created_at FROM document.business_partner_bank_verification item WHERE item.tenant_id=link.tenant_id AND item.business_partner_id=${input.businessPartnerId}::uuid AND(item.candidate_bank_account_link_id=link.id OR item.prior_bank_account_link_id=link.id) ORDER BY item.created_at DESC,item.id DESC LIMIT 1)verification ON true WHERE owner_type.code='business_partner' AND(owner_type.tenant_id IS NULL OR owner_type.tenant_id=${input.tenantId}::uuid) AND link.tenant_id=${input.tenantId}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND link.company_code_id=${input.companyCodeId}::uuid AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) ORDER BY link.is_primary DESC,link.effective_from DESC,link.id`.execute(
+    await sql<Row>`SELECT link.id::text link_id,account.id::text account_id,account.account_last4,account.account_holder_name,account.currency_code::text,COALESCE(bank.name,account.bank_name_override) bank_name,COALESCE(bank.country_code,account.bank_country_override)::text bank_country_code,link.purpose,link.relationship_role::text,link.company_code_id::text,link.is_primary,account.bic_override,account.account_id_type::text,usage.usage_scope,usage_company.company_usage,usage_company.company_assignments,usage_company.acceptance,usage_company.mesh_source,usage_company.disclosure_status,usage_company.usage_primary,master.bank_account_company_eligible(link.tenant_id,link.id,${input.companyCodeId ?? null}::uuid,${input.asOf}::date) company_applicable,account.status::text account_status,account.is_verified,account.verification_method::text,account.verified_at,link.effective_from,link.effective_until,verification.id::text verification_id,verification.status verification_status,verification.created_at verification_created_at FROM control.owner_type owner_type JOIN master.bank_account_link link ON link.owner_type_id=owner_type.id JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id LEFT JOIN shared.v_bank_directory bank ON bank.id=account.bank_institution_id AND bank.branch_id IS NOT DISTINCT FROM account.bank_branch_id LEFT JOIN master.bank_account_usage usage ON usage.tenant_id=link.tenant_id AND usage.bank_account_link_id=link.id
+ LEFT JOIN LATERAL(SELECT bool_or(u.is_primary) usage_primary,bool_or(u.source_account_id IS NOT NULL) mesh_source,
+ string_agg(DISTINCT CASE WHEN u.source_account_id IS NULL THEN NULL WHEN current_projection.id IS NULL THEN 'Disclosure unavailable' WHEN current_projection.projection_status='revoked' THEN 'Disclosure revoked' WHEN (current_snapshot.payload_json->>'expiresAt')::timestamptz<=clock_timestamp() THEN 'Disclosure expired' ELSE 'Disclosure current' END, ', ') disclosure_status,
+ jsonb_agg(DISTINCT jsonb_build_object('assignmentId',u.id::text,'companyCodeId',u.company_code_id::text,'companyName',company.name,'purpose',u.purpose,'primary',u.is_primary,'effectiveFrom',u.effective_from,'effectiveUntil',u.effective_until,'acceptanceCurrent',COALESCE((u.accepted_at IS NOT NULL AND (u.source_account_id IS NULL OR (current_projection.current_disclosure_id=u.accepted_disclosure_id AND current_projection.current_disclosure_version=u.accepted_disclosure_version AND current_projection.account_fingerprint=u.accepted_account_fingerprint AND current_projection.projection_status IN ('available','linked') AND (current_snapshot.payload_json->>'expiresAt' IS NULL OR (current_snapshot.payload_json->>'expiresAt')::timestamptz>clock_timestamp())))),false),'acceptance',CASE WHEN (u.accepted_at IS NOT NULL AND (u.source_account_id IS NULL OR (current_projection.current_disclosure_id=u.accepted_disclosure_id AND current_projection.current_disclosure_version=u.accepted_disclosure_version AND current_projection.account_fingerprint=u.accepted_account_fingerprint AND current_projection.projection_status IN ('available','linked') AND (current_snapshot.payload_json->>'expiresAt' IS NULL OR (current_snapshot.payload_json->>'expiresAt')::timestamptz>clock_timestamp())))) THEN 'Accepted for use' WHEN u.accepted_at IS NULL THEN 'Not accepted for use' ELSE 'Change pending review' END)) company_assignments,
+ string_agg(company.name, ', ' ORDER BY company.name) company_usage,
+ string_agg(CASE WHEN u.accepted_at IS NULL THEN 'Not accepted for ' || company.name
+ WHEN u.accepted_disclosure_version IS NOT NULL AND (current_projection.current_disclosure_id IS DISTINCT FROM u.accepted_disclosure_id OR current_projection.current_disclosure_version IS DISTINCT FROM u.accepted_disclosure_version OR current_projection.projection_status='revoked' OR (current_snapshot.payload_json->>'expiresAt')::timestamptz<=clock_timestamp()) THEN 'Change pending review for ' || company.name
+ ELSE 'Accepted for ' || company.name END, ', ' ORDER BY company.name) acceptance
+ FROM master.bank_account_company_usage u JOIN master.company_code company ON company.tenant_id=u.tenant_id AND company.id=u.company_code_id
+ LEFT JOIN snapshot.mesh_bank_account_disclosure_received accepted_snapshot ON accepted_snapshot.tenant_id=u.tenant_id AND accepted_snapshot.disclosure_id=u.accepted_disclosure_id
+ LEFT JOIN control.mesh_bank_account_projection current_projection ON current_projection.tenant_id=u.tenant_id AND current_projection.network_relationship_id=accepted_snapshot.network_relationship_id
+ LEFT JOIN snapshot.mesh_bank_account_disclosure_received current_snapshot ON current_snapshot.tenant_id=u.tenant_id AND current_snapshot.id=current_projection.current_snapshot_id
+ WHERE (${authorizedCompanyIds ?? null}::uuid[] IS NULL OR u.company_code_id=ANY(${authorizedCompanyIds ?? null}::uuid[])) AND u.tenant_id=link.tenant_id AND u.bank_account_link_id=link.id AND u.effective_from<=${input.asOf}::date AND(u.effective_until IS NULL OR u.effective_until>${input.asOf}::date)
+ AND(${input.companyCodeId ?? null}::uuid IS NULL OR u.company_code_id=${input.companyCodeId ?? null}::uuid)) usage_company ON true LEFT JOIN LATERAL(SELECT item.id,item.status,item.created_at FROM document.business_partner_bank_verification item WHERE item.tenant_id=link.tenant_id AND item.business_partner_id=${input.businessPartnerId}::uuid AND(item.candidate_bank_account_link_id=link.id OR item.prior_bank_account_link_id=link.id) ORDER BY item.created_at DESC,item.id DESC LIMIT 1)verification ON true WHERE owner_type.code='business_partner' AND(owner_type.tenant_id IS NULL OR owner_type.tenant_id=${input.tenantId}::uuid) AND link.tenant_id=${input.tenantId}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND (${authorizedCompanyIds ?? null}::uuid[] IS NULL OR link.company_code_id IS NULL OR link.company_code_id=ANY(${authorizedCompanyIds ?? null}::uuid[])) AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) ORDER BY link.is_primary DESC,link.effective_from DESC,link.id`.execute(
       tx,
     )
   ).rows;
@@ -170,8 +180,16 @@ async function banking(input: Input, tx: Tx) {
       : {}),
     purpose: text(row, "purpose"),
     relationshipRole: text(row, "relationship_role"),
-    companyCodeId: text(row, "company_code_id"),
-    primary: Boolean(row["is_primary"]),
+    ...(input.companyCodeId ? {companyCodeId:input.companyCodeId} : {}),
+    source: row["mesh_source"] ? "MESH" : "NEON",
+    ...(optional(row, "disclosure_status") ? {disclosureStatus:optional(row,"disclosure_status")} : {}),
+    ...(input.companyCodeId ? {companyApplicable:Boolean(row["company_applicable"])} : {}),
+    bic: optional(row, "bic_override"),
+    accountIdType: text(row, "account_id_type"),
+    companyAssignments: (row["company_assignments"] ?? []) as never,
+    companyUsage: optional(row, "usage_scope") === "all_authorized_companies" ? "Available to all authorized companies" : optional(row, "company_usage") ?? "Company assignment required",
+    acceptance: optional(row, "acceptance") ?? "Not accepted for use",
+    primary: Boolean(input.companyCodeId && row["usage_primary"]),
     accountStatus: text(row, "account_status"),
     verified: Boolean(row["is_verified"]),
     ...(optional(row, "verification_method")
@@ -193,16 +211,44 @@ async function banking(input: Input, tx: Tx) {
       : {}),
     revealable: !input.historical,
   }));
+  const disclosures = (await sql<Row>`SELECT p.id::text,p.projection_status,p.current_disclosure_id::text,p.current_disclosure_version,s.payload_json,s.received_at,assignments.company_assignments
+    FROM control.mesh_bank_account_projection p
+    JOIN control.mesh_business_partner_account_link mapping ON mapping.tenant_id=p.tenant_id AND mapping.id=p.account_link_id AND mapping.status='active'
+    JOIN snapshot.mesh_bank_account_disclosure_received s ON s.tenant_id=p.tenant_id AND s.id=p.current_snapshot_id
+    LEFT JOIN LATERAL (SELECT jsonb_agg(details ORDER BY details.company_name,details.purpose) company_assignments FROM (
+      SELECT u.id::text assignment_id,u.company_code_id::text,company.name company_name,u.purpose,u.is_primary,u.effective_from::text,u.effective_until::text,
+        u.accepted_at,u.accepted_disclosure_id::text,u.accepted_disclosure_version,verification.id::text verification_id,verification.status verification_status
+      FROM master.bank_account_company_usage u
+      JOIN master.bank_account_link local_link ON local_link.tenant_id=u.tenant_id AND local_link.id=u.bank_account_link_id AND local_link.owner_type='business_partner' AND local_link.owner_id=mapping.business_partner_id
+      JOIN master.company_code company ON company.tenant_id=u.tenant_id AND company.id=u.company_code_id
+      LEFT JOIN LATERAL (SELECT v.id,v.status FROM document.business_partner_bank_verification v
+        WHERE v.tenant_id=u.tenant_id AND v.bank_projection_id=p.id AND v.company_code_id=u.company_code_id
+          AND v.candidate_bank_account_link_id=local_link.id ORDER BY v.created_at DESC,v.id DESC LIMIT 1) verification ON true
+      WHERE u.tenant_id=p.tenant_id AND ((u.source_tenant_id=p.source_tenant_id AND u.source_account_id::text=s.payload_json->'bankAccount'->>'sourceAccountId') OR verification.id IS NOT NULL)
+        AND u.effective_from<=${input.asOf}::date AND(u.effective_until IS NULL OR u.effective_until>${input.asOf}::date)
+        AND local_link.effective_from<=${input.asOf}::date AND(local_link.effective_until IS NULL OR local_link.effective_until>${input.asOf}::date)
+        AND (${authorizedCompanyIds ?? null}::uuid[] IS NULL OR u.company_code_id=ANY(${authorizedCompanyIds ?? null}::uuid[]))
+        AND (${input.companyCodeId ?? null}::uuid IS NULL OR u.company_code_id=${input.companyCodeId ?? null}::uuid)
+    ) details) assignments ON true
+    WHERE p.tenant_id=${input.tenantId}::uuid AND mapping.business_partner_id=${input.businessPartnerId}::uuid AND NOT ${input.historical}
+    ORDER BY p.id`.execute(tx)).rows;
+  const receivedAccounts = disclosures.map(row => receivedBankDisclosureCard(row,input.companyCodeId));
+  const profile = input.companyCodeId ? (await sql<Row>`SELECT profile.id::text FROM master.company_code_supplier_profile profile
+    JOIN master.supplier supplier ON supplier.tenant_id=profile.tenant_id AND supplier.id=profile.supplier_id
+    WHERE profile.tenant_id=${input.tenantId}::uuid AND supplier.business_partner_id=${input.businessPartnerId}::uuid
+      AND profile.company_code_id=${input.companyCodeId}::uuid AND profile.status='active' LIMIT 1`.execute(tx)).rows[0] : undefined;
+  const scopeQuery = input.companyCodeId ? `?companyCodeId=${encodeURIComponent(input.companyCodeId)}` : "";
   const data: BusinessPartner360BankingData = {
     readOnly: input.historical,
-    scopeState: input.historical ? "historical" : "scoped",
-    accounts,
-    manageHref: href(input, "banking"),
-    verifyHref: href(input, "bank-verification"),
+    scopeState: input.historical ? "historical" : input.companyCodeId ? "scoped" : "global",
+    accounts: [...accounts, ...receivedAccounts],
+    ...(profile ? {supplierCompanyProfileId:String(profile["id"])} : {}),
+    manageHref: href(input, "banking") + scopeQuery,
+    verifyHref: href(input, "bank-verification") + scopeQuery,
   };
   return result(
     data,
-    rows.length ? "ready" : "empty",
+    accounts.length || receivedAccounts.length ? "ready" : "empty",
     "master.bank_account_link",
   );
 }

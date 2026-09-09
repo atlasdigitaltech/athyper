@@ -1,3 +1,5 @@
+import "@athyper/platform-entity-list-view/styles.css";
+import "./bank-directory.css";
 import "@athyper/platform-theme/styles.css";
 import "@athyper/platform-iam-identity-gate/styles.css";
 import "@athyper/product-studio-shell/styles.css";

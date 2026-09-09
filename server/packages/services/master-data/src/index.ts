@@ -62,3 +62,4 @@ export * from "./local-contact-challenge-routes.js";
 export * from "./verification-authority.js";
 
 export * from "./master-data-authority.js";
+export { createBusinessPartnerAtlasInsightOwner } from "./business-partner-atlas-insights.js";

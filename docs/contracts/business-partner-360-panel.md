@@ -12,6 +12,8 @@ Metadata controls presentation, never grants access. Section reads still require
 
 ## Navigation and loading
 
+The record breadcrumb uses `Display name (Code)` for recognition and a precise reference; when no distinct code is available it shows the display name alone.
+
 `tab` and `section` URL parameters identify the record view; legacy `?section=requests`, `?section=activity`, and `?section=business-activity` links open the corresponding tab. Explicit navigation creates a browser history entry and focuses the destination. Scroll tracking replaces the current entry without refetching the summary. Lazy sections load when approached or selected; a selected heading remains anchored while preceding sections finish loading. Wheel, touch, pointer, or keyboard interaction releases this anchor.
 
 Changing tenant, principal, permission epoch, role, effective date, or transaction context invalidates the rendered record data. Primary cards use the authorized summary and require an explicit primary designation. No primary designation produces an empty state rather than selecting the first record. Selecting transaction context in Overview or a scope-required section updates the record URL without changing the shell's working company.

@@ -894,15 +894,6 @@ END;
 $$;
 
 -- Neon operational banking foundation.
-CREATE TRIGGER trg_bank_party_normalize
-BEFORE INSERT OR UPDATE OF
-    code, name, country_code, bic, national_bank_code_type,
-    national_bank_code, branch_code, branch_name
-ON master.bank_party
-FOR EACH ROW EXECUTE FUNCTION master.trg_normalize_bank_party();
-CREATE TRIGGER trg_bank_party_identity
-BEFORE UPDATE OF id, tenant_id, code ON master.bank_party
-FOR EACH ROW EXECUTE FUNCTION master.trg_guard_organization_identity();
 
 CREATE TRIGGER trg_bank_account_normalize
 BEFORE INSERT OR UPDATE OF
@@ -955,7 +946,7 @@ DECLARE
     v_table text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_link',
+        'bank_account', 'bank_account_link',
         'bank_account_house_config'
     ]
     LOOP
@@ -980,7 +971,7 @@ BEGIN
     END LOOP;
 
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_house_config'
+        'bank_account', 'bank_account_house_config'
     ]
     LOOP
         EXECUTE format(
@@ -1564,3 +1555,5 @@ CREATE TRIGGER wave6_legal_entity_scope AFTER INSERT OR UPDATE OF parent_legal_e
 CREATE TRIGGER wave6_operating_organization_scope AFTER INSERT OR UPDATE OF parent_operating_organization_id,name,display_name,status ON master.operating_organization FOR EACH ROW EXECUTE FUNCTION master.trg_sync_organization_scope_target('operating_organization');
 CREATE TRIGGER wave6_operating_assignment_invalidation AFTER INSERT OR UPDATE OR DELETE ON master.operating_organization_company_assignment FOR EACH ROW EXECUTE FUNCTION master.trg_emit_operating_assignment_invalidation();
 CREATE TRIGGER wave6_organization_amendment_immutable BEFORE UPDATE OR DELETE ON master.organization_amendment FOR EACH ROW EXECUTE FUNCTION master.trg_reject_organization_amendment_mutation();
+
+CREATE TRIGGER trg_register_provisional_bank BEFORE INSERT OR UPDATE OF bank_institution_id,provisional_bank_reference_id,bank_name_override,bank_country_override,bic_override ON master.bank_account FOR EACH ROW EXECUTE FUNCTION master.trg_register_provisional_bank();

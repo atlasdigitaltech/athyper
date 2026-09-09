@@ -135,11 +135,11 @@ BEGIN
     ) THEN v_failure_code:='PROJECTION_SCHEMA_VERSION_MISMATCH'; END IF;
     IF v_failure_code IS NULL AND v_payload.id IS NOT NULL AND (
       p_evidence->>'target_plane' IS DISTINCT FROM v_payload.coordinates->>'plane_code' OR
-      p_evidence->>'definition_bundle_hash' IS DISTINCT FROM v_payload.payload_hash
-    ) THEN v_failure_code:='BUSINESS_PARTNER_DEFINITION_HASH_MISMATCH'; END IF;
+      COALESCE(p_evidence->>'payload_hash',p_evidence->>'definition_bundle_hash') IS DISTINCT FROM v_payload.payload_hash
+    ) THEN v_failure_code:=CASE WHEN v_payload.artifact_kind='bank_directory' THEN 'BANK_DIRECTORY_HASH_MISMATCH' ELSE 'BUSINESS_PARTNER_DEFINITION_HASH_MISMATCH' END; END IF;
     IF v_failure_code IS NULL AND v_payload.id IS NOT NULL AND
-      p_evidence->>'definition_bundle_schema_version' IS DISTINCT FROM v_payload.payload_schema_version
-    THEN v_failure_code:='BUSINESS_PARTNER_DEFINITION_SCHEMA_VERSION_MISMATCH'; END IF;
+      COALESCE(p_evidence->>'payload_schema_version',p_evidence->>'definition_bundle_schema_version') IS DISTINCT FROM v_payload.payload_schema_version
+    THEN v_failure_code:=CASE WHEN v_payload.artifact_kind='bank_directory' THEN 'BANK_DIRECTORY_SCHEMA_VERSION_MISMATCH' ELSE 'BUSINESS_PARTNER_DEFINITION_SCHEMA_VERSION_MISMATCH' END; END IF;
     IF v_failure_code IS NOT NULL THEN
       UPDATE runtime_meta.applied_release SET status='rejected',rejected_at=clock_timestamp(),failure_code=v_failure_code,
         verification_evidence=COALESCE(p_evidence,'{}'::jsonb) WHERE id=v_row.id RETURNING * INTO v_row;
@@ -278,6 +278,7 @@ DECLARE
   v_row runtime_meta.applied_release_payload%ROWTYPE;
   v_coordinates jsonb;
   v_plane text;
+  v_bank_failure text;
 BEGIN
   IF jsonb_typeof(p_projection)<>'object'
      OR jsonb_typeof(p_projection->'payload_json')<>'object'
@@ -288,6 +289,14 @@ BEGIN
    WHERE id=p_applied_release_id FOR UPDATE;
   v_coordinates:=p_projection->'coordinates';
   v_plane:=v_coordinates->>'plane_code';
+  IF p_projection->>'artifact_kind'='bank_directory' THEN
+    IF v_release.source_release_no>1 AND NOT EXISTS(SELECT 1 FROM shared.bank_directory_release WHERE version=v_release.source_release_no-1) THEN
+      RAISE EXCEPTION 'BANK_DIRECTORY_PREDECESSOR_PENDING';
+    END IF;
+    IF v_release.publication_key<>'shared.bank_directory' OR p_projection->'payload_json'->>'id' IS DISTINCT FROM v_release.source_release_id::text OR (p_projection->'payload_json'->>'version')::bigint IS DISTINCT FROM v_release.source_release_no OR p_projection->'payload_json'->>'contentHash' IS DISTINCT FROM p_projection->>'payload_hash' THEN RAISE EXCEPTION 'BANK_DIRECTORY_COORDINATES_INVALID'; END IF;
+    v_bank_failure:=shared.validate_bank_directory(p_projection->'payload_json');
+    IF v_bank_failure IS NOT NULL THEN RAISE EXCEPTION 'BANK_DIRECTORY_VALIDATION_FAILED: %',v_bank_failure; END IF;
+  END IF;
   IF p_projection->>'artifact_kind'='business_partner_definition_bundle' AND (
        NULLIF(p_projection->>'tenant_id','') IS NULL
        OR p_projection->'payload_json'->>'schema' IS DISTINCT FROM 'athyper.business-partner-definition-bundle.v1'
@@ -402,6 +411,10 @@ BEGIN
       UPDATE runtime_meta.entity_descriptor SET status='active',activated_at=v_head.activated_at
        WHERE id=v_descriptor.id;
     END IF;
+    IF v_candidate.manifest->>'artifactKind'='bank_directory' THEN
+      PERFORM shared.publish_bank_directory((p.payload_json->>'id')::uuid,(p.payload_json->>'version')::bigint,(p.payload_json->>'publishedAt')::timestamptz,p.payload_json->'sources',p.payload_json->'payload',p.payload_json->>'contentHash') FROM runtime_meta.applied_release_payload p WHERE p.applied_release_id=v_candidate.id AND p.artifact_kind='bank_directory';
+      IF NOT FOUND THEN RAISE EXCEPTION 'BANK_DIRECTORY_PAYLOAD_MISSING'; END IF;
+    END IF;
     UPDATE runtime_meta.applied_release SET status='active',activated_at=v_head.activated_at WHERE id=v_candidate.id;
     INSERT INTO runtime_meta.release_activation_event(publication_key,previous_applied_release_id,applied_release_id,activated_at,evidence)
     VALUES(v_candidate.publication_key,v_previous,v_candidate.id,v_head.activated_at,COALESCE(p_evidence,'{}'::jsonb));
@@ -420,6 +433,7 @@ DECLARE
     v_previous uuid;
     v_activated_at timestamptz := clock_timestamp();
 BEGIN
+    IF p_publication_key='shared.bank_directory' THEN RAISE EXCEPTION 'BANK_DIRECTORY_REQUIRES_FORWARD_CORRECTION'; END IF;
     SELECT * INTO v_head FROM runtime_meta.release_activation_head
      WHERE publication_key=p_publication_key FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'ACTIVE_RELEASE_NOT_FOUND' USING ERRCODE='no_data_found'; END IF;

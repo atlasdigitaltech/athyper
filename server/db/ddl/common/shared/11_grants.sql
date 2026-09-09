@@ -7,6 +7,12 @@ BEGIN
     IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'athyperapp') THEN
         GRANT USAGE ON SCHEMA shared TO athyperapp;
         GRANT SELECT ON
+            shared.bank_directory_release,
+            shared.bank_institution, shared.bank_branch,
+            shared.bank_institution_version, shared.bank_branch_version,
+            shared.bank_identifier, shared.bank_directory_source_record,
+            shared.bank_directory_activation, shared.v_bank_institution,
+            shared.v_bank_branch, shared.v_bank_directory,
             shared.country,
             shared.currency,
             shared.language,
@@ -44,3 +50,9 @@ BEGIN
     END IF;
 END;
 $$;
+
+GRANT EXECUTE ON FUNCTION shared.validate_bank_directory(jsonb) TO athyper_publication_service;
+GRANT USAGE ON SCHEMA shared TO athyper_publication_service,athyper_projection_applier;
+GRANT SELECT ON shared.country,shared.bank_directory_release,shared.bank_directory_activation,
+ shared.bank_identifier,shared.bank_institution_version,shared.bank_branch_version TO athyper_publication_service,athyper_projection_applier;
+GRANT EXECUTE ON FUNCTION shared.resolve_bank_directory_reference(uuid,uuid,uuid) TO athyperapp,athyper_publication_service,athyper_projection_applier;

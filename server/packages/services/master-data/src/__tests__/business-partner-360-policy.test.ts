@@ -12,9 +12,9 @@ describe("metadata-admitted section navigation",()=>{
  it("shows granted global tabs and requires context for scoped tabs",async()=>{
   const result=await evaluateBusinessPartner360Policy(authorizer(),input);
   for(const key of ["overview","identity","contacts","addresses","identifiers-tax","governance","roles-scope","requests","activity"])expect(result.sections.find(section=>section.code===key)).toMatchObject({authorization:"granted"});
-  expect(result.sections.find(section=>section.code==="banking")).toMatchObject({reasonCode:"BP_360_SCOPE_REQUIRED"});
+  expect(result.sections.find(section=>section.code==="banking")).not.toHaveProperty("reasonCode");
   expect(result.sections.some(section=>section.code==="customer-company")).toBe(false);
-  expect(result.granted.has(P.bankMasked)).toBe(false);
+  expect(result.granted.has(P.bankMasked)).toBe(true);
  });
  it("preserves section and field denials",async()=>{
   const result=await evaluateBusinessPartner360Policy(authorizer(P.taxMasked),input);
@@ -30,9 +30,9 @@ describe("metadata-admitted section navigation",()=>{
 
 it("keeps banking discoverable across roles and certificates available without company context", async () => {
  const result=await evaluateBusinessPartner360Policy(authorizer(),{...input,roles:[]});
- expect(result.sections.find(section=>section.code==='banking')).toMatchObject({reasonCode:'BP_360_SCOPE_REQUIRED'});
+ expect(result.sections.find(section=>section.code==='banking')).not.toHaveProperty("reasonCode");
  expect(result.sections.find(section=>section.code==='qualifications-certificates')).not.toHaveProperty('reasonCode');
- expect(result.granted.has(P.bankMasked)).toBe(false);
+ expect(result.granted.has(P.bankMasked)).toBe(true);
 });
 it("supports certificate-only readers without granting qualification or attachment access", async () => {
  const result=await evaluateBusinessPartner360Policy({async authorize(query){return [P.record,P.certificate].includes(query.permissionCode as never)?{allowed:true}:{allowed:false,reason:'denied_by_grant'};}},input);

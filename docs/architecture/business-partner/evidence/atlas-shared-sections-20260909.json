@@ -1,0 +1,23 @@
+{
+  "schema": "atlas-shared-sections-evidence/1",
+  "capturedAt": "2026-09-09T04:36:01.546058+00:00",
+  "apiImage": "athyper-runtime-server:atlas-shared-sections-20260909",
+  "health": "healthy",
+  "checks": {
+    "aiTests": 240,
+    "ownerTests": 24,
+    "hostTests": 7,
+    "typechecks": "passed",
+    "build": "passed",
+    "preflightImports": "passed",
+    "syntheticGenericPlaneContexts": [
+      "neon",
+      "mesh",
+      "studio"
+    ],
+    "deployedBpContacts": "passed",
+    "deployedBpAddresses": "passed"
+  },
+  "scope": "Shared registered current-record section execution and alias routing; BP compatibility registrations migrated. Metadata authoring/discovery is not auto-enabled.",
+  "authenticatedLiveModelQualification": "pending"
+}

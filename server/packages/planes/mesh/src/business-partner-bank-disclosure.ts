@@ -1,3 +1,4 @@
+import { normalizeBankBic, normalizeBankIdentifier } from "@athyper/server-contract-master-data";
 import { createHash, randomUUID } from "node:crypto";
 import { sql, type Transaction } from "kysely";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
@@ -127,7 +128,7 @@ export class KyselyBusinessPartnerBankDisclosureRepository {
     tx: Tx,
   ) {
     return one(
-      await sql<Row>`SELECT * FROM mesh.read_eligible_bank_disclosure_source(${tenantId}::uuid,${ownerAccountId}::uuid,${bankAccountId}::uuid,${relationshipId}::uuid,${purpose})`.execute(
+      await sql<Row>`SELECT * FROM mesh.read_eligible_bank_disclosure_source_v2(${tenantId}::uuid,${ownerAccountId}::uuid,${bankAccountId}::uuid,${relationshipId}::uuid,${purpose})`.execute(
         tx,
       ),
     );
@@ -188,6 +189,9 @@ export class KyselyBusinessPartnerBankDisclosureRepository {
       fingerprint = hash({
         bankAccountId: row["bank_account_id"],
         accountIdType: source["account_id_type"],
+        sourceFingerprint: source["account_fingerprint"],
+        holder: source["account_holder_name"], currency: source["currency_code"],
+        bank: source["bank_name"], country: source["bank_country_code"], bic: source["bic"],
       });
     const payload = {
       schemaCode: "mesh.bank_account_disclosure",
@@ -196,6 +200,7 @@ export class KyselyBusinessPartnerBankDisclosureRepository {
       disclosureId: id,
       disclosureVersion: version,
       purpose: row["purpose"],
+      expiresAt: row["expires_at"] ?? null,
       authority: {
         ownerTenantId: row["owner_tenant_id"],
         ownerNetworkAccountId: row["owner_account_id"],
@@ -206,13 +211,15 @@ export class KyselyBusinessPartnerBankDisclosureRepository {
         networkRelationshipId: row["network_relationship_id"],
       },
       bankAccount: {
+        sourceAccountId: row["bank_account_id"],
+        ownerVerified: true,
         accountHolderName: source["account_holder_name"],
         accountIdType: source["account_id_type"],
         accountLast4: source["account_last4"],
         currencyCode: source["currency_code"],
         bankName: source["bank_name"],
         bankCountryCode: source["bank_country_code"],
-        bic: source["bic"],
+        bic: source["bic"] ? normalizeBankBic(String(source["bic"])) : null,
         accountFingerprint: fingerprint,
       },
       secureRetrievalReference: secureRef,
@@ -333,6 +340,7 @@ export function createBusinessPartnerBankDisclosureService(options: {
   transactions: BankDisclosureTransactions;
   audit: AuditRecorder<Tx>;
   outbox: OutboxWriter<Tx>;
+  protectedIdentifiers?: {reveal(input:{tenantId:string;token:string;purpose:string}):Promise<string>};
 }): BusinessPartnerBankDisclosureService {
   return {
     async request(input) {
@@ -503,6 +511,12 @@ export function createBusinessPartnerBankDisclosureService(options: {
                 "MESH_BANK_DISCLOSURE_NOT_ELIGIBLE",
                 "Relationship or bank eligibility changed before approval",
               );
+            if(!options.protectedIdentifiers) throw new MeshBankDisclosureError(503,"MESH_BANK_VALIDATION_UNAVAILABLE","Protected account validation is unavailable");
+            const identifier = await options.protectedIdentifiers.reveal({tenantId:input.context.tenantId,token:String(source["protected_value_token"]),purpose:"bank_disclosure_validation"});
+            try {
+              normalizeBankIdentifier({accountIdType:String(source["account_id_type"]),accountIdentifier:identifier,bankCountryCode:String(source["bank_country_code"]),
+                ...(source["bic"] ? {bic:String(source["bic"])} : {}),...(source["clearing_scheme"] ? {clearingScheme:String(source["clearing_scheme"])} : {}),...(source["branch_code"] ? {branchCode:String(source["branch_code"])} : {})});
+            } catch(error) { throw invalid((error as Error).message); }
             result = await options.repository.approve(
               row,
               source,

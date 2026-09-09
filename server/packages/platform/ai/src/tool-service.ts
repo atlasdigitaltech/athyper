@@ -1,3 +1,5 @@
+import { atlasReadEvidenceHash } from "./message-lineage.js";
+import type { AtlasReadReplayEvidence } from "@athyper/server-contract-ai";
 import { parseInstant } from "@athyper/platform-temporal";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import type {
@@ -57,6 +59,7 @@ export class AtlasToolService {
     const decision = await this.options.authority.authorize({ context: input.context, manifest, phase: "preview" });
     const permissionsAllowed = manifest.requiredPermissions.every((code) => hasPermission(input.context, code));
     const allowed = manifest.allowedPlanes.includes(input.context.planeKey) && permissionsAllowed && decision.allowed;
+    if (allowed) await tool.validatePreview?.({context: input.context, arguments: input.arguments});
     const now = this.now(); const proposalId = this.createId();
     const confirmationRequired = allowed && (manifest.access === "mutation" || manifest.confirmation === "explicit_user");
     const expiresAt = confirmationRequired ? new Date(now.getTime() + this.ttl).toISOString() : undefined;
@@ -175,6 +178,23 @@ export class AtlasToolService {
       await this.options.proposals.fail({ context: input.context, proposalId: proposal.proposalId, expectedStatuses: ["executing"], errorClass: safeErrorClass(error), terminalAt: terminalAt.toISOString(), durationMs: elapsed(proposal.createdAt, terminalAt) });
       throw error;
     }
+  }
+
+  /** Re-run only a registered read, with current owner scope/fields. Never create a
+   * proposal, return old tool data, or invoke a mutation while authorizing history. */
+  async revalidate(context: VerifiedRequestContext, evidence: AtlasReadReplayEvidence): Promise<boolean> {
+    try {
+      assertAtlasContext(context);
+      const tool = this.options.registry.resolve(evidence.toolCode, evidence.toolVersion);
+      const manifest = tool.manifest;
+      if (manifest.access !== "read" || !tool.readHandler || !manifest.allowedPlanes.includes(context.planeKey) || !manifest.requiredPermissions.every(code => hasPermission(context, code))) return false;
+      tool.validateArguments?.(evidence.arguments, {});
+      const decision = await this.options.authority.authorize({ context, manifest, phase: "execute" });
+      if (!decision.allowed || decision.policyRevision !== evidence.policyRevision) return false;
+      const output = await executeRead(tool, context, evidence.arguments, this.options.records, manifest.timeoutMs);
+      enforceSize(output.data, manifest.maxResultBytes);
+      return atlasReadEvidenceHash(evidence.toolCode, { data: output.data, sources: output.sources }) === evidence.resultHash;
+    } catch { return false; }
   }
 
   async cancel(input: { readonly context: VerifiedRequestContext; readonly proposalId: string; readonly reason?: string }): Promise<AtlasToolRunResult> {

@@ -10,5 +10,7 @@ This directory contains durable architecture decisions, current architecture gui
 ## Current guidance
 
 - `frontend-first-business-module.md` — architectural boundary and readiness contract for the first frontend Business Partner module.
+- [Entity and record authorization](../contracts/entity-record-authorization.md) — proposed generic contract from application entry through record ownership, sections, fields and commands; includes migration and acceptance gates.
+- [Business Partner authorization profile](../contracts/business-partner-authorization-profile.md) — proposed first use case of the generic contract, with ownership boundaries and adoption journeys.
 
 Generated inventories, test evidence, completion reports, and dated review narratives do not belong here. Versioned governance inventories and durable evidence belong under `governance/policy/reports/` when they must remain live; otherwise Git history is the archive.

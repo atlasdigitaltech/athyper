@@ -1,0 +1,87 @@
+{
+  "schema": "bp-ai-03-replay-qualification/1",
+  "capturedAt": "2026-09-08T17:25:42.509Z",
+  "status": "passed",
+  "scope": "DEV local-model BP summary, durable message replay, BFF history/export/retry and capability revocation. Broader BP-AI-09 persona/UI rollout qualification is separate.",
+  "images": {
+    "api": "sha256:2e418ff75a3398aad6c75ddf63cb0597093e9afab3ac9aaad0ef5d4383114c2f",
+    "neon": "sha256:eb7cb892c15efb4c2a4f52be2c2d9eacce77b5f6e3eeeaa26c7871955be133a5"
+  },
+  "live": {
+    "schema": "atlas-message-replay-qualification/1",
+    "capturedAt": "2026-09-08T17:19:38.367Z",
+    "checks": {
+      "liveRead": true,
+      "persistedHistory": true,
+      "export": true,
+      "idempotentReplay": true,
+      "modelHistory": true
+    },
+    "status": "passed",
+    "evidence": {
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    "firstRunMs": 3026,
+    "replayMs": 203
+  },
+  "afterApiRecreation": {
+    "schema": "atlas-message-replay-qualification/1",
+    "capturedAt": "2026-09-08T17:23:32.860Z",
+    "checks": {
+      "persistedHistory": true,
+      "export": true,
+      "idempotentReplay": true,
+      "resumeFromSeparateProcess": true
+    },
+    "status": "passed",
+    "replayMs": 310
+  },
+  "revocation": {
+    "schema": "atlas-replay-capability-revocation/1",
+    "capturedAt": "2026-09-08T17:22:14.046Z",
+    "status": "passed",
+    "restored": true,
+    "checks": {
+      "historyWithheld": true,
+      "exportWithheld": true,
+      "staleRetryRejected": true,
+      "modelHistoryWithheld": true
+    }
+  },
+  "storage": {
+    "schema": "atlas-lineage-storage-qualification/1",
+    "capturedAt": "2026-09-08T17:22:45.402Z",
+    "ownerRows": 6,
+    "otherTenantRows": 0,
+    "otherPrincipalRows": 0,
+    "otherPlaneRows": 0,
+    "lineagePersisted": true,
+    "readEvidencePersisted": true,
+    "terminalLineageImmutable": true
+  },
+  "checks": {
+    "platformAiTests": 192,
+    "relayTests": 32,
+    "focusedLineageAndBudgetTests": 9,
+    "aiContractsAndPlatformTypechecks": "passed",
+    "hostTypecheck": "passed",
+    "relayTypecheck": "passed",
+    "r9": "passed (54 AI, 37 case-service, 3 provisioning)",
+    "productionImageBuilds": "passed",
+    "apiHealthy": true,
+    "neonHealthy": true,
+    "toolsRestored": true
+  },
+  "limitations": [
+    "Legacy/untracked lineage and mutation-preview replay remain withheld.",
+    "Record/field revocation and attachment revision behavior were tested at service level; live revocation used the existing Atlas tool capability switch.",
+    "Browser tests used authenticated fetch through the Neon BFF; full visual/accessibility and multi-persona rollout qualification remain BP-AI-09."
+  ]
+}

@@ -7,3 +7,5 @@ export type * from "./projection.js";
 export { BUSINESS_PARTNER_DEFINITION_BUNDLE_SCHEMA_V1 } from "./projection.js";
 export type * from "./signing.js";
 export type * from "./operations.js";
+
+export type { BankDirectoryRelease, BankDirectoryPayload } from "@athyper/server-contract-master-data";

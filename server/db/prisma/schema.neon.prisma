@@ -6217,6 +6217,8 @@ model budget_profile {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model business_partner_bank_verification {
+  expected_disclosure_id String? @db.Uuid
+  expected_disclosure_version Int?
   id                                                                                                               String                        @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
   tenant_id                                                                                                        String                        @db.Uuid
   bank_projection_id                                                                                               String                        @db.Uuid
@@ -14976,52 +14978,56 @@ model audit_reason_code {
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model bank_account {
-  id                                                                        String              @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                 String              @db.Uuid
-  code                                                                      String?
-  name                                                                      String?
-  bank_party_id                                                             String?             @db.Uuid
-  account_holder_name                                                       String
-  account_id_type                                                           String
-  account_id_value                                                          String
-  account_last4                                                             String
-  currency_code                                                             String              @db.Char(3)
-  bic_override                                                              String?
-  bank_name_override                                                        String?
-  bank_country_override                                                     String?             @db.Char(2)
-  account_nature                                                            String              @default("direct")
-  provider_account_ref                                                      String?
-  correspondent_bank_party_id                                               String?             @db.Uuid
-  is_verified                                                               Boolean             @default(false)
-  verified_at                                                               DateTime?           @db.Timestamptz(6)
-  verified_by                                                               String?             @db.Uuid
-  verification_method                                                       String?
-  metadata                                                                  Json                @default("{}")
-  status                                                                    String              @default("pending_verification")
-  is_active                                                                 Boolean?            @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                         DateTime?           @db.Timestamptz(6)
-  status_changed_by                                                         String?             @db.Uuid
-  created_at                                                                DateTime            @default(now()) @db.Timestamptz(6)
-  created_by                                                                String              @db.Uuid
-  updated_at                                                                DateTime?           @db.Timestamptz(6)
-  updated_by                                                                String?             @db.Uuid
-  bank_recon_case                                                           bank_recon_case[]
-  bank_statement                                                            bank_statement[]
-  payment_entry                                                             payment_entry[]
-  bank_party_bank_account_tenant_id_bank_party_idTobank_party               bank_party?         @relation("bank_account_tenant_id_bank_party_idTobank_party", fields: [tenant_id, bank_party_id], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_bank_party_fk")
-  bank_party_bank_account_tenant_id_correspondent_bank_party_idTobank_party bank_party?         @relation("bank_account_tenant_id_correspondent_bank_party_idTobank_party", fields: [tenant_id, correspondent_bank_party_id], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_correspondent_fk")
-  principal_bank_account_tenant_id_created_byToprincipal                    principal           @relation("bank_account_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_created_by_fk")
-  currency                                                                  currency            @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "bank_account_currency_fk")
-  principal_bank_account_tenant_id_status_changed_byToprincipal             principal?          @relation("bank_account_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_status_changed_by_fk")
-  tenant                                                                    tenant              @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "bank_account_tenant_fk")
-  principal_bank_account_tenant_id_updated_byToprincipal                    principal?          @relation("bank_account_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_updated_by_fk")
-  principal_bank_account_tenant_id_verified_byToprincipal                   principal?          @relation("bank_account_tenant_id_verified_byToprincipal", fields: [tenant_id, verified_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_verified_by_fk")
-  bank_account_link                                                         bank_account_link[]
+  id                                                                                String                      @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id                                                                         String                      @db.Uuid
+  code                                                                              String?
+  name                                                                              String?
+  bank_institution_id                                                               String?                     @db.Uuid
+  bank_branch_id                                                                    String?                     @db.Uuid
+  provisional_bank_reference_id                                                     String?                     @db.Uuid
+  account_holder_name                                                               String
+  account_id_type                                                                   String
+  account_id_value                                                                  String
+  account_last4                                                                     String
+  currency_code                                                                     String                      @db.Char(3)
+  bic_override                                                                      String?
+  bank_name_override                                                                String?
+  bank_country_override                                                             String?                     @db.Char(2)
+  account_nature                                                                    String                      @default("direct")
+  provider_account_ref                                                              String?
+  correspondent_bank_institution_id                                                 String?                     @db.Uuid
+  is_verified                                                                       Boolean                     @default(false)
+  verified_at                                                                       DateTime?                   @db.Timestamptz(6)
+  verified_by                                                                       String?                     @db.Uuid
+  verification_method                                                               String?
+  metadata                                                                          Json                        @default("{}")
+  status                                                                            String                      @default("pending_verification")
+  is_active                                                                         Boolean?                    @default(dbgenerated("((status)::text = 'active'::text)"))
+  status_changed_at                                                                 DateTime?                   @db.Timestamptz(6)
+  status_changed_by                                                                 String?                     @db.Uuid
+  created_at                                                                        DateTime                    @default(now()) @db.Timestamptz(6)
+  created_by                                                                        String                      @db.Uuid
+  updated_at                                                                        DateTime?                   @db.Timestamptz(6)
+  updated_by                                                                        String?                     @db.Uuid
+  bank_recon_case                                                                   bank_recon_case[]
+  bank_statement                                                                    bank_statement[]
+  payment_entry                                                                     payment_entry[]
+  bank_institution_bank_account_bank_institution_idTobank_institution               bank_institution?           @relation("bank_account_bank_institution_idTobank_institution", fields: [bank_institution_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "bank_account_bank_institution_fk")
+  bank_branch                                                                       bank_branch?                @relation(fields: [bank_institution_id, bank_branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bank_account_branch_fk")
+  bank_institution_bank_account_correspondent_bank_institution_idTobank_institution bank_institution?           @relation("bank_account_correspondent_bank_institution_idTobank_institution", fields: [correspondent_bank_institution_id], references: [id], onDelete: Restrict, onUpdate: NoAction, map: "bank_account_correspondent_fk")
+  principal_bank_account_tenant_id_created_byToprincipal                            principal                   @relation("bank_account_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_created_by_fk")
+  currency                                                                          currency                    @relation(fields: [currency_code], references: [code], onUpdate: NoAction, map: "bank_account_currency_fk")
+  bank_provisional_reference                                                        bank_provisional_reference? @relation(fields: [tenant_id, provisional_bank_reference_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction, map: "bank_account_provisional_fk")
+  principal_bank_account_tenant_id_status_changed_byToprincipal                     principal?                  @relation("bank_account_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_status_changed_by_fk")
+  tenant                                                                            tenant                      @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "bank_account_tenant_fk")
+  principal_bank_account_tenant_id_updated_byToprincipal                            principal?                  @relation("bank_account_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_updated_by_fk")
+  principal_bank_account_tenant_id_verified_byToprincipal                           principal?                  @relation("bank_account_tenant_id_verified_byToprincipal", fields: [tenant_id, verified_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_account_verified_by_fk")
+  bank_account_link                                                                 bank_account_link[]
 
   @@unique([tenant_id, account_id_value], map: "bank_account_active_iban_uq", where: raw("(((account_id_type)::text = 'iban'::text) AND ((status)::text <> ALL (ARRAY['closed'::text, 'retired'::text])))"))
   @@unique([tenant_id, id], map: "bank_account_tenant_id_uq")
-  @@index([tenant_id, bank_party_id, status], map: "bank_account_bank_party_idx", where: raw("(bank_party_id IS NOT NULL)"))
-  @@index([tenant_id, correspondent_bank_party_id], map: "bank_account_correspondent_idx", where: raw("(correspondent_bank_party_id IS NOT NULL)"))
+  @@index([tenant_id, bank_institution_id, status], map: "bank_account_bank_institution_idx", where: raw("(bank_institution_id IS NOT NULL)"))
+  @@index([tenant_id, correspondent_bank_institution_id], map: "bank_account_correspondent_idx", where: raw("(correspondent_bank_institution_id IS NOT NULL)"))
   @@index([tenant_id, provider_account_ref], map: "bank_account_provider_ref_idx", where: raw("(provider_account_ref IS NOT NULL)"))
   @@index([tenant_id, status, created_at], map: "bank_account_unverified_idx", where: raw("((NOT is_verified) AND ((status)::text <> ALL (ARRAY['closed'::text, 'retired'::text])))"))
   @@schema("master")
@@ -15113,45 +15119,6 @@ model bank_account_link {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
-model bank_party {
-  id                                                                          String         @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
-  tenant_id                                                                   String         @db.Uuid
-  code                                                                        String
-  name                                                                        String
-  country_code                                                                String         @db.Char(2)
-  institution_type                                                            String         @default("bank")
-  bic                                                                         String?
-  national_bank_code_type                                                     String?
-  national_bank_code                                                          String?
-  branch_code                                                                 String?
-  branch_name                                                                 String?
-  supports_swift                                                              Boolean        @default(false)
-  supports_local_clearing                                                     Boolean        @default(false)
-  supports_sepa                                                               Boolean        @default(false)
-  supports_ach                                                                Boolean        @default(false)
-  metadata                                                                    Json           @default("{}")
-  status                                                                      String         @default("active")
-  is_active                                                                   Boolean?       @default(dbgenerated("((status)::text = 'active'::text)"))
-  status_changed_at                                                           DateTime?      @db.Timestamptz(6)
-  status_changed_by                                                           String?        @db.Uuid
-  created_at                                                                  DateTime       @default(now()) @db.Timestamptz(6)
-  created_by                                                                  String         @db.Uuid
-  updated_at                                                                  DateTime?      @db.Timestamptz(6)
-  updated_by                                                                  String?        @db.Uuid
-  bank_account_bank_account_tenant_id_bank_party_idTobank_party               bank_account[] @relation("bank_account_tenant_id_bank_party_idTobank_party")
-  bank_account_bank_account_tenant_id_correspondent_bank_party_idTobank_party bank_account[] @relation("bank_account_tenant_id_correspondent_bank_party_idTobank_party")
-  country                                                                     country        @relation(fields: [country_code], references: [code], onUpdate: NoAction, map: "bank_party_country_fk")
-  principal_bank_party_tenant_id_created_byToprincipal                        principal      @relation("bank_party_tenant_id_created_byToprincipal", fields: [tenant_id, created_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_party_created_by_fk")
-  principal_bank_party_tenant_id_status_changed_byToprincipal                 principal?     @relation("bank_party_tenant_id_status_changed_byToprincipal", fields: [tenant_id, status_changed_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_party_status_changed_by_fk")
-  tenant                                                                      tenant         @relation(fields: [tenant_id], references: [id], onUpdate: NoAction, map: "bank_party_tenant_fk")
-  principal_bank_party_tenant_id_updated_byToprincipal                        principal?     @relation("bank_party_tenant_id_updated_byToprincipal", fields: [tenant_id, updated_by], references: [tenant_id, id], onUpdate: NoAction, map: "bank_party_updated_by_fk")
-
-  @@unique([tenant_id, country_code, bic], map: "bank_party_active_bic_uq", where: raw("((bic IS NOT NULL) AND ((status)::text = 'active'::text))"))
-  @@unique([tenant_id, code], map: "bank_party_tenant_code_uq")
-  @@unique([tenant_id, id], map: "bank_party_tenant_id_uq")
-  @@index([tenant_id, institution_type, status, name], map: "bank_party_type_status_idx")
-  @@schema("master")
-}
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -19738,9 +19705,6 @@ model principal {
   bank_account_house_config_bank_account_house_config_tenant_id_updated_byToprincipal                                                          bank_account_house_config[]                          @relation("bank_account_house_config_tenant_id_updated_byToprincipal")
   bank_account_link_bank_account_link_tenant_id_created_byToprincipal                                                                          bank_account_link[]                                  @relation("bank_account_link_tenant_id_created_byToprincipal")
   bank_account_link_bank_account_link_tenant_id_updated_byToprincipal                                                                          bank_account_link[]                                  @relation("bank_account_link_tenant_id_updated_byToprincipal")
-  bank_party_bank_party_tenant_id_created_byToprincipal                                                                                        bank_party[]                                         @relation("bank_party_tenant_id_created_byToprincipal")
-  bank_party_bank_party_tenant_id_status_changed_byToprincipal                                                                                 bank_party[]                                         @relation("bank_party_tenant_id_status_changed_byToprincipal")
-  bank_party_bank_party_tenant_id_updated_byToprincipal                                                                                        bank_party[]                                         @relation("bank_party_tenant_id_updated_byToprincipal")
   bom                                                                                                                                          master_bom[]
   bom_component                                                                                                                                master_bom_component[]
   brand_profile                                                                                                                                brand_profile[]
@@ -21353,7 +21317,6 @@ model tenant {
   bank_account                                                   bank_account[]
   bank_account_house_config                                      bank_account_house_config[]
   bank_account_link                                              bank_account_link[]
-  bank_party                                                     bank_party[]
   brand_profile                                                  brand_profile[]
   business_intent                                                business_intent[]
   business_partner                                               business_partner[]
@@ -21478,6 +21441,7 @@ model tenant {
   @@index([realm_key, code], map: "tenant_active_lookup_idx", where: raw("(status = 'active'::text)"))
   @@index([subscription_plan_id], map: "tenant_subscription_plan_idx", where: raw("(subscription_plan_id IS NOT NULL)"))
   @@schema("master")
+  bank_provisional_reference                                     bank_provisional_reference[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -22783,7 +22747,6 @@ model country {
   rate_table                           rate_table[]
   employee_tax_declaration             employee_tax_declaration[]
   address                              address[]
-  bank_party                           bank_party[]
   business_partner                     business_partner[]
   business_partner_alias               business_partner_alias[]
   business_partner_governance_relation business_partner_governance_relation[]
@@ -22805,6 +22768,10 @@ model country {
 
   @@index([code], map: "country_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("shared")
+  bank_provisional_reference           bank_provisional_reference[]
+  bank_branch_version                  bank_branch_version[]
+  bank_identifier                      bank_identifier[]
+  bank_institution_version             bank_institution_version[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -23530,4 +23497,174 @@ model template_version {
   @@index([tenant_id, template_id, locale_code, effective_from, effective_to], map: "template_version_effective_idx")
   @@index([tenant_id, template_id, locale_code, version(sort: Desc)], map: "template_version_template_recent_idx")
   @@schema("snapshot")
+}
+
+model bank_provisional_reference {
+  id                      String            @id @default(dbgenerated("shared.uuidv7()")) @db.Uuid
+  tenant_id               String            @db.Uuid
+  submitted_name          String
+  submitted_country       String            @db.Char(2)
+  submitted_bic           String?
+  status                  String            @default("unresolved")
+  resolved_institution_id String?           @db.Uuid
+  resolved_branch_id      String?           @db.Uuid
+  created_at              DateTime          @default(now()) @db.Timestamptz(6)
+  bank_account            bank_account[]
+  bank_institution        bank_institution? @relation(fields: [resolved_institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch             bank_branch?      @relation(fields: [resolved_institution_id, resolved_branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction)
+  country                 country           @relation(fields: [submitted_country], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  tenant                  tenant            @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, id])
+  @@schema("master")
+}
+
+model bank_branch {
+  id                         String                       @id @db.Uuid
+  institution_id             String                       @db.Uuid
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  bank_account               bank_account[]
+  bank_provisional_reference bank_provisional_reference[]
+  bank_institution           bank_institution             @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version        bank_branch_version[]
+
+  @@unique([institution_id, id])
+  @@schema("shared")
+}
+
+model bank_branch_version {
+  release_id                   String                         @db.Uuid
+  branch_id                    String                         @db.Uuid
+  institution_id               String                         @db.Uuid
+  name                         String
+  country_code                 String                         @db.Char(2)
+  location                     Json
+  status                       String
+  effective_from               DateTime                       @db.Date
+  effective_until              DateTime?                      @db.Date
+  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch                  bank_branch                    @relation(fields: [institution_id, branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version     bank_institution_version       @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_source_record bank_directory_source_record[]
+  bank_identifier              bank_identifier[]
+
+  @@id([release_id, branch_id])
+  @@unique([release_id, institution_id, branch_id])
+  @@schema("shared")
+}
+
+model bank_directory_activation {
+  singleton              Boolean                @id @default(true)
+  release_id             String                 @db.Uuid
+  activated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  bank_directory_release bank_directory_release @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("shared")
+}
+
+model bank_directory_release {
+  id                           String                         @id @db.Uuid
+  version                      BigInt                         @unique
+  published_at                 DateTime                       @db.Timestamptz(6)
+  source_manifest              Json
+  payload                      Json
+  content_hash                 String
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  bank_directory_activation    bank_directory_activation[]
+  bank_directory_source_record bank_directory_source_record[]
+  bank_institution_version     bank_institution_version[]
+
+  @@schema("shared")
+}
+
+model bank_directory_source_record {
+  release_id               String                   @db.Uuid
+  source                   String
+  source_record_id         String
+  institution_id           String                   @db.Uuid
+  branch_id                String?                  @db.Uuid
+  bank_directory_release   bank_directory_release   @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, source, source_record_id])
+  @@schema("shared")
+}
+
+model bank_identifier {
+  release_id               String                   @db.Uuid
+  id                       String                   @db.Uuid
+  institution_id           String                   @db.Uuid
+  branch_id                String?                  @db.Uuid
+  scheme                   String
+  scheme_namespace         String
+  jurisdiction             String                   @db.Char(2)
+  value                    String
+  effective_from           DateTime                 @db.Date
+  effective_until          DateTime?                @db.Date
+  country                  country                  @relation(fields: [jurisdiction], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, id])
+  @@schema("shared")
+}
+
+model bank_institution {
+  id                                                                            String                       @id @db.Uuid
+  created_at                                                                    DateTime                     @default(now()) @db.Timestamptz(6)
+  bank_account_bank_account_bank_institution_idTobank_institution               bank_account[]               @relation("bank_account_bank_institution_idTobank_institution")
+  bank_account_bank_account_correspondent_bank_institution_idTobank_institution bank_account[]               @relation("bank_account_correspondent_bank_institution_idTobank_institution")
+  bank_provisional_reference                                                    bank_provisional_reference[]
+  bank_branch                                                                   bank_branch[]
+  bank_institution_version                                                      bank_institution_version[]
+
+  @@schema("shared")
+}
+
+model bank_institution_version {
+  release_id                   String                         @db.Uuid
+  institution_id               String                         @db.Uuid
+  name                         String
+  country_code                 String                         @db.Char(2)
+  institution_type             String
+  status                       String
+  effective_from               DateTime                       @db.Date
+  effective_until              DateTime?                      @db.Date
+  bank_branch_version          bank_branch_version[]
+  bank_directory_source_record bank_directory_source_record[]
+  bank_identifier              bank_identifier[]
+  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution             bank_institution               @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_release       bank_directory_release         @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, institution_id])
+  @@schema("shared")
+}
+
+model bank_account_usage {
+  tenant_id String @db.Uuid
+  bank_account_link_id String @db.Uuid
+  usage_scope String @default("selected_companies")
+  @@id([tenant_id, bank_account_link_id])
+  @@schema("master")
+}
+
+model bank_account_company_usage {
+  id String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tenant_id String @db.Uuid
+  bank_account_link_id String @db.Uuid
+  company_code_id String @db.Uuid
+  purpose String @default("default")
+  effective_from DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  effective_until DateTime? @db.Date
+  is_primary Boolean @default(false)
+  accepted_at DateTime? @db.Timestamptz(6)
+  accepted_by String? @db.Uuid
+  source_tenant_id String? @db.Uuid
+  source_account_id String? @db.Uuid
+  accepted_disclosure_id String? @db.Uuid
+  accepted_disclosure_version Int?
+  accepted_account_fingerprint String?
+  @@schema("master")
 }

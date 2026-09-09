@@ -1,3 +1,4 @@
+import { readAtlasBusinessContext } from "./business-context.js";
 import type {
   AtlasDataClass,
   AtlasPlaneAdmissionResolver,
@@ -133,6 +134,7 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
         userText: requiredText(body, "userText"),
         catalogPolicyRevision: requiredText(body, "catalogPolicyRevision"),
         ...(optionalText(body.agentCode) ? { agentCode: optionalText(body.agentCode)! } : {}),
+        ...(body.businessContext !== undefined ? { businessContext: readAtlasBusinessContext(body.businessContext) } : {}),
         ...(optionalText(body.attachmentContextId) ? { attachmentContextId: readUuid(body.attachmentContextId) } : {}),
         ...(body.attachmentIds !== undefined ? { attachmentIds: readUuidList(body.attachmentIds, 5) } : {}),
         signal: controller.signal,

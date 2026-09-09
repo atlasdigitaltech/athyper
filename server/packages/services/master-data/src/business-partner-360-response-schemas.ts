@@ -44,6 +44,451 @@ export const bp360ResponseSchemas = {
           {
             "type": "object",
             "properties": {
+              "relatedActions": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "operationKey": {
+                          "type": "string"
+                        },
+                        "href": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "operationKey",
+                        "href"
+                      ],
+                      "additionalProperties": true
+                    }
+                  }
+                ]
+              },
+              "related": {
+                "anyOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "schemaVersion": {
+                          "const": 1,
+                          "type": "number"
+                        },
+                        "key": {
+                          "type": "string"
+                        },
+                        "sectionKey": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "anyOf": [
+                            {
+                              "const": "address-link.v1",
+                              "type": "string"
+                            },
+                            {
+                              "const": "contact-person.v1",
+                              "type": "string"
+                            },
+                            {
+                              "const": "external-reference.v1",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "titleField": {
+                          "type": "string"
+                        },
+                        "titleLabel": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "emptyLabel": {
+                          "type": "string"
+                        },
+                        "compactEmptyLabel": {
+                          "type": "string"
+                        },
+                        "viewAllLabel": {
+                          "type": "string"
+                        },
+                        "scopeLabel": {
+                          "type": "string"
+                        },
+                        "collectionOrder": {
+                          "anyOf": [
+                            {
+                              "const": "newest-first",
+                              "type": "string"
+                            },
+                            {
+                              "const": "primary-first",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "emptyFields": {
+                          "anyOf": [
+                            {
+                              "const": "disclose",
+                              "type": "string"
+                            },
+                            {
+                              "const": "hide",
+                              "type": "string"
+                            }
+                          ]
+                        },
+                        "summary": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "layout": {
+                                  "anyOf": [
+                                    {
+                                      "const": "contact-summary",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "postal-summary",
+                                      "type": "string"
+                                    }
+                                  ]
+                                },
+                                "fields": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "copyLabel": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "layout",
+                                "fields",
+                                "copyLabel"
+                              ],
+                              "additionalProperties": true
+                            }
+                          ]
+                        },
+                        "detail": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "layout": {
+                                  "anyOf": [
+                                    {
+                                      "const": "contact-detail",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "postal-detail",
+                                      "type": "string"
+                                    },
+                                    {
+                                      "const": "reference-detail",
+                                      "type": "string"
+                                    }
+                                  ]
+                                },
+                                "headerFields": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "copyLabel": {
+                                  "type": "string"
+                                },
+                                "additionalFieldsLabel": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "layout",
+                                "headerFields",
+                                "copyLabel",
+                                "additionalFieldsLabel"
+                              ],
+                              "additionalProperties": true
+                            }
+                          ]
+                        },
+                        "groups": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "compact": {
+                                "type": "boolean"
+                              },
+                              "collapsed": {
+                                "type": "boolean"
+                              },
+                              "renderer": {
+                                "anyOf": [
+                                  {
+                                    "const": "channels",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "const": "fields",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "const": "postal-address",
+                                    "type": "string"
+                                  },
+                                  {
+                                    "const": "timeline",
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "fields": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "key": {
+                                      "type": "string"
+                                    },
+                                    "field": {
+                                      "type": "string"
+                                    },
+                                    "label": {
+                                      "type": "string"
+                                    },
+                                    "renderer": {
+                                      "anyOf": [
+                                        {
+                                          "const": "badge",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "boolean",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "country",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "date",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "datetime",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "lookup",
+                                          "type": "string"
+                                        },
+                                        {
+                                          "const": "text",
+                                          "type": "string"
+                                        }
+                                      ]
+                                    },
+                                    "lookup": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {
+                                            "scopeField": {
+                                              "type": "string"
+                                            },
+                                            "values": {
+                                              "type": "object",
+                                              "properties": {},
+                                              "additionalProperties": {
+                                                "type": "object",
+                                                "properties": {},
+                                                "additionalProperties": {
+                                                  "type": "string"
+                                                }
+                                              }
+                                            }
+                                          },
+                                          "required": [
+                                            "scopeField",
+                                            "values"
+                                          ],
+                                          "additionalProperties": true
+                                        }
+                                      ]
+                                    },
+                                    "values": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "properties": {},
+                                          "additionalProperties": {
+                                            "type": "object",
+                                            "properties": {
+                                              "label": {
+                                                "type": "string"
+                                              },
+                                              "tone": {
+                                                "anyOf": [
+                                                  {
+                                                    "const": "danger",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "const": "neutral",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "const": "success",
+                                                    "type": "string"
+                                                  },
+                                                  {
+                                                    "const": "warning",
+                                                    "type": "string"
+                                                  }
+                                                ]
+                                              }
+                                            },
+                                            "required": [
+                                              "label"
+                                            ],
+                                            "additionalProperties": true
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "key",
+                                    "field",
+                                    "label",
+                                    "renderer"
+                                  ],
+                                  "additionalProperties": true
+                                }
+                              },
+                              "detail": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "placement": {
+                                        "anyOf": [
+                                          {
+                                            "const": "aside",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "const": "footer",
+                                            "type": "string"
+                                          },
+                                          {
+                                            "const": "main",
+                                            "type": "string"
+                                          }
+                                        ]
+                                      },
+                                      "showLabel": {
+                                        "type": "boolean"
+                                      },
+                                      "omitFields": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "columnWeights": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "number"
+                                        }
+                                      }
+                                    },
+                                    "required": [
+                                      "placement",
+                                      "showLabel",
+                                      "omitFields",
+                                      "columnWeights"
+                                    ],
+                                    "additionalProperties": true
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "compact",
+                              "collapsed",
+                              "renderer",
+                              "fields"
+                            ],
+                            "additionalProperties": true
+                          }
+                        },
+                        "actions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "operationKey": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "operationKey"
+                            ],
+                            "additionalProperties": true
+                          }
+                        }
+                      },
+                      "required": [
+                        "schemaVersion",
+                        "key",
+                        "sectionKey",
+                        "source",
+                        "titleField",
+                        "emptyLabel",
+                        "compactEmptyLabel",
+                        "viewAllLabel",
+                        "scopeLabel",
+                        "emptyFields",
+                        "groups",
+                        "actions"
+                      ],
+                      "additionalProperties": true
+                    }
+                  }
+                ]
+              },
               "panel": {
                 "anyOf": [
                   {
@@ -301,6 +746,13 @@ export const bp360ResponseSchemas = {
                         },
                         {
                           "const": "overflow",
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "scopePrompt": {
+                      "anyOf": [
+                        {
                           "type": "string"
                         }
                       ]
@@ -744,6 +1196,13 @@ export const bp360ResponseSchemas = {
             "items": {
               "type": "object",
               "properties": {
+                "label": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
                 "code": {
                   "type": "string"
                 },
@@ -942,6 +1401,13 @@ export const bp360ResponseSchemas = {
             "items": {
               "type": "object",
               "properties": {
+                "label": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    }
+                  ]
+                },
                 "code": {
                   "type": "string"
                 },

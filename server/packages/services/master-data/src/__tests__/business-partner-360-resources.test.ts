@@ -130,7 +130,7 @@ it("redacts qualification controls and document links for a certificate-only rea
     readCommercialControlSection: async () => ({state:"ready",provenance:[],data:{qualifications:[{id:"decision"}],preferences:[{id:"preference"}],blocks:[{id:"block"}],commodityCapabilities:[{id:"capability"}],certifications:[{id:"certificate",name:"ISO 9001",attachment:{attachmentId:"document"}}]}}),
   } as unknown as BusinessPartner360Repository<object>;
   const service=createBusinessPartner360Service({repository,transactions:{async run(_plane,_actor,work){return work({});}},definitions:{async resolve(){throw new Error("No definition");}},authorizer:{async authorize(query){return [P.record,P.certificate].includes(query.permissionCode as never)?{allowed:true}:{allowed:false,reason:"denied_by_grant"};}}});
-  const result=await service.section({context:{planeKey:"neon",tenantId:"tenant",principalId:"reader"} as never,businessPartnerId:"partner",sectionCode:"qualifications-certificates"});
+  const result=await service.section({context:{planeKey:"neon",tenantId:"tenant",principalId:"reader",permissions:{allowed:[P.record,P.certificate],authorizationScopes:[]}} as never,businessPartnerId:"partner",sectionCode:"qualifications-certificates"});
   expect(result.data).toMatchObject({qualifications:[],preferences:[],blocks:[],commodityCapabilities:[],certifications:[{id:"certificate",name:"ISO 9001"}]});
   expect(JSON.stringify(result.data)).not.toContain("attachmentId");
 });

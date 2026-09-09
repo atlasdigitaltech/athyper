@@ -4,7 +4,7 @@ import { EntityRecordHeader } from "./record-header";
 import { useEffect, useState, type FormEvent } from "react";
 import type { EntityDetailDescriptorV1, EntityFormDescriptorV1, EntityRecordV1, EntitySurfaceFieldV1 } from "@athyper/contract-platform-entity-runtime";
 import { entityDescriptorClient } from "@athyper/platform-entity-descriptor-client";
-import { PageFrame, PageHeader, useRecordPage } from "@athyper/platform-shell";
+import { PageFrame, PageHeader, useRecordPage, useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
 import { useApiClient, useSessionIdentity } from "@athyper/platform-shell-app-foundation";
 import { Button, Card, Checkbox, Input, Label, Select } from "@athyper/platform-ui";
 
@@ -12,6 +12,7 @@ export function EntityFormRuntime({ entityCode, recordId, onCommitted }: { reado
   const client = useApiClient(), mode = recordId ? "edit" : "create";
   const [descriptor, setDescriptor] = useState<EntityFormDescriptorV1>(), [record, setRecord] = useState<EntityRecordV1>(), [values, setValues] = useState<Record<string, unknown>>({}), [status, setStatus] = useState("Loading published metadata…"), [saving, setSaving] = useState(false);
   useEffect(() => { let active = true; setStatus("Loading published metadata…"); Promise.all([entityDescriptorClient.form(client, entityCode, mode), recordId ? entityDescriptorClient.record(client, entityCode, recordId) : Promise.resolve(undefined)]).then(([nextDescriptor, nextRecord]) => { if (!active) return; setDescriptor(nextDescriptor); setRecord(nextRecord); setValues(nextRecord ? Object.fromEntries(nextDescriptor.fields.map((field) => [field.key, nextRecord.values[field.key] ?? ""])) : {}); setStatus(""); }).catch((error) => active && setStatus(safeError(error))); return () => { active = false; }; }, [client, entityCode, mode, recordId]);
+  useAtlasBusinessContextPublisher(recordId ? {kind:"record",entityCode,recordId,dirty:record?.id===recordId && !!descriptor && descriptor.fields.some(field=>JSON.stringify(values[field.key]??"")!==JSON.stringify(record.values[field.key]??"")),savedRevision:record?.id!==recordId||record?.version===undefined?undefined:String(record.version)}:undefined);
   const submit = async (event: FormEvent) => { event.preventDefault(); if (!descriptor) return; setSaving(true); setStatus(""); try { const input = Object.fromEntries(descriptor.fields.filter((field) => !field.readOnly).flatMap((field) => values[field.key] === "" && !field.required ? [] : [[field.key, normalize(values[field.key], field)]])); const key = `entity-${mode}-${crypto.randomUUID()}`; const receipt = recordId ? await entityDescriptorClient.patch(client, entityCode, recordId, input, record?.version ?? 0, key) : await entityDescriptorClient.create(client, entityCode, input, key); setStatus(`${descriptor.entity.label} saved.`); onCommitted?.(receipt.recordId); } catch (error) { setStatus(safeError(error)); } finally { setSaving(false); } };
   if (!descriptor) return <PageFrame><PageHeader level="collection" context="Published metadata" title={humanize(entityCode)}/><Card><p role="status">{status}</p></Card></PageFrame>;
   return <PageFrame><PageHeader level="collection" context={`${descriptor.entity.label} · ${mode === "create" ? "Create" : "Edit"}`} title={descriptor.title} description={descriptor.description} metadata={<span>Release {descriptor.revision.release}</span>}/><form onSubmit={submit}><Card>{descriptor.fields.map((field) => <Field key={field.key} field={field} value={values[field.key]} onChange={(value) => setValues((current) => ({ ...current, [field.key]: value }))}/>)}</Card><div><Button type="submit" loading={saving}>{descriptor.submit.label}</Button></div><p role="status">{status}</p></form></PageFrame>;
@@ -30,6 +31,7 @@ export function EntityDetailRuntime({ entityCode, recordId, editHref }: { readon
       .catch(error => { if (active) setStatus(safeError(error)); });
     return () => { active = false; };
   }, [client, entityCode, recordId, key]);
+  useAtlasBusinessContextPublisher({kind:"record",entityCode,recordId,section:activeSection,dirty:false,savedRevision:loaded?.key===key&&loaded.record.version!==undefined?String(loaded.record.version):undefined});
   if (!loaded || loaded.key !== key) return <PageFrame><PageHeader level="collection" title={humanize(entityCode)}/><Card><p role="status">{status}</p></Card></PageFrame>;
   const { descriptor, record } = loaded;
   const presentation = descriptor.presentation ?? parseEntityRecordPresentation({ schemaVersion: 1, titleField: descriptor.titleField, sections: [{ key: "overview", label: "Overview", fields: descriptor.fields.map(field => field.key) }], actions: [{ key: "edit", label: "Edit", operationKey: "patch", placement: "primary" }] });
@@ -55,3 +57,5 @@ function safeError(error: unknown): string { return error instanceof Error && er
 export { EntityRecordHeader } from "./record-header";
 
 export { EntityRecord360Panel, type Record360Section } from "./record-360-panel";
+
+export { RelatedRecord, RelatedSectionError, PostalAddress, AddressSummary, ContactSummary, postalAddressLines, detailValue, safeChannelHref } from "./related-record";

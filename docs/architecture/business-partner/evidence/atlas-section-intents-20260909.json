@@ -1,0 +1,15 @@
+{
+  "package": "BP-AI-04",
+  "image": "athyper-runtime-server:atlas-section-intents-rebased-20260909",
+  "health": "healthy",
+  "aiTests": 270,
+  "focusedOwnerTests": 14,
+  "deployedSyntheticChecks": [
+    "named non-match",
+    "partial coverage",
+    "unavailable reader"
+  ],
+  "browserQualification": "pending",
+  "filterBoundary": "registered name fields; unsupported predicates explicitly declined",
+  "deploymentNote": "Rebased onto concurrent bp-primary-sort image after detecting replacement of intent modules."
+}

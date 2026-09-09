@@ -234,6 +234,7 @@ export interface BusinessPartner360GovernedAction {
 }
 
 export interface BusinessPartner360RequirementResult {
+  readonly label?: string;
   readonly code: string;
   readonly fieldCode: string;
   readonly sectionCode: BusinessPartner360SectionCode;
@@ -327,7 +328,7 @@ export const BUSINESS_PARTNER_360_SECTION_DEFINITIONS: readonly BusinessPartner3
   definition("roles-scope", [route("roles")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.record),
   definition("supplier-company", [route("company-configuration")], ["organization"], ["supplier"], false, BUSINESS_PARTNER_360_PERMISSIONS.record),
   definition("customer-company", [route("company-configuration")], ["organization"], ["customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.record),
-  definition("banking", [route("banking")], ["organization"], ["supplier"], false, BUSINESS_PARTNER_360_PERMISSIONS.bankMasked, [BUSINESS_PARTNER_360_PERMISSIONS.bankReveal]),
+  definition("banking", [route("banking")], ["organization"], ["supplier"], true, BUSINESS_PARTNER_360_PERMISSIONS.bankMasked, [BUSINESS_PARTNER_360_PERMISSIONS.bankReveal]),
   definition("qualifications-certificates", [route("qualifications"), route("certificates")], ["organization"], allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.qualification, [BUSINESS_PARTNER_360_PERMISSIONS.certificate, BUSINESS_PARTNER_360_PERMISSIONS.attachment]),
   definition("credit", [route("credit")], ["organization"], ["customer"], false, BUSINESS_PARTNER_360_PERMISSIONS.credit),
   definition("requests", [route("requests")], allCategories, allRoles, true, BUSINESS_PARTNER_360_PERMISSIONS.request),

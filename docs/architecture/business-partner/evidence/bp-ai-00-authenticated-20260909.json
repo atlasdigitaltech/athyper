@@ -1,0 +1,291 @@
+{
+  "schema": "bp-ai-authenticated-baseline/1",
+  "capturedAt": "2026-09-08T16:38:31.428Z",
+  "status": "passed",
+  "stage": "complete",
+  "samples": [
+    {
+      "firstTextMs": 1824,
+      "totalMs": 4596,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1761,
+      "totalMs": 4587,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1881,
+      "totalMs": 4726,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1756,
+      "totalMs": 3821,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1768,
+      "totalMs": 4695,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1901,
+      "totalMs": 4552,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1782,
+      "totalMs": 4889,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1853,
+      "totalMs": 3719,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1775,
+      "totalMs": 3668,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1851,
+      "totalMs": 4657,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1784,
+      "totalMs": 4579,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1854,
+      "totalMs": 4692,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1765,
+      "totalMs": 4558,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1838,
+      "totalMs": 3914,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1781,
+      "totalMs": 4443,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1764,
+      "totalMs": 4558,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1775,
+      "totalMs": 4739,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1842,
+      "totalMs": 4584,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1867,
+      "totalMs": 4867,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "firstTextMs": 1933,
+      "totalMs": 4893,
+      "citationCount": 1,
+      "revisionKind": "content_hash",
+      "descriptorHashes": [
+        "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+      ],
+      "promptRevision": "atlas-local-chat-v2",
+      "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    }
+  ],
+  "warmup": {
+    "firstTextMs": 2014,
+    "totalMs": 4893,
+    "citationCount": 1,
+    "revisionKind": "content_hash",
+    "descriptorHashes": [
+      "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41"
+    ],
+    "promptRevision": "atlas-local-chat-v2",
+    "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "policyRevision": "atlas-local-v2:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+  },
+  "timing": {
+    "measuredRuns": 20,
+    "firstTextMedianMs": 1784,
+    "firstTextP95Ms": 1901,
+    "totalMedianMs": 4584,
+    "totalP95Ms": 4889
+  },
+  "measurementScope": "Authenticated browser fetch through BFF, including Atlas tools; excludes UI composer/render timing and authorization-persona qualification.",
+  "verifiedAt": "2026-09-08T16:41:47.506146+00:00",
+  "regression": {
+    "status": "passed",
+    "atlasTests": 54,
+    "caseTests": 37,
+    "publicationTests": 3,
+    "typecheck": "passed"
+  },
+  "browserUi": {
+    "status": "passed",
+    "httpStatus": 200,
+    "visibleAssistantResponse": true,
+    "citationKind": "content_hash",
+    "citationMatchesFixture": true
+  },
+  "metadataResolution": {
+    "sharedRelease": 17,
+    "tenantSpecificRelease": 9,
+    "tenantSpecificPrecedence": true,
+    "descriptorHash": "e6bbd051a61c06f5536e25a884429230006ae9a77ad45388ef3f2ffe1e846c41",
+    "publishedVersionField": null
+  },
+  "validatorTests": 7
+}

@@ -23,14 +23,12 @@ export const BUSINESS_PARTNER_360_PANEL = parseRecord360Panel({
     "governance",
     "banking",
     "qualifications-certificates",
-    "roles-scope",
-    "supplier-company",
-    "customer-company",
     "credit",
     "network",
   ],
   tabs: [
     { key: "360", label: "360 View", provider: "360" },
+    { key: "roles", label: "Roles & scope", provider: "section", sectionKey: "roles-scope" },
     {
       key: "requests",
       label: "Requests",
@@ -89,8 +87,8 @@ export const businessPartnerRecordPresentation = parseEntityRecordPresentation({
     ["identifiers-tax", "Identifiers & tax"],
     ["governance", "Governance & ownership"],
     ["roles-scope", "Roles & scope"],
-    ["supplier-company", "Procurement & AP"],
-    ["customer-company", "Sales & AR"],
+    ["supplier-company", "Buying & Payables"],
+    ["customer-company", "Selling & Receivables"],
     ["banking", "Banking"],
     ["qualifications-certificates", "Qualifications & certificates"],
     ["credit", "Credit review"],
@@ -174,6 +172,11 @@ export function businessPartnerRecordHeader(
   );
   return {
     ...header,
+    relatedActions: summary.completeness.readOnly ? [] : Object.entries(authorizedActions).flatMap(([operationKey, action]) => action?.href ? [{ operationKey, href: action.href }] : []),
+    related: presentation.related?.filter(profile => summary.sections.some(section => section.code === profile.sectionKey && section.authorization === "granted")).map(profile => ({
+      ...profile,
+      actions: summary.completeness.readOnly ? [] : profile.actions.filter(action => Boolean(authorizedActions[action.operationKey])),
+    })),
     panel: presentation.panel ?? BUSINESS_PARTNER_360_PANEL,
     badges: [
       ...summary.roles.map((role) => ({
@@ -202,7 +205,8 @@ export function businessPartnerRecordHeader(
           key: section.code,
           label: published?.label ?? fallback?.label ?? section.code,
           placement: published?.placement ?? "overflow",
-          ...(section.authorization === "granted" && section.count !== undefined
+          ...(published?.scopePrompt ? { scopePrompt: published.scopePrompt } : {}),
+          ...(section.authorization === "granted" && section.reasonCode !== "BP_360_SCOPE_REQUIRED" && section.count !== undefined
             ? { count: section.count }
             : {}),
         };

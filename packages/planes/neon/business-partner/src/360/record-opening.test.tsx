@@ -3,7 +3,7 @@ import React, { act } from "react";
 import { createRoot } from "react-dom/client";
 import { expect, it, vi } from "vitest";
 const request = vi.hoisted(() => vi.fn(() => new Promise(() => {})));
-vi.mock("@athyper/platform-shell", () => ({useRecordPage:()=>{}, PageHeader:()=>null}));
+vi.mock("@athyper/platform-shell", () => ({useRecordPage:()=>{}, useAtlasBusinessContextPublisher:()=>{}, PageHeader:()=>null}));
 vi.mock("@athyper/platform-shell-app-foundation", () => ({useApiClient:()=>({request}), useSessionIdentity:()=>({scope:{tenantId:"tenant",principalId:"user",authEpoch:3}})}));
 vi.mock("@athyper/product-neon-shell", () => ({
   useNeonWorkContext:()=>{throw new Error("Record opening must not inherit shell company");},

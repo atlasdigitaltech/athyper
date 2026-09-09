@@ -1,5 +1,6 @@
+import { parseEntityAiDescriptor } from "@athyper/server-contract-metadata";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
-import { parseEntityRecordPresentation, validateRecordPresentationReferences } from "@athyper/contract-platform-entity-runtime";
+import { parseEntityRecordPresentation, validateRecordPresentationReferences, validateRelatedPresentationOwner } from "@athyper/contract-platform-entity-runtime";
 import { parseCollectionRelationship } from "@athyper/server-contract-metadata";
 import { parsePublishedListExperience } from "@athyper/contract-platform-entity-list";
 import { entityFieldFilterOperators, type EntityFieldDescriptor, type EntityListFilterOperator, type EntityListPresentationDescriptor, type EntityPolicyBindingDescriptor, type EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
@@ -36,6 +37,14 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   }
   const recordPresentation = value["recordPresentation"] === undefined ? undefined : parseEntityRecordPresentation(value["recordPresentation"]);
   if (recordPresentation) validateRecordPresentationReferences(recordPresentation, fields.map(field => field.key), Object.keys(operations));
+  if (recordPresentation?.related) validateRelatedPresentationOwner(recordPresentation.related, row.entity_code);
+  const collectionRelationship = value["collectionRelationship"] === undefined ? undefined : parseCollectionRelationship(value["collectionRelationship"], {schema:String(storage["schema"]),object:String(storage["object"]),idField:String(storage["idField"]),tenantField:storage["tenantField"] as string|undefined});
+  const ai = value["ai"] === undefined ? undefined : parseEntityAiDescriptor(value["ai"], {
+    entityCode: row.entity_code, planeKey,
+    fields: fields.map(field => ({ key: field.key, searchable: field.searchable === true, reference: field.type === "reference" })),
+    operationKeys: Object.keys(operations),
+    ...(collectionRelationship ? { collectionSourceRef: collectionRelationship.sourceRef } : {}),
+  });
   const lifecycleValue = value["lifecycle"] === undefined ? undefined : object(value["lifecycle"], "lifecycle");
   const releaseNo = Number(row.release_no);
   if (!Number.isSafeInteger(releaseNo) || releaseNo < 1) throw new Error("Invalid descriptor release number");
@@ -57,9 +66,10 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
       ...(storage["statusField"] ? { statusField: identifier(storage["statusField"], "storage.statusField") } : {}),
     },
     fields,
+    ...(ai ? { ai } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
     ...(value["directoryScope"] === undefined ? {} : { directoryScope: parseEntityDirectoryScope(value["directoryScope"]) }),
-    ...(value["collectionRelationship"] === undefined ? {} : {collectionRelationship:parseCollectionRelationship(value["collectionRelationship"], {schema:String(storage["schema"]),object:String(storage["object"]),idField:String(storage["idField"]),tenantField:storage["tenantField"] as string|undefined})}),
+    ...(collectionRelationship ? { collectionRelationship } : {}),
     operations,
     ...(lifecycleValue ? { lifecycle: { transitions: array(lifecycleValue["transitions"], "lifecycle.transitions").map((raw) => {
       const item = object(raw, "transition");

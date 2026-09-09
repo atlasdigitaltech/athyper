@@ -37,6 +37,8 @@ planes/mesh/control/02_domains.sql
 planes/mesh/mesh/02_domains.sql
 planes/mesh/document/02_domains.sql
 common/shared/03_tables.sql
+common/shared/03_bank_directory.sql
+common/shared/04_bank_directory_views.sql
 common/master/03_platform_tables.sql
 planes/mesh/master/03_tables.sql
 common/snapshot/03_tables.sql
@@ -97,6 +99,7 @@ common/governance/06_indexes.sql
 common/document/06_indexes.sql
 common/ai/06_indexes.sql
 common/shared/07_functions.sql
+common/shared/07_bank_directory.sql
 planes/mesh/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
@@ -211,4 +214,5 @@ planes/mesh/mesh/12_partner_profile_reference_seed.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
+planes/mesh/mesh/15_bank_disclosure_source.sql
 common/shared/99_security_definer_hardening.sql

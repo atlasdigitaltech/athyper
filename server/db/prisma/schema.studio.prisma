@@ -6477,6 +6477,8 @@ model principal {
   @@unique([tenant_id, id], map: "principal_tenant_id_uq")
   @@index([tenant_id, status, principal_type], map: "principal_tenant_status_type_idx")
   @@schema("master")
+  bank_directory_review                                                                                  bank_directory_review[]
+  bank_directory_revision                                                                                bank_directory_revision[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -7075,6 +7077,8 @@ model tenant {
   @@index([realm_key, code], map: "tenant_active_lookup_idx", where: raw("(status = 'active'::text)"))
   @@index([subscription_plan_id], map: "tenant_subscription_plan_idx", where: raw("(subscription_plan_id IS NOT NULL)"))
   @@schema("master")
+  bank_directory_authority                                       bank_directory_authority[]
+  bank_directory_revision                                        bank_directory_revision[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -9550,6 +9554,7 @@ model release {
   @@unique([release_key, release_no], map: "publication_release_coordinate_uq")
   @@index([status, created_at(sort: Desc)], map: "publication_release_status_idx")
   @@schema("publication")
+  bank_directory_release_link                 bank_directory_release_link?
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -10052,6 +10057,9 @@ model country {
 
   @@index([code], map: "country_active_pidx", where: raw("((status)::text = 'active'::text)"))
   @@schema("shared")
+  bank_branch_version          bank_branch_version[]
+  bank_identifier              bank_identifier[]
+  bank_institution_version     bank_institution_version[]
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
@@ -11107,4 +11115,180 @@ model trustiam_projection_scope {
   @@unique([projection_id, scope_kind, target_id], map: "trustiam_projection_scope_coordinate_uq")
   @@map("projection_scope")
   @@schema("trustiam")
+}
+
+model bank_branch {
+  id                  String                @id @db.Uuid
+  institution_id      String                @db.Uuid
+  created_at          DateTime              @default(now()) @db.Timestamptz(6)
+  bank_institution    bank_institution      @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version bank_branch_version[]
+
+  @@unique([institution_id, id])
+  @@schema("shared")
+}
+
+model bank_branch_version {
+  release_id                   String                         @db.Uuid
+  branch_id                    String                         @db.Uuid
+  institution_id               String                         @db.Uuid
+  name                         String
+  country_code                 String                         @db.Char(2)
+  location                     Json
+  status                       String
+  effective_from               DateTime                       @db.Date
+  effective_until              DateTime?                      @db.Date
+  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch                  bank_branch                    @relation(fields: [institution_id, branch_id], references: [institution_id, id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version     bank_institution_version       @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_source_record bank_directory_source_record[]
+  bank_identifier              bank_identifier[]
+
+  @@id([release_id, branch_id])
+  @@unique([release_id, institution_id, branch_id])
+  @@schema("shared")
+}
+
+model bank_directory_activation {
+  singleton              Boolean                @id @default(true)
+  release_id             String                 @db.Uuid
+  activated_at           DateTime               @default(now()) @db.Timestamptz(6)
+  bank_directory_release bank_directory_release @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("shared")
+}
+
+model bank_directory_release {
+  id                           String                         @id @db.Uuid
+  version                      BigInt                         @unique
+  published_at                 DateTime                       @db.Timestamptz(6)
+  source_manifest              Json
+  payload                      Json
+  content_hash                 String
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  bank_directory_activation    bank_directory_activation[]
+  bank_directory_source_record bank_directory_source_record[]
+  bank_institution_version     bank_institution_version[]
+
+  @@schema("shared")
+}
+
+model bank_directory_source_record {
+  release_id               String                   @db.Uuid
+  source                   String
+  source_record_id         String
+  institution_id           String                   @db.Uuid
+  branch_id                String?                  @db.Uuid
+  bank_directory_release   bank_directory_release   @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, source, source_record_id])
+  @@schema("shared")
+}
+
+model bank_identifier {
+  release_id               String                   @db.Uuid
+  id                       String                   @db.Uuid
+  institution_id           String                   @db.Uuid
+  branch_id                String?                  @db.Uuid
+  scheme                   String
+  scheme_namespace         String
+  jurisdiction             String                   @db.Char(2)
+  value                    String
+  effective_from           DateTime                 @db.Date
+  effective_until          DateTime?                @db.Date
+  country                  country                  @relation(fields: [jurisdiction], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_branch_version      bank_branch_version?     @relation(fields: [release_id, institution_id, branch_id], references: [release_id, institution_id, branch_id], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution_version bank_institution_version @relation(fields: [release_id, institution_id], references: [release_id, institution_id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, id])
+  @@schema("shared")
+}
+
+model bank_institution {
+  id                       String                     @id @db.Uuid
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  bank_branch              bank_branch[]
+  bank_institution_version bank_institution_version[]
+
+  @@schema("shared")
+}
+
+model bank_institution_version {
+  release_id                   String                         @db.Uuid
+  institution_id               String                         @db.Uuid
+  name                         String
+  country_code                 String                         @db.Char(2)
+  institution_type             String
+  status                       String
+  effective_from               DateTime                       @db.Date
+  effective_until              DateTime?                      @db.Date
+  bank_branch_version          bank_branch_version[]
+  bank_directory_source_record bank_directory_source_record[]
+  bank_identifier              bank_identifier[]
+  country                      country                        @relation(fields: [country_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  bank_institution             bank_institution               @relation(fields: [institution_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_release       bank_directory_release         @relation(fields: [release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([release_id, institution_id])
+  @@schema("shared")
+}
+
+model bank_directory_authority {
+  singleton Boolean @id @default(true)
+  tenant_id String  @db.Uuid
+  tenant    tenant  @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("publication")
+}
+
+model bank_directory_release_link {
+  publication_release_id                                                                             String                  @id @db.Uuid
+  revision_id                                                                                        String                  @unique @db.Uuid
+  tenant_id                                                                                          String                  @db.Uuid
+  directory_release                                                                                  Json
+  release                                                                                            release                 @relation(fields: [publication_release_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_revision_bank_directory_release_link_revision_idTobank_directory_revision           bank_directory_revision @relation("bank_directory_release_link_revision_idTobank_directory_revision", fields: [revision_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_revision_bank_directory_release_link_tenant_id_revision_idTobank_directory_revision bank_directory_revision @relation("bank_directory_release_link_tenant_id_revision_idTobank_directory_revision", fields: [tenant_id, revision_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("publication")
+}
+
+model bank_directory_revision {
+  id                                                                                                     String                       @id @db.Uuid
+  tenant_id                                                                                              String                       @db.Uuid
+  base_release_id                                                                                        String?                      @db.Uuid
+  input_json                                                                                             Json
+  payload                                                                                                Json
+  sources                                                                                                Json
+  content_hash                                                                                           String
+  validation_report                                                                                      Json
+  idempotency_key                                                                                        String
+  created_at                                                                                             DateTime                     @default(now()) @db.Timestamptz(6)
+  created_by                                                                                             String                       @db.Uuid
+  bank_directory_release_link_bank_directory_release_link_revision_idTobank_directory_revision           bank_directory_release_link? @relation("bank_directory_release_link_revision_idTobank_directory_revision")
+  bank_directory_release_link_bank_directory_release_link_tenant_id_revision_idTobank_directory_revision bank_directory_release_link? @relation("bank_directory_release_link_tenant_id_revision_idTobank_directory_revision")
+  bank_directory_review_bank_directory_review_revision_idTobank_directory_revision                       bank_directory_review?       @relation("bank_directory_review_revision_idTobank_directory_revision")
+  bank_directory_review_bank_directory_review_tenant_id_revision_idTobank_directory_revision             bank_directory_review?       @relation("bank_directory_review_tenant_id_revision_idTobank_directory_revision")
+  principal                                                                                              principal                    @relation(fields: [tenant_id, created_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+  tenant                                                                                                 tenant                       @relation(fields: [tenant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([tenant_id, id])
+  @@unique([tenant_id, idempotency_key])
+  @@schema("snapshot")
+}
+
+model bank_directory_review {
+  revision_id                                                                                  String                  @id @db.Uuid
+  tenant_id                                                                                    String                  @db.Uuid
+  decision                                                                                     String
+  reason                                                                                       String
+  reviewed_by                                                                                  String                  @db.Uuid
+  reviewed_at                                                                                  DateTime                @default(now()) @db.Timestamptz(6)
+  bank_directory_revision_bank_directory_review_revision_idTobank_directory_revision           bank_directory_revision @relation("bank_directory_review_revision_idTobank_directory_revision", fields: [revision_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  principal                                                                                    principal               @relation(fields: [tenant_id, reviewed_by], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+  bank_directory_revision_bank_directory_review_tenant_id_revision_idTobank_directory_revision bank_directory_revision @relation("bank_directory_review_tenant_id_revision_idTobank_directory_revision", fields: [tenant_id, revision_id], references: [tenant_id, id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("publication")
 }

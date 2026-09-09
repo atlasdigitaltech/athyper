@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { ManagementNavigation } from "@athyper/platform-shell";
 import {
   resolveEntityText,
   type EffectiveEntitySectionV1,
@@ -9,7 +10,7 @@ import { useOptionalI18n } from "@athyper/platform-i18n/react";
 export function EntityNavigationSkeleton() {
   return (
     <div
-      className="athyper-section-nav a-entity-navigation a-entity-navigation--loading"
+      className="athyper-section-nav a-management-navigation a-entity-navigation--loading"
       aria-hidden="true"
     >
       {[0, 1, 2].map((key) => (
@@ -46,66 +47,5 @@ export function EntityNavigation({
         (href) => href.replace(/\/$/, "") === pathname,
       ),
     )?.surfaceKey;
-  const link = (section: EffectiveEntitySectionV1) => (
-    <a
-      key={section.key}
-      href={section.href}
-      onClick={(event) => {
-        if (
-          onNavigate &&
-          event.button === 0 &&
-          !event.metaKey &&
-          !event.ctrlKey &&
-          !event.shiftKey &&
-          !event.altKey
-        ) {
-          event.preventDefault();
-          onNavigate(section.href);
-        }
-      }}
-      aria-current={section.surfaceKey === current ? "page" : undefined}
-    >
-      {resolveEntityText(section.label, locale)}
-      {section.attentionCount !== undefined && section.attentionCount > 0 ? (
-        <span className="a-entity-navigation__count">
-          {section.attentionCount}
-        </span>
-      ) : null}
-    </a>
-  );
-  const overflow = sections.filter(
-    (section) => section.placement === "overflow",
-  );
-  const more = resolveEntityText(
-    { defaultLocale: "en", values: { en: "More", ms: "Lagi" } },
-    locale,
-  );
-  const label = resolveEntityText(
-    {
-      defaultLocale: "en",
-      values: { en: "Entity sections", ms: "Bahagian entiti" },
-    },
-    locale,
-  );
-  return (
-    <nav className="athyper-section-nav a-entity-navigation" aria-label={label}>
-      {sections.filter((section) => section.placement === "direct").map(link)}
-      {overflow.length ? (
-        <details className="a-entity-navigation__more">
-          <summary
-            className={
-              overflow.some((section) => section.surfaceKey === current)
-                ? "is-current"
-                : undefined
-            }
-          >
-            {more} <span aria-hidden="true">▾</span>
-          </summary>
-          <div className="a-entity-navigation__overflow">
-            {overflow.map(link)}
-          </div>
-        </details>
-      ) : null}
-    </nav>
-  );
+  return <ManagementNavigation label={resolveEntityText({defaultLocale:"en",values:{en:"Entity sections",ms:"Bahagian entiti"}},locale)} moreLabel={resolveEntityText({defaultLocale:"en",values:{en:"More",ms:"Lagi"}},locale)} items={sections.map(section=>({key:section.key,label:resolveEntityText(section.label,locale),href:section.href,count:section.attentionCount,overflow:section.placement==="overflow"}))} currentKey={sections.find(section=>section.surfaceKey===current)?.key} onNavigate={onNavigate}/>;
 }

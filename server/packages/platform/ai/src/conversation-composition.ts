@@ -1,3 +1,6 @@
+import { AtlasDurableMessageAuthorizer } from "./message-lineage.js";
+import { KyselyAtlasMessageLineageReader } from "./kysely-message-lineage.js";
+import type { AtlasThreadServiceOptions } from "./thread-service.js";
 import type {
   AtlasPlaneAdmissionResolver,
   AtlasThreadAuthorizer,
@@ -12,6 +15,7 @@ import { AtlasThreadService } from "./thread-service.js";
 /** Durable conversation access does not depend on an inference provider being configured. */
 export function createAtlasConversationServices(
   transactions: PlaneTransactionCoordinator<Transaction<Record<string, never>>>,
+  disclosure?: AtlasThreadServiceOptions["disclosure"],
 ) {
   const authorizer: AtlasThreadAuthorizer = {
     async authorize({ context, operation, thread }) {
@@ -91,6 +95,7 @@ export function createAtlasConversationServices(
   return {
     threads: new AtlasThreadService({
       repository,
+      disclosure: disclosure ?? new AtlasDurableMessageAuthorizer({ reader: new KyselyAtlasMessageLineageReader(transactions) }),
       authorizer,
       retention,
       maxHistoryMessages: 20,

@@ -51,7 +51,12 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
       const minimumQueryLength = descriptor.listPresentation?.search?.minimumQueryLength ?? 1;
       if (query.search && query.search.trim().length < minimumQueryLength) throw new RecordServiceError(400, "SEARCH_TOO_SHORT", `Record search must contain at least ${minimumQueryLength} characters`);
       if (query.hydrateReferences) throw new RecordServiceError(409, "REFERENCE_HYDRATION_UNAVAILABLE", "Reference hydration is not available for this list endpoint");
-      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.list({ descriptor, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.viewRelationships?{viewRelationships:query.viewRelationships}:{}), ...(query.recordIds !== undefined ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) }, transaction));
+      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.list({ descriptor: {
+        ...descriptor,
+        // Both SQL and in-memory repositories derive search predicates from this
+        // descriptor. Hidden fields must not influence matches or exact counts.
+        fields: descriptor.fields.map(field => field.searchable && !readableKeys.has(field.key) ? { ...field, searchable: false } : field),
+      }, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.viewRelationships?{viewRelationships:query.viewRelationships}:{}), ...(query.recordIds !== undefined ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) }, transaction));
       const result = restrictResponseProjection(repositoryResult, descriptor, responseFields);
       return Object.freeze({ descriptor, collectionScope, authorization, readableFields, responseFields, result });
     },

@@ -1824,26 +1824,6 @@ COMMENT ON FUNCTION master.fn_refresh_mv_cpa() IS
 -- Neon operational-banking guards and commands
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION master.trg_normalize_bank_party()
-RETURNS trigger
-LANGUAGE plpgsql
-SET search_path = pg_catalog
-AS $$
-BEGIN
-    NEW.code := lower(btrim(NEW.code));
-    NEW.name := btrim(NEW.name);
-    NEW.country_code := upper(btrim(NEW.country_code::text));
-    NEW.bic := nullif(upper(regexp_replace(NEW.bic, '\s+', '', 'g')), '');
-    NEW.national_bank_code_type :=
-        nullif(lower(btrim(NEW.national_bank_code_type)), '');
-    NEW.national_bank_code :=
-        nullif(upper(regexp_replace(NEW.national_bank_code, '\s+', '', 'g')), '');
-    NEW.branch_code :=
-        nullif(upper(regexp_replace(NEW.branch_code, '\s+', '', 'g')), '');
-    NEW.branch_name := nullif(btrim(NEW.branch_name), '');
-    RETURN NEW;
-END;
-$$;
 
 CREATE OR REPLACE FUNCTION master.trg_normalize_bank_account()
 RETURNS trigger
@@ -1891,15 +1871,15 @@ BEGIN
                AND link.bank_account_id = OLD.id
         )
     ) AND ROW(
-        NEW.bank_party_id, NEW.account_holder_name, NEW.account_id_type,
+        NEW.bank_institution_id, NEW.bank_branch_id, NEW.provisional_bank_reference_id, NEW.account_holder_name, NEW.account_id_type,
         NEW.account_id_value, NEW.currency_code, NEW.bank_country_override,
         NEW.account_nature, NEW.provider_account_ref,
-        NEW.correspondent_bank_party_id
+        NEW.correspondent_bank_institution_id
     ) IS DISTINCT FROM ROW(
-        OLD.bank_party_id, OLD.account_holder_name, OLD.account_id_type,
+        OLD.bank_institution_id, OLD.bank_branch_id, OLD.provisional_bank_reference_id, OLD.account_holder_name, OLD.account_id_type,
         OLD.account_id_value, OLD.currency_code, OLD.bank_country_override,
         OLD.account_nature, OLD.provider_account_ref,
-        OLD.correspondent_bank_party_id
+        OLD.correspondent_bank_institution_id
     ) THEN
         RAISE EXCEPTION
             'Verified or linked bank-account coordinates are immutable; create a replacement account'
@@ -5827,4 +5807,20 @@ BEGIN
   status_changed_at=clock_timestamp(),status_changed_by=p_actor_id,updated_by=p_actor_id WHERE id=execution;
  RETURN QUERY SELECT p_case_id,bp_id,new_role_id,new_qualification_id,new_preference_id,result_snapshot,
   next_version,'materialized',false,outbox,verification_id;
+END $$;
+
+CREATE FUNCTION master.trg_register_provisional_bank() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,master AS $$
+DECLARE p master.bank_provisional_reference;
+BEGIN
+ IF NEW.bank_institution_id IS NULL THEN
+  IF NEW.provisional_bank_reference_id IS NULL THEN
+   INSERT INTO master.bank_provisional_reference(tenant_id,submitted_name,submitted_country,submitted_bic)
+   VALUES(NEW.tenant_id,NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override)
+   RETURNING id INTO NEW.provisional_bank_reference_id;
+  ELSE
+   SELECT * INTO p FROM master.bank_provisional_reference WHERE tenant_id=NEW.tenant_id AND id=NEW.provisional_bank_reference_id;
+   IF NOT FOUND OR ROW(p.submitted_name,p.submitted_country,p.submitted_bic) IS DISTINCT FROM ROW(NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override) THEN RAISE EXCEPTION 'Provisional bank reference does not match submitted details'; END IF;
+  END IF;
+ END IF;
+ RETURN NEW;
 END $$;

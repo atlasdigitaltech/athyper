@@ -256,6 +256,9 @@ importers:
       '@athyper/platform-communications-notifications-client':
         specifier: workspace:*
         version: link:../../packages/platform/communications/notifications-client
+      '@athyper/platform-entity-list-view':
+        specifier: workspace:*
+        version: link:../../packages/platform/entity/runtime/list-view
       '@athyper/platform-gateway-bff-relay':
         specifier: workspace:*
         version: link:../../packages/platform/gateway/bff-relay
@@ -517,10 +520,6 @@ importers:
         version: 6.0.3
 
   packages/contracts/platform/auth-session:
-    dependencies:
-      '@athyper/platform-temporal':
-        specifier: workspace:*
-        version: link:../../../platform/foundation/temporal
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -690,12 +689,21 @@ importers:
       '@athyper/config':
         specifier: workspace:*
         version: link:../../../../tooling/config
+      '@types/jsdom':
+        specifier: 21.1.7
+        version: 21.1.7
+      '@types/node':
+        specifier: 25.6.0
+        version: 25.6.0
       '@types/react':
         specifier: ^19.2.14
         version: 19.2.14
       '@types/react-dom':
         specifier: ^19.2.3
         version: 19.2.3(@types/react@19.2.14)
+      jsdom:
+        specifier: 25.0.1
+        version: 25.0.1
       react:
         specifier: ^19.2.5
         version: 19.2.8
@@ -838,9 +846,21 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../../platform/foundation/api-client
+      '@athyper/platform-entity-list-view':
+        specifier: workspace:*
+        version: link:../../../platform/entity/runtime/list-view
+      '@athyper/platform-icons':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/icons
+      '@athyper/platform-shell':
+        specifier: workspace:*
+        version: link:../../../platform/shell/shell
       '@athyper/platform-shell-app-foundation':
         specifier: workspace:*
         version: link:../../../platform/shell/app-foundation
+      '@athyper/platform-ui':
+        specifier: workspace:*
+        version: link:../../../platform/foundation/ui
     devDependencies:
       '@athyper/config':
         specifier: workspace:*
@@ -903,6 +923,9 @@ importers:
       '@athyper/platform-api-client':
         specifier: workspace:*
         version: link:../../foundation/api-client
+      '@athyper/server-contract-ai':
+        specifier: workspace:*
+        version: link:../../../../server/packages/contracts/ai
     devDependencies:
       '@athyper/tsconfig':
         specifier: workspace:*
@@ -1018,6 +1041,9 @@ importers:
       '@athyper/platform-entity-descriptor-client':
         specifier: workspace:*
         version: link:../descriptor-client
+      '@athyper/platform-i18n':
+        specifier: workspace:*
+        version: link:../../../foundation/i18n
       '@athyper/platform-icons':
         specifier: workspace:*
         version: link:../../../foundation/icons
@@ -2674,6 +2700,9 @@ importers:
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      ibantools:
+        specifier: ^4.5.4
+        version: 4.5.4
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -2790,6 +2819,10 @@ importers:
         version: 4.1.4(@opentelemetry/api@1.9.1)(@types/node@25.6.0)(@vitest/coverage-v8@4.1.4)(jsdom@25.0.1)(vite@7.3.1(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.9.0))
 
   server/packages/contracts/publication:
+    dependencies:
+      '@athyper/server-contract-master-data':
+        specifier: workspace:*
+        version: link:../master-data
     devDependencies:
       '@types/node':
         specifier: ^25.6.0
@@ -2931,6 +2964,9 @@ importers:
       '@athyper/server-contract-jobs':
         specifier: workspace:*
         version: link:../../contracts/jobs
+      '@athyper/server-contract-master-data':
+        specifier: workspace:*
+        version: link:../../contracts/master-data
       '@athyper/server-contract-records':
         specifier: workspace:*
         version: link:../../contracts/records
@@ -4124,6 +4160,9 @@ importers:
       '@athyper/platform-temporal':
         specifier: workspace:*
         version: link:../../../../packages/platform/foundation/temporal
+      '@athyper/server-contract-ai':
+        specifier: workspace:*
+        version: link:../../contracts/ai
       '@athyper/server-contract-audit':
         specifier: workspace:*
         version: link:../../contracts/audit
@@ -6043,6 +6082,9 @@ packages:
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
 
+  '@types/jsdom@21.1.7':
+    resolution: {integrity: sha512-yOriVnggzrnQ3a9OKOCxaVuSug3w3/SbOj5i7VwXWZEyUNl3bLF9V3MfxGbZKuwqJOQyRfqXyROBB1CoZLFWzA==}
+
   '@types/memcached@2.2.10':
     resolution: {integrity: sha512-AM9smvZN55Gzs2wRrqeMHVP7KE8KWgCJO/XL5yCly2xF6EKa4YlbpK+cLSAH4NG/Ah64HrlegmGqW8kYws7Vxg==}
 
@@ -6095,6 +6137,9 @@ packages:
 
   '@types/tedious@4.0.14':
     resolution: {integrity: sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw==}
+
+  '@types/tough-cookie@4.0.5':
+    resolution: {integrity: sha512-/Ad8+nIOV7Rl++6f1BdKxFSMgmoqEoYbHRpPcx3JEfv8VRsQe9Z4mCXeJBzxs7mbHY/XOZZuXlRNfhpVPbs6ZA==}
 
   '@types/web-push@3.6.4':
     resolution: {integrity: sha512-GnJmSr40H3RAnj0s34FNTcJi1hmWFV5KXugE0mYWnYhgTAHLJ/dJKAwDmvPJYMke0RplY2XE9LnM4hqSqKIjhQ==}
@@ -6792,6 +6837,9 @@ packages:
   https-proxy-agent@7.0.6:
     resolution: {integrity: sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==}
     engines: {node: '>= 14'}
+
+  ibantools@4.5.4:
+    resolution: {integrity: sha512-6jX1gh4aH6XH+o0ey+wtkMTzkcvsEta7DakIOZSng9voZYpMw3U+gK1+tZChk3aRcPcloEt0NOzksjaRZiqXbw==}
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -9970,6 +10018,12 @@ snapshots:
 
   '@types/http-errors@2.0.5': {}
 
+  '@types/jsdom@21.1.7':
+    dependencies:
+      '@types/node': 25.6.0
+      '@types/tough-cookie': 4.0.5
+      parse5: 7.3.0
+
   '@types/memcached@2.2.10':
     dependencies:
       '@types/node': 25.6.0
@@ -10036,6 +10090,8 @@ snapshots:
   '@types/tedious@4.0.14':
     dependencies:
       '@types/node': 25.6.0
+
+  '@types/tough-cookie@4.0.5': {}
 
   '@types/web-push@3.6.4':
     dependencies:
@@ -10812,6 +10868,8 @@ snapshots:
       debug: 4.4.3
     transitivePeerDependencies:
       - supports-color
+
+  ibantools@4.5.4: {}
 
   iconv-lite@0.6.3:
     dependencies:

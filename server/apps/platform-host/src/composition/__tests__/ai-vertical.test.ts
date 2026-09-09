@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { AtlasModelBinding, AtlasModelProvider } from "@athyper/server-contract-ai";
 import { loadConfig } from "../../config/index.js";
@@ -50,4 +51,23 @@ describe("Atlas host composition", () => {
     registerAtlas(container, { ...config, atlas: { enabled: true, persistenceEnabled: true, toolsEnabled: true } }, dependencies(), { neon: fakeDatabase }, transactions, iam);
     expect(container.platform.ai).toMatchObject({ routesEnabled: true, toolsEnabled: true }); expect(container.platform.ai?.runtime).toBeDefined(); expect(container.platform.ai?.tools).toBeDefined(); expect(container.platform.ai?.operations).toBeDefined(); expect(container.platform.httpRegistrars).toHaveLength(3); expect(container.runtimes.health.list()).toEqual(expect.arrayContaining(["atlas.tool-invocation-ledger", "atlas.runtime-composition", "atlas.a2-operations"]));
   });
+});
+
+it("initializes Atlas only after Records and the BP insight owner are composed", () => {
+  const source = readFileSync(new URL("../register-services.ts", import.meta.url), "utf8");
+  const composition = source.slice(source.indexOf("export function registerServices("), source.indexOf("export function registerAtlas("));
+  const call = composition.indexOf("  registerAtlas(");
+  expect(call).toBeGreaterThan(composition.indexOf("container.services.businessPartnerAtlasInsights ="));
+  expect(call).toBeGreaterThan(composition.indexOf("container.services.records ="));
+  expect(composition.match(/  registerAtlas\(/g)).toHaveLength(1);
+});
+it.each([true, false])("registers owner tools exactly when the composed owner exists (%s)", async present => {
+  const container = createContainer(), config = loadConfig();
+  if (present) container.services.businessPartnerAtlasInsights = {read: vi.fn(), readAddresses: vi.fn(), readContacts: vi.fn()};
+  registerAtlas(container, {...config, atlas: {enabled: true, persistenceEnabled: true, toolsEnabled: true}}, dependencies(), {neon: fakeDatabase}, transactions, iam);
+  for (const toolCode of ["bp_read_contacts", "bp_read_addresses", "bp_read_brief", "bp_explain_readiness", "bp_check_eligibility"]) {
+    // Validation precedes persistence; TOOL_INVALID proves the registered tool
+    // was resolved. With no owner the registry must reject it as unregistered.
+    await expect(container.platform.ai!.tools!.preview({context: {tenantId: "t", principalId: "p", realmKey: "neon", planeKey: "neon", requestId: "r", profileHash: "h", authEpoch: 1, permissions: {tenantId: "t", principalId: "p", planeKey: "neon", profileHash: "h"}} as never, threadId: "t", runId: "r", callId: "c", toolCode, toolVersion: "1", arguments: {recordId: "invalid"}, summary: "test"})).rejects.toMatchObject({code: present ? "TOOL_INVALID" : "TOOL_DENIED"});
+  }
 });

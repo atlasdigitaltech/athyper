@@ -1,3 +1,6 @@
+import { BankDirectoryService, registerBankDirectoryRoutes, registerBankDirectoryReferenceRoute, reconcileBankDirectoryReferences } from "@athyper/server-service-publication";
+import { createBankDirectoryAuthorizer } from "./bank-directory-authorizer.js";
+import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
 import { OllamaModelProvider } from "@athyper/server-adapter-ai-ollama";
 import { createAtlasLocalGenerationServices, parseAtlasLocalConfiguration } from "@athyper/server-platform-ai";
@@ -212,6 +215,8 @@ import {
   AtlasToolRegistry,
   createAtlasRecordDataGateway,
   createBusinessPartnerAtlasTools,
+  createBusinessPartnerCaseTools,
+  createBusinessPartnerInsightTools,
   createBusinessPartnerAtlasCommandBus,
   AtlasToolService,
   AtlasExperienceConfigurationService,
@@ -464,6 +469,7 @@ import {
 } from "@athyper/server-service-master-data";
 import {
   createBusinessPartner360Service,
+  createBusinessPartnerAtlasInsightOwner,
   createHttpBusinessPartner360MeshNetworkAdapter,
   createLastValidBusinessPartner360DefinitionResolver,
   createSecretStoreProtectedValueResolver,
@@ -785,14 +791,6 @@ export function registerServices(
     dependencies.transactions ?? createPlaneTransactionCoordinator(container);
   const objectStorage =
     dependencies.objectStorage ?? container.adapters.objectStorage;
-  registerAtlas(
-    container,
-    config,
-    dependencies.ai,
-    metadataDatabases,
-    transactions,
-    iam,
-  );
   const financeRoutesEnabled =
     config?.wave0.financeRoutesEnabled ??
     financeFoundation.routesEnabledByDefault;
@@ -1719,6 +1717,7 @@ export function registerServices(
       },
     });
     const bankDisclosures = createBusinessPartnerBankDisclosureService({
+      ...(container.adapters.secretStore ? {protectedIdentifiers:createSecretStoreProtectedValueResolver(container.adapters.secretStore)} : {}),
       authorizer: meshBankAuthorizer,
       repository: new KyselyBusinessPartnerBankDisclosureRepository(),
       transactions: transactions as never,
@@ -3042,6 +3041,7 @@ export function registerServices(
         onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
       });
     container.services.businessPartnerEligibility = businessPartnerEligibility;
+    container.services.businessPartnerAtlasInsights = createBusinessPartnerAtlasInsightOwner({summary: businessPartner360, eligibility: businessPartnerEligibility, authorizer: businessPartnerAuthorizer});
     const requestCount = container.adapters.openTelemetry?.metrics.counter(
       "athyper_business_partner_case_http_total",
       "Business Partner governed-case HTTP operations by outcome",
@@ -4125,6 +4125,7 @@ export function registerServices(
           })
         : undefined;
     container.services.records = {
+      lists,
       queries,
       mutations,
       ...(snapshots ? { snapshots } : {}),
@@ -4500,6 +4501,15 @@ export function registerServices(
       }),
     );
   }
+  // Atlas snapshots its tool registry; compose it after all owning services.
+  registerAtlas(
+    container,
+    config,
+    dependencies.ai,
+    metadataDatabases,
+    transactions,
+    iam,
+  );
   if (config) registerVerification(container, config);
 }
 
@@ -4558,9 +4568,12 @@ export function registerAtlas(
     };
     return;
   }
+  const caseOwner = container.services.businessPartnerRequests?.explainCase ? {
+    read: (input: Parameters<NonNullable<NonNullable<typeof container.services.businessPartnerRequests>["explainCase"]>>[0]) => container.services.businessPartnerRequests!.explainCase!(input),
+  } : undefined;
   if (!dependencies || config?.atlas.generationEnabled === false) {
     if (toolsEnabled && !config?.atlas.localInferenceConfigPath) throw new Error("Atlas tools require a configured local runtime or full provider composition.");
-    const localRegistry = new AtlasToolRegistry(createBusinessPartnerAtlasTools());
+    const localRegistry = new AtlasToolRegistry([...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
     const localAvailable = (access: "read" | "mutation" = "read") => Boolean(container.platform.metadata && container.services.records && (access === "read" || container.services.businessPartnerRequests));
     const localTools = toolsEnabled ? new AtlasToolService({
       registry: localRegistry, proposals: ledger,
@@ -4598,7 +4611,7 @@ export function registerAtlas(
     }) : undefined;
     const localCoordinator = localTools ? new AtlasRegisteredToolCoordinator(localRegistry,localTools) : undefined;
     const localConfig = config?.atlas.generationEnabled !== false && config?.atlas.localInferenceConfigPath ? parseAtlasLocalConfiguration(JSON.parse(readFileSync(config.atlas.localInferenceConfigPath,"utf8"))) : undefined;
-    const localServices = localConfig ? createAtlasLocalGenerationServices({transactions,config:localConfig,provider:new OllamaModelProvider({modelDigest:localConfig.model.digest,engineVersion:localConfig.engine.version}),...(localCoordinator?{tools:{coordinator:localCoordinator,readEnabled:toolsEnabled,mutationsEnabled:Boolean(config?.atlas.mutationsEnabled),available:localAvailable}}:{})}) : undefined;
+    const localServices = localConfig ? createAtlasLocalGenerationServices({businessContexts:{async resolve(context,value){const metadata=container.platform.metadata,records=container.services.records;if(!metadata||!records)throw new Error("Atlas business context unavailable");return createAtlasBusinessContextResolver({metadata,cases:caseOwner,records:records.queries,list:query=>records.lists.list(query)}).resolve(context,value);}},transactions,config:localConfig,provider:new OllamaModelProvider({modelDigest:localConfig.model.digest,engineVersion:localConfig.engine.version}),...(localCoordinator?{tools:{revalidate:(context,evidence)=>localTools!.revalidate(context,evidence),coordinator:localCoordinator,readEnabled:toolsEnabled,mutationsEnabled:Boolean(config?.atlas.mutationsEnabled),available:localAvailable}}:{})}) : undefined;
     const { threads, admission } = localServices ?? createAtlasConversationServices(transactions);
     const runtime = localServices?.runtime;
     container.platform.ai = { ledger, threads, ...(runtime ? {runtime} : {}), ...(localTools?{tools:localTools}:{}), routesEnabled: true, toolsEnabled };
@@ -4634,7 +4647,7 @@ export function registerAtlas(
   const bindings = new AtlasBindingRegistry(dependencies.bindings);
   const providers = new AtlasProviderRegistry(dependencies.providers);
   for (const binding of dependencies.bindings) providers.resolve(binding);
-  const registry = new AtlasToolRegistry([...dependencies.registeredTools, ...createBusinessPartnerAtlasTools()]);
+  const registry = new AtlasToolRegistry([...dependencies.registeredTools, ...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
   const tools = new AtlasToolService({
     registry,
     authority: dependencies.toolAuthority,
@@ -4666,6 +4679,7 @@ export function registerAtlas(
       reservationTtlSeconds: 1_800,
     });
   const runtime = new AtlasAgentRuntime({
+    businessContexts:{async resolve(context,value){const metadata=container.platform.metadata,records=container.services.records;if(!metadata||!records)throw new Error("Atlas business context unavailable");return createAtlasBusinessContextResolver({metadata,cases:caseOwner,records:records.queries,list:query=>records.lists.list(query)}).resolve(context,value);}},
     admission: dependencies.admission,
     modelPolicy: dependencies.modelPolicy,
     bindings,
@@ -4992,6 +5006,9 @@ function registerPublication(
       !container.adapters.publicationVerifier)
   )
     throw new Error("Publication artifact store and verifier are unavailable");
+  container.platform.httpRegistrars.push(application=>registerBankDirectoryReferenceRoute(application,{
+    authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,databases,
+  }));
   const authority = new KyselyPublicationAuthorityRepository(authorityDatabase);
   const projections: Partial<
     Record<PublicationPlane, KyselyLocalProjectionRepository>
@@ -5018,6 +5035,29 @@ function registerPublication(
       database,
       loader,
     );
+  }
+    const bankDirectory = new BankDirectoryService({database:authorityDatabase,authority,
+      inspectReferences:async(plane,references)=>{const database=databases[plane];if(!database)throw new Error("BANK_DIRECTORY_PLANE_UNAVAILABLE");return reconcileBankDirectoryReferences(database,references);},
+      inspectPlane: async (plane,tenantId) => {
+        const database=databases[plane];if(!database)return {available:false};
+        return database.transaction().execute(async db=>{
+          await sql`SELECT set_config('app.current_tenant_id',${tenantId},true)`.execute(db);
+          const row=(await sql<{id:string;version:string;content_hash:string}>`SELECT r.id,r.version,r.content_hash FROM shared.bank_directory_activation a JOIN shared.bank_directory_release r ON r.id=a.release_id WHERE a.singleton`.execute(db)).rows[0];
+          const releases=(await sql<{id:string;hash:string}>`SELECT id,encode(public.digest(payload::text,'sha256'),'hex') hash FROM shared.bank_directory_release ORDER BY version`.execute(db)).rows;
+          return {available:true,releases,...(row?{releaseId:row.id,version:Number(row.version),hash:row.content_hash}:{})};
+        });
+      },
+    });
+  const directoryAuthorityTenant=process.env["BANK_DIRECTORY_AUTHORITY_TENANT_ID"];
+  const directoryReconcileJob="publication.bank-directory.reconcile";
+  if(directoryAuthorityTenant){
+    if(!/^[0-9a-f-]{36}$/i.test(directoryAuthorityTenant))throw new Error("BANK_DIRECTORY_AUTHORITY_TENANT_ID is invalid");
+    container.runtimes.jobs?.register(PUBLICATION_MAINTENANCE_QUEUE,directoryReconcileJob,{async handle(){
+      const result=await bankDirectory.reconcile(directoryAuthorityTenant,"");
+      return {status:"completed",output:result};
+    }});
+    container.runtimes.jobDefinitions.push({code:directoryReconcileJob,owner:"@athyper/server-service-publication",queue:PUBLICATION_MAINTENANCE_QUEUE,name:directoryReconcileJob,scope:"plane",payloadSchema:{name:directoryReconcileJob,version:1},timeoutMs:60_000,maxAttempts:3,executionRetentionDays:90});
+    if(container.runtimes.scheduler&&config.publication.recoveryEnabled)container.runtimes.scheduledJobs.push({scheduleId:"bank-directory-reconciliation",queue:PUBLICATION_MAINTENANCE_QUEUE,name:directoryReconcileJob,data:{},pattern:{kind:"interval",everyMs:config.publication.recoveryIntervalMs},options:{jobId:"publication:bank-directory-reconcile",maxAttempts:3,payloadSchema:{name:directoryReconcileJob,version:1},execution:{planeKey:"studio",scope:"plane",principalId:"00000000-0000-0000-0000-000000000000"}}});
   }
   container.services.publication = { authority, projections, orchestrators };
   container.runtimes.health.register("publication.database", async () => {
@@ -5216,6 +5256,10 @@ function registerPublication(
         authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext,
         authorizer: createBusinessPartnerDefinitionAuthorizer(caseContracts), audit,
         jobs: container.runtimes.jobs!, service: caseContracts,
+      });
+      registerBankDirectoryRoutes(application, {
+        authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,
+        authorizer:createBankDirectoryAuthorizer(bankDirectory),audit,jobs:container.runtimes.jobs!,service:bankDirectory,
       });
       registerBusinessPartnerDefinitionRoutes(application, {
         authenticate: createIamAuthenticationMiddleware(iam),

@@ -37,7 +37,9 @@ async function roles(
       tx,
     ),
   ]);
+  const companies = await readCompanyRelationships(input, tx);
   const data: BusinessPartner360RolesScopeData = {
+    companies,
     scopeState: input.historical
       ? "historical"
       : input.operatingOrganizationId ||
@@ -332,4 +334,39 @@ function date(value: unknown) {
   return value instanceof Date
     ? value.toISOString().slice(0, 10)
     : String(value).slice(0, 10);
+}
+
+/** Matrix rows are released only after role-specific company + organization authorization. */
+export async function readCompanyRelationships(input: Input, tx: Tx) {
+  if (!input.authorizeAssignment) return [];
+  const candidates = await sql<Row>`
+    SELECT c.id::text company_id,COALESCE(c.display_name,c.name) company_name,
+      o.id::text organization_id,COALESCE(o.display_name,o.name) organization_name,
+      a.partner_role::text role,a.status::text assignment_status,
+      CASE WHEN a.partner_role='supplier' THEN s.status::text ELSE k.status::text END role_status,
+      CASE WHEN a.partner_role='supplier' THEN sp.status::text ELSE cp.status::text END profile_status
+    FROM master.business_partner_operating_organization_assignment a
+    JOIN master.operating_organization o ON o.tenant_id=a.tenant_id AND o.id=a.operating_organization_id
+    JOIN master.operating_organization_company_assignment oc ON oc.tenant_id=a.tenant_id AND oc.operating_organization_id=a.operating_organization_id
+      AND oc.status='active' AND oc.effective_from<=${input.asOf}::date AND (oc.effective_until IS NULL OR oc.effective_until>${input.asOf}::date)
+    JOIN master.company_code c ON c.tenant_id=oc.tenant_id AND c.id=oc.company_code_id
+    LEFT JOIN master.supplier s ON s.tenant_id=a.tenant_id AND s.business_partner_id=a.business_partner_id AND a.partner_role='supplier'
+    LEFT JOIN master.customer k ON k.tenant_id=a.tenant_id AND k.business_partner_id=a.business_partner_id AND a.partner_role='customer'
+    LEFT JOIN master.company_code_supplier_profile sp ON sp.tenant_id=s.tenant_id AND sp.supplier_id=s.id AND sp.company_code_id=c.id AND sp.created_at::date<=${input.asOf}::date
+    LEFT JOIN master.company_code_customer_profile cp ON cp.tenant_id=k.tenant_id AND cp.customer_id=k.id AND cp.company_code_id=c.id AND cp.created_at::date<=${input.asOf}::date
+    WHERE a.tenant_id=${input.tenantId}::uuid AND a.business_partner_id=${input.businessPartnerId}::uuid
+      AND a.partner_role IN ('supplier','customer') AND a.created_at::date<=${input.asOf}::date
+      AND a.effective_from<=${input.asOf}::date AND (a.effective_until IS NULL OR a.effective_until>${input.asOf}::date)
+      AND a.status<>'archived'
+      AND (${input.companyCodeId??null}::uuid IS NULL OR c.id=${input.companyCodeId??null}::uuid)
+      AND (${input.operatingOrganizationId??null}::uuid IS NULL OR o.id=${input.operatingOrganizationId??null}::uuid)
+    ORDER BY company_name,organization_name,role
+  `.execute(tx);
+  const result: import("@athyper/server-contract-master-data").BusinessPartner360CompanyRelationship[]=[];
+  for (const row of candidates.rows) {
+    const role=text(row,"role") as "supplier"|"customer",companyCodeId=text(row,"company_id"),operatingOrganizationId=text(row,"organization_id");
+    if (!await input.authorizeAssignment(companyCodeId,operatingOrganizationId,role)) continue;
+    result.push({companyCodeId,companyName:text(row,"company_name"),operatingOrganizationId,operatingOrganizationName:text(row,"organization_name"),role,roleStatus:optional(row,"role_status")??"missing",assignmentStatus:text(row,"assignment_status"),...(optional(row,"profile_status")?{profileStatus:optional(row,"profile_status")}: {})});
+  }
+  return result;
 }

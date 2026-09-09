@@ -233,7 +233,9 @@
     "record:business-partner-r8": "node tooling/scripts/verification/record-business-partner-r8-evidence.mjs",
     "test:business-partner-r8-qualification": "node --test tooling/scripts/verification/business-partner-r8-qualification.test.mjs tooling/scripts/verification/business-partner-r8-intake.test.mjs",
     "test:e2e:bp-r6-amendment": "bash tooling/scripts/verification/run-playwright-with-linux-deps.sh test --config=tooling/config/playwright.config.ts --project=bp-r6-amendment --output=tests/e2e/.playwright-bp-r6-amendment-output",
-    "preflight:e2e:bp-r6-amendment": "node tooling/scripts/verification/preflight-business-partner-environment.mjs --slice=r6-amendment"
+    "preflight:e2e:bp-r6-amendment": "node tooling/scripts/verification/preflight-business-partner-environment.mjs --slice=r6-amendment",
+    "qualify:business-partner-ai": "node tooling/scripts/verification/qualify-business-partner-ai.mjs",
+    "test:business-partner-ai-qualification": "node --test tooling/scripts/verification/business-partner-ai-qualification.test.mjs"
   },
   "pnpm": {
     "overrides": {

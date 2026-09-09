@@ -1,3 +1,4 @@
+import type { AtlasReplayInput, AtlasReplayCompletion } from "./replay.js";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { AtlasContentBlock, AtlasFinishReason, AtlasProviderErrorClass, AtlasProviderId, AtlasProviderUsage, AtlasPublicModelId } from "./model.js";
 
@@ -24,6 +25,7 @@ export interface AtlasRun {
 }
 
 export interface AtlasBeginRunInput {
+  readonly replayInput?: AtlasReplayInput;
   readonly context: VerifiedRequestContext;
   readonly runId: string;
   readonly threadId: string;
@@ -45,7 +47,7 @@ export interface AtlasBeginRunResult { readonly replayed: boolean; readonly run:
 export interface AtlasRunRepository {
   begin(input: AtlasBeginRunInput): Promise<AtlasBeginRunResult>;
   get(input: { readonly context: VerifiedRequestContext; readonly runId: string }): Promise<AtlasRun | null>;
-  complete(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly assistantContent: readonly AtlasContentBlock[]; readonly completedAt: string }): Promise<AtlasRun | null>;
+  complete(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly assistantContent: readonly AtlasContentBlock[]; readonly replayCompletion?: AtlasReplayCompletion; readonly completedAt: string }): Promise<AtlasRun | null>;
   fail(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly errorClass: AtlasProviderErrorClass; readonly failedAt: string }): Promise<AtlasRun | null>;
   cancel(input: { readonly context: VerifiedRequestContext; readonly runId: string; readonly cancelledAt: string }): Promise<AtlasRun | null>;
 }

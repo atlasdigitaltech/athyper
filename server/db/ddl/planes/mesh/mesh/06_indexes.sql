@@ -243,8 +243,6 @@ CREATE UNIQUE INDEX network_account_tax_registration_primary_uq
        (tenant_id, network_account_id, country_code, registration_type_code)
     WHERE is_primary AND status = 'active';
 
-CREATE INDEX mesh_bank_party_bic_idx
-    ON mesh.bank_party (bic) WHERE bic IS NOT NULL;
 CREATE UNIQUE INDEX mesh_bank_account_code_uq
     ON mesh.bank_account (tenant_id, network_account_id, code)
     WHERE code IS NOT NULL;

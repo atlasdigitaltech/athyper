@@ -67,7 +67,7 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
           contractSchemaVersion: envelope.payload.entityContract.contractSchemaVersion,
           descriptorSchemaVersion: envelope.payload.entityDescriptor.descriptorSchemaVersion,
         }
-      : {
+      : envelope.artifactKind === "bank_directory" ? { payloadHash: envelope.payload.contentHash, payloadSchemaVersion: "1.0.0" } : {
           definitionBundleHash: envelope.payload.bundleHash,
           definitionBundleSchemaVersion: envelope.payload.bundleSchemaVersion,
         };

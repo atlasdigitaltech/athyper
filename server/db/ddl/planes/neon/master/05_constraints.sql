@@ -1161,24 +1161,18 @@ END;
 $$;
 
 -- Neon operational banking foundation.
-ALTER TABLE master.bank_party
-    ADD CONSTRAINT bank_party_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
-ALTER TABLE master.bank_party
-    ADD CONSTRAINT bank_party_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT;
 
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_tenant_fk
     FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
-    ADD CONSTRAINT bank_account_bank_party_fk
-    FOREIGN KEY (tenant_id, bank_party_id)
-    REFERENCES master.bank_party (tenant_id, id) ON DELETE RESTRICT;
+    ADD CONSTRAINT bank_account_bank_institution_fk
+    FOREIGN KEY (bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_correspondent_fk
-    FOREIGN KEY (tenant_id, correspondent_bank_party_id)
-    REFERENCES master.bank_party (tenant_id, id) ON DELETE RESTRICT;
+    FOREIGN KEY (correspondent_bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT;
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT;
@@ -1217,7 +1211,7 @@ DECLARE
     v_column text;
 BEGIN
     FOREACH v_table IN ARRAY ARRAY[
-        'bank_party', 'bank_account', 'bank_account_house_config'
+        'bank_account', 'bank_account_house_config'
     ]
     LOOP
         FOREACH v_column IN ARRAY ARRAY['created_by', 'updated_by', 'status_changed_by']
@@ -1371,8 +1365,8 @@ ALTER TABLE master.bank_account
 
 ALTER TABLE master.bank_account
     ADD CONSTRAINT bank_account_correspondent_self_chk CHECK (
-        correspondent_bank_party_id IS NULL
-        OR correspondent_bank_party_id IS DISTINCT FROM bank_party_id
+        correspondent_bank_institution_id IS NULL
+        OR correspondent_bank_institution_id IS DISTINCT FROM bank_institution_id
     );
 
 ALTER TABLE master.person
@@ -2486,3 +2480,11 @@ ALTER TABLE master.external_worker
     ADD CONSTRAINT external_worker_created_by_fk FOREIGN KEY (tenant_id, created_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_worker_updated_by_fk FOREIGN KEY (tenant_id, updated_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT,
     ADD CONSTRAINT external_worker_status_changed_by_fk FOREIGN KEY (tenant_id, status_changed_by) REFERENCES master.principal(tenant_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE master.bank_account
+ ADD CONSTRAINT bank_account_branch_fk FOREIGN KEY(bank_institution_id,bank_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ ADD CONSTRAINT bank_account_branch_parent_chk CHECK(bank_branch_id IS NULL OR bank_institution_id IS NOT NULL),
+ ADD CONSTRAINT bank_account_provisional_fk FOREIGN KEY(tenant_id,provisional_bank_reference_id) REFERENCES master.bank_provisional_reference(tenant_id,id),
+ ADD CONSTRAINT bank_account_reference_choice_chk CHECK ((bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL) OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL));
+
+ALTER TABLE master.bank_account ADD CONSTRAINT bank_account_canonical_routing_chk CHECK(bank_institution_id IS NULL OR bic_override IS NULL);

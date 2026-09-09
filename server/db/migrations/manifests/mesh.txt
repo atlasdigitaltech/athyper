@@ -2,3 +2,4 @@
 20260906_mesh_exchange_readiness.sql
 20260907_atlas_conversation_runtime_access.sql
 20260907_lookup_reference_governance.sql
+20260909_atlas_tool_only_completion.sql

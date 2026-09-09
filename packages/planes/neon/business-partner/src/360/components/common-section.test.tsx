@@ -1,6 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ItemCard } from "./common-section";
+import { RelatedRecord } from "@athyper/platform-entity-form-detail";
+import { readFileSync } from "node:fs";
 import {
   createBusinessPartner360SectionClient,
   type CommonSectionItem,
@@ -54,15 +56,16 @@ describe("Identity record cards", () => {
     expect(html).not.toContain("External ID");
   });
   it("renders external reference details without empty partner fields", () => {
-    const html = render({
+    const profile = JSON.parse(readFileSync(new URL("../../../../../../../server/db/scripts/provisioning/config/business-partner-record-presentation.v1.json", import.meta.url), "utf8")).recordPresentation.related.find((entry: {source: string}) => entry.source === "external-reference.v1");
+    const html = renderToStaticMarkup(<RelatedRecord profile={profile} hideScope values={{
       id: "reference-1",
       kind: "external_reference",
       sourceSystemCode: "athyper_mesh",
       externalEntityCode: "partner",
       externalId: "remote-1",
-    });
+    }} />);
     expect(html).toContain("External reference");
-    expect(html).toContain("athyper_mesh");
+    expect(html).toContain("Athyper Mesh");
     expect(html).toContain("remote-1");
     expect(html).not.toContain("Legal name");
     expect(html).not.toContain("Aliases");

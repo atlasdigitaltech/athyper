@@ -371,7 +371,7 @@ ALTER TABLE ONLY "ai"."ai_agent_call"
   ADD CONSTRAINT "ai_agent_call_aac_billable_pair_chk" CHECK ((billable_units IS NULL) = (billable_unit_type IS NULL));
 
 ALTER TABLE ONLY "ai"."ai_agent_call"
-  ADD CONSTRAINT "ai_agent_call_aac_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text);
+  ADD CONSTRAINT "ai_agent_call_aac_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text OR (usage_source = 'unavailable'::text AND model_call_count = 0 AND tool_call_count > 0 AND resolved_provider_id IS NULL AND actual_model_id IS NULL));
 
 ALTER TABLE ONLY "ai"."ai_agent_call"
   ADD CONSTRAINT "ai_agent_call_aac_cost_chk" CHECK (cost_amount IS NULL OR cost_amount >= 0::numeric);
@@ -437,7 +437,7 @@ ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_binding_chk" CHECK (resolved_binding_id IS NULL OR btrim(resolved_binding_id) <> ''::text);
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
-  ADD CONSTRAINT "ai_agent_run_aar_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text);
+  ADD CONSTRAINT "ai_agent_run_aar_completed_usage_chk" CHECK (outcome <> 'completed'::text OR usage_source = 'provider_final'::text OR (usage_source = 'unavailable'::text AND model_call_count = 0 AND tool_call_count > 0 AND resolved_provider_id IS NULL AND actual_model_id IS NULL));
 
 ALTER TABLE ONLY "ai"."ai_agent_run"
   ADD CONSTRAINT "ai_agent_run_aar_cost_chk" CHECK (cost_amount IS NULL OR cost_amount >= 0::numeric);

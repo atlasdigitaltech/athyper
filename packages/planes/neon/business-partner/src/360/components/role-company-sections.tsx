@@ -28,6 +28,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
     client = useMemo(() => createBusinessPartner360RoleClient(http), [http]),
     [value, setValue] = useState<RoleCompanySection>(),
     [failed, setFailed] = useState(false),
+    [loadedKey, setLoadedKey] = useState<string>(),
     query = {
       tenantId: identity.scope?.tenantId ?? "unbound",
       principalId: identity.scope?.principalId ?? "unbound",
@@ -56,7 +57,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
     setFailed(false);
     client
       .read(query, controller.signal)
-      .then(setValue)
+      .then(next=>{if(!controller.signal.aborted){setValue(next);setLoadedKey(key);}})
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);
       });
@@ -69,7 +70,7 @@ function ScopedSection({ code }: { code: RoleCompanySectionCode }) {
         <p>The global identity view remains available.</p>
       </Card>
     );
-  if (!value) return <Skeleton className="bp360-shell-skeleton" />;
+  if (!value || loadedKey !== key) return <Skeleton className="bp360-shell-skeleton" />;
   const data = value.data,
     state = String(data["scopeState"] ?? "scoped"),
     readOnly = Boolean(data["readOnly"]);
@@ -224,10 +225,10 @@ function Actions({ code }: { id: string; code: RoleCompanySectionCode }) {
   if (!actions.length) return null;
   return (
     <Card className="bp360-section-card">
-      <h2>Governed actions</h2>
+      <h2>Setup actions</h2>
       <div className="bp-actions">
         {actions.map((action) => (
-          <a key={action.key} href={action.href}>
+          <a key={action.key} href={scopedActionHref(action.href!,summary,code,action.key)}>
             {action.label}
           </a>
         ))}
@@ -341,4 +342,13 @@ function label(value: string) {
   return value
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (letter) => letter.toUpperCase());
+}
+
+function scopedActionHref(href:string,summary:import("../business-partner-360-client").Summary,code:RoleCompanySectionCode,action:string){
+ const url=new URL(href,"https://local.test");
+ if(summary.scope.companyCodeId)url.searchParams.set("companyCodeId",summary.scope.companyCodeId);
+ if(summary.scope.operatingOrganizationId)url.searchParams.set("operatingOrganizationId",summary.scope.operatingOrganizationId);
+ if(code!=="roles-scope")url.searchParams.set("role",code==="customer-company"?"customer":"supplier");
+ if(action==="configure_company"||action==="assign_organization")url.searchParams.set("kind",action);
+ return url.pathname+url.search;
 }

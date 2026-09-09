@@ -1,8 +1,24 @@
 # Business Partner Atlas AI Agent — implementation plan
 
 Date: 2026-09-08  
-Status: Proposed implementation plan; no application changes or deployment performed  
+Status: Implementation in progress; see work-package notes below for qualification and deployment scope
 Scope: NEON Business Partner Manage, individual BP360 records, and related case assistance
+
+BP-AI-00 complete (DEV baseline, 2026-09-09): [inventory and authenticated closure report](bp-ai-00-baseline.md). A refreshed session passed 20 measured cited reads plus warm-up, a visible Atlas response check and the 94-test R9 regression gate. Observed p95: first text 1.901 s, complete response 4.889 s. Tenant-specific descriptor precedence is documented; later feature/persona qualification remains separate.
+
+BP-AI-06 implementation: [Manage insights and selected comparisons](../../contracts/atlas-business-partner-list-insights.md) use the authorized Records list service, exact-only totals and bounded owner readiness reads. Structured results label partial coverage and overlapping issue counts; comparison tables and server-authored count summaries share the live/replay authorization path. Synthetic scale and Records parity tests are implemented. Deployment and authenticated browser/live-model qualification remain pending under BP-AI-09.
+
+BP-AI-01 implementation: optional AI metadata schema, Studio validation/compilation and runtime parsing are implemented in the working tree. See [the v1 contract and supported capability catalogue](../../contracts/entity-ai-metadata.md). Deterministic publication, invalid-reference rejection and legacy compatibility are covered by 75 passing package tests and three package typechecks. No live metadata publication or runtime AI enablement was performed.
+
+BP-AI-04 implementation: [owner-backed record insights](../../contracts/atlas-business-partner-insights.md) now provide `bp_read_brief`, `bp_explain_readiness`, and `bp_check_eligibility` through master-data and platform AI. Explicit role/organization/company scope, field-authorized Records identity, restricted-requirement suppression, unavailable states, and fresh replay authorization are covered by focused tests; R9 passes. This is working-tree implementation, not a deployed/live-model qualification claim.
+
+BP-AI-03 implementation: [insight disclosure contracts, query audit and cache/history policy](../../contracts/atlas-insight-disclosure.md) are implemented. Restricted evidence and dependent findings/actions are withheld; Records search excludes unreadable fields. Message replay now requires current lineage authorization and fails closed when it is unavailable. Durable lineage persistence and fresh owner-read reauthorization are now connected for new messages; legacy or incomplete lineage remains withheld. [DEV replay qualification](evidence/bp-ai-03-replay-20260909.json) passed on 2026-09-09, including authenticated history/export/retry, grounded follow-up, API recreation and capability revocation/restoration. New BP owner tools and broader BP-AI-09 rollout qualification remain subsequent work packages.
+
+BP-AI-02 implementation: versioned shared page context, semantic Manage/record/BP360 publishers, shell/controller/client/API/runtime transport, server Records/Entity List admission and generation-bound navigation are implemented. See [the context contract and qualification notes](../../contracts/atlas-business-context.md). Focused contract, HTTP and navigation tests and R9 pass. On 2026-09-09, authenticated DEV browser/live-model qualification passed all 22 checks after API/Neon deployment, and the existing frontend governance failures were closed. See [deployment and gate-closure evidence](evidence/bp-ai-02-deployed-20260909.md).
+
+BP-AI-05 implemented and deployed to DEV (2026-09-09): [answer envelope and presentation contract](../../contracts/atlas-answer-envelope.md) includes strict reference validation, safe prose/owner-assessment rendering, inline source groups, context-specific starters and accessible dock/fullscreen layouts. Authorized source metadata survives history, follow-ups and replay under current lineage checks; streaming text retains exact whitespace. [Deployed qualification](evidence/bp-ai-05-deployed-20260909.md) passed 24 authenticated Chromium/live-model checks, including desktop/mobile accessibility scans, keyboard focus, computed contrast and screenshot review. Local checks and R9 pass. Broader BP-AI-09 persona/production rollout and physical screen-reader qualification retain their separate scope.
+
+BP-AI-07 implementation: [saved case explanations and confirmed-submit integration](../../contracts/atlas-case-explanation.md) are implemented in the working tree. Current-snapshot validation, partial routing-field diffs against the previous saved snapshot, baseline-scope authorization, case-context binding and owner-checked submit previews are covered by focused tests and R9. Protected field diffs remain withheld; deployment and authenticated browser/model qualification are not claimed.
 
 ## 1. Outcome and design commitments
 
@@ -317,6 +333,12 @@ All packages below describe future work. Contract and documentation changes shou
 | BP-AI-08 | Opt-in rollout of automatic briefs, refresh, cancellation, deduplication, cache and context budgeting | 04, 05, 06 | No stale-record race or duplicate generation; measured budget/latency targets accepted |
 | BP-AI-09 | Full persona/browser/live-model qualification, operations runbook and release evidence | Each enabled package | Release gates below pass on target environment |
 | BP-AI-10 | Duplicate candidates, document expiry and optional draft-preview evaluation | 09 plus owner contracts | Separate evidence quality, disclosure and workflow qualification for each capability |
+
+BP-AI-10 build started: [capability contracts and owner gaps](../../contracts/atlas-business-partner-extensions.md), explicit capability selection, and independent owner-contract, evidence-quality, disclosure and workflow receipt checks now extend the BP-AI-09 verifier. The pending extension intake selects duplicate candidates and document expiry; draft preview remains optional. Local verifier tests pass; owner projections, runtime adapters and target qualification remain outstanding. No extended capability is enabled by this build.
+
+BP-AI-09 build started: [qualification and operations runbook](../../runbooks/business-partner-ai-qualification.md), a version-bound release receipt verifier, and a pending DEV intake now cover package-dependent acceptance, all eight personas, browser/accessibility, live-model quality, performance and rollback. Local validation is recorded in [build evidence](evidence/bp-ai-09-build-20260909.json). Full target execution and reviewed receipts remain outstanding; the release gate intentionally fails until those are supplied. This does not qualify BP-AI-08 or expand deployed capabilities.
+
+BP-AI-08 build started: the first slice adds default-off NEON rollout wiring, session opt-in, saved-state/applied-query scheduling, explicit refresh, controller-local deduplication and cancellation ownership tests. See [automatic brief contract and remaining gate](../../contracts/atlas-automatic-briefs.md). Redis caching, distributed coordination and measured live latency acceptance remain outstanding; BP-AI-08 is not release-qualified.
 
 Logical review sequence: metadata contract → context transport → evidence/disclosure → record vertical slice → response UI → Manage insights → case assistance → proactive operation → qualification. UI components may be developed against fixtures once their contracts are stable.
 

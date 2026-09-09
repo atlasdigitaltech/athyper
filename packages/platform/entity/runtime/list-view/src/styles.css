@@ -390,14 +390,6 @@
 .a-entity-list__header--loading .athyper-page-header__icon{border-color:transparent;background:transparent;box-shadow:none}
 .a-entity-list__skeleton-icon{display:block;width:100%;height:100%;border-radius:inherit}
 
-.a-entity-navigation{overflow:visible;display:flex;align-items:center;gap:var(--a-space-1);padding:var(--a-space-1);min-height:3rem;border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-lg);background:var(--a-surface);box-shadow:var(--a-shadow-raised);flex-wrap:wrap}
-.a-entity-navigation a,.a-entity-navigation summary{display:flex;align-items:center;gap:var(--a-space-2);padding:.7rem .85rem;border-radius:var(--a-radius-md);color:var(--a-muted-foreground);font-weight:600;font-size:var(--a-font-size-sm);text-decoration:none;cursor:pointer;white-space:nowrap}
-.a-entity-navigation a[aria-current=page],.a-entity-navigation summary.is-current{background:var(--a-brand-soft);color:var(--a-brand);box-shadow:inset 0 -2px var(--a-brand)}
-.a-entity-navigation a:hover,.a-entity-navigation summary:hover{background:var(--a-brand-soft)}
-.a-entity-navigation a:focus-visible,.a-entity-navigation summary:focus-visible{outline:2px solid var(--a-brand);outline-offset:2px}
-.a-entity-navigation__more{position:relative}.a-entity-navigation summary{list-style:none}.a-entity-navigation summary::-webkit-details-marker{display:none}
-.a-entity-navigation__overflow{position:absolute;z-index:20;right:0;min-width:12rem;padding:var(--a-space-1);border:var(--a-border-width) solid var(--a-border);border-radius:var(--a-radius-md);background:var(--a-surface);box-shadow:var(--a-shadow-raised)}
-.a-entity-navigation__count{padding:.1rem .4rem;border-radius:999px;background:var(--a-brand);color:var(--a-on-brand,#fff);font-size:.75rem}
 .a-entity-navigation__placeholder{display:block;width:7rem;height:2.3rem}.a-entity-navigation__placeholder:last-child{width:10rem}
 
 /* One shared surface for the list toolbar and results; overlays remain unclipped. */

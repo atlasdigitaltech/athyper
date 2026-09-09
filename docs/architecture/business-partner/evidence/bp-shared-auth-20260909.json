@@ -1,0 +1,22 @@
+{
+  "schema": "bp-shared-authorization-evidence/1",
+  "capturedAt": "2026-09-09T03:43:05.957207+00:00",
+  "apiImage": "athyper-runtime-server:bp-shared-auth-summary-20260909",
+  "neonImage": "athyper-neon-web:bp-shared-auth-20260909",
+  "apiHealth": "healthy",
+  "neonHealth": "healthy",
+  "neonLivez": 200,
+  "publishedDirectoryMode": "tenant",
+  "authorizationGrantsChanged": false,
+  "checks": {
+    "aiTests": 221,
+    "ownerTests": 10,
+    "presentationTests": 7,
+    "r9Checks": 94,
+    "changedServerTypechecks": "passed",
+    "serverBuilds": "passed",
+    "neonBuild": "passed",
+    "deployedSyntheticOwnerDenial": "passed"
+  },
+  "authenticatedLiveModelQualification": "pending"
+}

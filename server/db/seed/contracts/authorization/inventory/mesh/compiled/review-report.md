@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no permissions, 
 
 ## Coverage
 
-- Physical business-data tables: 65 (29 master, 5 document, 31 mesh)
+- Physical business-data tables: 70 (29 master, 9 document, 32 mesh)
 - Reviewed network-topology tables: 9
-- Pending business review: 56
+- Pending business review: 61
 - Proposed operations: 18
 - Proposed lifecycles: 2
 - Studio-to-Mesh provisionable resources: 1
@@ -107,6 +107,10 @@ Required before enforcement:
 
 - document.conversation
 - document.conversation_participant
+- document.entity_case
+- document.entity_case_command_evidence
+- document.entity_case_materialization
+- document.entity_case_validation
 - document.multipart_upload
 - document.multipart_upload_part
 - document.work_item
@@ -143,7 +147,8 @@ Required before enforcement:
 - mesh.bank_account_disclosure
 - mesh.bank_account_disclosure_event
 - mesh.bank_account_link
-- mesh.bank_party
+- mesh.bank_provisional_reference
+- mesh.business_partner_delivery_acknowledgement
 - mesh.catalog
 - mesh.catalog_audience
 - mesh.catalog_availability
@@ -164,5 +169,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 56 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 61 tables still require business classification and 3 implementation/RLS qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

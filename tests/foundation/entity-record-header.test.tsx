@@ -4,9 +4,9 @@ import React, { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { JSDOM } from "jsdom";
 import {
-  EntityPageLayout,
   useRecordPage,
 } from "../../packages/platform/shell/shell/src/entity-page-layout";
+import { ManagementWorkspace } from "../../packages/platform/shell/shell/src/management-workspace";
 import { EntityRecordHeader } from "../../packages/platform/entity/runtime/form-detail/src/record-header";
 import {
   parseEntityRecordPresentation,
@@ -74,12 +74,12 @@ function Record({ header }: { header: EntityRecordHeaderV1 }) {
 describe("Shared metadata record header", () => {
   it("replaces collection chrome and restores it when leaving a record", async () => {
     const page = (record: boolean) => (
-      <EntityPageLayout
-        collectionHeader={<h1>Business Partners</h1>}
-        collectionNavigation={<nav>Manage</nav>}
+      <ManagementWorkspace
+        header={<h1>Business Partners</h1>}
+        navigation={<nav>Manage</nav>}
       >
         {record ? <Record header={header} /> : <div>Collection</div>}
-      </EntityPageLayout>
+      </ManagementWorkspace>
     );
     await act(async () => root.render(page(true)));
     assert.equal(host.querySelectorAll("h1").length, 1);

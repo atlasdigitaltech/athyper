@@ -1,0 +1,167 @@
+{
+  "schema": "atlas-business-context-qualification/1",
+  "capturedAt": "2026-09-08T17:15:30.195Z",
+  "origin": "https://neon.dev.athyper.test",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "session-refreshed"
+    },
+    {
+      "name": "authenticated-session"
+    },
+    {
+      "name": "manage-filtered-set",
+      "kind": "manage",
+      "totalMs": 644,
+      "generationMatched": true
+    },
+    {
+      "name": "manage-selection",
+      "kind": "manage",
+      "totalMs": 541,
+      "generationMatched": true
+    },
+    {
+      "name": "dock-reopen",
+      "kind": "manage",
+      "totalMs": 648,
+      "generationMatched": true
+    },
+    {
+      "name": "manage-cursor",
+      "kind": "manage",
+      "totalMs": 728,
+      "generationMatched": true
+    },
+    {
+      "name": "manage-applied-search",
+      "kind": "manage",
+      "totalMs": 589,
+      "generationMatched": true
+    },
+    {
+      "name": "record-grounded-read",
+      "kind": "record",
+      "totalMs": 2657,
+      "generationMatched": true
+    },
+    {
+      "name": "record-citation",
+      "citationCount": 1,
+      "revisionKind": "content_hash"
+    },
+    {
+      "name": "record-panel-section",
+      "kind": "record",
+      "totalMs": 624,
+      "generationMatched": true
+    },
+    {
+      "name": "fullscreen-context",
+      "kind": "record",
+      "totalMs": 724,
+      "generationMatched": true
+    },
+    {
+      "name": "fullscreen-thread-restored"
+    },
+    {
+      "name": "forged-tenant",
+      "status": 400
+    },
+    {
+      "name": "forged-record",
+      "status": 403
+    },
+    {
+      "name": "forged-company",
+      "status": 403
+    },
+    {
+      "name": "mixed-selection-rejected",
+      "status": 403
+    },
+    {
+      "name": "historical-context",
+      "kind": "record",
+      "totalMs": 1127,
+      "generationMatched": true
+    },
+    {
+      "name": "role-context",
+      "kind": "record",
+      "totalMs": 694,
+      "generationMatched": true
+    },
+    {
+      "name": "record-switch",
+      "kind": "record",
+      "totalMs": 804,
+      "generationMatched": true
+    },
+    {
+      "name": "active-stream-navigation-isolation"
+    },
+    {
+      "name": "return-to-manage",
+      "kind": "manage",
+      "totalMs": 825,
+      "generationMatched": true
+    },
+    {
+      "name": "no-browser-errors"
+    }
+  ],
+  "completedAt": "2026-09-08T17:16:39.381Z",
+  "qualificationDate": "2026-09-09",
+  "environment": "DEV",
+  "modelMode": "atlas-re-1.0-local",
+  "images": [
+    {
+      "service": "api",
+      "tag": "sha256:04b21f9e705b64f85c4da0c5a6cb38a09da401eda1a5b4a133aefa8a114b2321",
+      "imageId": "sha256:04b21f9e705b64f85c4da0c5a6cb38a09da401eda1a5b4a133aefa8a114b2321",
+      "health": "healthy"
+    },
+    {
+      "service": "neon-web",
+      "tag": "athyper-neon-web:bp-ai-02-20260909",
+      "imageId": "sha256:eb7cb892c15efb4c2a4f52be2c2d9eacce77b5f6e3eeeaa26c7871955be133a5",
+      "health": "healthy"
+    }
+  ],
+  "receiptDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/receipts/bp-ai-02-20260909/browser-refreshed",
+  "receiptSha256": {
+    "dock-reopen-run.json": "d272c50b5691e4da74eba9f23b12331511227111fc1439240fef7ef3c23970ca",
+    "forged-company.json": "78d1c3c35b927dd7e3bbffa8b7347892e65597b967d221a83d2b79545893400a",
+    "forged-record.json": "78d1c3c35b927dd7e3bbffa8b7347892e65597b967d221a83d2b79545893400a",
+    "forged-tenant.json": "8a6db9632a0c1fef68de2ad962731f05474b7c5f418d8497a1b5a595366e83c2",
+    "fullscreen-context-run.json": "ae1581b04c0c0f8215061b876a72cfce15d1ee4344a1bb812e02edca01cae9b3",
+    "historical-context-run.json": "94830e1a40b927d207333e4ddb5c48a22fe8f5bd5f57cc5319fced89beb9c642",
+    "manage-applied-search-run.json": "3261f166c8a377a5a50cc99350d8b7f7b12d64bf5a2b74590530d7f853c5fd53",
+    "manage-complete.png": "34d00778b5c6bfca00de4de4038ac43d2e80646d2318fcf017c5de6f4eb78edf",
+    "manage-cursor-run.json": "229be1b0d7e00444336d4c324440a5cb86d8bf1430ad2ea933f36dc2ccdecc96",
+    "manage-filtered-set-run.json": "5b5c3e2d5ca2ea0db8182dbdebb4082b986a405f2624d05e5f8040b251c355e4",
+    "manage-selection-run.json": "2c7062d3d7edd83f9ecc13eb6dd55256330b07d1ca0bf1dc0c7b2a62983be396",
+    "record-grounded-read-run.json": "ce1694bf8023f61e07acb8507ff60baba52393754e54a858c70dd1d063151e06",
+    "record-panel-section-run.json": "4f7639d88b83e30c7411b34d544fc4d84200766c7343e6b67dd065306f0b68b3",
+    "record-switch-run.json": "a8010797bc34f82a78aff9583c55ab3d423ea342b515588769fbc3e29544f032",
+    "return-to-manage-run.json": "9ef82b34efb55a9b8ab370efd1a5b5867b3569beafb89bff6f4758c6a0d62b3b",
+    "role-context-run.json": "7c4e5b2a04788c9290812abc2fd872524f6f1380095fcd597a78c8adf2142206",
+    "summary.json": "fb1ba1466fe68871b2d7b85eb1c2cbbb42d6d689f5545e34d6af43d82440bd75"
+  },
+  "validation": {
+    "aiContractTests": 20,
+    "aiRuntimeTests": 189,
+    "browserClientControllerTests": 13,
+    "businessPartnerR9Assertions": 94,
+    "frontendSpineGovernance": "passed",
+    "sharedPackagePurity": "passed (63 packages)",
+    "frontendContractAndTransportTests": 17,
+    "governancePolicyTests": 3,
+    "aiTypecheck": "passed",
+    "neonProductionBuild": "passed",
+    "apiProductionBuild": "passed"
+  }
+}

@@ -1,3 +1,4 @@
+import { atlasBusinessContextSchema } from "@athyper/server-contract-ai";
 import type { RouteContract } from "@athyper/server-runtime-http";
 
 const text = { type: "string", minLength: 1, pattern: "\\S" } as const;
@@ -61,6 +62,7 @@ export const atlasRequests: Readonly<Record<string, RouteContract["request"]>> =
         userText: text,
         catalogPolicyRevision: text,
         agentCode: text,
+        businessContext: atlasBusinessContextSchema,
         attachmentContextId: uuid,
         attachmentIds: {
           type: "array",

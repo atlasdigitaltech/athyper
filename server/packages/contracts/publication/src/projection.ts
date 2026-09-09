@@ -156,6 +156,8 @@ export interface PublicationVerificationEvidence {
   readonly descriptorSourceHash?: string;
   readonly contractSchemaVersion?: string;
   readonly descriptorSchemaVersion?: string;
+  readonly payloadHash?: string;
+  readonly payloadSchemaVersion?: string;
   readonly definitionBundleHash?: string;
   readonly definitionBundleSchemaVersion?: string;
   readonly signatureAlgorithm?: string;

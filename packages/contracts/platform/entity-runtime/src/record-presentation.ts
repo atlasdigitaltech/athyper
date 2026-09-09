@@ -1,3 +1,4 @@
+import { parseRelatedPresentations, type RelatedPresentationV1 } from "./related-presentation";
 import {
   parseRecord360Panel,
   type EntityRecord360PanelV1,
@@ -6,6 +7,7 @@ import {
 export type RecordBadgeTone = "neutral" | "success" | "warning" | "danger";
 export interface EntityRecordPresentationV1 {
   readonly schemaVersion: 1;
+  readonly related?: readonly RelatedPresentationV1[];
   readonly panel?: EntityRecord360PanelV1;
   readonly iconKey?: string;
   readonly titleField: string;
@@ -22,6 +24,7 @@ export interface EntityRecordPresentationV1 {
     readonly label: string;
     readonly fields: readonly string[];
     readonly placement: "direct" | "overflow";
+    readonly scopePrompt?: string;
   }[];
   readonly actions: readonly {
     readonly key: string;
@@ -31,6 +34,8 @@ export interface EntityRecordPresentationV1 {
   }[];
 }
 export interface EntityRecordHeaderV1 {
+  readonly relatedActions?: readonly { readonly operationKey: string; readonly href: string }[];
+  readonly related?: readonly RelatedPresentationV1[];
   readonly panel?: EntityRecord360PanelV1;
   readonly title: string;
   readonly entityLabel: string;
@@ -57,6 +62,7 @@ export interface EntityRecordHeaderV1 {
     readonly key: string;
     readonly label: string;
     readonly placement: "direct" | "overflow";
+    readonly scopePrompt?: string;
     readonly count?: number;
   }[];
   readonly readOnly?: boolean;
@@ -98,6 +104,7 @@ export function parseEntityRecordPresentation(
     throw new TypeError("Invalid record presentation version");
   const result: EntityRecordPresentationV1 = {
     schemaVersion: 1,
+    ...(raw.related === undefined ? {} : { related: parseRelatedPresentations(raw.related) }),
     ...(raw.panel === undefined
       ? {}
       : { panel: parseRecord360Panel(raw.panel) }),
@@ -125,6 +132,7 @@ export function parseEntityRecordPresentation(
         key: key(item.key),
         label: text(item.label),
         fields: list(item.fields ?? []).map(key),
+        ...(item.scopePrompt === undefined ? {} : { scopePrompt: text(item.scopePrompt) }),
         placement: choice(item.placement ?? "direct", [
           "direct",
           "overflow",
@@ -146,6 +154,7 @@ export function parseEntityRecordPresentation(
     }),
   };
   unique(result.sections.map((item) => item.key));
+  for (const profile of result.related ?? []) if (!result.sections.some(section => section.key === profile.sectionKey)) throw new TypeError(`Unknown related section: ${profile.sectionKey}`);
   if (result.panel) {
     const sections = new Set(result.sections.map((item) => item.key));
     for (const reference of [
@@ -178,7 +187,7 @@ export function validateRecordPresentationReferences(
   for (const field of referenced)
     if (!fields.includes(field))
       throw new TypeError(`Unknown record presentation field: ${field}`);
-  for (const action of presentation.actions)
+  for (const action of [...presentation.actions, ...(presentation.related ?? []).flatMap(profile => profile.actions)])
     if (!operations.includes(action.operationKey))
       throw new TypeError(
         `Unknown record presentation operation: ${action.operationKey}`,
@@ -193,6 +202,8 @@ export function readableRecordPresentation(
 ): EntityRecordPresentationV1 {
   return {
     ...presentation,
+    // Related projections have their own authorization boundary; flat entity fields cannot authorize them.
+    related: undefined,
     titleField: fields.includes(presentation.titleField)
       ? presentation.titleField
       : fallbackTitle,

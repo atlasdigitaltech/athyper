@@ -273,7 +273,13 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     const row = await readOne(transaction, tenantId, "c.id", caseId);
     if (!row) return null;
     const request = mapCase(row);
-    const findings = await readFindings(transaction, tenantId, caseId);
+    const findings = await readFindings(transaction, tenantId, caseId, nullable(row["validation_evaluation_id"]));
+    const previous = (await sql<Row>`SELECT prior.id,prior.version_number,body.payload_json
+      FROM snapshot.entity_snapshot_identity current
+      JOIN snapshot.entity_snapshot_identity prior ON prior.tenant_id=current.tenant_id
+        AND prior.id=current.previous_snapshot_id AND prior.entity_id=current.entity_id AND prior.entity_type=current.entity_type
+      JOIN snapshot.entity_snapshot body ON body.tenant_id=prior.tenant_id AND body.snapshot_id=prior.id
+      WHERE current.tenant_id=${tenantId}::uuid AND current.id=${text(row, "current_snapshot_id")}::uuid`.execute(transaction)).rows[0];
     const workflowRow = request.workflowRequestId
       ? await readWorkflow(transaction, tenantId, caseId)
       : undefined;
@@ -295,6 +301,9 @@ export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerReque
     return {
       request,
       validationFindings: findings,
+      validationCurrent: Boolean(row["validation_snapshot_id"] && row["validation_snapshot_id"] === row["current_snapshot_id"]),
+      snapshotId: text(row, "current_snapshot_id"),
+      ...(previous ? { previousSnapshot: { id: text(previous, "id"), revision: Number(previous["version_number"]), payload: object(previous["payload_json"]) } } : {}),
       ...(workflow ? { workflow } : {}),
       ...(onboardingCycle ? { onboardingCycle } : {}),
       ...(materializationProof ? { materializationProof } : {}),
@@ -1034,13 +1043,11 @@ async function readOne(
   );
 }
 
-async function readFindings(tx: Tx, tenantId: string, caseId: string) {
+async function readFindings(tx: Tx, tenantId: string, caseId: string, evaluationId: string | undefined) {
   const rows = (
     await sql<Row>`SELECT v.* FROM document.entity_case_validation v
       WHERE v.tenant_id=${tenantId}::uuid AND v.entity_case_id=${caseId}::uuid
-        AND v.evaluation_id=(SELECT evaluation_id FROM document.entity_case_validation
-          WHERE tenant_id=${tenantId}::uuid AND entity_case_id=${caseId}::uuid
-          ORDER BY evaluated_at DESC,id DESC LIMIT 1)
+        AND v.evaluation_id=${evaluationId ?? null}::uuid
       ORDER BY v.ordinal`.execute(tx)
   ).rows;
   return rows.map((row): BusinessPartnerRequestValidationFinding => {

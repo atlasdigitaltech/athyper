@@ -1,0 +1,228 @@
+{
+  "schema": "atlas-answer-presentation-qualification/1",
+  "capturedAt": "2026-09-08T18:08:46.452Z",
+  "origin": "https://neon.dev.athyper.test",
+  "status": "passed",
+  "checks": [
+    {
+      "name": "authenticated-session"
+    },
+    {
+      "name": "dock-composer-focus"
+    },
+    {
+      "name": "starter-fills-without-generation"
+    },
+    {
+      "name": "dock-empty-accessibility",
+      "rulesPassed": 24,
+      "contrastNodesReviewed": 4,
+      "minimumReviewedContrast": 5.171617734197214
+    },
+    {
+      "name": "escape-restores-focus"
+    },
+    {
+      "name": "record-specific-starters"
+    },
+    {
+      "name": "dock-grounded-summary-owner-facts-match"
+    },
+    {
+      "name": "dock-grounded-summary"
+    },
+    {
+      "name": "dock-source-keyboard"
+    },
+    {
+      "name": "dock-answer-accessibility",
+      "rulesPassed": 27,
+      "contrastNodesReviewed": 8,
+      "minimumReviewedContrast": 5.171617734197214
+    },
+    {
+      "name": "dock-accessibility-tree"
+    },
+    {
+      "name": "fullscreen-replay-text-parity"
+    },
+    {
+      "name": "fullscreen-replayed-source-keyboard"
+    },
+    {
+      "name": "fullscreen-grounded-followup-owner-facts-match"
+    },
+    {
+      "name": "fullscreen-grounded-followup"
+    },
+    {
+      "name": "fullscreen-context-retained"
+    },
+    {
+      "name": "fullscreen-answer-accessibility",
+      "rulesPassed": 30,
+      "contrastNodesReviewed": 2,
+      "minimumReviewedContrast": 5.171617734197214
+    },
+    {
+      "name": "untrusted-prose-and-action"
+    },
+    {
+      "name": "no-model-created-executable-content"
+    },
+    {
+      "name": "mobile-fullscreen-accessibility",
+      "rulesPassed": 31,
+      "contrastNodesReviewed": 3,
+      "minimumReviewedContrast": 5.171617734197214
+    },
+    {
+      "name": "mobile-fullscreen-layout"
+    },
+    {
+      "name": "mobile-dock-accessibility",
+      "rulesPassed": 24,
+      "contrastNodesReviewed": 3,
+      "minimumReviewedContrast": 5.171617734197214
+    },
+    {
+      "name": "mobile-dock-layout"
+    },
+    {
+      "name": "no-browser-errors"
+    }
+  ],
+  "turns": [
+    {
+      "name": "dock-grounded-summary",
+      "totalMs": 4096,
+      "publicModelId": "atlas-re-1.0-local",
+      "citations": 1,
+      "insights": 0
+    },
+    {
+      "name": "fullscreen-grounded-followup",
+      "totalMs": 1066,
+      "publicModelId": "atlas-re-1.0-local",
+      "citations": 1,
+      "insights": 0
+    },
+    {
+      "name": "untrusted-prose-and-action",
+      "totalMs": 2985,
+      "publicModelId": "atlas-re-1.0-local",
+      "citations": 1,
+      "insights": 0
+    }
+  ],
+  "scope": {
+    "environment": "DEV",
+    "principal": "existing authenticated DEV principal",
+    "browser": "Chromium",
+    "viewports": [
+      {
+        "width": 1440,
+        "height": 1000
+      },
+      {
+        "width": 390,
+        "height": 844
+      }
+    ],
+    "businessOperations": "read-only",
+    "browserMocks": false,
+    "manualScreenReaderSession": false,
+    "screenshotReview": "Completed: desktop/mobile source wrapping, replay text, viewport controls and collapsed mobile history inspected."
+  },
+  "deployment": [
+    {
+      "service": "api",
+      "tag": "athyper-runtime-server:bp-ai-05-20260909",
+      "imageId": "sha256:01823078b88750f655a9f692e5d3ca27cf56056ec253b53e8d013701ef680dc0",
+      "health": "healthy"
+    },
+    {
+      "service": "neon-web",
+      "tag": "athyper-neon-web:bp-ai-05-20260909",
+      "imageId": "sha256:ff31c2d0d4a2457dd65c059583f7f6ef16d89fc5a8182cc9ddb95d48ac6f6ad4",
+      "health": "healthy"
+    }
+  ],
+  "model": {
+    "upstream": "qwen3:8b",
+    "digest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+    "publicId": "atlas-re-1.0-local",
+    "installedManifestVerified": true
+  },
+  "apiBuild": {
+    "method": "Targeted compiled AI package overlay on the first successful production build; avoids concurrently incomplete bank-directory work.",
+    "baseImageId": "sha256:2b0d639506ca6de42ccc2f7d78f29a8f9aa5b6df97f309411842df4ec7143271",
+    "packages": [
+      "@athyper/server-contract-ai",
+      "@athyper/server-platform-ai"
+    ],
+    "runtimeImportSmoke": "passed"
+  },
+  "validation": {
+    "envelopeAndClientTests": 13,
+    "rendererComposerContextTests": 11,
+    "runtimeReplayTests": 15,
+    "businessPartnerR9Tests": 94,
+    "frontendGovernance": "passed",
+    "testReachability": "passed (115 root tests, no excluded tests)",
+    "typechecks": "passed",
+    "neonProductionBuild": "passed"
+  },
+  "limitations": [
+    "DEV existing-principal and synthetic partner scope; broader BP-AI-09 persona/production qualification remains separate.",
+    "Accessibility coverage is automated rules, keyboard operation, computed contrast and Chromium accessibility-tree/screenshot review; no physical screen-reader session or blanket WCAG certification.",
+    "The live suite checks identity/status against owner evidence and inert rendering; it does not prove universal prose factuality or qualify new BP owner tools."
+  ],
+  "receiptDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/receipts/bp-ai-05-20260909/qualified",
+  "receiptSha256": {
+    "dock-accessibility-tree.json": "7ae7c05f668c59876b40ecd5a7e20acb9a90c47525de6a871628de62e6e01938",
+    "dock-answer-accessibility-axe.json": "297cddd5e99964ac12a8f16cf9f4a8969165fa7729f8e7e9065deed493214bb0",
+    "dock-answer-accessibility-contrast-review.json": "4deda1ddb2d223d7373a181b108fc90689ecfae4cc969cd89fb5ffe31cb34272",
+    "dock-answer.png": "c8203b5020aad0a2d54d397369ab0f1f5c9d9afeb167051234ba9d1185788356",
+    "dock-empty-accessibility-axe.json": "ef106366b52e56e9c5b8e9334a814dc98e98c90712aafeb0458d6d3efc8c6085",
+    "dock-empty-accessibility-contrast-review.json": "61e6d21c822297d4d43c3befecefc7d06226dd168b00f13f0c60b3407ca6a542",
+    "dock-grounded-summary-history.json": "a466b5c43891c1166f3c94c51ba6e77be3c84773928e7f9bee3c37fb61360a70",
+    "dock-grounded-summary-run.json": "0d6c8e091997ca515a1ba6b95cd83231ae0e6f121bec540d703d132b0ba85508",
+    "fullscreen-accessibility-tree.json": "3204a847f0267b055465e8acccf57196521ba215b9039e8b0d194632ee26d991",
+    "fullscreen-answer-accessibility-axe.json": "5c033e591b194786c92fca1d13a747fa96b244679ddbf336293dc56d9d66a49c",
+    "fullscreen-answer-accessibility-contrast-review.json": "cda02e73167375e79fd0020a093df4b5b5db434fe67b4e1df4918b050238feac",
+    "fullscreen-answer.png": "7efc8ccac9314b989838df5635e5a5e87417e0c7cfa43b5630f876aea1ab8b60",
+    "fullscreen-grounded-followup-history.json": "650f6259b145e885738a527cdc7201e99b06ffc87ee490fe94aaf3e416b2f629",
+    "fullscreen-grounded-followup-run.json": "06e9f376c2eab48c1fb139a9d0e0c3859244576309fe08173ef56bd78694a040",
+    "mobile-dock-accessibility-axe.json": "10f09059b1ee430660bf65e97257b3a7ddbb127cadca7133def6350a0ce2fa9a",
+    "mobile-dock-accessibility-contrast-review.json": "002729081d1ba329648e57469c83547b8bced7a21e542ce2d8796e468933fa8a",
+    "mobile-dock.png": "8ab2af11650992e7e78c2414019b1890a8b8a919acaf56fafb42e917c5c1f8e0",
+    "mobile-fullscreen-accessibility-axe.json": "d1851b96c29c1a1830321f6068a05b201f2bda461891cfb3b9f6819166ef80a9",
+    "mobile-fullscreen-accessibility-contrast-review.json": "9ee547921734d7897a330de6e6bd9af8de03f23859780f74ff749b074a692a00",
+    "mobile-fullscreen.png": "b9dd0f6b075cf9dd2903f40c38a0b2df95ce2ad5e4150c256992a1ef126d44aa",
+    "summary.json": "55e4b203d5b7cbdf344292d04dac33eff259075281823f8d66b70649c727486e",
+    "untrusted-prose-and-action-run.json": "2b4745de7b8cb00252e9065a5bb1c37f435f4576e8a93a9b32786837a6aad197"
+  },
+  "sourceSha256": {
+    "packages/platform/ai/agent-runtime/src/index.ts": "1237e670cc859026ac26aa85e4dfa5248c1881522b8aae3c23a822d9afc17502",
+    "packages/platform/ai/agent-ui/src/index.ts": "760c2b51a0ebfd33a1cc581c6ced1bcacbc8226882945f2e740b7fbf2caca7c5",
+    "packages/platform/shell/shell/src/atlas-answer.tsx": "e017942fd45dd5233188d6fe77501ac947f2ee48113fd8e3799d9787ed50729a",
+    "packages/platform/shell/shell/src/atlas-workspace.tsx": "7c8fedaaee45dc8e4c688d1668c4300f9f590157fab43b52f41239c133d3ff90",
+    "packages/platform/shell/shell/src/home.tsx": "84bbbaf89bdde7bc0ef1025972244a1ada36061ec4816da2b8714cac807ed80a",
+    "packages/platform/shell/shell/src/styles.css": "1dc582493e9a14f2277d56b57a0748cb7d44341f855f15b371a1d2f7882867ac",
+    "server/packages/contracts/ai/src/answer.ts": "9a3dbb1a748290b04428167959a871a2faafc15ec03453b7098fd01df1522266",
+    "server/packages/contracts/ai/src/model.ts": "f1c19c9b6b42aaad55b97ae3bb06d0a67093d3d2aabb4a0962dfbc01e9fb3ddf",
+    "server/packages/platform/ai/src/agent-runtime.ts": "05853a2f4791fdeb02b19039efc5ba205f8d3c74c4b10397df77c1f7bc46a1d4",
+    "server/packages/platform/ai/src/thread-service.ts": "5314ba706417966a437d8890fdcdad825191b94df36f254b01e3e90e9eac7acc",
+    "tooling/scripts/verification/qualify-atlas-answer-presentation.mjs": "1032c6cefd9445fcd16debdf64e50eca90f5150bf0529f94c47d9704ae4f67db"
+  },
+  "validationReceiptSha256": {
+    "client-tests.log": "d554659817d66ce9b0c394d5141dc92b9b1622db5292e113bf387c7cb32fc967",
+    "ui-tests.log": "98bd94c68055d7d662dd2710aa38cae8135e595b4ff4d0797be05d7468aa6f7b",
+    "replay-tests.log": "06097c88a9bffef504b3284b55e36131d4fdd3abe52fab515a7a68409b562689",
+    "r9-final.log": "cb26b99290efb9ab80ea3f4266ef4378c0f5564c99426cdeb958b83a3438cefb",
+    "governance.log": "82ff9de6c7ae121615307cda004b20f847f5be884c49232438e48ea7fe865b0e",
+    "api-build-history-sources.log": "742885e27c3d29abe9ec66dedd6d751ba709dedb94e25cf6329c327a22f5a58b",
+    "neon-build-replay-text.log": "c99c418adb58f55b450daef94a787bf4a26ee5eefa7e979f2da41248c973ac8e"
+  }
+}

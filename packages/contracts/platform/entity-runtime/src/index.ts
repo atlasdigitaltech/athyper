@@ -26,3 +26,5 @@ function oneOf<const T extends readonly unknown[]>(value: unknown, choices: T, n
 function fail(name: string): never { throw new TypeError(`${name} is invalid`); }
 
 export * from "./record-360-panel";
+
+export * from "./related-presentation";

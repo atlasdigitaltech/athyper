@@ -16,6 +16,7 @@
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-events": "workspace:*",
     "@athyper/server-contract-jobs": "workspace:*",
+    "@athyper/server-contract-master-data": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
     "@athyper/server-runtime-http": "workspace:*",
     "kysely": "^0.28.17"

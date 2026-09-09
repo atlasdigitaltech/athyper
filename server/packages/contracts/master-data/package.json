@@ -12,9 +12,10 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@athyper/contract-platform-entity-runtime": "workspace:*",
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-foundation": "workspace:*",
-    "@athyper/contract-platform-entity-runtime": "workspace:*"
+    "ibantools": "^4.5.4"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

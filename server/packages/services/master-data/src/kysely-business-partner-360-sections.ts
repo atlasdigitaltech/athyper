@@ -18,6 +18,7 @@ type Positioned<T> = {
   readonly item: T;
   readonly at: string;
   readonly id: string;
+  readonly primary: boolean;
 };
 
 export async function readBusinessPartner360CommonSection(
@@ -45,29 +46,43 @@ export async function readBusinessPartner360CommonSection(
     input.sectionCode === "comments" || input.sectionCode === "attachments"
       ? await resources(input, transaction)
       : input.sectionCode === "identity"
-      ? await identity(input, businessPartnerOwnerType, transaction)
-      : input.sectionCode === "contacts"
-        ? await contacts(
-            input,
-            businessPartnerOwnerType,
-            contactPersonOwnerType,
-            transaction,
-          )
-        : input.sectionCode === "addresses"
-          ? await addresses(input, businessPartnerOwnerType, transaction)
-          : input.sectionCode === "governance"
-            ? await governance(input, transaction)
-            : await identifiers(input, businessPartnerOwnerType, transaction);
+        ? await identity(input, businessPartnerOwnerType, transaction)
+        : input.sectionCode === "contacts"
+          ? await contacts(
+              input,
+              businessPartnerOwnerType,
+              contactPersonOwnerType,
+              transaction,
+            )
+          : input.sectionCode === "addresses"
+            ? await addresses(input, businessPartnerOwnerType, transaction)
+            : input.sectionCode === "governance"
+              ? await governance(input, transaction)
+              : await identifiers(input, businessPartnerOwnerType, transaction);
   const ordered = positioned.sort(
       (left, right) =>
-        right.at.localeCompare(left.at) || right.id.localeCompare(left.id),
+        (input.collectionOrder === "primary-first"
+          ? Number(right.primary) - Number(left.primary)
+          : 0) ||
+        right.at.localeCompare(left.at) ||
+        right.id.localeCompare(left.id),
     ),
     page = ordered.slice(0, input.limit),
     last = page.at(-1),
     hasNext = ordered.length > input.limit;
   return {
     items: page.map((value) => value.item),
-    ...(hasNext && last ? { next: { at: last.at, id: last.id } } : {}),
+    ...(hasNext && last
+      ? {
+          next: {
+            at: last.at,
+            id: last.id,
+            ...(input.collectionOrder === "primary-first"
+              ? { primary: last.primary }
+              : {}),
+          },
+        }
+      : {}),
     provenance: [
       {
         plane: "neon",
@@ -217,7 +232,7 @@ async function contacts(
 ): Promise<Positioned<BusinessPartner360ContactItem>[]> {
   if (!contactOwnerType) return [];
   const people = (
-    await sql<Row>`SELECT id::text,contact_name,business_title,department_name,is_primary,created_at FROM master.contact_person WHERE tenant_id=${input.tenantId}::uuid AND owner_type_id=${ownerType}::uuid AND owner_id=${input.businessPartnerId}::uuid AND status='active' AND created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input)} ORDER BY created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
+    await sql<Row>`SELECT id::text,contact_name,business_title,department_name,is_primary,created_at FROM master.contact_person WHERE tenant_id=${input.tenantId}::uuid AND owner_type_id=${ownerType}::uuid AND owner_id=${input.businessPartnerId}::uuid AND status='active' AND created_at<=${input.cursor.snapshotAt}::timestamptz ${afterRelated(input)} ORDER BY ${relatedOrder(input)} created_at DESC,id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     )
   ).rows;
@@ -285,7 +300,7 @@ async function addresses(
   transaction: Tx,
 ): Promise<Positioned<BusinessPartner360AddressItem>[]> {
   const rows = (
-    await sql<Row>`SELECT address.id::text,link.id::text link_id,link.purpose,link.is_primary,link.effective_from,link.effective_until,address.address_kind,address.line1,address.line2,address.line3,address.city,address.dependent_locality,address.region,address.postal_code,address.country_code::text,address.formatted_address,address.validation_status,address.validation_provider,address.validation_confidence,address.validated_at,link.created_at FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) AND link.created_at<=${input.cursor.snapshotAt}::timestamptz ${after(input, "link.created_at", "link.id")} ORDER BY link.created_at DESC,link.id DESC LIMIT ${input.limit + 1}`.execute(
+    await sql<Row>`SELECT address.id::text,link.id::text link_id,link.purpose,link.is_primary,link.effective_from,link.effective_until,address.address_kind,address.line1,address.line2,address.line3,address.city,address.dependent_locality,address.region,address.postal_code,address.country_code::text,address.formatted_address,address.validation_status,address.validation_provider,address.validation_confidence,address.validated_at,link.created_at FROM master.address_link link JOIN master.address address ON address.tenant_id=link.tenant_id AND address.id=link.address_id WHERE link.tenant_id=${input.tenantId}::uuid AND link.owner_type_id=${ownerType}::uuid AND link.owner_id=${input.businessPartnerId}::uuid AND link.usage_status='active' AND address.status='active' AND link.effective_from<=${input.asOf}::date AND(link.effective_until IS NULL OR link.effective_until>${input.asOf}::date) AND link.created_at<=${input.cursor.snapshotAt}::timestamptz ${afterRelated(input, "link.")} ORDER BY ${relatedOrder(input, "link.")} link.created_at DESC,link.id DESC LIMIT ${input.limit + 1}`.execute(
       transaction,
     )
   ).rows;
@@ -478,19 +493,38 @@ async function identifiers(
   ];
 }
 
-async function resources(input: Input, transaction: Tx): Promise<Positioned<unknown>[]> {
+async function resources(
+  input: Input,
+  transaction: Tx,
+): Promise<Positioned<unknown>[]> {
   if (input.sectionCode === "comments") {
-    const result = await sql<Row>`SELECT comment.id::text,principal.name author_name,comment.comment_text,comment.visibility,comment.status,comment.created_at,comment.parent_comment_id::text
+    const result =
+      await sql<Row>`SELECT comment.id::text,principal.name author_name,comment.comment_text,comment.visibility,comment.status,comment.created_at,comment.parent_comment_id::text
       FROM document.comment comment LEFT JOIN master.principal principal ON principal.tenant_id=comment.tenant_id AND principal.id=comment.commenter_id
       WHERE comment.tenant_id=${input.tenantId}::uuid AND comment.context_type='entity'
         AND comment.entity_type IN ('business_partner','master.business_partner') AND comment.entity_id=${input.businessPartnerId}
         AND comment.status<>'deleted' AND (comment.visibility<>'private' OR comment.commenter_id=${input.principalId ?? null}::uuid)
         AND comment.created_at<=${input.cursor.snapshotAt}::timestamptz AND comment.created_at::date<=${input.asOf}::date
         ${after(input, "comment.created_at", "comment.id")}
-      ORDER BY comment.created_at DESC,comment.id DESC LIMIT ${input.limit + 1}`.execute(transaction);
-    return result.rows.map(row => position(row, { id: text(row, "id"), text: text(row, "comment_text"), authorName: optional(row, "author_name"), visibility: text(row, "visibility"), status: text(row, "status"), createdAt: iso(row["created_at"]), ...(optional(row, "parent_comment_id") ? { parentCommentId: optional(row, "parent_comment_id") } : {}) }));
+      ORDER BY comment.created_at DESC,comment.id DESC LIMIT ${input.limit + 1}`.execute(
+        transaction,
+      );
+    return result.rows.map((row) =>
+      position(row, {
+        id: text(row, "id"),
+        text: text(row, "comment_text"),
+        authorName: optional(row, "author_name"),
+        visibility: text(row, "visibility"),
+        status: text(row, "status"),
+        createdAt: iso(row["created_at"]),
+        ...(optional(row, "parent_comment_id")
+          ? { parentCommentId: optional(row, "parent_comment_id") }
+          : {}),
+      }),
+    );
   }
-  const result = await sql<Row>`SELECT attachment.id::text,attachment.file_name,attachment.content_type,attachment.size_bytes,attachment.created_at
+  const result =
+    await sql<Row>`SELECT attachment.id::text,attachment.file_name,attachment.content_type,attachment.size_bytes,attachment.created_at
     FROM document.attachment attachment
     JOIN document.attachment_series series ON series.tenant_id=attachment.tenant_id AND series.id=attachment.series_id AND series.current_attachment_id=attachment.id
     WHERE attachment.tenant_id=${input.tenantId}::uuid AND attachment.is_active AND attachment.is_virus_scanned AND attachment.status='active'
@@ -499,10 +533,35 @@ async function resources(input: Input, transaction: Tx): Promise<Positioned<unkn
       AND (EXISTS(SELECT 1 FROM document.attachment_link link WHERE link.tenant_id=attachment.tenant_id AND link.entity_type IN ('business_partner','master.business_partner') AND link.entity_id=${input.businessPartnerId} AND link.attachment_series_id=attachment.series_id AND (link.pinned_attachment_id IS NULL OR link.pinned_attachment_id=attachment.id))
         OR (${input.certificateVisible === true} AND EXISTS(SELECT 1 FROM master.certification certification WHERE certification.tenant_id=attachment.tenant_id AND certification.owner_type='business_partner' AND certification.owner_id=${input.businessPartnerId}::uuid AND certification.document_attachment_id=attachment.id AND (certification.company_code_id IS NULL OR certification.company_code_id=${input.companyCodeId ?? null}::uuid) AND (certification.effective_from IS NULL OR certification.effective_from<=${input.asOf}::date))))
       ${after(input, "attachment.created_at", "attachment.id")}
-    ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${input.limit + 1}`.execute(transaction);
-  return result.rows.map(row => position(row, { id: text(row, "id"), attachmentId: text(row, "id"), fileName: text(row, "file_name"), contentType: optional(row, "content_type"), sizeBytes: row["size_bytes"] == null ? undefined : Number(row["size_bytes"]), createdAt: iso(row["created_at"]) }));
+    ORDER BY attachment.created_at DESC,attachment.id DESC LIMIT ${input.limit + 1}`.execute(
+      transaction,
+    );
+  return result.rows.map((row) =>
+    position(row, {
+      id: text(row, "id"),
+      attachmentId: text(row, "id"),
+      fileName: text(row, "file_name"),
+      contentType: optional(row, "content_type"),
+      sizeBytes:
+        row["size_bytes"] == null ? undefined : Number(row["size_bytes"]),
+      createdAt: iso(row["created_at"]),
+    }),
+  );
 }
 
+function relatedOrder(input: Input, prefix = "") {
+  return input.collectionOrder === "primary-first"
+    ? sql`COALESCE(${sql.ref(`${prefix}is_primary`)},false) DESC,`
+    : sql``;
+}
+function afterRelated(input: Input, prefix = "") {
+  if (input.collectionOrder !== "primary-first")
+    return after(input, `${prefix}created_at`, `${prefix}id`);
+  if (!input.cursor.afterAt || !input.cursor.afterId) return sql``;
+  if (typeof input.cursor.afterPrimary !== "boolean")
+    throw new Error("Primary-first cursor requires primary anchor");
+  return sql`AND (COALESCE(${sql.ref(`${prefix}is_primary`)},false),${sql.ref(`${prefix}created_at`)},${sql.ref(`${prefix}id`)})<(${input.cursor.afterPrimary}::boolean,${input.cursor.afterAt}::timestamptz,${input.cursor.afterId}::uuid)`;
+}
 function after(input: Input, at = "created_at", id = "id") {
   return input.cursor.afterAt && input.cursor.afterId
     ? sql`AND (${sql.raw(at)},${sql.raw(id)})<(${input.cursor.afterAt}::timestamptz,${input.cursor.afterId}::uuid)`
@@ -511,6 +570,7 @@ function after(input: Input, at = "created_at", id = "id") {
 function position<T>(row: Row, item: T): Positioned<T> {
   return {
     item,
+    primary: row["is_primary"] === true,
     at: iso(row["created_at"]),
     id: optional(row, "link_id") ?? text(row, "id"),
   };

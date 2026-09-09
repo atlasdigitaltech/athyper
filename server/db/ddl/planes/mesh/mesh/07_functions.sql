@@ -681,11 +681,6 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, mesh
 AS $$
 BEGIN
-    IF TG_TABLE_NAME = 'bank_party' THEN
-        NEW.code := lower(btrim(NEW.code));
-        NEW.name := btrim(NEW.name);
-        NEW.bic := nullif(upper(regexp_replace(NEW.bic, '\s+', '', 'g')), '');
-    ELSE
         NEW.code := nullif(lower(btrim(NEW.code)), '');
         NEW.name := nullif(btrim(NEW.name), '');
         NEW.account_holder_name := btrim(NEW.account_holder_name);
@@ -695,7 +690,7 @@ BEGIN
         NEW.bic_override := nullif(upper(regexp_replace(
             NEW.bic_override, '\s+', '', 'g'
         )), '');
-    END IF;
+
     RETURN NEW;
 END;
 $$;
@@ -706,6 +701,11 @@ LANGUAGE plpgsql
 SET search_path = pg_catalog, mesh
 AS $$
 BEGIN
+  IF (OLD.is_verified OR EXISTS(SELECT 1 FROM mesh.bank_account_link l WHERE l.tenant_id=OLD.tenant_id AND l.bank_account_id=OLD.id))
+  AND ROW(NEW.bank_institution_id,NEW.bank_branch_id,NEW.provisional_bank_reference_id)
+      IS DISTINCT FROM ROW(OLD.bank_institution_id,OLD.bank_branch_id,OLD.provisional_bank_reference_id) THEN
+    RAISE EXCEPTION 'Verified or linked bank routing identity is immutable; create a replacement account';
+  END IF;
     IF NEW.id IS DISTINCT FROM OLD.id
        OR NEW.tenant_id IS DISTINCT FROM OLD.tenant_id
        OR NEW.network_account_id IS DISTINCT FROM OLD.network_account_id
@@ -1060,9 +1060,8 @@ AS $function$
       ON bank_account.tenant_id = p_owner_tenant_id
      AND bank_account.id = p_bank_account_id
      AND bank_account.network_account_id = owner_account.id
-    LEFT JOIN mesh.bank_party AS bank_party
-      ON bank_party.tenant_id = bank_account.tenant_id
-     AND bank_party.id = bank_account.bank_party_id
+    LEFT JOIN shared.v_bank_directory AS bank_party
+      ON bank_party.id = bank_account.bank_institution_id AND bank_party.branch_id IS NOT DISTINCT FROM bank_account.bank_branch_id
     JOIN mesh.bank_account_link AS bank_link
       ON bank_link.tenant_id = bank_account.tenant_id
      AND bank_link.network_account_id = owner_account.id
@@ -1096,3 +1095,19 @@ $function$;
 
 COMMENT ON FUNCTION mesh.read_eligible_bank_disclosure_source(uuid, uuid, uuid, uuid, text) IS
   'Validates and locks a relationship-scoped bank disclosure source while returning masked bank coordinates only.';
+
+CREATE FUNCTION mesh.trg_register_provisional_bank() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,mesh AS $$
+DECLARE p mesh.bank_provisional_reference;
+BEGIN
+ IF NEW.bank_institution_id IS NULL THEN
+  IF NEW.provisional_bank_reference_id IS NULL THEN
+   INSERT INTO mesh.bank_provisional_reference(tenant_id,submitted_name,submitted_country,submitted_bic)
+   VALUES(NEW.tenant_id,NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override)
+   RETURNING id INTO NEW.provisional_bank_reference_id;
+  ELSE
+   SELECT * INTO p FROM mesh.bank_provisional_reference WHERE tenant_id=NEW.tenant_id AND id=NEW.provisional_bank_reference_id;
+   IF NOT FOUND OR ROW(p.submitted_name,p.submitted_country,p.submitted_bic) IS DISTINCT FROM ROW(NEW.bank_name_override,NEW.bank_country_override,NEW.bic_override) THEN RAISE EXCEPTION 'Provisional bank reference does not match submitted details'; END IF;
+  END IF;
+ END IF;
+ RETURN NEW;
+END $$;

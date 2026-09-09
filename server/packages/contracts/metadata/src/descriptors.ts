@@ -165,6 +165,7 @@ export interface EntityPolicyBindingDescriptor {
 }
 
 export interface EntityRuntimeDescriptor {
+  readonly ai?: import("./entity-ai.js").EntityAiDescriptorV1;
   readonly recordPresentation?: import("@athyper/contract-platform-entity-runtime").EntityRecordPresentationV1;
   readonly directoryScope?: import("./directory-scope.js").EntityDirectoryScopeV1;
   readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;

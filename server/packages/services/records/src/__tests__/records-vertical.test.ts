@@ -157,3 +157,22 @@ describe("descriptor-driven Records vertical", () => {
 });
 
 function eventFrom(input: AuditRecordInput, sequence: number): AuditEvent { return { ...input, id: `audit-${sequence}`, occurredAt: "2026-08-09T00:00:00.000Z", severity: input.severity ?? "info" }; }
+
+// BP-AI-03: search, sort, groups and counts must not become hidden-field oracles.
+it("excludes unreadable search predicates and rejects hidden query operations", async () => {
+  const secured: EntityRuntimeDescriptor = { ...descriptor, fields: [...descriptor.fields, {
+    key: "secret", storagePath: "secret", type: "string", required: false, writableOn: [],
+    searchable: true, filterable: true, sortable: true, list: { groupable: true },
+    readPermissionCode: "master.secret.read",
+  }] };
+  const persistence = createInMemoryRecordPersistence();
+  persistence.seed(secured, context.tenantId, [{ id: "bp-1", tenant_id: context.tenantId, code: "ACME", name: "Acme", status: "active", row_version: 1, secret: "HIDDEN-SENTINEL" }]);
+  const queries = createRecordQueryService({ metadata: { getEntityDescriptor: async () => secured }, authorizer, repository: persistence.repository, transactions: persistence.transactions });
+  await expect(queries.list({ context, entityCode: secured.entityCode, search: "HIDDEN-SENTINEL", countMode: "exact" })).resolves.toMatchObject({ data: [], pagination: { total: 0 } });
+  const visible = await queries.list({ context, entityCode: secured.entityCode, search: "Acme", countMode: "exact" });
+  expect(visible.pagination.total).toBe(1);
+  expect(JSON.stringify(visible)).not.toContain("HIDDEN-SENTINEL");
+  for (const query of [{ filters: [{ field: "secret", operator: "eq" as const, value: "HIDDEN-SENTINEL" }] }, { sort: [{ field: "secret", direction: "asc" as const }] }, { group: "secret" }, { fields: ["secret"] }, { filters: [{ field: "linked.secret", operator: "eq" as const, value: "x" }] }]) {
+    await expect(queries.list({ context, entityCode: secured.entityCode, ...query })).rejects.toThrow();
+  }
+});

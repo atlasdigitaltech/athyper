@@ -59,8 +59,9 @@
 .bp-directory-filters { display:flex; flex-wrap:wrap; gap:1rem; align-items:end; } .bp-directory-filters label { display:grid; gap:.375rem; font-size:var(--a-font-size-sm); } .bp-directory-filters select { max-width:100%; padding:.5rem; border:1px solid var(--a-border); border-radius:.375rem; background:var(--a-surface); color:inherit; }
 
 .bp360-primary-card { overflow-wrap:anywhere; }
+.bp360 .bp360-primary-card { padding:1.25rem; }
+.bp360 .a-related-summary h3,.bp360 .a-related-summary address { margin:0; }
 .bp360-primary-card address { font-style:normal; margin:.5rem 0; }
-.bp360-primary-card button { display:block; margin-top:.75rem; min-height:2.75rem; color:var(--a-primary); background:transparent; border:0; padding:0; text-align:start; cursor:pointer; }
 .bp360-certificate-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap:1rem; }
 .bp360-certificate { border:1px solid var(--a-border); border-radius:var(--a-radius-md); padding:1rem; min-width:0; overflow-wrap:anywhere; }
 .bp360-document-icon { font-size:2rem; color:var(--a-primary); }
@@ -74,3 +75,19 @@
 .bp360-section-card button:disabled,.bp360-section-list form button:disabled { opacity:.55; cursor:default; }
 .bp360-section-card button.bp360-empty-toggle { min-height:2.5rem; margin-top:.75rem; border-color:transparent; color:var(--a-muted-foreground); }
 @media(max-width:48rem) { .bp360-section-card>.bp360-fields { grid-template-columns:minmax(0,1fr); } }
+
+/* Relationship overview and company configuration share the record's selected context. */
+.bp-company-table { overflow-x: auto; margin-block: 1rem; }
+.bp-company-table table { width: 100%; border-collapse: collapse; text-align: left; }
+.bp-company-table th, .bp-company-table td { padding: .8rem; border-bottom: 1px solid var(--a-color-border, #d8dfea); }
+.bp-company-table tr[aria-selected="true"] { background: var(--a-color-surface-subtle, #f1f5fb); }
+.bp-role-tabs { display: flex; gap: .5rem; flex-wrap: wrap; border-bottom: 1px solid var(--a-color-border, #d8dfea); }
+.bp-role-tabs button { padding: .8rem 1rem; background: transparent; border: 0; border-bottom: 3px solid transparent; cursor: pointer; }
+.bp-role-tabs button[aria-selected="true"] { border-bottom-color: #24529b; color: #24529b; font-weight: 600; }
+.bp-roles-workspace select, .bp360-overview select, .bp360-overview input[type="date"] { display: block; max-width: 100%; min-height: 2.5rem; padding: .4rem .7rem; border: 1px solid var(--a-color-border, #d8dfea); border-radius: .4rem; background: var(--a-color-surface, white); color: inherit; }
+.bp-outcome-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(140px,1fr)); gap: 1rem; margin-block: 1rem; }
+.bp-outcome-grid h3 { font-size: .9rem; }
+.bp-relationship-summary { font-size: 1.05rem; font-weight: 600; }
+@media(max-width: 700px) { .bp-company-table th,.bp-company-table td { padding: .5rem; } .bp-role-tabs button { flex: 1; padding: .6rem; } }
+
+.bp360 .bp360-primary-card--primary-contact > h2 { font-size:1rem; font-weight:var(--a-font-weight-medium); }

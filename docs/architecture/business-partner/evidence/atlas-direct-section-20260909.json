@@ -1,0 +1,24 @@
+{
+  "schema": "atlas-direct-section-evidence/1",
+  "capturedAt": "2026-09-09T05:05:23.398937+00:00",
+  "reportedRun": "2a0379e9-2569-42e2-8afc-00d3637b0801",
+  "observedBehavior": {
+    "modelCalls": 1,
+    "toolCalls": 0,
+    "runStatus": "completed",
+    "response": "Claimed address tool unavailable"
+  },
+  "apiImage": "athyper-runtime-server:atlas-direct-section-20260909",
+  "health": "healthy",
+  "checks": {
+    "aiTests": 253,
+    "typecheck": "passed",
+    "build": "passed",
+    "imageImportPreflight": "passed",
+    "syntheticDeployedRuntime": "passed",
+    "authorizedReadCitationsReplay": "passed",
+    "deniedReadWithoutModelFallback": "passed"
+  },
+  "authenticatedBrowserVerification": "pending",
+  "scopedReadinessEligibilityQualification": "pending"
+}

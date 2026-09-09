@@ -1241,51 +1241,21 @@ COMMENT ON COLUMN master.company_code_gl_account.default_site_id IS
 -- Neon operational banking foundation
 -- ============================================================================
 
-CREATE TABLE master.bank_party (
-    id                    uuid                           NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id             uuid                           NOT NULL,
-    code                  text                           NOT NULL,
-    name                  text                           NOT NULL,
-    country_code          character(2)                   NOT NULL,
-    institution_type      master.bank_institution_type_d NOT NULL DEFAULT 'bank',
-    bic                   text,
-    national_bank_code_type text,
-    national_bank_code    text,
-    branch_code           text,
-    branch_name           text,
-    supports_swift        boolean                        NOT NULL DEFAULT false,
-    supports_local_clearing boolean                      NOT NULL DEFAULT false,
-    supports_sepa         boolean                        NOT NULL DEFAULT false,
-    supports_ach          boolean                        NOT NULL DEFAULT false,
-    metadata              jsonb                          NOT NULL DEFAULT '{}'::jsonb,
-    status                master.finance_setup_status_d  NOT NULL DEFAULT 'active',
-    is_active             boolean GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at     timestamptz,
-    status_changed_by     uuid,
-    created_at            timestamptz                    NOT NULL DEFAULT now(),
-    created_by            uuid                           NOT NULL,
-    updated_at            timestamptz,
-    updated_by            uuid,
 
-    CONSTRAINT bank_party_pkey PRIMARY KEY (id),
-    CONSTRAINT bank_party_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT bank_party_tenant_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT bank_party_code_chk CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
-    CONSTRAINT bank_party_name_chk CHECK (btrim(name) <> ''),
-    CONSTRAINT bank_party_country_chk CHECK (country_code::text ~ '^[A-Z]{2}$'),
-    CONSTRAINT bank_party_bic_chk
-        CHECK (bic IS NULL OR bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'),
-    CONSTRAINT bank_party_national_code_pair_chk CHECK (
-        (national_bank_code_type IS NULL) = (national_bank_code IS NULL)
-    ),
-    CONSTRAINT bank_party_branch_chk CHECK (
-        branch_code IS NULL OR btrim(branch_code) <> ''
-    ),
-    CONSTRAINT bank_party_metadata_object_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT bank_party_status_audit_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT bank_party_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+CREATE TABLE master.bank_provisional_reference (
+ id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+ tenant_id uuid NOT NULL REFERENCES master.tenant(id),
+ submitted_name text NOT NULL CHECK (btrim(submitted_name) <> ''),
+ submitted_country character(2) NOT NULL REFERENCES shared.country(code),
+ submitted_bic text,
+ status text NOT NULL DEFAULT 'unresolved' CHECK (status IN ('unresolved','resolved','rejected')),
+ resolved_institution_id uuid REFERENCES shared.bank_institution(id),
+ resolved_branch_id uuid,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE (tenant_id,id),
+ FOREIGN KEY (resolved_institution_id,resolved_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ CHECK ((status='resolved') = (resolved_institution_id IS NOT NULL)),
+ CHECK (resolved_branch_id IS NULL OR resolved_institution_id IS NOT NULL)
 );
 
 CREATE TABLE master.bank_account (
@@ -1293,7 +1263,9 @@ CREATE TABLE master.bank_account (
     tenant_id             uuid                           NOT NULL,
     code                  text,
     name                  text,
-    bank_party_id         uuid,
+    bank_institution_id         uuid,
+    bank_branch_id uuid,
+    provisional_bank_reference_id uuid,
     account_holder_name   text                           NOT NULL,
     account_id_type       master.bank_account_id_type_d  NOT NULL,
     account_id_value      text                           NOT NULL,
@@ -1304,7 +1276,7 @@ CREATE TABLE master.bank_account (
     bank_country_override character(2),
     account_nature        master.bank_account_nature_d   NOT NULL DEFAULT 'direct',
     provider_account_ref  text,
-    correspondent_bank_party_id uuid,
+    correspondent_bank_institution_id uuid,
     is_verified           boolean                        NOT NULL DEFAULT false,
     verified_at           timestamptz,
     verified_by           uuid,
@@ -1337,12 +1309,12 @@ CREATE TABLE master.bank_account (
     CONSTRAINT bank_account_currency_chk CHECK (currency_code::text ~ '^[A-Z]{3}$'),
     CONSTRAINT bank_account_bank_identity_chk CHECK (
         (
-            bank_party_id IS NOT NULL
+            bank_institution_id IS NOT NULL
             AND bank_name_override IS NULL
             AND bank_country_override IS NULL
         )
         OR (
-            bank_party_id IS NULL
+            bank_institution_id IS NULL
             AND bank_name_override IS NOT NULL
             AND btrim(bank_name_override) <> ''
             AND bank_country_override IS NOT NULL
@@ -1358,8 +1330,8 @@ CREATE TABLE master.bank_account (
     ),
     CONSTRAINT bank_account_correspondent_self_chk
         CHECK (
-            correspondent_bank_party_id IS NULL
-            OR correspondent_bank_party_id IS DISTINCT FROM bank_party_id
+            correspondent_bank_institution_id IS NULL
+            OR correspondent_bank_institution_id IS DISTINCT FROM bank_institution_id
         ),
     CONSTRAINT bank_account_provider_ref_chk
         CHECK (provider_account_ref IS NULL OR btrim(provider_account_ref) <> ''),

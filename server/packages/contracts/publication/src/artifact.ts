@@ -1,10 +1,11 @@
+import type { BankDirectoryRelease } from "@athyper/server-contract-master-data";
 import { PublicationContractError } from "./errors.js";
 import type { BusinessPartnerDefinitionProjection, EntityRuntimeProjection, PublicationCompatibilityLevel, PublicationPlane } from "./projection.js";
 
 export const PUBLICATION_ARTIFACT_SCHEMA_V1 = "athyper.publication-artifact.v1" as const;
 export const PUBLICATION_ARTIFACT_MEDIA_TYPE_V1 = "application/vnd.athyper.publication-artifact.v1+json" as const;
 
-export type PublicationArtifactKind = "entity_runtime" | "business_partner_definition_bundle";
+export type PublicationArtifactKind = "entity_runtime" | "business_partner_definition_bundle" | "bank_directory";
 
 interface PublicationArtifactEnvelopeBaseV1 {
   readonly schema: typeof PUBLICATION_ARTIFACT_SCHEMA_V1;
@@ -20,6 +21,7 @@ interface PublicationArtifactEnvelopeBaseV1 {
 }
 
 export type PublicationArtifactEnvelopeV1 =
+  | (PublicationArtifactEnvelopeBaseV1 & { readonly artifactKind: "bank_directory"; readonly payload: BankDirectoryRelease })
   | (PublicationArtifactEnvelopeBaseV1 & { readonly artifactKind: "entity_runtime"; readonly payload: EntityRuntimeProjection })
   | (PublicationArtifactEnvelopeBaseV1 & { readonly artifactKind: "business_partner_definition_bundle"; readonly payload: BusinessPartnerDefinitionProjection });
 
@@ -72,6 +74,9 @@ export function parsePublicationArtifactEnvelope(value: unknown): PublicationArt
   } else if (value.artifactKind === "business_partner_definition_bundle") {
     if (!isRecord(value.payload.bundle) || typeof value.payload.bundleHash !== "string" || typeof value.payload.bundleSchemaVersion !== "string" || value.payload.plane !== value.targetPlane)
       throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID", "Business Partner definition bundle payload is required");
+  } else if (value.artifactKind === "bank_directory") {
+    const p=value.payload;
+    if(p.id!==value.releaseId||p.version!==value.releaseNo||typeof p.contentHash!=="string"||!/^[a-f0-9]{64}$/.test(p.contentHash)||!isRecord(p.payload)||!Array.isArray(p.sources)||value.publicationKey!=="shared.bank_directory") throw new PublicationContractError("ARTIFACT_PAYLOAD_INVALID","Invalid bank directory coordinates");
   } else {
     throw new PublicationContractError("ARTIFACT_KIND_UNSUPPORTED", "Artifact kind is unsupported");
   }

@@ -41,13 +41,14 @@ export interface AtlasModelBinding {
   readonly reasoningPricePerMtokUsd?: number | null;
 }
 
-export interface AtlasTextBlock { readonly type: "text"; readonly text: string }
+export interface AtlasHistoryCitation { readonly toolCode: string; readonly coordinate: import("./records.js").AtlasRecordSourceCoordinate }
+export interface AtlasTextBlock { /** Server-retained, reauthorized provenance; never read from provider output. */ readonly citations?: readonly AtlasHistoryCitation[]; readonly type: "text"; readonly text: string }
 export interface AtlasToolUseBlock { readonly type: "tool_use"; readonly callId: string; readonly toolName: string; readonly input: Readonly<Record<string, unknown>> }
-export interface AtlasToolResultBlock { readonly type: "tool_result"; readonly callId: string; readonly toolName: string; readonly result: unknown; readonly isError?: boolean }
+export interface AtlasToolResultBlock { /** Server-owned citation coordinates, retained under message lineage authorization. */ readonly sources?: readonly import("./records.js").AtlasRecordSourceCoordinate[]; readonly type: "tool_result"; readonly callId: string; readonly toolName: string; readonly result: unknown; readonly isError?: boolean }
 export type AtlasContentBlock = AtlasTextBlock | AtlasToolUseBlock | AtlasToolResultBlock;
 export type AtlasMessageRole = "system" | "user" | "assistant" | "tool";
 export interface AtlasModelMessage { readonly role: AtlasMessageRole; readonly content: readonly AtlasContentBlock[] }
-export interface AtlasProviderToolDefinition { readonly name: string; readonly description: string; readonly inputSchema: Readonly<Record<string, unknown>> }
+export interface AtlasProviderToolDefinition { readonly entitySection?: import("./entity-sections.js").AtlasEntitySectionContext; readonly name: string; readonly description: string; readonly inputSchema: Readonly<Record<string, unknown>> }
 
 export interface AtlasModelPrompt {
   readonly messages: readonly AtlasModelMessage[];

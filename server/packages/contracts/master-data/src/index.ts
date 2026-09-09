@@ -16,3 +16,7 @@ export type * from "./business-partner-invitation-ports.js";
 export * from "./workforce.js";
 export type * from "./workforce-ports.js";
 export * from "./supplier-workforce.js";
+
+export * from "./bank-directory.js";
+
+export * from "./bank-account-identifiers.js";

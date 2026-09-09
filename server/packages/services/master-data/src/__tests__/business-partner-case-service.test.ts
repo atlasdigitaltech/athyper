@@ -1,6 +1,6 @@
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { BusinessPartnerRequest, BusinessPartnerRequestRepository, BusinessPartnerRequestValidationResult, CreateBusinessPartnerRequestCommand } from "@athyper/server-contract-master-data";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createBusinessPartnerRequestService, createBusinessPartnerRequestValidator, MasterDataError } from "../index.js";
 
 const context = {
@@ -205,4 +205,24 @@ it.each(["invalid", "2026-13-01", "2026-02-30", "infinity"])("rejects invalid ca
   const value=fixture();
   await expect(value.service.list({context,operatingOrganizationId:"55555555-5555-4555-8555-555555555555",beforeCreatedAt})).rejects.toMatchObject({status:400,code:"BUSINESS_PARTNER_REQUEST_INVALID"});
   expect(value.permissions).toHaveLength(0);
+});
+
+it("BP-AI-07: authorizes current scope, pins version, and never exposes the owner baseline DTO", async () => {
+  const value = fixture();
+  const {request} = await value.service.create(command());
+  vi.spyOn(value.repository, "getView").mockResolvedValue({request, validationFindings: [], snapshotId: "saved", validationCurrent: false, previousSnapshot: {id: "prior", revision: 1, payload: {bankAccount: "protected-baseline"}}} as never);
+  const result = await value.service.explainCase!({context, requestId: request.id, expectedVersion: request.rowVersion});
+  expect(result).toMatchObject({caseId: request.id, rowVersion: request.rowVersion, validation: "not_evaluated", coverage: "partial"});
+  expect(JSON.stringify(result)).not.toContain("protected-baseline");
+  expect(await value.service.getView({context, requestId: request.id})).not.toHaveProperty("previousSnapshot");
+  await expect(value.service.explainCase!({context, requestId: request.id, expectedVersion: request.rowVersion + 1})).rejects.toMatchObject({code: "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT"});
+  await expect(value.service.explainCase!({context, requestId: request.id, businessPartnerId: "unrelated"})).rejects.toMatchObject({code: "FORBIDDEN"});
+  expect(value.repository.submissionCount).toBe(0);
+});
+it("BP-AI-07: rejects revoked case access before explaining saved evidence", async () => {
+  let allowed = true;
+  const value = fixture(() => allowed);
+  const {request} = await value.service.create(command());
+  allowed = false;
+  await expect(value.service.explainCase!({context, requestId: request.id})).rejects.toMatchObject({code: "FORBIDDEN"});
 });

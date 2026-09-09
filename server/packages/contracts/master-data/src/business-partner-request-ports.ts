@@ -150,6 +150,7 @@ export interface BusinessPartnerRequestNumberAllocator<Transaction = unknown> {
 }
 
 export interface BusinessPartnerRequestService {
+  explainCase?(query: { readonly context: BusinessPartnerRequestQuery["context"]; readonly requestId: string; readonly expectedVersion?: number; readonly businessPartnerId?: string }): Promise<import("./business-partner-requests.js").BusinessPartnerCaseExplanation>;
   create(command: CreateBusinessPartnerRequestCommand): Promise<{
     readonly request: BusinessPartnerRequest;
     readonly case?: BusinessPartnerCase;

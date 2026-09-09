@@ -1,3 +1,5 @@
+import { resolveMeshExternalReferenceCode } from "./mesh-external-reference-code.js";
+import { normalizeBankIdentifier } from "@athyper/server-contract-master-data";
 import { createHash, randomUUID } from "node:crypto";
 import { sql, type Transaction } from "kysely";
 import type {
@@ -65,9 +67,28 @@ export interface LocalAudit {
 }
 
 export class KyselyBusinessPartnerAccountBankRepository {
+  async configureCompanyUsage(input: {tenantId:string;principalId:string;linkId:string;companyCodeId:string;effectiveFrom:string;effectiveUntil?:string;purpose:string;primary:boolean}, tx:Tx) {
+    const link=one(await sql<Row>`SELECT * FROM master.bank_account_link WHERE tenant_id=${input.tenantId}::uuid AND id=${input.linkId}::uuid AND owner_type='business_partner' FOR UPDATE`.execute(tx));
+    if(!link)throw missing("NEON_BANK_LINK_NOT_FOUND","Partner account was not found");
+    if(link["company_code_id"] && link["company_code_id"]!==input.companyCodeId)throw conflict("NEON_BANK_LEGACY_SCOPE_RESTRICTED","Existing company restrictions must be migrated explicitly");
+    const profile=await this.protectedRegistrationSource(input.tenantId,String(link["owner_id"]),input.companyCodeId,tx);
+    if(!profile)throw conflict("NEON_BANK_COMPANY_NOT_ELIGIBLE","An active supplier company profile is required");
+    await sql`INSERT INTO master.bank_account_usage(tenant_id,bank_account_link_id) VALUES(${input.tenantId}::uuid,${input.linkId}::uuid) ON CONFLICT DO NOTHING`.execute(tx);
+    const existing=one(await sql<Row>`SELECT * FROM master.bank_account_company_usage WHERE tenant_id=${input.tenantId}::uuid AND bank_account_link_id=${input.linkId}::uuid AND company_code_id=${input.companyCodeId}::uuid AND purpose=${input.purpose} AND daterange(effective_from,effective_until,'[)') && daterange(${input.effectiveFrom}::date,${input.effectiveUntil??null}::date,'[)') FOR UPDATE`.execute(tx));
+    if(existing){
+      if(String(existing["effective_from"]).slice(0,10)!==input.effectiveFrom && !(existing["effective_from"] instanceof Date && existing["effective_from"].toISOString().slice(0,10)===input.effectiveFrom))throw conflict("NEON_BANK_USAGE_OVERLAP","The assignment overlaps an existing effective period");
+      return required(one(await sql<Row>`UPDATE master.bank_account_company_usage SET is_primary=${input.primary},effective_until=${input.effectiveUntil??null}::date,
+        accepted_at=CASE WHEN effective_until IS NOT DISTINCT FROM ${input.effectiveUntil??null}::date THEN accepted_at ELSE NULL END,
+        accepted_by=CASE WHEN effective_until IS NOT DISTINCT FROM ${input.effectiveUntil??null}::date THEN accepted_by ELSE NULL END
+        WHERE id=${existing["id"]}::uuid RETURNING *`.execute(tx)));
+    }
+    // Assignment is availability only. It deliberately carries no acceptance.
+    return required(one(await sql<Row>`INSERT INTO master.bank_account_company_usage(tenant_id,bank_account_link_id,company_code_id,purpose,effective_from,effective_until,is_primary)
+      VALUES(${input.tenantId}::uuid,${input.linkId}::uuid,${input.companyCodeId}::uuid,${input.purpose},${input.effectiveFrom}::date,${input.effectiveUntil??null}::date,${input.primary}) RETURNING *`.execute(tx)));
+  }
   async protectedRegistrationByKey(tenantId: string, key: string, tx: Tx) {
     await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${tenantId}:protected-registration:${key}`},0))`.execute(tx);
-    return one(await sql<Row>`SELECT account.metadata->>'accountFingerprint' registration_account_fingerprint,account.account_id_type::text registration_account_id_type,link.company_code_id::text,link.owner_id::text business_partner_id,link.id::text bank_account_link_id,account.id::text bank_account_id,account.account_last4,account.account_holder_name,account.currency_code::text,account.bank_name_override,account.bank_country_override::text,account.bic_override,account.status::text,account.is_verified,account.created_by::text,account.verified_by::text,account.verification_method::text
+    return one(await sql<Row>`SELECT account.metadata->>'accountFingerprint' registration_account_fingerprint,account.account_id_type::text registration_account_id_type,COALESCE(link.company_code_id::text,link.metadata->>'registrationCompanyCodeId') company_code_id,link.owner_id::text business_partner_id,link.id::text bank_account_link_id,account.id::text bank_account_id,account.account_last4,account.account_holder_name,account.currency_code::text,account.bank_name_override,account.bank_country_override::text,account.bic_override,account.status::text,account.is_verified,account.created_by::text,account.verified_by::text,account.verification_method::text
       FROM master.bank_account_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id
       WHERE link.tenant_id=${tenantId}::uuid AND link.metadata->>'registrationIdempotencyKey'=${key}`.execute(tx));
   }
@@ -79,17 +100,18 @@ export class KyselyBusinessPartnerAccountBankRepository {
       WHERE bp.tenant_id=${tenantId}::uuid AND bp.id=${businessPartnerId}::uuid AND bp.status='active' AND supplier.status IN('onboarding','active')
         AND profile.company_code_id=${companyCodeId}::uuid AND profile.status='active' LIMIT 1 FOR SHARE OF bp,supplier,profile`.execute(tx));
   }
-  async createProtectedRegistration(input:{tenantId:string;principalId:string;businessPartnerId:string;companyCodeId:string;accountHolderName:string;accountIdType:string;accountFingerprint:string;accountLast4:string;currencyCode:string;bankName:string;bankCountryCode:string;bic?:string;protectedValueToken:string;idempotencyKey:string;source:Row},tx:Tx){
+  async createProtectedRegistration(input:{tenantId:string;principalId:string;businessPartnerId:string;companyCodeId:string;accountHolderName:string;accountIdType:string;accountFingerprint:string;accountLast4:string;currencyCode:string;bankName:string;bankCountryCode:string;bic?:string;clearingScheme?:string;branchCode?:string;protectedValueToken:string;idempotencyKey:string;source:Row},tx:Tx){
     const accountId=randomUUID(),linkId=randomUUID();
     await sql`INSERT INTO master.bank_account(id,tenant_id,account_holder_name,account_id_type,account_id_value,account_last4,currency_code,bic_override,bank_name_override,bank_country_override,metadata,status,created_by)
-      VALUES(${accountId}::uuid,${input.tenantId}::uuid,${input.accountHolderName},${input.accountIdType}::master.bank_account_id_type_d,${input.accountFingerprint.toUpperCase()},${input.accountLast4},${input.currencyCode}::char(3),${input.bic??null},${input.bankName},${input.bankCountryCode}::char(2),${JSON.stringify({protectedValueToken:input.protectedValueToken,accountFingerprint:input.accountFingerprint,classification:"restricted",source:"protected_registration"})}::jsonb,'pending_verification',${input.principalId}::uuid)`.execute(tx);
+      VALUES(${accountId}::uuid,${input.tenantId}::uuid,${input.accountHolderName},${input.accountIdType}::master.bank_account_id_type_d,${input.accountFingerprint.toUpperCase()},${input.accountLast4},${input.currencyCode}::char(3),${input.bic??null},${input.bankName},${input.bankCountryCode}::char(2),${JSON.stringify({protectedValueToken:input.protectedValueToken,accountFingerprint:input.accountFingerprint,classification:"restricted",source:"protected_registration",clearingScheme:input.clearingScheme,branchCode:input.branchCode?.replace(/[ -]/g, "")})}::jsonb,'pending_verification',${input.principalId}::uuid)`.execute(tx);
     await sql`INSERT INTO master.bank_account_link(id,tenant_id,owner_type_id,owner_type,owner_id,relationship_role,bank_account_id,company_code_id,purpose,is_primary,metadata,created_by)
-      VALUES(${linkId}::uuid,${input.tenantId}::uuid,${String(input.source["owner_type_id"])}::uuid,'business_partner',${input.businessPartnerId}::uuid,'beneficiary',${accountId}::uuid,${input.companyCodeId}::uuid,'default',false,${JSON.stringify({registrationIdempotencyKey:input.idempotencyKey,registrationMode:"protected",lineage:{authority:"master.bank_account",source:"supplier_registration"}})}::jsonb,${input.principalId}::uuid)`.execute(tx);
+      VALUES(${linkId}::uuid,${input.tenantId}::uuid,${String(input.source["owner_type_id"])}::uuid,'business_partner',${input.businessPartnerId}::uuid,'beneficiary',${accountId}::uuid,NULL,'default',false,${JSON.stringify({registrationCompanyCodeId:input.companyCodeId,registrationIdempotencyKey:input.idempotencyKey,registrationMode:"protected",lineage:{authority:"master.bank_account",source:"supplier_registration"}})}::jsonb,${input.principalId}::uuid)`.execute(tx);
+    await sql`INSERT INTO master.bank_account_company_usage(tenant_id,bank_account_link_id,company_code_id) VALUES(${input.tenantId}::uuid,${linkId}::uuid,${input.companyCodeId}::uuid)`.execute(tx);
     return required(await this.protectedRegistrationByKey(input.tenantId,input.idempotencyKey,tx));
   }
   async protectedRegistration(tenantId:string,linkId:string,tx:Tx,lock=false){
-    return one(await sql<Row>`SELECT link.tenant_id::text,link.id::text bank_account_link_id,account.id::text bank_account_id,link.company_code_id::text,link.owner_id::text business_partner_id,account.account_last4,account.account_holder_name,account.currency_code::text,account.bank_name_override,account.bank_country_override::text,account.bic_override,account.status::text,account.is_verified,account.created_by::text,account.verified_by::text,account.verification_method::text,
-      EXISTS(SELECT 1 FROM master.supplier supplier JOIN master.company_code_supplier_profile profile ON profile.tenant_id=supplier.tenant_id AND profile.supplier_id=supplier.id WHERE supplier.tenant_id=link.tenant_id AND supplier.business_partner_id=link.owner_id AND profile.company_code_id=link.company_code_id AND profile.preferred_remittance_bank_link_id=link.id) is_applied
+    return one(await sql<Row>`SELECT link.tenant_id::text,link.id::text bank_account_link_id,account.id::text bank_account_id,COALESCE(link.company_code_id::text,link.metadata->>'registrationCompanyCodeId') company_code_id,link.owner_id::text business_partner_id,account.account_last4,account.account_holder_name,account.currency_code::text,account.bank_name_override,account.bank_country_override::text,account.bic_override,account.status::text,account.is_verified,account.created_by::text,account.verified_by::text,account.verification_method::text,
+      EXISTS(SELECT 1 FROM master.supplier supplier JOIN master.company_code_supplier_profile profile ON profile.tenant_id=supplier.tenant_id AND profile.supplier_id=supplier.id WHERE supplier.tenant_id=link.tenant_id AND supplier.business_partner_id=link.owner_id AND profile.company_code_id=COALESCE(link.company_code_id,(link.metadata->>'registrationCompanyCodeId')::uuid) AND profile.preferred_remittance_bank_link_id=link.id) is_applied
       FROM master.bank_account_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id
       WHERE link.tenant_id=${tenantId}::uuid AND link.id=${linkId}::uuid AND link.owner_type='business_partner' AND link.relationship_role='beneficiary' ${sql.raw(lock?"FOR UPDATE OF account":"")}`.execute(tx));
   }
@@ -106,9 +128,14 @@ export class KyselyBusinessPartnerAccountBankRepository {
     if(!profile)throw conflict("NEON_BANK_REGISTRATION_PROFILE_MISSING","Active supplier company profile is required");
     const current=String(profile["preferred_remittance_bank_link_id"]??"");
     if(current&&current!==String(row["bank_account_link_id"]))throw conflict("NEON_BANK_CHANGE_CASE_REQUIRED","An existing remittance account can only be replaced through a governed bank-change case");
+    const eligible=one(await sql<Row>`SELECT master.bank_account_company_eligible(${row["tenant_id"]}::uuid,${row["bank_account_link_id"]}::uuid,${row["company_code_id"]}::uuid,CURRENT_DATE) eligible`.execute(tx));
+    if(eligible?.["eligible"]!==true)throw conflict("NEON_BANK_COMPANY_NOT_ELIGIBLE","Company assignment is required before application");
+    await sql`UPDATE master.bank_account_company_usage u SET is_primary=false FROM master.bank_account_link l WHERE l.tenant_id=u.tenant_id AND l.id=u.bank_account_link_id AND l.owner_id=${row["business_partner_id"]}::uuid AND u.tenant_id=${row["tenant_id"]}::uuid AND u.company_code_id=${row["company_code_id"]}::uuid AND u.purpose='default' AND u.effective_from<=CURRENT_DATE AND(u.effective_until IS NULL OR u.effective_until>CURRENT_DATE)`.execute(tx);
+    await sql`UPDATE master.bank_account_company_usage SET accepted_at=clock_timestamp(),accepted_by=${principalId}::uuid,is_primary=true
+      WHERE tenant_id=${row["tenant_id"]}::uuid AND bank_account_link_id=${row["bank_account_link_id"]}::uuid AND company_code_id=${row["company_code_id"]}::uuid AND effective_from<=CURRENT_DATE AND(effective_until IS NULL OR effective_until>CURRENT_DATE)`.execute(tx);
     if(current===String(row["bank_account_link_id"]))return required(await this.protectedRegistration(String(row["tenant_id"]),String(row["bank_account_link_id"]),tx));
     await sql`UPDATE master.company_code_supplier_profile SET preferred_remittance_bank_link_id=${String(row["bank_account_link_id"])}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${String(profile["id"])}::uuid`.execute(tx);
-    await sql`UPDATE master.bank_account_link SET is_primary=true,metadata=metadata||${JSON.stringify({appliedAsPreferredRemittance:true,appliedBy:principalId})}::jsonb,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${String(row["tenant_id"])}::uuid AND id=${String(row["bank_account_link_id"])}::uuid`.execute(tx);
+    await sql`UPDATE master.bank_account_link SET metadata=metadata||${JSON.stringify({appliedAsPreferredRemittance:true,appliedBy:principalId})}::jsonb,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${String(row["tenant_id"])}::uuid AND id=${String(row["bank_account_link_id"])}::uuid`.execute(tx);
     return required(await this.protectedRegistration(String(row["tenant_id"]),String(row["bank_account_link_id"]),tx));
   }
   async linkByKey(tenantId: string, key: string, tx: Tx) {
@@ -201,11 +228,14 @@ export class KyselyBusinessPartnerAccountBankRepository {
           "NEON_MESH_ACCOUNT_ALREADY_LINKED",
           "MESH account is already mapped to another Business Partner",
         );
+      const externalCode = await resolveMeshExternalReferenceCode(row, tx);
       let referenceId = existing ? String(existing["id"]) : randomUUID();
       if (!existing)
-        await sql`INSERT INTO master.external_reference(id,tenant_id,owner_type_id,owner_id,source_system_code,external_entity_code,external_id,metadata,created_by) VALUES(${referenceId}::uuid,${row["tenant_id"]}::uuid,${ownerType["id"]}::uuid,${row["business_partner_id"]}::uuid,'athyper_mesh','network_account',${externalId},${JSON.stringify({ sourceTenantId: row["source_tenant_id"], recipientNetworkAccountId: row["recipient_network_account_id"], networkRelationshipId: row["network_relationship_id"], proposedRole: row["proposed_role"] })}::jsonb,${principalId}::uuid)`.execute(
+        await sql`INSERT INTO master.external_reference(id,tenant_id,owner_type_id,owner_id,source_system_code,external_entity_code,external_id,external_code,metadata,created_by) VALUES(${referenceId}::uuid,${row["tenant_id"]}::uuid,${ownerType["id"]}::uuid,${row["business_partner_id"]}::uuid,'athyper_mesh','network_account',${externalId},${externalCode ?? null},${JSON.stringify({ sourceTenantId: row["source_tenant_id"], recipientNetworkAccountId: row["recipient_network_account_id"], networkRelationshipId: row["network_relationship_id"], proposedRole: row["proposed_role"] })}::jsonb,${principalId}::uuid)`.execute(
           tx,
         );
+      if (existing && externalCode && !String(existing["external_code"] ?? "").trim())
+        await sql`UPDATE master.external_reference SET external_code=${externalCode},updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE tenant_id=${row["tenant_id"]}::uuid AND id=${referenceId}::uuid AND NULLIF(btrim(external_code),'') IS NULL`.execute(tx);
       await sql`UPDATE control.mesh_business_partner_account_link SET status='active',external_reference_id=${referenceId}::uuid,decision_fingerprint=${fingerprint},reviewed_at=clock_timestamp(),reviewed_by=${principalId}::uuid,approved_at=clock_timestamp(),approved_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(
         tx,
       );
@@ -295,7 +325,7 @@ export class KyselyBusinessPartnerAccountBankRepository {
       tx,
     );
     if (current)
-      await sql`UPDATE control.mesh_bank_account_projection SET current_disclosure_id=${e.disclosureId}::uuid,current_disclosure_version=${e.disclosureVersion},current_lifecycle_version=${e.lifecycleVersion},current_snapshot_id=${snapshotId}::uuid,last_inbox_event_id=${inboxId}::uuid,account_fingerprint=${fingerprint},projection_status=CASE WHEN account_fingerprint=${fingerprint} THEN projection_status ELSE 'change_pending' END,updated_at=clock_timestamp(),updated_by=${input.principalId}::uuid WHERE id=${current["id"]}::uuid`.execute(
+      await sql`UPDATE control.mesh_bank_account_projection SET current_disclosure_id=${e.disclosureId}::uuid,current_disclosure_version=${e.disclosureVersion},current_lifecycle_version=${e.lifecycleVersion},current_snapshot_id=${snapshotId}::uuid,last_inbox_event_id=${inboxId}::uuid,account_fingerprint=${fingerprint},projection_status='change_pending',updated_at=clock_timestamp(),updated_by=${input.principalId}::uuid WHERE id=${current["id"]}::uuid`.execute(
         tx,
       );
     else
@@ -326,7 +356,7 @@ export class KyselyBusinessPartnerAccountBankRepository {
     tx: Tx,
   ) {
     return one(
-      await sql<Row>`SELECT p.*,l.business_partner_id,profile.company_code_id,profile.preferred_remittance_bank_link_id FROM control.mesh_bank_account_projection p JOIN control.mesh_business_partner_account_link l ON l.tenant_id=p.tenant_id AND l.id=p.account_link_id AND l.status='active' JOIN master.supplier s ON s.tenant_id=l.tenant_id AND s.business_partner_id=l.business_partner_id JOIN master.company_code_supplier_profile profile ON profile.tenant_id=s.tenant_id AND profile.supplier_id=s.id WHERE p.tenant_id=${tenantId}::uuid AND p.id=${projectionId}::uuid AND profile.id=${profileId}::uuid AND p.projection_status IN('available','change_pending') FOR UPDATE OF p,profile`.execute(
+      await sql<Row>`SELECT p.*,l.business_partner_id,profile.company_code_id,profile.preferred_remittance_bank_link_id FROM control.mesh_bank_account_projection p JOIN control.mesh_business_partner_account_link l ON l.tenant_id=p.tenant_id AND l.id=p.account_link_id AND l.status='active' JOIN master.supplier s ON s.tenant_id=l.tenant_id AND s.business_partner_id=l.business_partner_id JOIN master.company_code_supplier_profile profile ON profile.tenant_id=s.tenant_id AND profile.supplier_id=s.id WHERE p.tenant_id=${tenantId}::uuid AND p.id=${projectionId}::uuid AND profile.id=${profileId}::uuid AND p.projection_status IN('available','change_pending','linked') FOR UPDATE OF p,profile`.execute(
         tx,
       ),
     );
@@ -350,7 +380,7 @@ export class KyselyBusinessPartnerAccountBankRepository {
   }
   async verifyCandidate(row: Row, candidateId: string, tx: Tx) {
     return one(
-      await sql<Row>`SELECT link.*,account.is_verified,account.status::text account_status,owner.code owner_type_code FROM master.bank_account_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${row["tenant_id"]}::uuid AND link.id=${candidateId}::uuid AND link.owner_id=${row["business_partner_id"]}::uuid AND owner.code='business_partner' AND link.relationship_role='beneficiary' AND account.is_verified AND account.status='active' AND(link.company_code_id IS NULL OR link.company_code_id=${row["company_code_id"]}::uuid) AND link.effective_from<=CURRENT_DATE AND(link.effective_until IS NULL OR link.effective_until>CURRENT_DATE) FOR SHARE OF link,account`.execute(
+      await sql<Row>`SELECT link.*,account.is_verified,account.status::text account_status,owner.code owner_type_code FROM master.bank_account_link link JOIN master.bank_account account ON account.tenant_id=link.tenant_id AND account.id=link.bank_account_id JOIN control.owner_type owner ON owner.id=link.owner_type_id WHERE link.tenant_id=${row["tenant_id"]}::uuid AND link.id=${candidateId}::uuid AND link.owner_id=${row["business_partner_id"]}::uuid AND owner.code='business_partner' AND link.relationship_role='beneficiary' AND account.is_verified AND account.status='active' AND master.bank_account_company_eligible(link.tenant_id,link.id,${row["company_code_id"]}::uuid,CURRENT_DATE) AND link.effective_from<=CURRENT_DATE AND(link.effective_until IS NULL OR link.effective_until>CURRENT_DATE) FOR SHARE OF link,account`.execute(
         tx,
       ),
     );
@@ -400,8 +430,11 @@ export class KyselyBusinessPartnerAccountBankRepository {
     );
     if (
       !projection ||
+      Number(projection["current_disclosure_version"]) !== Number(row["expected_disclosure_version"]) ||
+      String(projection["current_disclosure_id"]) !== String(row["expected_disclosure_id"]) ||
+      (object(projection["payload_json"])["expiresAt"] != null && Date.parse(String(object(projection["payload_json"])["expiresAt"])) <= Date.now()) ||
       String(projection["id"]) !== String(row["bank_projection_id"]) ||
-      !["available","change_pending"].includes(String(projection["projection_status"])) ||
+      !["available","change_pending","linked"].includes(String(projection["projection_status"])) ||
       String(projection["account_fingerprint"]) !==
         String(row["expected_account_fingerprint"])
     )
@@ -432,15 +465,26 @@ export class KyselyBusinessPartnerAccountBankRepository {
       prior: row["prior_bank_account_link_id"],
       principalId,
     });
+    const bank = object(object(projection["payload_json"])["bankAccount"]);
+    if (!bank["sourceAccountId"]) throw conflict("NEON_BANK_SOURCE_ID_REQUIRED", "Republish the disclosure with a stable source account identity");
+    await sql`INSERT INTO master.bank_account_company_usage(tenant_id,bank_account_link_id,company_code_id)
+      SELECT ${row["tenant_id"]}::uuid,${row["candidate_bank_account_link_id"]}::uuid,${row["company_code_id"]}::uuid
+      WHERE NOT EXISTS(SELECT 1 FROM master.bank_account_company_usage WHERE tenant_id=${row["tenant_id"]}::uuid AND bank_account_link_id=${row["candidate_bank_account_link_id"]}::uuid AND company_code_id=${row["company_code_id"]}::uuid AND effective_from<=CURRENT_DATE AND(effective_until IS NULL OR effective_until>CURRENT_DATE))`.execute(tx);
+    await sql`UPDATE master.bank_account_company_usage u SET is_primary=false FROM master.bank_account_link l WHERE l.tenant_id=u.tenant_id AND l.id=u.bank_account_link_id AND l.owner_id=${row["business_partner_id"]}::uuid AND u.tenant_id=${row["tenant_id"]}::uuid AND u.company_code_id=${row["company_code_id"]}::uuid AND u.purpose='default' AND u.effective_from<=CURRENT_DATE AND(u.effective_until IS NULL OR u.effective_until>CURRENT_DATE)`.execute(tx);
+    await sql`UPDATE master.bank_account_company_usage SET accepted_at=clock_timestamp(),accepted_by=${principalId}::uuid,is_primary=true,
+      source_tenant_id=${projection["source_tenant_id"]}::uuid,source_account_id=${bank["sourceAccountId"]}::uuid,
+      accepted_disclosure_id=${projection["current_disclosure_id"]}::uuid,accepted_disclosure_version=${projection["current_disclosure_version"]},
+      accepted_account_fingerprint=${projection["account_fingerprint"]}
+      WHERE tenant_id=${row["tenant_id"]}::uuid AND bank_account_link_id=${row["candidate_bank_account_link_id"]}::uuid
+      AND company_code_id=${row["company_code_id"]}::uuid AND effective_from<=CURRENT_DATE AND(effective_until IS NULL OR effective_until>CURRENT_DATE)`.execute(tx);
+    await sql`UPDATE control.mesh_bank_account_projection SET projection_status='linked',updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${projection["id"]}::uuid`.execute(tx);
     await sql`UPDATE master.company_code_supplier_profile SET preferred_remittance_bank_link_id=${row["candidate_bank_account_link_id"]}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${profile["id"]}::uuid`.execute(
       tx,
     );
     await sql`UPDATE document.business_partner_bank_verification SET status='applied',application_fingerprint=${fingerprint},applied_at=clock_timestamp(),applied_by=${principalId}::uuid,updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${row["id"]}::uuid`.execute(
       tx,
     );
-    await sql`UPDATE control.mesh_bank_account_projection SET projection_status='linked',updated_at=clock_timestamp(),updated_by=${principalId}::uuid WHERE id=${projection["id"]}::uuid`.execute(
-      tx,
-    );
+
     return required(
       await this.verification(String(row["id"]), String(row["tenant_id"]), tx),
     );
@@ -456,14 +500,39 @@ export function createBusinessPartnerAccountBankLinkageService(options: {
   onboardingCycles?:{advanceForBusinessPartner(input:{tenantId:string;principalId:string;businessPartnerId:string;eventCode:string;metadata?:Readonly<Record<string,unknown>>},transaction:Tx):Promise<void>};
 }) {
   return Object.freeze({
-    async registerProtectedBankAccount(input:{context:VerifiedRequestContext;businessPartnerId:string;companyCodeId:string;accountHolderName:string;accountIdentifier:string;accountIdType:string;currencyCode:string;bankName:string;bankCountryCode:string;bic?:string;idempotencyKey:string}){
+    async configureUsageScope(input:{context:VerifiedRequestContext;linkId:string;usageScope:"selected_companies"|"all_authorized_companies"}) {
+      context(input.context);
+      // A company-scoped grant cannot widen availability across the tenant.
+      if(!["selected_companies","all_authorized_companies"].includes(input.usageScope))throw invalid("Explicit usage scope is required");
+      const decision=await options.authorizer.authorize({context:input.context,permissionCode:meshAccountBankPermissions.apply,resource:{tenantId:input.context.tenantId,allCompanies:true,governedWorkflow:true}});
+      if(!decision.allowed || !(decision.scope?.tenantWide || input.context.permissions.authorizationScopes?.some(scope=>scope.permissionCode===meshAccountBankPermissions.apply && scope.tenantWide)))throw forbidden("FORBIDDEN","Tenant-wide bank usage authority is required");
+      return options.transactions.run("neon",actor(input.context),async tx=>{
+        const link=one(await sql<Row>`SELECT id,company_code_id FROM master.bank_account_link WHERE tenant_id=${input.context.tenantId}::uuid AND id=${input.linkId}::uuid AND owner_type='business_partner' FOR UPDATE`.execute(tx));
+        if(!link)throw missing("NEON_BANK_LINK_NOT_FOUND","Partner account was not found");
+        if(link["company_code_id"] && input.usageScope==="all_authorized_companies")throw conflict("NEON_BANK_LEGACY_SCOPE_RESTRICTED","Existing company restrictions must be migrated explicitly");
+        const usage=required(one(await sql<Row>`INSERT INTO master.bank_account_usage(tenant_id,bank_account_link_id,usage_scope) VALUES(${input.context.tenantId}::uuid,${input.linkId}::uuid,${input.usageScope}) ON CONFLICT(tenant_id,bank_account_link_id) DO UPDATE SET usage_scope=EXCLUDED.usage_scope RETURNING *`.execute(tx)));
+        await options.audit?.record({eventCode:"business_partner.bank_usage.scope_changed",action:"configure",outcome:"success",tenantId:input.context.tenantId,entityType:"bank_account_link",entityId:input.linkId,actor:{kind:"user",principalId:input.context.principalId},metadata:{usageScope:input.usageScope}},tx);
+        return usage;
+      });
+    },
+    async configureCompanyUsage(input:{context:VerifiedRequestContext;linkId:string;companyCodeId:string;effectiveFrom:string;effectiveUntil?:string;purpose:string;primary:boolean}) {
+      context(input.context);
+      await permit(options.authorizer,input.context,meshAccountBankPermissions.apply,input.companyCodeId);
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(input.effectiveFrom) || (input.effectiveUntil && (!/^\d{4}-\d{2}-\d{2}$/.test(input.effectiveUntil)||input.effectiveUntil<=input.effectiveFrom)) || !/^[a-z][a-z0-9_]{0,49}$/.test(input.purpose))throw invalid("Valid effective dates and purpose are required");
+      return options.transactions.run("neon",actor(input.context),async tx=>{
+        const usage=await options.repository.configureCompanyUsage({...input,tenantId:input.context.tenantId,principalId:input.context.principalId},tx);
+        await options.audit?.record({eventCode:"business_partner.bank_usage.assigned",action:"assign",outcome:"success",tenantId:input.context.tenantId,entityType:"bank_account_link",entityId:input.linkId,actor:{kind:"user",principalId:input.context.principalId},metadata:{companyCodeId:input.companyCodeId,purpose:input.purpose}},tx);
+        return usage;
+      });
+    },
+    async registerProtectedBankAccount(input:{context:VerifiedRequestContext;businessPartnerId:string;companyCodeId:string;accountHolderName:string;accountIdentifier:string;accountIdType:string;currencyCode:string;bankName:string;bankCountryCode:string;bic?:string;clearingScheme?:string;branchCode?:string;idempotencyKey:string}){
       context(input.context);key(input.idempotencyKey);
       await permit(options.authorizer,input.context,meshAccountBankPermissions.register,input.companyCodeId);
-      const normalized=input.accountIdentifier.replace(/[\s-]/g,"").toUpperCase();
-      if(!/^[A-Z0-9]{4,64}$/.test(normalized))throw invalid("accountIdentifier must contain 4 to 64 letters or digits");
-      if(!input.accountHolderName.trim()||!/[A-Za-z]/.test(input.accountIdType)||!/^[A-Z]{3}$/.test(input.currencyCode)||!/^[A-Z]{2}$/.test(input.bankCountryCode)||!input.bankName.trim())throw invalid("Complete account holder, identifier type, currency, bank name and country are required");
-      if(input.bic&&!/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(input.bic))throw invalid("bic is invalid");
-      const accountFingerprint=hash({tenantId:input.context.tenantId,normalized}),accountLast4=normalized.slice(-4);
+      let normalized: string;
+      try { const value = normalizeBankIdentifier(input); normalized = value.identifier; input = {...input, ...(value.bic ? {bic:value.bic} : {})}; }
+      catch (error) { throw invalid((error as Error).message); }
+      if(!input.accountHolderName.trim()||!/^[A-Z]{3}$/.test(input.currencyCode)||!/^[A-Z]{2}$/.test(input.bankCountryCode)||!input.bankName.trim())throw invalid("Complete account holder, currency, bank name and country are required");
+      const accountFingerprint=hash({tenantId:input.context.tenantId,normalized,country:input.bankCountryCode,type:input.accountIdType,scheme:input.accountIdType==="local"?input.clearingScheme:undefined,branch:input.accountIdType==="local"?input.branchCode?.replace(/[ -]/g, ""):undefined}),accountLast4=normalized.slice(-4);
       const replayRegistration=async(row:Row)=>{
         await permit(options.authorizer,input.context,meshAccountBankPermissions.register,String(row["company_code_id"]));
         const expected:Row={business_partner_id:input.businessPartnerId,company_code_id:input.companyCodeId,registration_account_fingerprint:accountFingerprint,registration_account_id_type:input.accountIdType,account_holder_name:input.accountHolderName.trim(),currency_code:input.currencyCode,bank_name_override:input.bankName.trim(),bank_country_override:input.bankCountryCode,bic_override:input.bic??null};
@@ -480,7 +549,7 @@ export function createBusinessPartnerAccountBankLinkageService(options: {
         if(replay)return replayRegistration(replay);
         const source=await options.repository.protectedRegistrationSource(input.context.tenantId,input.businessPartnerId,input.companyCodeId,tx);
         if(!source)throw conflict("NEON_BANK_REGISTRATION_SCOPE_INVALID","Active supplier and company profile are required");
-        const registration=await options.repository.createProtectedRegistration({tenantId:input.context.tenantId,principalId:input.context.principalId,businessPartnerId:input.businessPartnerId,companyCodeId:input.companyCodeId,accountHolderName:input.accountHolderName.trim(),accountIdType:input.accountIdType,currencyCode:input.currencyCode,bankName:input.bankName.trim(),bankCountryCode:input.bankCountryCode,...(input.bic?{bic:input.bic}:{}),accountFingerprint,accountLast4,protectedValueToken:token,idempotencyKey:input.idempotencyKey,source},tx);
+        const registration=await options.repository.createProtectedRegistration({tenantId:input.context.tenantId,principalId:input.context.principalId,businessPartnerId:input.businessPartnerId,companyCodeId:input.companyCodeId,accountHolderName:input.accountHolderName.trim(),accountIdType:input.accountIdType,currencyCode:input.currencyCode,bankName:input.bankName.trim(),bankCountryCode:input.bankCountryCode,...(input.bic?{bic:input.bic}:{}),...(input.clearingScheme?{clearingScheme:input.clearingScheme}:{}),...(input.branchCode?{branchCode:input.branchCode}:{}),accountFingerprint,accountLast4,protectedValueToken:token,idempotencyKey:input.idempotencyKey,source},tx);
         await options.audit?.record({eventCode:"business_partner.bank_registration.protected",action:"register",outcome:"success",tenantId:input.context.tenantId,entityType:"bank_account_link",entityId:registration["bank_account_link_id"],actor:{kind:"user",principalId:input.context.principalId},requestId:input.context.requestId,metadata:{businessPartnerId:input.businessPartnerId,companyCodeId:input.companyCodeId,accountLast4,protected:true}},tx);
         await options.onboardingCycles?.advanceForBusinessPartner({tenantId:input.context.tenantId,principalId:input.context.principalId,businessPartnerId:input.businessPartnerId,eventCode:"business_partner.bank_registration.protected",metadata:{bankAccountLinkId:registration["bank_account_link_id"],accountLast4,companyCodeId:input.companyCodeId}},tx);
         return{registration:publicRegistration(registration),replayed:false};
@@ -970,6 +1039,8 @@ function validateEnvelope(e: MeshBankDisclosureEnvelope) {
       "Bank payload hash does not match",
     );
   const keys = new Set([
+      "sourceAccountId",
+      "ownerVerified",
       "accountHolderName",
       "accountIdType",
       "accountLast4",
@@ -982,11 +1053,13 @@ function validateEnvelope(e: MeshBankDisclosureEnvelope) {
     bank = object(e.payload["bankAccount"]);
   if (
     Object.keys(bank).some((k) => !keys.has(k)) ||
-    !/^[A-F0-9]{4}$/.test(String(bank["accountLast4"] ?? "")) ||
+    !/^[A-Z0-9]{4}$/.test(String(bank["accountLast4"] ?? "")) ||
     !/^[a-f0-9]{64}$/.test(String(bank["accountFingerprint"] ?? "")) ||
     containsSensitive(e.payload)
   )
     throw invalid("Only the governed masked bank field set is accepted");
+  if(bank["sourceAccountId"] !== undefined) uuid(bank["sourceAccountId"],"sourceAccountId");
+  if(e.payload["expiresAt"] != null && !Number.isFinite(Date.parse(String(e.payload["expiresAt"])))) throw invalid("Disclosure expiry must be an instant");
   const recipient = object(e.payload["recipient"]);
   if (
     recipient["tenantId"] !== e.recipientTenantId ||

@@ -11,14 +11,16 @@ export function EntityRecordHeader({
   onSelectSection,
   contextControls,
   technicalDetails,
+  breadcrumbLabel,
 }: {
   readonly header: EntityRecordHeaderV1;
   readonly activeSection?: string;
   readonly onSelectSection?: (key: string) => void;
   readonly contextControls?: ReactNode;
   readonly technicalDetails?: ReactNode;
+  readonly breadcrumbLabel?: string;
 }) {
-  useRecordBreadcrumb(header.code ?? header.title);
+  useRecordBreadcrumb(breadcrumbLabel ?? header.code ?? header.title);
   const root = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const dismissOutside = (event: Event) => {

@@ -103,7 +103,10 @@ SELECT
     account.verified_at,
     account.verification_method,
     account.status AS bank_account_status,
-    party.id AS bank_party_id,
+    party.id AS bank_institution_id,
+    account.bank_branch_id,
+    account.provisional_bank_reference_id,
+    party.release_id AS bank_directory_release_id,
     COALESCE(party.name, account.bank_name_override) AS bank_name,
     COALESCE(party.bic, account.bic_override) AS bic,
     COALESCE(
@@ -115,16 +118,14 @@ SELECT
     party.national_bank_code,
     party.branch_code,
     party.branch_name,
-    correspondent.id AS correspondent_bank_party_id,
+    correspondent.id AS correspondent_bank_institution_id,
     correspondent.name AS correspondent_bank_name,
     correspondent.bic AS correspondent_bic
 FROM master.bank_account AS account
-LEFT JOIN master.bank_party AS party
-  ON party.tenant_id = account.tenant_id
- AND party.id = account.bank_party_id
-LEFT JOIN master.bank_party AS correspondent
-  ON correspondent.tenant_id = account.tenant_id
- AND correspondent.id = account.correspondent_bank_party_id
+LEFT JOIN shared.v_bank_directory AS party
+  ON party.id = account.bank_institution_id AND party.branch_id IS NOT DISTINCT FROM account.bank_branch_id
+LEFT JOIN shared.v_bank_directory AS correspondent
+  ON correspondent.id = account.correspondent_bank_institution_id AND correspondent.branch_id IS NULL
 WHERE account.tenant_id = shared.current_tenant_id()
   AND account.status NOT IN ('closed', 'retired');
 
@@ -510,7 +511,9 @@ WITH bp_scoped_link AS (
     bal.effective_until,
     COALESCE(bp.name, ba.bank_name_override) AS bank_name,
     ba.bic_override,
-    ba.bank_party_id,
+    ba.bank_institution_id,
+    ba.bank_branch_id,
+    ba.provisional_bank_reference_id,
     bal.bank_account_id,
     bal.created_at,
     bal.updated_at,
@@ -548,8 +551,8 @@ WITH bp_scoped_link AS (
     ba.metadata AS account_metadata
    FROM bp_scoped_link bal
      JOIN master.bank_account ba ON ba.id = bal.bank_account_id AND ba.tenant_id = bal.tenant_id
-     LEFT JOIN master.bank_party bp ON bp.id = ba.bank_party_id AND bp.tenant_id = ba.tenant_id
-     LEFT JOIN master.bank_party cbp ON cbp.id = ba.correspondent_bank_party_id AND cbp.tenant_id = ba.tenant_id
+     LEFT JOIN shared.v_bank_directory bp ON bp.id = ba.bank_institution_id AND bp.branch_id IS NOT DISTINCT FROM ba.bank_branch_id
+     LEFT JOIN shared.v_bank_directory cbp ON cbp.id = ba.correspondent_bank_institution_id AND cbp.branch_id IS NULL
      LEFT JOIN master.company_code cc ON cc.id = bal.company_code_id AND cc.tenant_id = bal.tenant_id;
 
 CREATE OR REPLACE VIEW "master"."v_business_partner_role_summary"
@@ -932,13 +935,15 @@ WITH supplier_scoped_link AS (
     bal.effective_until,
     COALESCE(bp.name, ba.bank_name_override) AS bank_name,
     ba.bic_override,
-    ba.bank_party_id,
+    ba.bank_institution_id,
+    ba.bank_branch_id,
+    ba.provisional_bank_reference_id,
     bal.bank_account_id,
     bal.created_at,
     bal.updated_at
    FROM supplier_scoped_link bal
      JOIN master.bank_account ba ON ba.id = bal.bank_account_id AND ba.tenant_id = bal.tenant_id
-     LEFT JOIN master.bank_party bp ON bp.id = ba.bank_party_id AND bp.tenant_id = ba.tenant_id;
+     LEFT JOIN shared.v_bank_directory bp ON bp.id = ba.bank_institution_id AND bp.branch_id IS NOT DISTINCT FROM ba.bank_branch_id;
 
 CREATE VIEW master.business_partner_governance_summary
 WITH (security_invoker = true, security_barrier = true) AS

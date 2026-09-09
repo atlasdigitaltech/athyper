@@ -62,21 +62,24 @@
       },
       {
         "key": "supplier-company",
-        "label": "Procurement & AP",
+        "label": "Buying & Payables",
         "fields": [],
-        "placement": "overflow"
+        "placement": "overflow",
+        "scopePrompt": "Select company"
       },
       {
         "key": "customer-company",
-        "label": "Sales & AR",
+        "label": "Selling & Receivables",
         "fields": [],
-        "placement": "overflow"
+        "placement": "overflow",
+        "scopePrompt": "Select company"
       },
       {
         "key": "banking",
         "label": "Banking",
         "fields": [],
-        "placement": "overflow"
+        "placement": "overflow",
+        "scopePrompt": "Select company"
       },
       {
         "key": "qualifications-certificates",
@@ -88,7 +91,8 @@
         "key": "credit",
         "label": "Credit review",
         "fields": [],
-        "placement": "overflow"
+        "placement": "overflow",
+        "scopePrompt": "Select company"
       },
       {
         "key": "requests",
@@ -165,9 +169,6 @@
         "governance",
         "banking",
         "qualifications-certificates",
-        "roles-scope",
-        "supplier-company",
-        "customer-company",
         "credit",
         "network"
       ],
@@ -176,6 +177,12 @@
           "key": "360",
           "label": "360 View",
           "provider": "360"
+        },
+        {
+          "key": "roles",
+          "label": "Roles & scope",
+          "provider": "section",
+          "sectionKey": "roles-scope"
         },
         {
           "key": "requests",
@@ -220,7 +227,596 @@
           "provider": "primary-address"
         }
       ]
-    }
+    },
+    "related": [
+      {
+        "schemaVersion": 1,
+        "key": "contact-details",
+        "sectionKey": "contacts",
+        "source": "contact-person.v1",
+        "titleField": "displayName",
+        "emptyLabel": "No current contact is available.",
+        "viewAllLabel": "View all contacts",
+        "scopeLabel": "Shared Business Partner contacts across companies.",
+        "emptyFields": "disclose",
+        "actions": [
+          {
+            "key": "request-change",
+            "label": "Request contact change",
+            "operationKey": "amend_partner"
+          }
+        ],
+        "groups": [
+          {
+            "key": "identity",
+            "label": "Contact details",
+            "renderer": "fields",
+            "compact": false,
+            "collapsed": false,
+            "fields": [
+              {
+                "key": "businessTitle",
+                "field": "businessTitle",
+                "label": "Title",
+                "renderer": "text"
+              },
+              {
+                "key": "departmentName",
+                "field": "departmentName",
+                "label": "Department",
+                "renderer": "text"
+              },
+              {
+                "key": "primary",
+                "field": "primary",
+                "label": "Assignment",
+                "renderer": "badge",
+                "values": {
+                  "true": {
+                    "label": "Primary",
+                    "tone": "success"
+                  },
+                  "false": {
+                    "label": "Additional",
+                    "tone": "neutral"
+                  }
+                }
+              }
+            ],
+            "detail": {
+              "placement": "main",
+              "showLabel": false,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "channels",
+            "label": "Contact channels",
+            "renderer": "channels",
+            "compact": true,
+            "collapsed": false,
+            "fields": [
+              {
+                "key": "type",
+                "field": "type",
+                "label": "Channel",
+                "renderer": "lookup",
+                "values": {
+                  "email": {
+                    "label": "Email"
+                  },
+                  "phone": {
+                    "label": "Phone"
+                  },
+                  "fax": {
+                    "label": "Fax"
+                  },
+                  "sms": {
+                    "label": "Sms"
+                  },
+                  "whatsapp": {
+                    "label": "Whatsapp"
+                  },
+                  "website": {
+                    "label": "Website"
+                  }
+                }
+              },
+              {
+                "key": "value",
+                "field": "value",
+                "label": "Contact value",
+                "renderer": "text"
+              },
+              {
+                "key": "purpose",
+                "field": "purpose",
+                "label": "Purpose",
+                "renderer": "lookup",
+                "values": {
+                  "default": {
+                    "label": "Default"
+                  },
+                  "business": {
+                    "label": "Business"
+                  },
+                  "billing": {
+                    "label": "Billing"
+                  },
+                  "shipping": {
+                    "label": "Shipping"
+                  },
+                  "registered": {
+                    "label": "Registered"
+                  },
+                  "remittance": {
+                    "label": "Remittance"
+                  },
+                  "correspondence": {
+                    "label": "Correspondence"
+                  }
+                }
+              },
+              {
+                "key": "verified",
+                "field": "verified",
+                "label": "Channel verification",
+                "renderer": "badge",
+                "values": {
+                  "true": {
+                    "label": "Verified",
+                    "tone": "success"
+                  },
+                  "false": {
+                    "label": "Not verified",
+                    "tone": "neutral"
+                  }
+                }
+              }
+            ],
+            "detail": {
+              "placement": "main",
+              "showLabel": true,
+              "omitFields": [],
+              "columnWeights": [
+                1,
+                4,
+                1,
+                2
+              ]
+            }
+          }
+        ],
+        "compactEmptyLabel": "No primary contact assigned",
+        "summary": {
+          "layout": "contact-summary",
+          "fields": [
+            "channels.type",
+            "channels.value",
+            "channels.verified"
+          ],
+          "copyLabel": "Copy contact value"
+        },
+        "detail": {
+          "layout": "contact-detail",
+          "headerFields": [
+            "identity.primary"
+          ],
+          "copyLabel": "Copy contact value",
+          "additionalFieldsLabel": "Additional fields"
+        },
+        "collectionOrder": "primary-first"
+      },
+      {
+        "schemaVersion": 1,
+        "key": "address-details",
+        "sectionKey": "addresses",
+        "source": "address-link.v1",
+        "titleField": "purpose",
+        "emptyLabel": "No current address is available.",
+        "viewAllLabel": "View all addresses",
+        "scopeLabel": "Shared Business Partner addresses across companies.",
+        "emptyFields": "disclose",
+        "actions": [
+          {
+            "key": "request-change",
+            "label": "Request address change",
+            "operationKey": "amend_partner"
+          }
+        ],
+        "groups": [
+          {
+            "key": "postal",
+            "label": "Postal address",
+            "renderer": "postal-address",
+            "compact": true,
+            "collapsed": false,
+            "fields": [],
+            "detail": {
+              "placement": "main",
+              "showLabel": true,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "usage",
+            "label": "Address use",
+            "renderer": "fields",
+            "compact": false,
+            "collapsed": false,
+            "fields": [
+              {
+                "key": "purpose",
+                "field": "purpose",
+                "label": "Purpose",
+                "renderer": "lookup",
+                "values": {
+                  "default": {
+                    "label": "Default"
+                  },
+                  "business": {
+                    "label": "Business"
+                  },
+                  "billing": {
+                    "label": "Billing"
+                  },
+                  "shipping": {
+                    "label": "Shipping"
+                  },
+                  "registered": {
+                    "label": "Registered"
+                  },
+                  "remittance": {
+                    "label": "Remittance"
+                  },
+                  "correspondence": {
+                    "label": "Correspondence"
+                  }
+                }
+              },
+              {
+                "key": "primary",
+                "field": "primary",
+                "label": "Assignment",
+                "renderer": "badge",
+                "values": {
+                  "true": {
+                    "label": "Primary",
+                    "tone": "success"
+                  },
+                  "false": {
+                    "label": "Additional",
+                    "tone": "neutral"
+                  }
+                }
+              }
+            ],
+            "detail": {
+              "placement": "main",
+              "showLabel": false,
+              "omitFields": [
+                "purpose"
+              ],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "validation",
+            "label": "Address validation",
+            "renderer": "fields",
+            "compact": true,
+            "collapsed": false,
+            "fields": [
+              {
+                "key": "validationStatus",
+                "field": "validationStatus",
+                "label": "Postal validation",
+                "renderer": "badge",
+                "values": {
+                  "valid": {
+                    "label": "Valid",
+                    "tone": "success"
+                  },
+                  "invalid": {
+                    "label": "Invalid",
+                    "tone": "danger"
+                  },
+                  "unvalidated": {
+                    "label": "Not validated",
+                    "tone": "neutral"
+                  },
+                  "pending": {
+                    "label": "Pending validation",
+                    "tone": "warning"
+                  },
+                  "partial": {
+                    "label": "Partially validated",
+                    "tone": "warning"
+                  },
+                  "unverified": {
+                    "label": "Not verified",
+                    "tone": "neutral"
+                  }
+                }
+              },
+              {
+                "key": "validationProvider",
+                "field": "validationProvider",
+                "label": "Validation source",
+                "renderer": "lookup",
+                "values": {
+                  "development_fixture": {
+                    "label": "Development fixture"
+                  }
+                }
+              },
+              {
+                "key": "validatedAt",
+                "field": "validatedAt",
+                "label": "Validated on",
+                "renderer": "datetime"
+              },
+              {
+                "key": "validationConfidence",
+                "field": "validationConfidence",
+                "label": "Validation confidence",
+                "renderer": "text"
+              }
+            ],
+            "detail": {
+              "placement": "aside",
+              "showLabel": false,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "validity",
+            "label": "Validity",
+            "renderer": "fields",
+            "compact": false,
+            "collapsed": false,
+            "fields": [
+              {
+                "key": "effectiveFrom",
+                "field": "effectiveFrom",
+                "label": "Effective from",
+                "renderer": "date"
+              },
+              {
+                "key": "effectiveUntil",
+                "field": "effectiveUntil",
+                "label": "Effective until",
+                "renderer": "date"
+              }
+            ],
+            "detail": {
+              "placement": "aside",
+              "showLabel": false,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "history",
+            "label": "Validation history",
+            "renderer": "timeline",
+            "compact": false,
+            "collapsed": true,
+            "fields": [
+              {
+                "key": "eventType",
+                "field": "eventType",
+                "label": "Event",
+                "renderer": "lookup",
+                "values": {
+                  "VALIDATION_RECORDED": {
+                    "label": "Address validated"
+                  },
+                  "MOVED": {
+                    "label": "Address moved"
+                  },
+                  "CORRECTED": {
+                    "label": "Address corrected"
+                  },
+                  "MERGED": {
+                    "label": "Address merged"
+                  },
+                  "CREATED": {
+                    "label": "Address created"
+                  },
+                  "RETIRED": {
+                    "label": "Address retired"
+                  },
+                  "GEOCODE_RECORDED": {
+                    "label": "Location recorded"
+                  },
+                  "STANDARDIZATION_PROPOSED": {
+                    "label": "Standardized address proposed"
+                  },
+                  "CORRECTION_ACCEPTED": {
+                    "label": "Correction accepted"
+                  },
+                  "CORRECTION_REJECTED": {
+                    "label": "Correction rejected"
+                  },
+                  "POSTAL_OVERRIDE_ACCEPTED": {
+                    "label": "Postal override accepted"
+                  },
+                  "MANUALLY_VERIFIED": {
+                    "label": "Address manually verified"
+                  }
+                }
+              },
+              {
+                "key": "occurredAt",
+                "field": "occurredAt",
+                "label": "Recorded on",
+                "renderer": "datetime"
+              },
+              {
+                "key": "resultStatus",
+                "field": "resultStatus",
+                "label": "Result",
+                "renderer": "lookup",
+                "values": {
+                  "valid": {
+                    "label": "Valid",
+                    "tone": "success"
+                  },
+                  "invalid": {
+                    "label": "Invalid",
+                    "tone": "danger"
+                  },
+                  "unvalidated": {
+                    "label": "Not validated",
+                    "tone": "neutral"
+                  },
+                  "pending": {
+                    "label": "Pending validation",
+                    "tone": "warning"
+                  },
+                  "partial": {
+                    "label": "Partially validated",
+                    "tone": "warning"
+                  },
+                  "unverified": {
+                    "label": "Not verified",
+                    "tone": "neutral"
+                  }
+                }
+              },
+              {
+                "key": "confidence",
+                "field": "confidence",
+                "label": "Confidence",
+                "renderer": "text"
+              },
+              {
+                "key": "reasonCode",
+                "field": "reasonCode",
+                "label": "Reason",
+                "renderer": "text"
+              }
+            ],
+            "detail": {
+              "placement": "footer",
+              "showLabel": true,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          }
+        ],
+        "compactEmptyLabel": "No primary address assigned",
+        "summary": {
+          "layout": "postal-summary",
+          "fields": [
+            "validation.validationStatus"
+          ],
+          "copyLabel": "Copy address"
+        },
+        "detail": {
+          "layout": "postal-detail",
+          "headerFields": [
+            "usage.primary"
+          ],
+          "copyLabel": "Copy address",
+          "additionalFieldsLabel": "Additional fields"
+        },
+        "collectionOrder": "primary-first"
+      },
+      {
+        "schemaVersion": 1,
+        "key": "external-reference-details",
+        "sectionKey": "identity",
+        "source": "external-reference.v1",
+        "titleField": "externalEntityCode",
+        "titleLabel": "External reference",
+        "emptyLabel": "No external references",
+        "compactEmptyLabel": "No external reference",
+        "viewAllLabel": "View external references",
+        "scopeLabel": "External system references",
+        "emptyFields": "disclose",
+        "groups": [
+          {
+            "key": "reference",
+            "label": "External reference details",
+            "compact": false,
+            "collapsed": false,
+            "renderer": "fields",
+            "fields": [
+              {
+                "key": "system",
+                "field": "sourceSystemCode",
+                "label": "External system",
+                "renderer": "lookup",
+                "values": {
+                  "athyper_mesh": {
+                    "label": "Athyper Mesh"
+                  }
+                }
+              },
+              {
+                "key": "entity",
+                "field": "externalEntityCode",
+                "label": "External entity",
+                "renderer": "lookup",
+                "lookup": {
+                  "scopeField": "sourceSystemCode",
+                  "values": {
+                    "athyper_mesh": {
+                      "network_account": "Network account"
+                    }
+                  }
+                }
+              },
+              {
+                "key": "code",
+                "field": "externalCode",
+                "label": "Network account code",
+                "renderer": "text"
+              }
+            ],
+            "detail": {
+              "placement": "main",
+              "showLabel": false,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          },
+          {
+            "key": "technical",
+            "label": "Technical details",
+            "compact": false,
+            "collapsed": true,
+            "renderer": "fields",
+            "fields": [
+              {
+                "key": "id",
+                "field": "externalId",
+                "label": "External ID",
+                "renderer": "text"
+              }
+            ],
+            "detail": {
+              "placement": "footer",
+              "showLabel": true,
+              "omitFields": [],
+              "columnWeights": []
+            }
+          }
+        ],
+        "actions": [],
+        "detail": {
+          "layout": "reference-detail",
+          "headerFields": [],
+          "copyLabel": "Copy reference",
+          "additionalFieldsLabel": "Additional fields"
+        }
+      }
+    ]
   },
   "operationPermissions": {
     "amend_partner": "neon.relationship.entity_case.create",

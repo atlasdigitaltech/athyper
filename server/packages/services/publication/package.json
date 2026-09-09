@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test": "vitest run",
-    "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs"
+    "test:integration:three-plane": "pnpm exec tsx src/__tests__/integration/three-plane-local-projection.mjs",
+    "test:integration:bank-directory": "tsx src/__tests__/integration/bank-directory.mjs"
   },
   "dependencies": {
     "@athyper/server-contract-audit": "workspace:*",

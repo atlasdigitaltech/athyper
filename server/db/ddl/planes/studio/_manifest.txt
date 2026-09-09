@@ -43,6 +43,8 @@ planes/studio/onboarding/02_domains.sql
 planes/studio/publication/02_domains.sql
 common/runtime_meta/02_domains.sql
 common/shared/03_tables.sql
+common/shared/03_bank_directory.sql
+common/shared/04_bank_directory_views.sql
 common/master/03_platform_tables.sql
 planes/studio/master/03_tables.sql
 planes/studio/metadata/03_tables.sql
@@ -112,6 +114,7 @@ common/ai/06_indexes.sql
 planes/studio/ai/06_indexes.sql
 planes/studio/onboarding/06_indexes.sql
 common/shared/07_functions.sql
+common/shared/07_bank_directory.sql
 planes/studio/control/07_functions.sql
 common/control/07_functions.sql
 planes/studio/master/07_functions.sql
@@ -202,6 +205,7 @@ planes/studio/metadata/11_grants.sql
 planes/studio/trustiam/11_grants.sql
 planes/studio/onboarding/11_grants.sql
 planes/studio/publication/11_grants.sql
+planes/studio/publication/11_bank_directory.sql
 planes/studio/document/11_grants.sql
 common/event/11_grants.sql
 common/governance/11_grants.sql

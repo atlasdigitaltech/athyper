@@ -32,24 +32,28 @@ export function BusinessPartnerRecord({ businessPartnerId }: { readonly business
   return useFeature("neon.business_partner.view_360") ? <BusinessPartner360Shell businessPartnerId={businessPartnerId} /> : <BusinessPartnerAggregateDetail businessPartnerId={businessPartnerId} />;
 }
 
-export function BusinessPartnerScopeConfiguration({ businessPartnerId }: { readonly businessPartnerId: string }) {
+export function BusinessPartnerScopeConfiguration({ businessPartnerId, initialCompanyCodeId="", initialOrganizationId="", initialRole="supplier", initialKind="assign_organization" }: { readonly businessPartnerId: string; initialCompanyCodeId?:string; initialOrganizationId?:string; initialRole?:"supplier"|"customer"; initialKind?:"assign_organization"|"configure_company" }) {
   const api = usePartnerApi(),
     work = useNeonWorkContext(),
+    operating = useNeonOperatingOrganization(),
     toast = useToasts(),
     navigation = useApplicationNavigation();
-  const [kind, setKind] = useState<"assign_organization" | "configure_company">("assign_organization"),
-    [role, setRole] = useState<"supplier" | "customer">("supplier"),
-    [organizationId, setOrganizationId] = useState(""),
+  const [kind, setKind] = useState<"assign_organization" | "configure_company">(initialKind),
+    [role, setRole] = useState<"supplier" | "customer">(initialRole),
+    [organizationId, setOrganizationId] = useState(initialOrganizationId),
+    [companyCodeId, setCompanyCodeId] = useState(initialCompanyCodeId),
     [busy, setBusy] = useState(false),
     [error, setError] = useState<string>();
-  const companyCodeId = work.selection.mode === "company" ? work.selection.companyCodeId : undefined;
+  const selectedOrganization=operating.organizations.find(o=>o.id===organizationId);
+  const companyAvailable=work.companies.some(c=>c.companyCodeId===companyCodeId)&&selectedOrganization?.companyAssignments.some(a=>a.companyCodeId===companyCodeId);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError(undefined);
     const data = new FormData(event.currentTarget);
     try {
-      if (kind === "configure_company" && !companyCodeId) throw new Error("Select a company in the NEON work context before creating a finance configuration request.");
+      if (!selectedOrganization || (companyCodeId && !companyAvailable)) throw new Error("Select an authorized company and operating organization.");
+      if (kind === "configure_company" && !companyCodeId) throw new Error("Select a company before creating a finance configuration request.");
       const proposedPayload =
         kind === "assign_organization"
           ? {
@@ -121,7 +125,8 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId }: { reado
                 <option value="customer">Customer</option>
               </Select>
             </Field>
-            <OrganizationField value={organizationId} onChange={setOrganizationId} />
+            <Field label="Company" htmlFor="bp-extension-company"><Select id="bp-extension-company" value={companyCodeId} onChange={event=>{const id=event.target.value;setCompanyCodeId(id);const choices=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===id));setOrganizationId(choices.length===1?choices[0]!.id:"");}}><option value="">Select company</option>{work.companies.map(c=><option key={c.companyCodeId} value={c.companyCodeId}>{c.displayName}</option>)}</Select></Field>
+            <Field label="Operating organization" htmlFor="bp-extension-organization"><Select id="bp-extension-organization" value={organizationId} onChange={e=>setOrganizationId(e.target.value)}><option value="">Select organization</option>{operating.organizations.filter(o=>!companyCodeId||o.companyAssignments.some(a=>a.companyCodeId===companyCodeId)).map(o=><option key={o.id} value={o.id}>{o.displayName}</option>)}</Select></Field>
             {kind === "assign_organization" ? (
               <>
                 <Field label="Effective from" htmlFor="bp-effective-from">
@@ -134,7 +139,7 @@ export function BusinessPartnerScopeConfiguration({ businessPartnerId }: { reado
             ) : (
               <>
                 <Field label="Selected company" htmlFor="bp-selected-company">
-                  <Input id="bp-selected-company" value={companyCodeId ?? "Select a company in the work context"} readOnly />
+                  <Input id="bp-selected-company" value={work.companies.find(c=>c.companyCodeId===companyCodeId)?.displayName ?? "Select a company"} readOnly />
                 </Field>
                 <Field label="Currency" htmlFor="bp-currency">
                   <Input id="bp-currency" name="currencyCode" required minLength={3} maxLength={3} pattern="[A-Za-z]{3}" />
@@ -1181,3 +1186,5 @@ export function AuthorizedNewBusinessPartnerRequest() {
 }
 
 export { BusinessPartnerTransactionSelector } from "./transaction-selector";
+
+export { BankingWorkspace } from "./banking-workspace";

@@ -87,3 +87,63 @@ test("Atlas preserves whitespace token chunks instead of failing a successful an
   assert.equal(answer.text, parts.join(""));
   assert.deepEqual(deltas, parts);
 });
+
+test("Atlas transports the business context and rejects mismatched stream generations", async () => {
+  const generationId="10000000-0000-4000-8000-000000000001";
+  const businessContext={schemaVersion:1 as const,kind:"record" as const,entityCode:"business_partner",recordId:generationId,generationId,locale:"en",dirty:false};
+  let received:unknown;
+  let mismatch=false;
+  const client={async request(operation:any,options:any){
+    const path=typeof operation.path==="function"?operation.path(options?.params??{}):operation.path;
+    if(path==="/api/atlas/admission")return{chatAllowed:true,persistenceAllowed:true,allowedPublicModelIds:["atlas-fast"],allowedDataClasses:["internal"],policyRevision:"1"};
+    if(path==="/api/atlas/threads")return{threadId:"thread"};
+    received=options.body.businessContext;
+    return stream([event("message.delta",{text:"scoped"}),event("run.completed",{reason:"stop"})].map(frame=>frame.replace('"protocol":"atlas.sse/1"',`"protocol":"atlas.sse/1","contextGenerationId":"${mismatch?"other":generationId}"`)));
+  }} as HttpClient;
+  const atlas=createAtlasAnswerClient({client});
+  assert.equal((await atlas.answer("Explain",{businessContext})).text,"scoped");assert.deepEqual(received,businessContext);
+  mismatch=true;await assert.rejects(atlas.answer("Explain",{businessContext}),/different page context/);
+});
+
+test("Atlas rejects disconnected streams before accepting the final answer envelope", async () => {
+  const client = { async request(operation: { path: string | ((params: Record<string, string | number>) => string) }, options?: { params?: Record<string, string | number> }) {
+    const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path;
+    if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: false, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "1" };
+    if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+    return stream([event("message.delta", { text: "Incomplete answer" })]);
+  } } as unknown as HttpClient;
+  await assert.rejects(createAtlasAnswerClient({ client }).answer("Summarize"), /interrupted/);
+});
+
+test("Atlas carries validated owner coverage and findings independently of generated prose", async () => {
+  const insight = { schemaVersion: 1, scope: { entityCode: "business_partner", fingerprint: "scope-1" }, coverage: { target: "record", state: "partial", evaluatedCount: 1 }, evaluatedAt: "2026-09-09T10:00:00Z", freshness: "current", findings: [], evidence: [], actions: [] };
+  let invalid = false;
+  const client = { async request(operation: { path: string | ((params: Record<string, string | number>) => string) }, options?: { params?: Record<string, string | number> }) {
+    const path = typeof operation.path === "function" ? operation.path(options?.params ?? {}) : operation.path;
+    if (path === "/api/atlas/admission") return { schema: "atlas-plane-admission/1", chatAllowed: true, persistenceAllowed: true, readToolsAllowed: true, mutationToolsAllowed: false, allowedPublicModelIds: ["atlas-fast"], allowedDataClasses: ["internal"], policyRevision: "1" };
+    if (path === "/api/atlas/threads") return { threadId: "thread-1" };
+    return stream([event("insight.cited", { callId: "c1", insight: invalid ? { ...insight, href: "/invented" } : insight }), event("message.delta", { text: "Available assessment" }), event("run.completed", { messageId: "m1", reason: "stop" })]);
+  } } as unknown as HttpClient;
+  const answer = await createAtlasAnswerClient({ client }).answer("Summarize");
+  assert.deepEqual(answer.insights, [insight]);
+  assert.equal(answer.envelope?.kind, "explanation");
+  invalid = true;
+  await assert.rejects(createAtlasAnswerClient({ client }).answer("Summarize"), /Invalid Atlas insight/);
+});
+
+test("Atlas fullscreen history restores only server-persisted source coordinates", async () => {
+  const coordinate = { entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1" };
+  let metadata = true, inherited = false;
+  const client = { async request(operation: { parse: (value: unknown) => unknown }) { return operation.parse({ items: [{ messageId: "m1", threadId: "t1", sequence: 2, role: "assistant", status: "completed", content: [{ type: "text", text: "Saved", ...(inherited ? { citations: [{ toolCode: "bp_read_summary", coordinate }] } : {}) }, { type: "text", text: " " }, { type: "text", text: "record summary." }, { type: "tool_result", callId: "c1", toolName: "bp_read_summary", result: { records: [], sources: [coordinate] }, ...(metadata ? { sources: [coordinate] } : {}) }], runId: "r1", createdAt: "2026-09-09T00:00:00Z", terminalAt: "2026-09-09T00:00:01Z" }], nextCursor: null }); } } as unknown as HttpClient;
+  const atlas = createAtlasAnswerClient({ client });
+  const page = await atlas.messages("t1");
+  assert.equal(page.items[0]?.text, "Saved record summary.");
+  assert.equal(page.items[0]?.answer?.envelope?.summary, "Saved record summary.");
+  assert.deepEqual(page.items[0]?.answer?.citations, [{ ...coordinate, toolCode: "bp_read_summary" }]);
+  assert.deepEqual(page.items[0]?.answer?.envelope?.evidenceIds, ["record:0"]);
+  assert.deepEqual(page.items[0]?.answer?.actions, []);
+  metadata = false;
+  assert.equal((await atlas.messages("t1")).items[0]?.answer, undefined);
+  inherited = true;
+  assert.deepEqual((await atlas.messages("t1")).items[0]?.answer?.citations, [{ ...coordinate, toolCode: "bp_read_summary" }]);
+});

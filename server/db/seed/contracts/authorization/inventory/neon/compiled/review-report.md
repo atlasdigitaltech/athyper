@@ -4,9 +4,9 @@ Status: inventory-only and non-enforcing. This artifact creates no roles, grants
 
 ## Coverage
 
-- Physical tables: 307 (145 master, 162 document)
+- Physical tables: 309 (145 master, 164 document)
 - Reviewed tables: 45
-- Pending business review: 262
+- Pending business review: 264
 - Proposed operations: 43
 - Proposed lifecycles: 6
 - Studio-to-Neon organization resource contracts: 3
@@ -243,6 +243,8 @@ Required before enforcement:
 - document.mesh_business_partner_acceptance
 - document.mesh_business_partner_acceptance_event
 - document.mesh_business_partner_match
+- document.mesh_profile_change_case
+- document.mesh_profile_change_resolution
 - document.netting_batch
 - document.obligation_horizon
 - document.offboarding_case
@@ -327,7 +329,7 @@ Required before enforcement:
 - master.bank_account
 - master.bank_account_house_config
 - master.bank_account_link
-- master.bank_party
+- master.bank_provisional_reference
 - master.bom
 - master.bom_component
 - master.brand_profile
@@ -441,5 +443,5 @@ Required before enforcement:
 
 ## Release conclusion
 
-Blocked: 262 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
+Blocked: 264 tables still require business classification and 1 implementation qualification item(s) remain. Inventory compilation may continue; release compilation must fail.
 

@@ -194,15 +194,6 @@ CREATE TRIGGER trg_network_account_tax_registration_updated
 BEFORE UPDATE ON mesh.network_account_tax_registration
 FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
-CREATE TRIGGER trg_mesh_bank_party_normalize
-BEFORE INSERT OR UPDATE OF code, name, bic ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION mesh.trg_normalize_bank_identity();
-CREATE TRIGGER trg_mesh_bank_party_status
-BEFORE UPDATE OF status ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION shared.trg_set_status_changed();
-CREATE TRIGGER trg_mesh_bank_party_updated
-BEFORE UPDATE ON mesh.bank_party
-FOR EACH ROW EXECUTE FUNCTION shared.trg_set_updated_at();
 
 CREATE TRIGGER trg_mesh_bank_account_normalize
 BEFORE INSERT OR UPDATE OF code, name, account_holder_name,
@@ -268,3 +259,5 @@ CREATE TRIGGER wave6_network_lifecycle_event_immutable BEFORE UPDATE OR DELETE O
 CREATE TRIGGER delivery_acknowledgement_immutable BEFORE UPDATE OR DELETE
   ON mesh.business_partner_delivery_acknowledgement FOR EACH ROW
   EXECUTE FUNCTION mesh.trg_delivery_acknowledgement_immutable();
+
+CREATE TRIGGER trg_register_provisional_bank BEFORE INSERT OR UPDATE OF bank_institution_id,provisional_bank_reference_id,bank_name_override,bank_country_override,bic_override ON mesh.bank_account FOR EACH ROW EXECUTE FUNCTION mesh.trg_register_provisional_bank();

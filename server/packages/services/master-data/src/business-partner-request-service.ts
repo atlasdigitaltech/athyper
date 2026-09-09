@@ -1,3 +1,4 @@
+import { projectBusinessPartnerCaseExplanation } from "./business-partner-case-explanation.js";
 import { parseInstant } from "@athyper/platform-temporal";
 import { createHash, randomUUID } from "node:crypto";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
@@ -70,13 +71,32 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         return request;
       });
     },
+    async explainCase(query) {
+      assertContext(query.context);
+      if (query.expectedVersion !== undefined && (!Number.isSafeInteger(query.expectedVersion) || query.expectedVersion < 1)) throw invalid("expectedVersion must be positive");
+      return options.transactions.run("neon", actor(query.context), async transaction => {
+        const view = await options.repository.getView(query.context.tenantId, query.requestId, transaction);
+        if (!view) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Case explanation is unavailable");
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(view.request.operatingOrganizationId, view.request.companyCodeId));
+        if (query.businessPartnerId && query.businessPartnerId !== view.request.targetBusinessPartnerId && query.businessPartnerId !== view.request.materializedBusinessPartnerId) throw new MasterDataError(403, "FORBIDDEN", "Case explanation is unavailable");
+        if (query.expectedVersion !== undefined && query.expectedVersion !== view.request.rowVersion) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Saved case changed; refresh the explanation");
+        let baselineAllowed = false;
+        if (view.previousSnapshot) {
+          const payload = view.previousSnapshot.payload;
+          const decision = await options.authorizer.authorize({context: query.context, permissionCode: businessPartnerRequestPermissions.read, resource: scope(typeof payload.operatingOrganizationId === "string" ? payload.operatingOrganizationId : undefined, typeof payload.companyCodeId === "string" ? payload.companyCodeId : undefined)});
+          baselineAllowed = decision.allowed;
+        }
+        return projectBusinessPartnerCaseExplanation(view, baselineAllowed);
+      });
+    },
     async getView(query) {
       assertContext(query.context);
       return options.transactions.run("neon", actor(query.context), async (transaction) => {
         const view = await options.repository.getView(query.context.tenantId, query.requestId, transaction);
         if (!view) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
         await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(view.request.operatingOrganizationId, view.request.companyCodeId));
-        return view;
+        const { previousSnapshot: _baseline, ...publicView } = view;
+        return publicView;
       });
     },
     async list(query) {

@@ -55,13 +55,15 @@ describe("published 360 panel", () => {
     });
     expect(value.panel?.tabs.map((tab) => tab.label)).toEqual([
       "360 View",
+      "Roles & scope",
       "Requests",
       "Business Transactions",
       "Activity",
       "Comments",
       "Attachments",
     ]);
-    expect(value.panel?.sections).toContain("customer-company");
+    expect(value.panel?.sections).not.toContain("customer-company");
+    expect(value.panel?.tabs.find(t=>t.key==="roles")?.sectionKey).toBe("roles-scope");
     expect(value.panel?.sections).toContain("credit");
   });
 });

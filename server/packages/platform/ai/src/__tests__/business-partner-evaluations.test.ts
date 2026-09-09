@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { AtlasDomainCommandBus, AtlasRecordDataGateway } from "@athyper/server-contract-ai";
+import type { AtlasCaseExplanationOwner, AtlasDomainCommandBus, AtlasRecordDataGateway } from "@athyper/server-contract-ai";
 import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { AtlasRegisteredToolCoordinator, AtlasToolRegistry, AtlasToolService, BP_ATLAS_SUBMIT, createBusinessPartnerAtlasCommandBus, createBusinessPartnerAtlasTools } from "../index.js";
 import { MemoryToolStore } from "./tool-store-fixture.js";
@@ -13,7 +13,7 @@ const context: VerifiedRequestContext = {
 };
 const args = { governance: { affectedEntityType: "entity_case", affectedEntityId: id, expectedRowVersion: 3 } };
 const source = { entityCode: "business_partner", recordId: id, revision: "3", descriptorHash: "descriptor-1" };
-function harness() {
+function harness(caseOwner?: AtlasCaseExplanationOwner) {
   let now = new Date("2026-09-05T00:00:00Z");
   const store = new MemoryToolStore();
   const submit = vi.fn(async () => ({ request: { id, rowVersion: 4, status: "pending_approval", proposedPayload: { bankAccount: "never-return" } }, workflow: { requestId: other } }));
@@ -21,7 +21,7 @@ function harness() {
   const query = vi.fn<AtlasRecordDataGateway["query"]>(async () => ({ rows: [{ code: "BP-1", status: "active", bankAccount: "never-return" }], sources: [source], responseBytes: 100, authorizationProfileHash: context.profileHash }));
   const authorize = vi.fn(async () => ({ allowed: true, policyRevision: "policy-1" }));
   const verify = vi.fn(async () => true);
-  const registry = new AtlasToolRegistry(createBusinessPartnerAtlasTools());
+  const registry = new AtlasToolRegistry(createBusinessPartnerAtlasTools(caseOwner));
   const bus = createBusinessPartnerAtlasCommandBus({ submit, fallback: { execute: fallback } });
   const service = new AtlasToolService({ registry, proposals: store, records: { query }, authority: { authorize }, confirmations: { verify }, commands: bus, now: () => now });
   const coordinator = new AtlasRegisteredToolCoordinator(registry, service);
@@ -158,8 +158,9 @@ it('does not repeat a domain side effect when receipt persistence is interrupted
 it.each([{display_name:{injection:'object'}},{code:'x'.repeat(4097)}])('rejects a summary outside its registered field schema',async row=>{
  const h=harness();h.query.mockResolvedValue({rows:[row],sources:[source],responseBytes:10,authorizationProfileHash:context.profileHash});await expect(h.coordinator.handle({context,runId:id,threadId:id,callId:'invalid-result',toolCode:'bp_read_summary',arguments:{recordId:id},mutationToolsAllowed:false})).rejects.toMatchObject({code:'TOOL_INVALID'});
 });
-it('passes only a validated operating-organization coordinate to Records',async()=>{
- const h=harness();await h.coordinator.handle({context,runId:id,threadId:id,callId:'scope',toolCode:'bp_read_summary',arguments:{recordId:id,operatingOrganizationId:other},mutationToolsAllowed:false});expect(h.query).toHaveBeenCalledWith({context,request:expect.objectContaining({limit:1,scopeCoordinate:{operatingOrganizationId:other}})});
+it('reads shared identity independently of a validated legacy organization argument',async()=>{
+ const h=harness();await h.coordinator.handle({context,runId:id,threadId:id,callId:'scope',toolCode:'bp_read_summary',arguments:{recordId:id,operatingOrganizationId:other},mutationToolsAllowed:false});expect(h.query).toHaveBeenCalledWith({context,request:expect.objectContaining({limit:1})});
+ expect(h.query.mock.calls[0]![0].request).not.toHaveProperty('scopeCoordinate');
  await expect(h.coordinator.handle({context,runId:id,threadId:id,callId:'bad-scope',toolCode:'bp_read_summary',arguments:{recordId:id,operatingOrganizationId:'untrusted'},mutationToolsAllowed:false})).rejects.toMatchObject({code:'TOOL_INVALID'});
 });
 
@@ -186,4 +187,31 @@ it("times out a read that never settles without invoking a mutation", async () =
     await rejected;
     expect(h.submit).not.toHaveBeenCalled();
   } finally { vi.useRealTimers(); }
+});
+
+const savedCase = {caseId: id, rowVersion: 3, snapshotId: other, descriptorHash: "d".repeat(64), status: "draft", validation: "passed" as const, findings: [], coverage: "partial" as const, diff: {state: "unavailable" as const, baseline: "previous_saved_snapshot" as const, changes: []}};
+it.each([
+  {caseId: other}, {rowVersion: 4}, {status: "pending_approval"}, {validation: "not_evaluated" as const}, {validation: "failed" as const},
+])("BP-AI-07: rejects a submit preview without matching current owner evidence %j", async change => {
+  const h = harness({read: async () => ({...savedCase, ...change})});
+  await expect(h.preview()).rejects.toMatchObject({code: "TOOL_DENIED"});
+  expect(h.store.rows.size).toBe(0);
+  expect(h.submit).not.toHaveBeenCalled();
+});
+it("BP-AI-07: reviewed owner version survives concurrent confirmation and retry", async () => {
+  const read = vi.fn(async () => savedCase);
+  const h = harness({read});
+  const {preview} = await h.preview();
+  expect(read).toHaveBeenCalledExactlyOnceWith({context, requestId: id, expectedVersion: 3});
+  const input = {context, proposalId: preview.proposalId, arguments: args, confirmationToken: preview.confirmationToken};
+  await Promise.allSettled([h.service.run(input), h.service.run(input)]);
+  expect(await h.service.run(input)).toMatchObject({replayed: true});
+  expect(h.submit).toHaveBeenCalledOnce();
+});
+
+it("BP-AI-07: rejects submission aimed at a different case than the current page", async () => {
+  const h = harness({read: async () => savedCase});
+  await expect(h.coordinator.handle({context, runId: id, threadId: id, callId: "wrong-case", toolCode: "bp_submit_case", arguments: args, mutationToolsAllowed: true, businessContext: {descriptorHash: "descriptor", scopeFingerprint: "scope", page: {schemaVersion: 1, kind: "record", generationId: "generation", entityCode: "business_partner", recordId: id, caseId: other, locale: "en", dirty: false}}})).rejects.toMatchObject({code: "TOOL_DENIED"});
+  expect(h.store.rows.size).toBe(0);
+  expect(h.submit).not.toHaveBeenCalled();
 });

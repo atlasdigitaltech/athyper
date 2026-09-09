@@ -1,3 +1,5 @@
+import { RelatedRecord } from "@athyper/platform-entity-form-detail";
+import { RelatedSection } from "./related-section";
 import { businessLabel, countryName } from "../display-values";
 import { useRecordFooterSources } from "@athyper/platform-shell";
 import { parseInstant } from "@athyper/platform-temporal";
@@ -16,6 +18,13 @@ import {
 } from "../business-partner-360-section-client";
 import { useBusinessPartner360 } from "../business-partner-360-context";
 export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
+  return code === "contacts" || code === "addresses" ? (
+    <RelatedSection code={code} />
+  ) : (
+    <LegacyCommonSection code={code} />
+  );
+}
+function LegacyCommonSection({ code }: { readonly code: CommonSectionCode }) {
   const http = useApiClient(),
     identity = useSessionIdentity(),
     { summary, roleLens } = useBusinessPartner360(),
@@ -101,15 +110,40 @@ export function CommonSection({ code }: { readonly code: CommonSectionCode }) {
             Number(right.kind === "canonical") -
             Number(left.kind === "canonical"),
         )
-        .map((item) => (
-          <ItemCard
-            key={`${item.kind ?? code}:${item.id}`}
-            item={item}
-            section={code}
-            client={client}
-            businessPartnerId={summary.identity.id}
-          />
-        ))}
+        .map((item) =>
+          item.kind === "external_reference" ? (
+            <Card
+              key={`external_reference:${item.id}`}
+              className="bp360-section-card"
+            >
+              {summary.recordHeader?.related?.find(
+                (p) => p.source === "external-reference.v1",
+              ) ? (
+                <RelatedRecord
+                  profile={summary.recordHeader.related.find(
+                    (p) => p.source === "external-reference.v1",
+                  )!}
+                  values={{ ...item }}
+                  restrictedFields={section.redactions.map((r) => r.fieldCode)}
+                  hideScope
+                />
+              ) : (
+                <p>
+                  Presentation unavailable. Refresh after the record definition
+                  is published.
+                </p>
+              )}
+            </Card>
+          ) : (
+            <ItemCard
+              key={`${item.kind ?? code}:${item.id}`}
+              item={item}
+              section={code}
+              client={client}
+              businessPartnerId={summary.identity.id}
+            />
+          ),
+        )}
       {section.data.nextCursor ? (
         <button
           disabled={loading}
@@ -177,27 +211,9 @@ export function ItemCard({
           className="bp360-empty-toggle"
           onClick={() => setShowEmpty((value) => !value)}
         >
-          {showEmpty ? "Hide" : "Show"} {emptyCount} empty fields
+          {showEmpty ? "Hide" : "Show"} {emptyCount} missing{" "}
+          {emptyCount === 1 ? "field" : "fields"}
         </button>
-      ) : null}
-      {item.channels?.length ? (
-        <ul>
-          {item.channels.map((channel, index) => (
-            <li key={String(channel["id"] ?? index)}>
-              {display(channel["type"])} · {display(channel["value"])} ·{" "}
-              {channel["verified"] ? "verified" : "unverified"}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {item.events?.length ? (
-        <ul>
-          {item.events.map((event, index) => (
-            <li key={String(event["id"] ?? index)}>
-              {display(event["eventType"])} · {display(event["occurredAt"])}
-            </li>
-          ))}
-        </ul>
       ) : null}
       {item.industryCodeId ? (
         <details>
@@ -242,7 +258,6 @@ export function ItemCard({
 function title(item: CommonSectionItem, section: CommonSectionCode) {
   if (section === "identity") {
     if (item.kind === "classification") return "Industry classification";
-    if (item.kind === "external_reference") return "External reference";
   }
   return (
     item.displayName ??
@@ -271,13 +286,6 @@ function fields(
         ["Effective from", item.effectiveFrom],
         ["Effective until", item.effectiveUntil],
       ];
-    else if (item.kind === "external_reference")
-      return [
-        ["External system", item.sourceSystemCode],
-        ["External entity", item.externalEntityCode],
-        ["External ID", item.externalId],
-        ["External code", item.externalCode],
-      ];
     else
       return [
         ["Code", item.code],
@@ -290,27 +298,6 @@ function fields(
         ["Incorporation date", item.incorporationDate],
         ["Website", item.websiteUrl],
       ];
-  if (section === "contacts")
-    return [
-      ["Title", item.businessTitle],
-      ["Department", item.departmentName],
-      ["Primary", item.primary],
-      ["Effective from", item.effectiveFrom],
-      ["Effective until", item.effectiveUntil],
-    ];
-  if (section === "addresses")
-    return [
-      ["Purpose", businessLabel(item.purpose)],
-      ["Address", item.lines?.join(", ")],
-      ["Locality", item.locality],
-      ["Region", item.region],
-      ["Postal code", item.postalCode],
-      ["Country", countryName(item.countryCode)],
-      ["Primary", item.primary],
-      ["Validation", businessLabel(item.validationStatus)],
-      ["Effective from", item.effectiveFrom],
-      ["Effective until", item.effectiveUntil],
-    ];
   if (section === "governance")
     return [
       ["Role", businessLabel(item.relationTypeCode)],

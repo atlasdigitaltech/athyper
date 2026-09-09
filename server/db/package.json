@@ -134,12 +134,15 @@
     "test:integration:business-partner-r4-change-case": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r4-change-case.sql",
     "test:integration:entity-case-payload-validation": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/entity-case-payload-validation.sql",
     "test:integration:case-contract-publication": "tsx scripts/tests/integration/business-partner-case-contract-publication.ts",
+    "db:publish:bank-directory": "tsx scripts/operations/banking/publish-bank-directory.ts",
+    "test:integration:bank-directory": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/bank-directory/ownership.sql",
     "test:integration:bank-verification": "tsx scripts/tests/integration/business-partner-bank-verification.ts",
     "db:provision:neon:business-partner-r5-fixtures": "tsx scripts/provisioning/provision-business-partner-r5-fixtures.ts",
     "test:integration:business-partner-r6-delivery": "tsx scripts/tests/integration/business-partner-r6-delivery.ts",
     "db:evidence:business-partner-r5-downstream": "tsx scripts/business-partner-360/collect-customer-downstream-evidence.ts",
     "test:integration:business-partner-r6-amendment": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r6-amendment.sql",
-    "test:integration:identity-replay": "tsx scripts/tests/integration/identity-replay-live.mjs"
+    "test:integration:identity-replay": "tsx scripts/tests/integration/identity-replay-live.mjs",
+    "db:verify:business-partner-360-reads": "tsx scripts/business-partner-360/verify-business-partner-360-reads.ts"
   },
   "dependencies": {
     "@athyper/platform-temporal": "workspace:*",

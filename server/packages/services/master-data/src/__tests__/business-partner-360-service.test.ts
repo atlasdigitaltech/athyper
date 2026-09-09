@@ -58,7 +58,42 @@ describe("360 metadata directory admission",()=>{
   expect(fixture.baseCalls()).toBe(0);
  });
 });
-it("does not read a transaction section without an explicit scope",async()=>{
+it("does not read a company transaction section without an explicit scope",async()=>{
  const service=fixture({...core("organization",["supplier"]),scopeResolved:false});
- await expect(service.section({context,businessPartnerId:ids.bp,sectionCode:"banking"})).rejects.toMatchObject({code:"BP_360_SCOPE_REQUIRED",status:409});
+ await expect(service.section({context,businessPartnerId:ids.bp,sectionCode:"supplier-company"})).rejects.toMatchObject({code:"BP_360_SCOPE_REQUIRED",status:409});
+});
+
+describe("published related collection ordering", () => {
+  for (const sectionCode of ["contacts", "addresses"] as const) {
+    it(`${sectionCode} binds primary-first cursor anchors to the published order`, async () => {
+      let order = "primary-first";
+      const seen: unknown[] = [];
+      class OrderedRepository extends MemoryRepository {
+        override async readCommonSection(input: Parameters<BusinessPartner360Repository<object>["readCommonSection"]>[0]) {
+          seen.push(input);
+          const page = await super.readCommonSection(input);
+          return {...page, ...(page.next ? {next:{...page.next,primary:true}} : {})};
+        }
+      }
+      const service = createBusinessPartner360Service({
+        authorizer:{async authorize(){return {allowed:true};}} as never,
+        repository:new OrderedRepository(core("organization",["supplier"])),
+        metadata:{async getEntityDescriptor(){return {recordPresentation:{related:[{sectionKey:sectionCode,collectionOrder:order}]}};}} as never,
+        transactions:{async run(_plane,_actor,work){return work({});}},
+        definitions:{async resolve(){return {code:"business_partner.onboarding" as const,version:"1.0.0",hash:"a".repeat(64)};}},
+        now:()=>new Date("2026-09-09T00:00:00Z"),
+      });
+      const first = await service.section<{nextCursor?:string}>({context,businessPartnerId:ids.bp,sectionCode,limit:1});
+      const payload = JSON.parse(Buffer.from(first.data.nextCursor!,"base64url").toString());
+      expect(payload).toMatchObject({collectionOrder:"primary-first",afterPrimary:true});
+      await service.section({context,businessPartnerId:ids.bp,sectionCode,cursor:first.data.nextCursor});
+      expect(seen[1]).toMatchObject({collectionOrder:"primary-first",cursor:{afterPrimary:true}});
+      for(const bad of [undefined,"true",0]) {
+        const cursor=Buffer.from(JSON.stringify({...payload,afterPrimary:bad})).toString("base64url");
+        await expect(service.section({context,businessPartnerId:ids.bp,sectionCode,cursor})).rejects.toMatchObject({code:"BP_360_CURSOR_STALE"});
+      }
+      order="newest-first";
+      await expect(service.section({context,businessPartnerId:ids.bp,sectionCode,cursor:first.data.nextCursor})).rejects.toMatchObject({code:"BP_360_CURSOR_STALE"});
+    });
+  }
 });

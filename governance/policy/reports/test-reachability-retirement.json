@@ -24,6 +24,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/atlas-answer-envelope.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/atlas-grounded-answer.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -180,7 +184,19 @@
       "runner": "test:foundation"
     },
     {
+      "path": "tests/foundation/atlas-answer.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-business-context.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
       "path": "tests/foundation/atlas-composer-interactions.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/atlas-history-interactions.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -229,6 +245,10 @@
     },
     {
       "path": "tests/foundation/entity-record-header.test.tsx",
+      "runner": "test:foundation"
+    },
+    {
+      "path": "tests/foundation/entity-related-presentation.test.tsx",
       "runner": "test:foundation"
     },
     {
@@ -373,6 +393,14 @@
     },
     {
       "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/bp-ai-authenticated-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/business-partner-ai-qualification.test.mjs",
       "runner": "test:operations"
     },
     {

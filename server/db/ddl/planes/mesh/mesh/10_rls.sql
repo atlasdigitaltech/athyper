@@ -239,8 +239,6 @@ ALTER TABLE mesh.network_account_industry_classification ENABLE ROW LEVEL SECURI
 ALTER TABLE mesh.network_account_industry_classification FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_tax_registration ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.network_account_tax_registration FORCE ROW LEVEL SECURITY;
-ALTER TABLE mesh.bank_party ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mesh.bank_party FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account FORCE ROW LEVEL SECURITY;
 ALTER TABLE mesh.bank_account_link ENABLE ROW LEVEL SECURITY;
@@ -285,11 +283,6 @@ CREATE POLICY profile_publication_event_participant_read ON mesh.network_account
 CREATE POLICY profile_publication_event_owner_insert ON mesh.network_account_profile_publication_event FOR INSERT WITH CHECK(owner_tenant_id=shared.current_tenant_id());
 CREATE POLICY seed_write ON mesh.network_account_profile_publication_event FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);
 
-CREATE POLICY tenant_access ON mesh.bank_party FOR ALL
-    USING (tenant_id = shared.current_tenant_id_soft())
-    WITH CHECK (tenant_id = shared.current_tenant_id());
-CREATE POLICY seed_write ON mesh.bank_party FOR ALL TO CURRENT_USER
-    USING (true) WITH CHECK (true);
 
 CREATE POLICY owner_access ON mesh.bank_account FOR ALL
     USING (tenant_id = shared.current_tenant_id_soft())
@@ -373,3 +366,8 @@ CREATE POLICY worker_read ON mesh.business_partner_delivery_acknowledgement
   FOR SELECT TO athyper_jobs_service USING (true);
 CREATE POLICY owner_access ON mesh.business_partner_delivery_acknowledgement
   TO CURRENT_USER USING (true) WITH CHECK (true);
+
+ALTER TABLE mesh.bank_provisional_reference ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mesh.bank_provisional_reference FORCE ROW LEVEL SECURITY;
+CREATE POLICY tenant_access ON mesh.bank_provisional_reference FOR ALL USING(tenant_id=shared.current_tenant_id_soft()) WITH CHECK(tenant_id=shared.current_tenant_id());
+CREATE POLICY seed_write ON mesh.bank_provisional_reference FOR ALL TO CURRENT_USER USING(true) WITH CHECK(true);

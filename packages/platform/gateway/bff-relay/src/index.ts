@@ -28,6 +28,7 @@ export const ATLAS_EXPERIENCE_OPERATION:RelayOperation=Object.freeze({id:"atlas.
 export const ATLAS_THREAD_CREATE_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.create",method:"POST",path:"/api/atlas/threads",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
 export const ATLAS_THREAD_LIST_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.list",method:"GET",path:"/api/atlas/threads",requestClass:"json",requiresTenant:true});
 export const ATLAS_THREAD_MESSAGE_LIST_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.messages.list",method:"GET",path:"/api/atlas/threads/:threadId/messages",requestClass:"json",requiresTenant:true});
+export const ATLAS_THREAD_EXPORT_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.export",method:"GET",path:"/api/atlas/threads/:threadId/export",requestClass:"json",requiresTenant:true});
 export const ATLAS_THREAD_RENAME_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.rename",method:"PATCH",path:"/api/atlas/threads/:threadId",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
 export const ATLAS_THREAD_ARCHIVE_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.archive",method:"POST",path:"/api/atlas/threads/:threadId/archive",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:4096});
 export const ATLAS_THREAD_RUN_OPERATION:RelayOperation=Object.freeze({id:"atlas.threads.run",method:"POST",path:"/api/atlas/threads/:threadId/runs",requestClass:"stream",requiresTenant:true,idempotency:"required",maxBodyBytes:64*1024});
@@ -39,7 +40,7 @@ export const ATTACHMENT_FINALIZE_OPERATION:RelayOperation=Object.freeze({id:"att
 export const ATTACHMENT_STATUS_OPERATION:RelayOperation=Object.freeze({id:"attachments.status",method:"GET",path:"/api/attachments/:attachmentId/status",requestClass:"json",requiresTenant:true});
 export const ATTACHMENT_REMOVE_OPERATION:RelayOperation=Object.freeze({id:"attachments.remove",method:"DELETE",path:"/api/attachments/:attachmentId",requestClass:"json",requiresTenant:true});
 export const ATTACHMENT_DOWNLOAD_OPERATION:RelayOperation=Object.freeze({id:"attachments.download",method:"POST",path:"/api/attachments/:attachmentId/download",requestClass:"json",requiresTenant:true,maxBodyBytes:4096});
-export const ATLAS_ANSWER_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([ATLAS_ADMISSION_OPERATION,ATLAS_EXPERIENCE_OPERATION,ATLAS_THREAD_CREATE_OPERATION,ATLAS_THREAD_LIST_OPERATION,ATLAS_THREAD_MESSAGE_LIST_OPERATION,ATLAS_THREAD_RENAME_OPERATION,ATLAS_THREAD_ARCHIVE_OPERATION,ATLAS_THREAD_RUN_OPERATION,ATLAS_TOOL_HISTORY_OPERATION,ATLAS_TOOL_RUN_OPERATION,ATLAS_TOOL_CANCEL_OPERATION,ATTACHMENT_STAGE_OPERATION,ATTACHMENT_FINALIZE_OPERATION,ATTACHMENT_STATUS_OPERATION,ATTACHMENT_REMOVE_OPERATION]);
+export const ATLAS_ANSWER_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([ATLAS_ADMISSION_OPERATION,ATLAS_EXPERIENCE_OPERATION,ATLAS_THREAD_CREATE_OPERATION,ATLAS_THREAD_LIST_OPERATION,ATLAS_THREAD_MESSAGE_LIST_OPERATION,ATLAS_THREAD_EXPORT_OPERATION,ATLAS_THREAD_RENAME_OPERATION,ATLAS_THREAD_ARCHIVE_OPERATION,ATLAS_THREAD_RUN_OPERATION,ATLAS_TOOL_HISTORY_OPERATION,ATLAS_TOOL_RUN_OPERATION,ATLAS_TOOL_CANCEL_OPERATION,ATTACHMENT_STAGE_OPERATION,ATTACHMENT_FINALIZE_OPERATION,ATTACHMENT_STATUS_OPERATION,ATTACHMENT_REMOVE_OPERATION]);
 export const ATLAS_EXPERIENCE_ADMIN_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([
   {id:"atlas.admin.experience.draft.read",method:"GET",path:"/api/admin/atlas/experience/draft",requestClass:"json",requiresTenant:true},
   {id:"atlas.admin.experience.draft.save",method:"PUT",path:"/api/admin/atlas/experience/draft",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:128*1024},
@@ -332,3 +333,14 @@ export const NEON_BP_BANK_VERIFICATION_RELAY_OPERATIONS: readonly RelayOperation
 ]);
 
 export const ENTITY_VIEWS_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([{id:"entity-views.list",method:"GET",path:"/api/entity-runtime/:entityCode/views",requestClass:"json",requiresTenant:true},{id:"entity-views.command",method:"POST",path:"/api/entity-runtime/:entityCode/views",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:64*1024}]);
+
+export const BANK_DIRECTORY_REFERENCE_OPERATION:RelayOperation=Object.freeze({id:"bank-directory.reference",method:"GET",path:"/api/bank-directory/reference",requestClass:"json",requiresTenant:true});
+export const STUDIO_BANK_DIRECTORY_RELAY_OPERATIONS:readonly RelayOperation[]=Object.freeze([
+ {id:"studio.bank-directory.references",method:"POST",path:"/api/studio/bank-directory/references",requestClass:"json",requiresTenant:true,idempotency:"none",maxBodyBytes:256*1024},
+ {id:"studio.bank-directory.list",method:"GET",path:"/api/studio/bank-directory",requestClass:"json",requiresTenant:true},
+ {id:"studio.bank-directory.reconcile",method:"GET",path:"/api/studio/bank-directory/reconcile",requestClass:"json",requiresTenant:true},
+ {id:"studio.bank-directory.import",method:"POST",path:"/api/studio/bank-directory/import",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:256*1024},
+ {id:"studio.bank-directory.get",method:"GET",path:"/api/studio/bank-directory/:revisionId",requestClass:"json",requiresTenant:true},
+ {id:"studio.bank-directory.resume",method:"POST",path:"/api/studio/bank-directory/:revisionId/resume",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:8192},
+ {id:"studio.bank-directory.review",method:"POST",path:"/api/studio/bank-directory/:revisionId/review",requestClass:"json",requiresTenant:true,idempotency:"required",maxBodyBytes:8192},
+]);

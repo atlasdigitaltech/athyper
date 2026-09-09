@@ -13,14 +13,12 @@ export const BUSINESS_PARTNER_360_PANEL = parseRecord360Panel({
     "governance",
     "banking",
     "qualifications-certificates",
-    "roles-scope",
-    "supplier-company",
-    "customer-company",
     "credit",
     "network",
   ],
   tabs: [
     { key: "360", label: "360 View", provider: "360" },
+    { key: "roles", label: "Roles & scope", provider: "section", sectionKey: "roles-scope" },
     {
       key: "requests",
       label: "Requests",
@@ -57,3 +55,8 @@ export const BUSINESS_PARTNER_360_PANEL = parseRecord360Panel({
     { key: "address", label: "Primary Address", provider: "primary-address" },
   ],
 });
+
+/** Upgrade older published layouts while preserving other published tabs and sidebar bindings. */
+export function realignPartnerPanel(panel: typeof BUSINESS_PARTNER_360_PANEL) {
+ return parseRecord360Panel({...panel,sections:panel.sections.filter(code=>!["roles-scope","supplier-company","customer-company"].includes(code)),tabs:[panel.tabs.find(t=>t.provider==="360")!,{key:"roles",label:"Roles & scope",provider:"section",sectionKey:"roles-scope"},...panel.tabs.filter(t=>t.provider!=="360"&&t.key!=="roles"&&!["roles-scope","supplier-company","customer-company"].includes(t.sectionKey??""))]});
+}

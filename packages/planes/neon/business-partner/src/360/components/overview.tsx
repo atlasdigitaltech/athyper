@@ -1,3 +1,4 @@
+import { RelationshipOverview } from "./relationship-overview";
 import { Card } from "@athyper/platform-ui";
 import type { Summary } from "../business-partner-360-client";
 import { useBusinessPartner360 } from "../business-partner-360-context";
@@ -15,6 +16,7 @@ export function Overview({ summary }: { readonly summary: Summary }) {
   const canOpenRequests = requests?.authorization === "granted";
   return (
     <div className="bp360-overview">
+      <RelationshipOverview />
       <div className="bp360-signals" aria-label="Partner status summary">
         <div>
           <span>Data completeness</span>

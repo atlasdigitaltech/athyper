@@ -1,4 +1,5 @@
 "use client";
+import { useAtlasContextNavigation } from "@athyper/platform-ai-agent-ui";
 import { RecordFooterSource } from "./record-footer";
 
 import { BellIcon, Building2Icon, CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, CircleCheckIcon, CloseIcon, HistoryIcon, HomeIcon, InboxIcon, LogOutIcon, MenuIcon, NetworkIcon, RefreshCwIcon, resolveIcon, SearchIcon, SparklesIcon, StarIcon, UserIcon } from "@athyper/platform-icons";
@@ -27,6 +28,7 @@ export function ShellChrome({ currentLocale="en",localePolicy,onLocaleChange,app
   const t=useShellI18n().message;
   const [drawerOpen, setDrawerOpen] = useState(false), [collapsed, setCollapsed] = useState(initialCollapsed), [observedPath, setPath] = useState("/");
   const routeState=useShellRoute(), path=routeState?.pathname??observedPath;
+  useAtlasContextNavigation(path);
   const [atlasOpen,setAtlasOpen]=useState(false),[atlasPinned,setAtlasPinned]=useState(false);
   const [navigationPeek, setNavigationPeek] = useState<ShellNavigationPeek>(), [quickAccessTab, setQuickAccessTab] = useState<ShellQuickAccessTab>(), [headerAction, setHeaderAction] = useState<HeaderActionKind>();
   const menuButton = useRef<HTMLButtonElement>(null), firstLink = useRef<HTMLAnchorElement>(null);

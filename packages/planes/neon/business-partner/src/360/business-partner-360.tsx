@@ -3,7 +3,7 @@ import { BUSINESS_PARTNER_360_PANEL } from "./panel-definition";
 import { EntityRecord360Panel } from "@athyper/platform-entity-form-detail";
 import { PrimaryDetails } from "./components/primary-details";
 import { ResourceSection } from "./components/resource-section";
-import { PageHeader, useRecordPage } from "@athyper/platform-shell";
+import { PageHeader, useRecordPage, useAtlasBusinessContextPublisher } from "@athyper/platform-shell";
 
 import {
   useApiClient,
@@ -33,7 +33,6 @@ import { CommonSection } from "./components/common-section";
 import type { CommonSectionCode } from "./business-partner-360-section-client";
 import {
   CustomerCompanySection,
-  RolesScopeSection,
   SupplierCompanySection,
 } from "./components/role-company-sections";
 import {
@@ -47,6 +46,8 @@ import {
   RequestsSection,
 } from "./components/explainability-sections";
 import { NetworkSection } from "./components/network-section";
+import { RolesWorkspace } from "./components/roles-workspace";
+import { realignPartnerPanel } from "./panel-definition";
 import { sectionLabel } from "./section-registry";
 
 export function BusinessPartner360Shell({
@@ -95,7 +96,21 @@ export function BusinessPartner360Shell({
       authEpoch,
     ],
   );
+  const panel = realignPartnerPanel(summary?.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL);
+  const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
+  const legacyTab = panel.tabs.find((tab) => tab.sectionKey === url.section);
+  const tab =
+    (["roles-scope", "supplier-company", "customer-company"].includes(url.section) ? panel.tabs.find(tab=>tab.key==="roles") : undefined) ?? panel.tabs.find((tab) => tab.key === url.tab) ?? legacyTab ?? overviewTab;
+  const railSections = panel.sections.filter((code) =>
+    summary?.sections.some((item) => item.code === code),
+  );
+  const section =
+    tab.sectionKey ??
+    (railSections.includes(url.section)
+      ? url.section
+      : (railSections[0] ?? "overview"));
   const key = summaryQueryKey(query).join(":");
+  useAtlasBusinessContextPublisher({kind:"record",entityCode:"business_partner",recordId:businessPartnerId,section,savedRevision:loadedKey===key&&summary?String(summary.businessPartnerVersion):undefined,roleLens:url.roleLens,dirty:false,asOf:url.asOf?`${url.asOf}T00:00:00.000Z`:undefined,workContext:operatingOrganizationId||companyCodeId||legalEntityId?{operatingOrganizationId,companyCodeId,legalEntityId}:undefined});
 
   useEffect(() => {
     const onPopState = () => {
@@ -191,19 +206,6 @@ export function BusinessPartner360Shell({
         <Skeleton className="bp360-shell-skeleton" />
       </div>
     );
-  const panel = summary.recordHeader?.panel ?? BUSINESS_PARTNER_360_PANEL;
-  const overviewTab = panel.tabs.find((tab) => tab.provider === "360")!;
-  const legacyTab = panel.tabs.find((tab) => tab.sectionKey === url.section);
-  const tab =
-    panel.tabs.find((tab) => tab.key === url.tab) ?? legacyTab ?? overviewTab;
-  const railSections = panel.sections.filter((code) =>
-    summary.sections.some((item) => item.code === code),
-  );
-  const section =
-    tab.sectionKey ??
-    (railSections.includes(url.section)
-      ? url.section
-      : (railSections[0] ?? "overview"));
   const renderSection = (section: string) => {
     const manifest = summary.sections.find((item) => item.code === section);
     if (!manifest) return <RestrictedSection />;
@@ -219,7 +221,7 @@ export function BusinessPartner360Shell({
     ) : isCommon(section) ? (
       <CommonSection code={section} />
     ) : section === "roles-scope" ? (
-      <RolesScopeSection />
+      <RolesWorkspace />
     ) : section === "supplier-company" ? (
       <SupplierCompanySection />
     ) : section === "customer-company" ? (
@@ -246,7 +248,6 @@ export function BusinessPartner360Shell({
         {section === "overview" ? (
           <div className="bp360-overview">
             <Overview summary={summary} />
-            <AccessScopeCard />
             <RecordTechnicalDetails />
           </div>
         ) : undefined}
@@ -257,7 +258,7 @@ export function BusinessPartner360Shell({
     navigate({
       section: code,
       tab:
-        panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
+        (["supplier-company","customer-company"].includes(code)?"roles":undefined) ?? panel.tabs.find((tab) => tab.sectionKey === code)?.key ??
         overviewTab.key,
     });
   const observeSection = (code: string) => {
@@ -308,13 +309,14 @@ export function BusinessPartner360Shell({
               )?.label ?? sectionLabel(item.code),
             ...(item.authorization === "granted" &&
             item.count !== undefined &&
+            item.reasonCode !== "BP_360_SCOPE_REQUIRED" &&
             !["comments", "attachments"].includes(item.code)
               ? { count: item.count }
               : {}),
             ...(item.authorization === "restricted"
               ? { status: "Restricted" }
               : item.reasonCode === "BP_360_SCOPE_REQUIRED"
-                ? { status: "Select scope" }
+                ? { status: summary.recordHeader?.sections.find(section => section.key === item.code)?.scopePrompt ?? "Select scope" }
                 : item.state === "stale"
                   ? { status: "Needs refresh" }
                   : {}),

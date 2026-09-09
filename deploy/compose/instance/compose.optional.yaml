@@ -113,6 +113,7 @@ services:
     cpus: 0.25
 
   secretstore:
+    restart: unless-stopped
     profiles: [secretstore]
     image: infisical/infisical:v0.159.16
     # Read owner-only Docker secrets, then drop to the image's non-root account.

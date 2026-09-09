@@ -976,46 +976,21 @@ COMMENT ON TABLE mesh.network_account_profile_publication IS
 COMMENT ON TABLE mesh.network_account_profile_publication_event IS
   'Append-only governed publication lifecycle. Withdrawal preserves the publication and snapshot.';
 
-CREATE TABLE mesh.bank_party (
-    id                       uuid                         NOT NULL DEFAULT shared.uuidv7(),
-    tenant_id                uuid                         NOT NULL,
-    code                     text                         NOT NULL,
-    name                     text                         NOT NULL,
-    country_code             character(2)                 NOT NULL,
-    institution_type         mesh.bank_institution_type_d NOT NULL DEFAULT 'bank',
-    bic                      text,
-    national_bank_code_type  text,
-    national_bank_code       text,
-    branch_code              text,
-    branch_name              text,
-    supports_swift           boolean                      NOT NULL DEFAULT false,
-    supports_local_clearing  boolean                      NOT NULL DEFAULT false,
-    supports_sepa            boolean                      NOT NULL DEFAULT false,
-    supports_ach             boolean                      NOT NULL DEFAULT false,
-    metadata                 jsonb                        NOT NULL DEFAULT '{}'::jsonb,
-    status                   mesh.profile_record_status_d NOT NULL DEFAULT 'active',
-    is_active                boolean GENERATED ALWAYS AS (status = 'active') STORED,
-    status_changed_at        timestamptz,
-    status_changed_by        uuid,
-    created_at               timestamptz                  NOT NULL DEFAULT now(),
-    created_by               uuid                         NOT NULL,
-    updated_at               timestamptz,
-    updated_by               uuid,
 
-    CONSTRAINT mesh_bank_party_pkey PRIMARY KEY (id),
-    CONSTRAINT mesh_bank_party_tenant_id_uq UNIQUE (tenant_id, id),
-    CONSTRAINT mesh_bank_party_code_uq UNIQUE (tenant_id, code),
-    CONSTRAINT mesh_bank_party_code_chk CHECK (code ~ '^[a-z][a-z0-9_.-]{1,62}$'),
-    CONSTRAINT mesh_bank_party_name_chk CHECK (btrim(name) <> ''),
-    CONSTRAINT mesh_bank_party_bic_chk
-        CHECK (bic IS NULL OR bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'),
-    CONSTRAINT mesh_bank_party_national_code_pair_chk
-        CHECK ((national_bank_code_type IS NULL) = (national_bank_code IS NULL)),
-    CONSTRAINT mesh_bank_party_metadata_chk CHECK (jsonb_typeof(metadata) = 'object'),
-    CONSTRAINT mesh_bank_party_status_pair_chk
-        CHECK ((status_changed_at IS NULL) = (status_changed_by IS NULL)),
-    CONSTRAINT mesh_bank_party_audit_pair_chk
-        CHECK ((updated_at IS NULL) = (updated_by IS NULL))
+CREATE TABLE mesh.bank_provisional_reference (
+ id uuid PRIMARY KEY DEFAULT shared.uuidv7(),
+ tenant_id uuid NOT NULL REFERENCES master.tenant(id),
+ submitted_name text NOT NULL CHECK (btrim(submitted_name) <> ''),
+ submitted_country character(2) NOT NULL REFERENCES shared.country(code),
+ submitted_bic text,
+ status text NOT NULL DEFAULT 'unresolved' CHECK (status IN ('unresolved','resolved','rejected')),
+ resolved_institution_id uuid REFERENCES shared.bank_institution(id),
+ resolved_branch_id uuid,
+ created_at timestamptz NOT NULL DEFAULT now(),
+ UNIQUE (tenant_id,id),
+ FOREIGN KEY (resolved_institution_id,resolved_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ CHECK ((status='resolved') = (resolved_institution_id IS NOT NULL)),
+ CHECK (resolved_branch_id IS NULL OR resolved_institution_id IS NOT NULL)
 );
 
 CREATE TABLE mesh.bank_account (
@@ -1024,7 +999,9 @@ CREATE TABLE mesh.bank_account (
     network_account_id   uuid                            NOT NULL,
     code                 text,
     name                 text,
-    bank_party_id        uuid,
+    bank_institution_id        uuid,
+    bank_branch_id uuid,
+    provisional_bank_reference_id uuid,
     account_holder_name  text                            NOT NULL,
     account_id_type      mesh.bank_account_id_type_d     NOT NULL,
     protected_value_token text                           NOT NULL,
@@ -1069,10 +1046,10 @@ CREATE TABLE mesh.bank_account (
     CONSTRAINT mesh_bank_account_last4_chk
         CHECK (account_last4 ~ '^[A-Z0-9]{4}$'),
     CONSTRAINT mesh_bank_account_bank_identity_chk CHECK (
-        (bank_party_id IS NOT NULL
+        (bank_institution_id IS NOT NULL
          AND bank_name_override IS NULL AND bank_country_override IS NULL)
         OR
-        (bank_party_id IS NULL
+        (bank_institution_id IS NULL
          AND nullif(btrim(bank_name_override), '') IS NOT NULL
          AND bank_country_override IS NOT NULL)
     ),

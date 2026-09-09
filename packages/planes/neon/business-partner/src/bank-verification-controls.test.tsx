@@ -20,3 +20,13 @@ it("offers MFA step-up for protected bank operations",()=>{expect(button("Verify
 it("requires explicit confirmation to apply and removes the control after the native receipt",async()=>{await load("verified");expect(button("Apply verified bank change")!.disabled).toBe(true);await click(container.querySelector('input[type="checkbox"]')!);transport.mockResolvedValueOnce(Response.json({verification:{id:"verification",business_partner_id:"partner",company_code_id:"company",status:"applied",created_by:"maker",applied_by:"checker",candidate_bank_account_link_id:"candidate"},replayed:false}));await click(button("Apply verified bank change")!);expect(container.textContent).toContain("native application receipt is recorded");expect(button("Apply verified bank change")).toBeUndefined();});
 it("refuses a verification for another partner",async()=>{await load("verified","other-partner");expect(container.textContent).toContain("different partner or company");expect(button("Apply verified bank change")).toBeUndefined();});
 it("clears loaded authority when its ID changes",async()=>{await load("verified");await input("bank-verification-id","other");expect(button("Apply verified bank change")).toBeUndefined();});
+it("refreshes company acceptance after applying a verification",async()=>{
+ const onApplied=vi.fn();
+ await act(async()=>root.render(<BankVerificationControls businessPartnerId="partner" companyCodeId="company" onApplied={onApplied}/>));
+ await load("verified");
+ const confirmation=container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+ await click(confirmation);
+ transport.mockResolvedValueOnce(Response.json({verification:{id:"verification",business_partner_id:"partner",company_code_id:"company",status:"applied"}}));
+ await click(button("Apply verified bank change")!);
+ expect(onApplied).toHaveBeenCalledTimes(1);
+});

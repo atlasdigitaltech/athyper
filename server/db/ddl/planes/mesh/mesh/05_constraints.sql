@@ -363,22 +363,14 @@ ALTER TABLE mesh.network_account_tax_registration
     FOREIGN KEY (tenant_id, verified_by)
     REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
-ALTER TABLE mesh.bank_party
-    ADD CONSTRAINT mesh_bank_party_tenant_fk
-    FOREIGN KEY (tenant_id) REFERENCES master.tenant (id) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_party_country_fk
-    FOREIGN KEY (country_code) REFERENCES shared.country (code) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_party_created_by_fk
-    FOREIGN KEY (tenant_id, created_by)
-    REFERENCES master.principal (tenant_id, id) ON DELETE RESTRICT;
 
 ALTER TABLE mesh.bank_account
     ADD CONSTRAINT mesh_bank_account_owner_fk
     FOREIGN KEY (tenant_id, network_account_id)
     REFERENCES mesh.network_account (tenant_id, id) ON DELETE RESTRICT,
-    ADD CONSTRAINT mesh_bank_account_bank_party_fk
-    FOREIGN KEY (tenant_id, bank_party_id)
-    REFERENCES mesh.bank_party (tenant_id, id) ON DELETE RESTRICT,
+    ADD CONSTRAINT mesh_bank_account_bank_institution_fk
+    FOREIGN KEY (bank_institution_id)
+    REFERENCES shared.bank_institution (id) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_bank_account_currency_fk
     FOREIGN KEY (currency_code) REFERENCES shared.currency (code) ON DELETE RESTRICT,
     ADD CONSTRAINT mesh_bank_account_country_fk
@@ -490,3 +482,11 @@ ALTER TABLE mesh.network_account_profile_publication
 ALTER TABLE mesh.network_account_profile_publication_event
   ADD CONSTRAINT network_account_profile_publication_event_publication_fk FOREIGN KEY(owner_tenant_id,publication_id) REFERENCES mesh.network_account_profile_publication(owner_tenant_id,id) ON DELETE RESTRICT,
   ADD CONSTRAINT network_account_profile_publication_event_recorded_by_fk FOREIGN KEY(owner_tenant_id,recorded_by) REFERENCES master.principal(tenant_id,id) ON DELETE RESTRICT;
+
+ALTER TABLE mesh.bank_account
+ ADD CONSTRAINT bank_account_branch_fk FOREIGN KEY(bank_institution_id,bank_branch_id) REFERENCES shared.bank_branch(institution_id,id),
+ ADD CONSTRAINT bank_account_branch_parent_chk CHECK(bank_branch_id IS NULL OR bank_institution_id IS NOT NULL),
+ ADD CONSTRAINT bank_account_provisional_fk FOREIGN KEY(tenant_id,provisional_bank_reference_id) REFERENCES mesh.bank_provisional_reference(tenant_id,id),
+ ADD CONSTRAINT bank_account_reference_choice_chk CHECK ((bank_institution_id IS NOT NULL AND provisional_bank_reference_id IS NULL) OR (bank_institution_id IS NULL AND provisional_bank_reference_id IS NOT NULL));
+
+ALTER TABLE mesh.bank_account ADD CONSTRAINT bank_account_canonical_routing_chk CHECK(bank_institution_id IS NULL OR bic_override IS NULL);

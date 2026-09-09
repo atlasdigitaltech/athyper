@@ -33,6 +33,9 @@ export function IdentityHeader() {
   return (
     <EntityRecordHeader
       header={header}
+      breadcrumbLabel={header.code && header.code !== header.title
+        ? `${header.title} (${header.code})`
+        : header.title}
       activeSection={section}
       onSelectSection={selectSection}
 

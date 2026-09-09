@@ -47,3 +47,16 @@ it("explicit content revisions bind only the captured authorized projection when
     a.sources[0]?.revision,
   );
 });
+
+it("does not disclose owner query diagnostics or forward unregistered query paths", async () => {
+  let received: Record<string, unknown> | undefined;
+  const gateway = createAtlasRecordDataGateway({
+    maxRows: 1, maxResponseBytes: 1000,
+    metadata: { getEntityDescriptor: async () => ({ entityCode: "business_partner", planeKey: context.planeKey, compiledHash: "schema", fields: [{ key: "name" }], storage: { idField: "id" } }) as never },
+    records: { list: async (query: Record<string, unknown>) => { received = query; throw new Error("HIDDEN-RECORD linked.secret denied"); } } as never,
+    fieldSecurity: { project: async () => { throw new Error("must not project denied results"); } },
+  });
+  await expect(gateway.query({ context, request: { entityCode: "business_partner", fields: ["name"], limit: 1, group: "secret", search: "secret", viewRelationships: [{ secret: true }] } as never })).rejects.toThrow("The requested Atlas query is unavailable.");
+  expect(received).toMatchObject({ countMode: "none", hydrateReferences: false });
+  for (const key of ["group", "search", "viewRelationships"]) expect(received).not.toHaveProperty(key);
+});

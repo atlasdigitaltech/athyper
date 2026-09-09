@@ -37,6 +37,8 @@ planes/neon/control/02_domains.sql
 planes/neon/document/02_domains.sql
 planes/neon/ledger/02_domains.sql
 common/shared/03_tables.sql
+common/shared/03_bank_directory.sql
+common/shared/04_bank_directory_views.sql
 common/master/03_platform_tables.sql
 planes/neon/master/03_tables.sql
 common/snapshot/03_tables.sql
@@ -94,6 +96,7 @@ common/document/06_indexes.sql
 planes/neon/ledger/06_indexes.sql
 common/ai/06_indexes.sql
 common/shared/07_functions.sql
+common/shared/07_bank_directory.sql
 planes/neon/control/07_functions.sql
 common/control/07_functions.sql
 common/runtime_meta/07_functions.sql
@@ -215,4 +218,5 @@ planes/neon/control/12_notification_reference_seed.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
+planes/neon/master/15_bank_account_company_usage.sql
 common/shared/99_security_definer_hardening.sql

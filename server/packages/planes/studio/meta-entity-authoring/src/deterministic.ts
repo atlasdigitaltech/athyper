@@ -1,5 +1,6 @@
+import { compileEntityAi } from "./entity-ai.js";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
-import { parseEntityRecordPresentation, validateRecordPresentationReferences } from "@athyper/contract-platform-entity-runtime";
+import { parseEntityRecordPresentation, validateRecordPresentationReferences, validateRelatedPresentationOwner } from "@athyper/contract-platform-entity-runtime";
 import { parseCollectionRelationship } from "@athyper/server-contract-metadata";
 import { compileListExperience } from "./list-experience.js";
 import { createHash } from "node:crypto";
@@ -65,6 +66,9 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   optionalReferences(graph.policyBindings,"entityOperationId",ids(graph.operations),"policyBindings",issues); optionalReferences(graph.fieldPolicyBindings,"entityOperationId",ids(graph.operations),"fieldPolicyBindings",issues); optionalReferences(graph.numberingBindings,"entityOperationId",ids(graph.operations),"numberingBindings",issues);
   validateOwners(graph,issues);
   validateListSurfaces(graph,issues);
+  try { compileEntityAi(graph); } catch (cause) {
+    issues.push({ code: "ENTITY_AI_INVALID", path: "surfaces.layoutConfig.ai", message: cause instanceof Error ? cause.message : "Invalid entity AI contract" });
+  }
   return { deterministic: true, contractHash, issues:sorted(issues) };
 }
 
@@ -80,16 +84,19 @@ export function runContractTests(graph: MetaEntityGraph): ContractTestReport {
 export function compileGraph(graph: MetaEntityGraph): CompiledMetaEntityArtifact {
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
+  const ai = compileEntityAi(graph);
   const listPresentation = compileListPresentation(graph);
   const recordSurfaces = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.["recordPresentation"] !== undefined);
   if (recordSurfaces.length > 1) throw new Error("Only one record presentation may be published per entity");
   const recordPresentation = recordSurfaces[0] ? parseEntityRecordPresentation(recordSurfaces[0].layoutConfig!["recordPresentation"]) : undefined;
   if (recordPresentation) validateRecordPresentationReferences(recordPresentation, graph.fields.map(field => field.fieldKey), graph.operations.filter(operation => operation.status !== "deprecated").map(operation => operation.operationKey));
+  if (recordPresentation?.related) validateRelatedPresentationOwner(recordPresentation.related, graph.entity.entityCode);
   const directoryRules=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.["directoryScope"]===undefined?[]:[parseEntityDirectoryScope(surface.layoutConfig["directoryScope"])]);
   if(directoryRules.length>1) throw new TypeError("Only one directory scope rule is allowed");
   const relationshipBindings=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.["collectionRelationship"]===undefined?[]:[parseCollectionRelationship(surface.layoutConfig["collectionRelationship"])]);
   if(relationshipBindings.length>1)throw new Error("Only one collection relationship may be published per entity");
   const descriptor = canonicalValue({
+    ...(ai ? { ai } : {}),
     ...(directoryRules[0]?{directoryScope:directoryRules[0]}:{}),
     ...(relationshipBindings[0]?{collectionRelationship:relationshipBindings[0]}:{}),
     ...(recordPresentation ? { recordPresentation } : {}),

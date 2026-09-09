@@ -91,17 +91,16 @@ BEGIN
             TO athyperapp;
         GRANT SELECT ON master.mv_company_postable_account TO athyperapp;
         GRANT SELECT, INSERT, UPDATE
-            ON master.bank_party,
-               master.bank_account_link,
+            ON master.bank_account_link,
                master.bank_account_house_config
             TO athyperapp;
         GRANT INSERT, UPDATE ON master.bank_account TO athyperapp;
         GRANT SELECT (
-            id, tenant_id, code, name, bank_party_id,
+            id, tenant_id, code, name, bank_institution_id, bank_branch_id, provisional_bank_reference_id,
             account_holder_name, account_id_type, account_last4,
             currency_code, bic_override, bank_name_override,
             bank_country_override, account_nature, provider_account_ref,
-            correspondent_bank_party_id, is_verified, verified_at,
+            correspondent_bank_institution_id, is_verified, verified_at,
             verified_by, verification_method, metadata, status, is_active,
             status_changed_at, status_changed_by,
             created_at, created_by, updated_at, updated_by
@@ -487,3 +486,9 @@ REVOKE ALL ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,
 GRANT EXECUTE ON FUNCTION master.command_materialize_mesh_profile_change_case(uuid,uuid,bigint,text,uuid,uuid) TO athyperapp,athyperadmin;
 
 REVOKE ALL ON FUNCTION master.fn_materialize_business_partner_case_relationships() FROM PUBLIC;
+
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+ GRANT SELECT,INSERT ON master.bank_provisional_reference TO athyperapp;
+ END IF;
+END $$;

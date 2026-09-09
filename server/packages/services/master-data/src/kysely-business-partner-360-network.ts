@@ -12,7 +12,7 @@ export async function readBusinessPartner360NetworkSection(input:Input,transacti
     matched.id::text match_id,matched.algorithm_code,matched.algorithm_version,matched.diff_hash,matched.created_at matched_at,
     ARRAY(SELECT item->>'path' FROM jsonb_array_elements(COALESCE(matched.field_diff,'[]'::jsonb)) item WHERE item->>'path'=ANY(${safePaths}::text[]) ORDER BY item->>'path') diff_paths,
     acceptance.id::text acceptance_id,acceptance.accepted_field_paths,acceptance.acceptance_hash,acceptance.created_at acceptance_created_at,
-    acceptance_event.event_kind acceptance_event_kind,acceptance_event.business_partner_request_id::text,acceptance_event.recorded_at acceptance_recorded_at,
+    acceptance_event.event_kind acceptance_event_kind,acceptance_event.entity_case_id::text business_partner_request_id,acceptance_event.recorded_at acceptance_recorded_at,
     bank.projection_status bank_status,bank.current_disclosure_version bank_disclosure_version,bank.current_lifecycle_version bank_lifecycle_version,bank.updated_at bank_observed_at,bank_snapshot.payload_hash bank_payload_hash
     ,link.tenant_id::text authority_tenant_id FROM control.mesh_business_partner_account_link link
     JOIN control.mesh_business_partner_profile_projection projection ON projection.tenant_id=link.tenant_id AND projection.id=link.profile_projection_id AND projection.network_relationship_id=link.network_relationship_id
