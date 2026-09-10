@@ -1,3 +1,5 @@
+import { compileEntityAuthorizationPublication, type EntityAuthorizationPublicationInput } from "./entity-authorization-compiler.js";
+import type { EntityRuntimeProjection } from "@athyper/server-contract-publication";
 import { tryGetRequestContext } from "@athyper/server-foundation/context";
 import { createHash } from "node:crypto";
 import {
@@ -29,6 +31,13 @@ export interface KyselyPublicationAuthorityWorkOptions {
   readonly targetEnvironment: string;
   readonly targetPlanes: readonly PublicationPlane[];
   readonly targetInstance?: string;
+  /** Absent means authorization releases may be signed but cannot dispatch. */
+  readonly authorizeEntityActivation?: (releaseId: string) => Promise<void>;
+  readonly authorizationCompilation?: {
+    readonly runtime: EntityAuthorizationPublicationInput["runtime"];
+    readonly review?: EntityAuthorizationPublicationInput["review"];
+    catalog(plane: PublicationPlane): Promise<EntityAuthorizationPublicationInput["catalog"]>;
+  };
 }
 
 export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork {
@@ -88,7 +97,15 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
       }
     }
     if (!result.rows.length) {
-      result = await sql<Row>`SELECT pr.id publication_release_id,pr.release_key,pr.release_no,pr.release_kind,
+      result = await sql<Row>`SELECT * FROM publication.fn_initial_baseline_compilation_source(${releaseId}::uuid)`.execute(this.options.database);
+      if (!result.rows.length) {
+        const available=(await sql<Row>`SELECT to_regprocedure('publication.fn_authorization_successor_compilation_source(uuid)') IS NOT NULL AS available`.execute(this.options.database)).rows[0]?.["available"];
+        if(available) result=await sql<Row>`SELECT * FROM publication.fn_authorization_successor_compilation_source(${releaseId}::uuid)`.execute(this.options.database);
+      }
+      if (result.rows.length) artifactKind = "entity_runtime";
+    }
+    if (!result.rows.length) {
+      result = await sql<Row>`SELECT pr.id publication_release_id,pr.tenant_id,pr.release_key,pr.release_no,pr.release_kind,
       pr.compatibility_level,pr.minimum_runtime_version,er.revision_id,er.contract_schema_code,
       er.contract_schema_version,er.contract_hash,er.contract_signature,er.signature_algorithm,
       er.signing_key_id contract_signing_key_id,er.published_at,er.published_by,e.id entity_id,e.entity_code,
@@ -106,13 +123,45 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
 
     const compilationIds: string[] = [];
     const selected=result.rows.filter(row=>this.options.targetPlanes.includes(planeValue(row["plane_key"])));
-    if(selected.length!==(caseContract?1:this.options.targetPlanes.length))throw permanent("PUBLICATION_TARGET_COMPILATION_SOURCE_MISSING");
-    for (const row of selected) {
+    if(selected.length!==((caseContract || result.rows.some(row=>row["imported_baseline"]!==undefined))?1:this.options.targetPlanes.length))throw permanent("PUBLICATION_TARGET_COMPILATION_SOURCE_MISSING");
+    for (const sourceRow of selected) {
+      let row = sourceRow;
       const plane = planeValue(row["plane_key"]);
-      const unsigned = artifactKind === "entity_runtime"
+      // Studio snapshot hashes bind SQL ledger coordinates. Runtime verification
+      // uses canonical content hashes and a signature over the actual contract.
+      // Vocabulary derivatives explicitly bridge these two existing contracts.
+      if (artifactKind === "entity_runtime" && (row["imported_baseline"] !== undefined || (object(row,"compiled_json")["ai"] as {vocabulary?:unknown}|undefined)?.vocabulary)) {
+        const contractBytes = this.options.canonicalizer.canonicalBytes(row["contract_json"]);
+        const signed = await this.options.signer.sign({keyId:this.options.signingKeyId,algorithm:"Ed25519",bytes:contractBytes});
+        row = {...row,contract_hash:this.options.canonicalizer.sha256(contractBytes),compiled_hash:this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(row["compiled_json"])),contract_signature:signed.signature,signature_algorithm:"Ed25519",contract_signing_key_id:this.options.signingKeyId};
+      }
+      let unsigned = artifactKind === "entity_runtime"
         ? buildUnsigned(row, plane, this.options.signingKeyId, this.options.canonicalizer)
         : artifactKind === "bank_directory" ? buildBankDirectoryUnsigned(row, plane, this.options.signingKeyId, this.options.canonicalizer)
         : buildBusinessPartnerDefinitionUnsigned(row, plane, this.options.signingKeyId, this.options.canonicalizer);
+      if (artifactKind === "entity_runtime" && object(row,"compiled_json")["authorizationRuntime"] !== undefined) {
+        const configuration = this.options.authorizationCompilation;
+        if (!configuration) throw permanent("ENTITY_AUTHORIZATION_COMPILER_UNAVAILABLE");
+        if (row["release_kind"] !== "publish") throw permanent("ENTITY_AUTHORIZATION_ROLLBACK_REQUIRES_COMPATIBLE_ARTIFACT");
+        const native = buildUnsigned(row, plane, this.options.signingKeyId, this.options.canonicalizer);
+        const contract = object(row,"contract_json");
+        const authored = contract["operations"];
+        if (!Array.isArray(authored)) throw permanent("ENTITY_AUTHORIZATION_AUTHORED_OPERATIONS_REQUIRED");
+        const operationIds: Record<string,string> = {};
+        for (const operation of authored) {
+          if (operation.status === "deprecated") continue;
+          if (typeof operation.operationKey !== "string" || typeof operation.id !== "string" || Object.hasOwn(operationIds,operation.operationKey)) throw permanent("ENTITY_AUTHORIZATION_AUTHORED_OPERATIONS_INVALID");
+          operationIds[operation.operationKey] = operation.id;
+        }
+        const compiled = await compileEntityAuthorizationPublication({
+          projection: native.envelope.payload as EntityRuntimeProjection, operationIds,
+          catalog: await configuration.catalog(plane), runtime: configuration.runtime,
+          ...(configuration.review ? {review:configuration.review} : {}),
+          signer: this.options.signer, canonicalizer: this.options.canonicalizer,
+          signingKeyId: this.options.signingKeyId, minimumRuntimeVersion: string(row,"minimum_runtime_version"),
+        });
+        unsigned = { envelope: compiled.envelope, manifest: {...compiled.manifest, evidence: {...native.manifest.evidence, ...compiled.manifest.evidence}} } as typeof unsigned;
+      }
       const unsignedHash = this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(unsigned));
       const id = stableUuid(`publication-compilation:${releaseId}:${plane}:${artifactKind}`);
       await sql`INSERT INTO publication.artifact_compilation
@@ -139,6 +188,19 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
     const unsigned = object(row, "unsigned_document");
     const unsignedBytes = this.options.canonicalizer.canonicalBytes(unsigned);
     if (this.options.canonicalizer.sha256(unsignedBytes) !== string(row, "unsigned_hash")) throw permanent("PUBLICATION_COMPILATION_HASH_MISMATCH");
+    const projection=(unsigned as unknown as {envelope:{payload:EntityRuntimeProjection}}).envelope?.payload;
+    if(projection?.entityDescriptor?.descriptor["authorizationRuntime"]!==undefined){
+      const configuration=this.options.authorizationCompilation;
+      if(!configuration?.review)throw permanent("ENTITY_AUTHORIZATION_SIGNING_REVIEW_REQUIRED");
+      const c=projection.entityContract,d=projection.entityDescriptor;
+      const profile=d.descriptor["authorization"] as {operations:readonly {key:string}[]};
+      const runtime=d.descriptor["authorizationRuntime"];
+      configuration.runtime.qualify(profile,runtime);
+      const hash=(value:unknown)=>this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(value));
+      const review=await configuration.review.qualify({releaseId:c.releaseId,releaseNo:c.releaseNo,tenantId:c.tenantId??null,plane:d.plane,entityCode:c.entityCode,contractHash:hash(c.contract),profileHash:hash(profile),runtimeHash:hash(runtime),catalogHash:hash(await configuration.catalog(d.plane)),operationKeys:profile.operations.map(o=>o.key).sort()});
+      const evidence=(unsigned as any).manifest?.evidence;
+      if(review.receiptSha256!==evidence?.authorizationReviewReceiptSha256)throw permanent("ENTITY_AUTHORIZATION_SIGNING_REVIEW_CHANGED");
+    }
     const signed = await this.options.signer.sign({ keyId: this.options.signingKeyId, algorithm: "Ed25519", bytes: unsignedBytes });
     const document = { ...unsigned, signature: signed.signature } as unknown as PublicationArtifactDocumentV1;
     const bytes = this.options.canonicalizer.canonicalBytes(document);
@@ -159,13 +221,30 @@ export class KyselyPublicationAuthorityWork implements PublicationAuthorityWork 
   private async dispatchScoped(deploymentId: string): Promise<PublicationCoordinatePayload> {
     const deployment = await this.options.authority.getDeployment(deploymentId);
     if (!deployment) throw permanent("DEPLOYMENT_NOT_FOUND");
+    await this.assertActivationApproved(deploymentId);
     if (deployment.deploymentStatus === "pending") await this.options.authority.transitionDeployment({ deploymentId, status: "dispatched", evidence: { authorityWorker: "publication.v1" } });
     return { deploymentId, targetPlane: deployment.targetPlane };
   }
 
+  private async assertActivationApproved(deploymentId: string): Promise<void> {
+    const rows=(await sql<Row>`SELECT a.publication_release_id FROM publication.deployment d
+      JOIN publication.artifact a ON a.id=d.artifact_id
+      JOIN publication.artifact_compilation c ON c.publication_release_id=a.publication_release_id AND c.plane_code=a.plane_code AND c.artifact_kind=a.artifact_kind
+      WHERE d.id=${deploymentId}::uuid AND c.unsigned_document #> '{envelope,payload,entityDescriptor,descriptor,authorizationRuntime}' IS NOT NULL`.execute(this.options.database)).rows;
+    if(rows.length){
+      if(!this.options.authorizeEntityActivation)throw permanent("ENTITY_AUTHORIZATION_ACTIVATION_APPROVAL_REQUIRED");
+      await this.options.authorizeEntityActivation(string(rows[0]!,"publication_release_id"));
+    }
+  }
+
   async acknowledge(): Promise<void> { /* Activation acknowledges in the target orchestrator transaction flow. */ }
   async recoverStalled(): Promise<readonly PublicationCoordinatePayload[]> {
-    return (await this.options.authority.listRecoverableDeployments(200)).map(item => ({ deploymentId:item.deploymentId,targetPlane:item.targetPlane }));
+    const eligible: PublicationCoordinatePayload[]=[];
+    for(const item of await this.options.authority.listRecoverableDeployments(200)){
+      try{await this.assertActivationApproved(item.deploymentId);eligible.push({deploymentId:item.deploymentId,targetPlane:item.targetPlane});}
+      catch(error){if((error as Error).message!=="ENTITY_AUTHORIZATION_ACTIVATION_APPROVAL_REQUIRED")throw error;}
+    }
+    return eligible;
   }
 }
 
@@ -179,7 +258,7 @@ function buildUnsigned(row: Row, plane: PublicationPlane, signingKeyId: string, 
     },
   };
   const envelope = { schema:PUBLICATION_ARTIFACT_SCHEMA_V1,publicationKey:string(row,"release_key"),releaseId:string(row,"publication_release_id"),releaseNo:number(row,"release_no"),releaseKind:string(row,"release_kind"),targetPlane:plane,artifactKind:"entity_runtime" as const,generatedAt:date(row,"created_at"),...(row["minimum_runtime_version"]?{minimumRuntimeVersion:string(row,"minimum_runtime_version")} : {}),compatibilityLevel:string(row,"compatibility_level"),payload };
-  const manifest = { artifactSchema:PUBLICATION_ARTIFACT_SCHEMA_V1,mediaType:PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,publicationKey:string(row,"release_key"),releaseId:string(row,"publication_release_id"),releaseNo:number(row,"release_no"),targetPlane:plane,artifactKind:"entity_runtime" as const,payloadSha256:canonicalizer.sha256(canonicalizer.canonicalBytes(payload)),compiler:{name:"athyper.entity-release-artifact",version:"1.0.0"},contractSchemaVersion:string(row,"contract_schema_version"),descriptorSchemaVersion:"1.0.0",...(row["minimum_runtime_version"]?{minimumRuntimeVersion:string(row,"minimum_runtime_version")} : {}),signatureAlgorithm:"Ed25519",signingKeyId,createdAt:date(row,"created_at") };
+  const manifest = { ...(row["imported_baseline"] ? {evidence:{importedBaseline:object(row,"imported_baseline")}} : {}), artifactSchema:PUBLICATION_ARTIFACT_SCHEMA_V1,mediaType:PUBLICATION_ARTIFACT_MEDIA_TYPE_V1,publicationKey:string(row,"release_key"),releaseId:string(row,"publication_release_id"),releaseNo:number(row,"release_no"),targetPlane:plane,artifactKind:"entity_runtime" as const,payloadSha256:canonicalizer.sha256(canonicalizer.canonicalBytes(payload)),compiler:{name:"athyper.entity-release-artifact",version:"1.0.0"},contractSchemaVersion:string(row,"contract_schema_version"),descriptorSchemaVersion:"1.0.0",...(row["minimum_runtime_version"]?{minimumRuntimeVersion:string(row,"minimum_runtime_version")} : {}),signatureAlgorithm:"Ed25519",signingKeyId,createdAt:date(row,"created_at") };
   return { envelope, manifest };
 }
 

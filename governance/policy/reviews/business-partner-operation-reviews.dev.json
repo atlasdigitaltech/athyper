@@ -1,0 +1,2738 @@
+{
+  "reviewerNomination": {
+    "path": "governance/policy/reviews/business-partner-operation-reviewers.dev.json",
+    "sha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb"
+  },
+  "reviewers": [
+    {
+      "id": "catl.owner",
+      "name": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ]
+    },
+    {
+      "id": "catl.admin",
+      "name": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "homeTenantId": "44444444-4444-4444-8444-444444444444",
+      "domains": [
+        "business",
+        "security"
+      ]
+    }
+  ],
+  "schemaVersion": 1,
+  "kind": "business_partner_operation_review_proposals",
+  "generatedAt": "2026-09-09T19:19:20.829Z",
+  "source": {
+    "path": "governance/policy/reports/business-partner-activation-publication.dev.json",
+    "sha256": "1449bda0c0e29112cf96af696448020e84e841a46e50fc48b1ac7d924434e5c8",
+    "base": {
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "planeKey": "neon",
+      "entityCode": "business_partner",
+      "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+      "appliedReleaseId": "01a08532-31a1-7493-8953-ca4528dda3de",
+      "headVersion": 17,
+      "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+      "releaseNo": 17,
+      "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+      "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+      "eligibleHeadsHash": "a358d053e03c836c23251be16944e8521e70385234922928e996b829a0a746fe"
+    },
+    "candidateHash": "12203b304945675c8697105ff94319b41c2e1dbdbba4aa42cc225be479aa3900"
+  },
+  "operationCount": 51,
+  "policyReviewCount": 36,
+  "rows": [
+    {
+      "operation": "enter",
+      "bindingSha256": "fb8b2a4c2d888b964e9307426103a1afa890cd2ecda7be17b4b5f5c2de7998b9",
+      "requiresPolicyReview": true,
+      "categories": [
+        "missing_permission",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.enter",
+        "permissionId": null,
+        "catalogScopes": [],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "application",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": [
+          "createEntityListService",
+          "async applicationDescriptor("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review a precise catalog capability; no inferred alias, permission ID or grant.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "discover",
+      "bindingSha256": "7a3d479a0b69c4780d750f240a0a7361d92b23b880c2e5c01c4a2e69a0f8c0b7",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "directory",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": [
+          "createEntityListService",
+          "async list("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "read",
+      "bindingSha256": "a7ce388be5fabffa67fad894d3e90375b4a90e298f23c1b711de0fa3265120bb",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "record",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": [
+          "createEntityListService",
+          "async record("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "navigate_manage",
+      "bindingSha256": "0c22144c4e7d50ab47c9523b5b9ff6298f9713318914026c6adbe6ef395d2bea",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "directory",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": [
+          "createEntityListService",
+          "async list("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "navigate_overview",
+      "bindingSha256": "26b0e3311a95501facf60277b97232006f90cd59235c512325dc148dd4c2a33d",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "directory",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": [
+          "createEntityListService",
+          "async list("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "export",
+      "bindingSha256": "f5680d65fb33ed11563a67366ef872a3160acb95f50ffaaa3af27458aa6355ca",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "export",
+        "handlerVariant": "default",
+        "workflow": "transfer",
+        "workflowRequirements": [
+          "Reauthorize import/export start, worker execution and result retrieval.",
+          "Import read permission is a gateway only; per-mutation permissions are still required.",
+          "Target integration and export field projection require qualification."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/transfer/transfer-service.ts",
+        "anchors": [
+          "createRecordTransferService",
+          "async requestExport("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "navigate_review",
+      "bindingSha256": "6843f8e1619c285a3c339573568c48ee76bd2014997bfd9058edd23162fb7ae9",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.read",
+        "permissionId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_read",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async list(",
+          "async get("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "request_supplier",
+      "bindingSha256": "2d91ae311b6091363fa880c8a12bcc2f7ac535276f2aee7c493d97d7bc659454",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "new_partner (requestedRole=supplier)",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "add_role",
+      "bindingSha256": "1bac347e034bd889ee5473aa33667dde22eaed8455b4053ca6762d66cbe3552a",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "add_supplier | add_customer (selected role)",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "amend_partner",
+      "bindingSha256": "3e11c68fb8913961b83d517ceca459228ebb00f1c72b0ba2a06f2a9f90cb53a1",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "amend_partner",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "assign_organization",
+      "bindingSha256": "03aac9fb302939ea6f04d4d179c9bcdf714c499e0e21a890ee7690b00d168a7b",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "assign_organization",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "configure_company",
+      "bindingSha256": "7fd12a24d7d0bf7ab138c0d7a277a8344eb9e07ee502f79e8281bbd80e89c006",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "configure_company",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "change_bank",
+      "bindingSha256": "2f860d435461a99ecaa53e67388a5a4d28e1d780683a3b443c123519dbadc6e4",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "change_bank",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "lifecycle",
+      "bindingSha256": "65fcb0281594b62eea800e3d9bfcf860db588225c96827bdd9aff9f31314512c",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "activate_supplier | deactivate | reactivate | archive (selected transition)",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "certification",
+      "bindingSha256": "48cb56162f46bdcadbc01d3cb7a44726a73f347b4d15f573f119a6b2b1ca6c62",
+      "requiresPolicyReview": true,
+      "categories": [
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "unresolved case kind",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "defer",
+      "recommendation": "Defer certification: no executable request kind. Author and qualify a supported operation before enabling.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "import",
+      "bindingSha256": "6a9f306194c9324391692196f382365e8fc9492f0f946f5ad6cd90a27c4e988c",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "import",
+        "handlerVariant": "default",
+        "workflow": "transfer",
+        "workflowRequirements": [
+          "Reauthorize import/export start, worker execution and result retrieval.",
+          "Import read permission is a gateway only; per-mutation permissions are still required.",
+          "Target integration and export field projection require qualification."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/transfer/transfer-service.ts",
+        "anchors": [
+          "createRecordTransferService",
+          "async beginImport("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "identity_read",
+      "bindingSha256": "eace65baab9638cfa633f94766571b35d7d6224f6e3b94262d1db3314c75d0d9",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_identity.read",
+        "permissionId": "9c8b720c-1b8b-5099-90ed-21dcdb1636c1",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "identity",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "contacts_read",
+      "bindingSha256": "3c0f9ea2d2f1ea3e364e57ab16dbdaedecf3d48e028541ce8a0bd1eb670360f3",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_contact.read",
+        "permissionId": "5ea10c61-2c69-529c-9427-729aa161472e",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "contacts",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "addresses_read",
+      "bindingSha256": "d876b26baa9df23ad2b47c4634943b1e3aa5632b56cb597143d1e9b62f5ae5ba",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_address.read",
+        "permissionId": "a266c702-0dbc-56ed-91b4-e3105a265b24",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "addresses",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "identifier_read",
+      "bindingSha256": "97c491c48422c624ebc07c0caaf41598a4c0386a7beea56711674e3b717a362e",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+        "permissionId": "f138c881-9748-52f4-a836-596913b9f1de",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "identifiers-tax",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "tax_read",
+      "bindingSha256": "d54053980cebc6d764f88aea3126f121845bc40ee3e999a562c80003b475e787",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+        "permissionId": "e240234c-755a-503b-b3b4-991109ccc7e1",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "identifiers-tax",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "bank_read",
+      "bindingSha256": "35f46ecddeaadde397aa37262e2a048f6d7a3d8db47a49fdb54b6841eaad73d9",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+        "permissionId": "86bf91e7-dac1-56ee-a07c-4171f7d81545",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "banking",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "qualification_read",
+      "bindingSha256": "e8a1ee33d725e7bf6be6da6c9a1dc2be5e2b073816616628700f83ee5b609659",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_qualification.read",
+        "permissionId": "52e76b02-d2f1-53ff-a04b-f7bbb586cec3",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "qualifications-certificates",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "certificate_read",
+      "bindingSha256": "a603a55b5a6cd77b9cafe894818206681064893b2e577cb983ac76f3c497e3c6",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_certificate.read",
+        "permissionId": "c0d8a00f-4f20-53b7-9478-b8e83748ff1c",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "qualifications-certificates",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "credit_read",
+      "bindingSha256": "3bbdf6941153b4e5e2b201c3bc99b7dda30180e8f174513c908fd2115e8c3b4f",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_credit.read",
+        "permissionId": "34cca4e2-4d41-5ea6-b3ba-cd055a21e4a1",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "section",
+        "handlerVariant": "credit",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "requests_read",
+      "bindingSha256": "d1853570e517e38b93ddf3480c3f24d25e6dc14095fae25d225c9eda57be0011",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.read",
+        "permissionId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "requests",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "activity_read",
+      "bindingSha256": "c1215c536ac5069356e8cab6fd2d874bf8a6a63f452590fe218be81f25424468",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_activity.read",
+        "permissionId": "a130132e-8dc4-5341-9906-4e009078a79b",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "activity",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "network_read",
+      "bindingSha256": "45d66de5ec979294ace1b04f9393836fee7161f007cbfd10c46e1953992f374c",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_network.read",
+        "permissionId": "97926e41-0da8-5ca2-89f0-2269c0ff188f",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "section",
+        "handlerVariant": "network",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "comments_read",
+      "bindingSha256": "605e2ea9bed54f3f1f40b6aefaaf0fb786bd71a9cd4f555a246062bb00ee637b",
+      "requiresPolicyReview": true,
+      "categories": [
+        "missing_permission",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "collaboration.comment.read",
+        "permissionId": null,
+        "catalogScopes": [],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "comments",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review a precise catalog capability; no inferred alias, permission ID or grant.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "attachments_read",
+      "bindingSha256": "3fd5c10c6af7f9f7cf715b648f87bc4dc2a6d3ac7b1022d71dbdadcda377a1b4",
+      "requiresPolicyReview": true,
+      "categories": [
+        "missing_permission",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "document.attachment.read",
+        "permissionId": null,
+        "catalogScopes": [],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "section",
+        "handlerVariant": "attachments",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review a precise catalog capability; no inferred alias, permission ID or grant.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "bank_reveal",
+      "bindingSha256": "a8fcce69e3cffbb9c0042f66b438c4519abf90380e8b102130917c11dcb06215",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_bank.reveal",
+        "permissionId": "e776180b-06f3-5b7b-8210-2d455eca6de6",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "bank_reveal",
+        "handlerVariant": "default",
+        "workflow": "reveal",
+        "workflowRequirements": [
+          "Reauthorize the protected child value and parent.",
+          "Require purpose, unexpired purpose binding, reveal replay protection and audit; honor MFA decision."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "existing",
+        "effect": "reveal"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "async revealBankAccount("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "tax_reveal",
+      "bindingSha256": "53334589f3a766a65bfea1c675bcb2804f33bc1bb39646b0b039991f0988732d",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_tax.reveal",
+        "permissionId": "815dfed2-3b83-5ddb-a219-b06ece8e03ed",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "tax_reveal",
+        "handlerVariant": "default",
+        "workflow": "reveal",
+        "workflowRequirements": [
+          "Reauthorize the protected child value and parent.",
+          "Require purpose, unexpired purpose binding, reveal replay protection and audit; honor MFA decision."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "existing",
+        "effect": "reveal"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "async revealTaxRegistration("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "person_read",
+      "bindingSha256": "c5bd805675dcd4b30e5a172ab59392b96c6bb7357e5cd395ee28a8e5ca9ba314",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_person.read",
+        "permissionId": "012c7296-cd18-5d46-99f5-ad1bf080e2a7",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "summary",
+        "handlerVariant": "person_read",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async summary("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "person_sensitive_read",
+      "bindingSha256": "6f0f0ac99fb60866406371e4b92499506043f8f69dddad723f0887ac1eb16a2d",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_person_sensitive.read",
+        "permissionId": "2d750c0f-eb7b-5516-bf35-72fc496835d2",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "summary",
+        "handlerVariant": "person_sensitive_read",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async summary("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "workforce_read",
+      "bindingSha256": "614003e295be9d11793b95e1ce90dc07995c9c9adb3e77435c5a0340c0d95877",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_workforce.read",
+        "permissionId": "d6382cc9-7f33-5ab4-8329-182843a0ec48",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "summary",
+        "handlerVariant": "workforce_read",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async summary("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "contact_sensitive_read",
+      "bindingSha256": "0de7ba467249afbbbe1dd4431c8032a30bc68c3efd2becf50f250d4b9c1acf05",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read_contact_sensitive",
+        "permissionId": "e648ebd2-30e5-5876-a9b7-f60816c161e5",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "summary",
+        "handlerVariant": "contact_sensitive_read",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async summary("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "address_sensitive_read",
+      "bindingSha256": "c1ee80aa3ed2e791c2cb80a90350a03c8c1cb2165c9e3d0fff7e61354df8a7be",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read_address_sensitive",
+        "permissionId": "6859023e-eb9f-5b02-86c9-61193ca41359",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "summary",
+        "handlerVariant": "address_sensitive_read",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async summary("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_create",
+      "bindingSha256": "233cf8a6e85c0850d78a1321717cdc61d680bcd13e281d74bb1d9df435d7ad28",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.create",
+        "permissionId": "01a06b47-1ff3-706a-bcdb-7d9527895f98",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_read",
+      "bindingSha256": "2fbeca1a728e9064cb5c6b62f4e63a1fc1a35215d0b20138aa3ffb4f68ce4652",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.read",
+        "permissionId": "01a06b47-1ff4-7c24-af0c-dd46ae7e8573",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_read",
+        "handlerVariant": "default",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": false,
+        "target": "collection",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async list(",
+          "async get("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_update",
+      "bindingSha256": "164a5300f9a7914522bda1caf0bb84b018c6c813979c8cde6054031c02ea4787",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.update",
+        "permissionId": "01a06b47-1ff4-72e2-afd1-7de290a59160",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_update",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async patch("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_validate",
+      "bindingSha256": "b6f6a52b56a724398d0e7d5869aa0d286a765ca4a837de6f92468988480df8da",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.validate",
+        "permissionId": "01a06b47-1ff4-74a5-b28a-3a6bf46bfacf",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_validate",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async validate("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_submit",
+      "bindingSha256": "0bd366377d6645af4c3cac62ea9f8649c5bbab4d41c6e68eec0879dfecd85a4a",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.submit",
+        "permissionId": "01a06b47-1ff4-7c24-bbf8-80b7ae5acaee",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_submit",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async submit("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_decide",
+      "bindingSha256": "806bc70d2b10c5f23494eb2d40130e138344c4d38e63a267e2764a667a23c5c4",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.decide",
+        "permissionId": "01a06b47-1ff4-7c66-98fe-a01ec8dcb473",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_decide",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async decide("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "case_materialize",
+      "bindingSha256": "e1752b71eb9b5eaba24ec438e5b89a289eac73ade9d8739a827edba55e1fbd12",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.entity_case.materialize",
+        "permissionId": "01a06b47-1ff4-7188-8eb4-1020830dc44b",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_materialize",
+        "handlerVariant": "default",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async apply("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "section_propose_change",
+      "bindingSha256": "971b1b250c2ab8d1b766cc9ed4e4a98db6fb349e1494dba7fb31404202986f9b",
+      "requiresPolicyReview": true,
+      "categories": [
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner_amend.create",
+        "permissionId": "cc01536c-d18c-504f-8d9a-0a1779ef219d",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "case_create",
+        "handlerVariant": "amend_partner",
+        "workflow": "case",
+        "workflowRequirements": [
+          "Resolve the verified local case schema and workflow by request kind.",
+          "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+          "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async create("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Legacy section amendment capability differs from entity_case.create. Preserve the distinction until the entry-to-command capability contract is reviewed.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "create",
+      "bindingSha256": "719f1518b25176ae0d6524ebc495284d08e38fa085db558fdb37c4946b45b4cf",
+      "requiresPolicyReview": true,
+      "categories": [
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.create",
+        "permissionId": "a04f7edb-c487-5fb8-9a61-1f532f233860",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization",
+          "tenant"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "create",
+        "handlerVariant": "default",
+        "workflow": "direct_mutation",
+        "workflowRequirements": [
+          "Retain candidate direct create/update mapping only; steward versus governed-request semantics need review.",
+          "Fresh record/field authorization, expected version, idempotency and audit/outbox required."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/mutation-service.ts",
+        "anchors": [
+          "createRecordMutationService",
+          "async function create<"
+        ]
+      },
+      "proposedDisposition": "defer",
+      "recommendation": "Defer direct master mutation from the target release pending an explicit stewardship contract. Retain legacy grants and enforcement until separately reviewed activation.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "update",
+      "bindingSha256": "ca08c76ad808865a33f763b1c15255fb30a56835dbf0ea784c4b236c9ee198cd",
+      "requiresPolicyReview": true,
+      "categories": [
+        "unclear_semantics",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.update",
+        "permissionId": "991c3e90-f8c6-57d9-a0ad-21b8d3c396a6",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization",
+          "tenant"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "tenant",
+            "coordinateSource": "tenant_context",
+            "resolverKey": null,
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "tenant.record.v1",
+        "handler": "update",
+        "handlerVariant": "default",
+        "workflow": "direct_mutation",
+        "workflowRequirements": [
+          "Retain candidate direct create/update mapping only; steward versus governed-request semantics need review.",
+          "Fresh record/field authorization, expected version, idempotency and audit/outbox required."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": true,
+        "target": "existing",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/records/src/mutation-service.ts",
+        "anchors": [
+          "createRecordMutationService",
+          "async function patch<"
+        ]
+      },
+      "proposedDisposition": "defer",
+      "recommendation": "Defer direct master mutation from the target release pending an explicit stewardship contract. Retain legacy grants and enforcement until separately reviewed activation.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "qualification",
+      "bindingSha256": "01db4a56fdd48ed27ea294c108e0eb2d0df96771765dc19b8251993571c37eb2",
+      "requiresPolicyReview": false,
+      "categories": [
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.supplier.qualification.admin",
+        "permissionId": "4cbdf98c-826e-55aa-bbc2-ef9de66b531b",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization",
+          "tenant"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization.record.v1",
+        "handler": "qualification",
+        "handlerVariant": "default",
+        "workflow": "qualification",
+        "workflowRequirements": [
+          "Retain existing qualification state, organization/company compatibility, maker/checker and audit checks.",
+          "Creation and decision require separate execution qualification."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+        "anchors": [
+          "createBusinessPartnerEligibilityService",
+          "async createQualification(",
+          "async decideQualification("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Existing service reference retained; execution integration is qualified separately.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "qualification_company",
+      "bindingSha256": "dbaa598dc8ad55b401a0027f9bc8c73921e914917eb2467a3e483cf82d8dea20",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.supplier.qualification.admin",
+        "permissionId": "4cbdf98c-826e-55aa-bbc2-ef9de66b531b",
+        "catalogScopes": [
+          "legal_entity",
+          "operating_organization",
+          "tenant"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "qualification",
+        "handlerVariant": "organization-company",
+        "workflow": "qualification",
+        "workflowRequirements": [
+          "Retain existing qualification state, organization/company compatibility, maker/checker and audit checks.",
+          "Creation and decision require separate execution qualification."
+        ],
+        "requiresParentRead": false,
+        "requiresPreflight": true,
+        "target": "proposed",
+        "effect": "write"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+        "anchors": [
+          "createBusinessPartnerEligibilityService",
+          "async createQualification(",
+          "async decideQualification("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "supplier_company_read",
+      "bindingSha256": "2f873ddab0687c2e9f854ca2af84871f112fdbb805b6bd22c552a8f1ebf11767",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "section",
+        "handlerVariant": "supplier-company",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    },
+    {
+      "operation": "customer_company_read",
+      "bindingSha256": "c347b8b3aaf04883593c84d30586489fd6a20df6cc6b84415ed604e233cc522e",
+      "requiresPolicyReview": true,
+      "categories": [
+        "incompatible_scope",
+        "runtime_registration_unqualified"
+      ],
+      "exactBinding": {
+        "permissionCode": "neon.relationship.business_partner.read",
+        "permissionId": "04a1f105-978d-5906-b6df-0e7eb5c938bd",
+        "catalogScopes": [
+          "operating_organization"
+        ],
+        "requiredScopeBindings": [
+          {
+            "scopeKind": "operating_organization",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          },
+          {
+            "scopeKind": "company_code",
+            "coordinateSource": "relation_resolver",
+            "resolverKey": "organization-company.record.v1",
+            "coordinateKey": null,
+            "missingValueBehavior": "deny"
+          }
+        ],
+        "ownershipResolver": "organization-company.record.v1",
+        "handler": "section",
+        "handlerVariant": "customer-company",
+        "workflow": "read",
+        "workflowRequirements": [
+          "Fresh authorization and authorized projection; no workflow execution."
+        ],
+        "requiresParentRead": true,
+        "requiresPreflight": false,
+        "target": "existing",
+        "effect": "read"
+      },
+      "handlerSource": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "createBusinessPartner360Service",
+          "async section("
+        ]
+      },
+      "proposedDisposition": "retain_pending_exact_review",
+      "recommendation": "Review dedicated target capability/scope semantics. Do not widen the existing catalog entry or organization grants to tenant grants.",
+      "decision": "pending",
+      "reviewer": null,
+      "acceptanceReference": null,
+      "regressionEvidence": [],
+      "runtimeQualification": null,
+      "deferredRuntimeRequirement": "If deferral is approved, remove from executable descriptor/profile/bindings and dependent UI/field references together; target direct invocation must return unavailable without legacy fallback."
+    }
+  ],
+  "grantChanges": [],
+  "approvals": [],
+  "publicationEligible": false,
+  "activationAuthorized": false
+}

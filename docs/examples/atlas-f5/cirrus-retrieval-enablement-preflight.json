@@ -1,0 +1,35 @@
+{
+  "observedAt": "2026-09-10T03:48:52.583721+00:00",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "principal": "catl.admin",
+  "parentPublication": "release 18 active; see cirrus-baseline-roundtrip.verified.json",
+  "attachmentPermissions": {
+    "neon.collaboration.attachment.create": "published",
+    "neon.collaboration.attachment.read": "published",
+    "effectiveUserAccess": "requires refreshed authenticated Neon session"
+  },
+  "sessionChecks": [
+    {
+      "path": "tests/e2e/.auth/dev/neon/catl.admin.json",
+      "state": "anonymous",
+      "refreshHttpStatus": 200
+    },
+    {
+      "path": "tests/e2e/.auth/neon.json",
+      "state": "anonymous",
+      "refreshHttpStatus": 200
+    }
+  ],
+  "reservedAttachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+  "reservedAttachmentExists": false,
+  "documentUploaded": false,
+  "retrievalEnabled": false,
+  "runtimeFinding": "The configured local Atlas branch does not compose the full knowledge service, index or attachment owner admission. Retrieval composition and qualification remain required; metadata publication alone is insufficient.",
+  "nextSteps": [
+    "Refresh catl.admin Neon session in DEV CirrusAtlantic.",
+    "Use authenticated document staging, upload, finalization and actual extraction.",
+    "Compose a deployed knowledge index and owner-authorized ingestion/search path for the local runtime.",
+    "Index actual extracted text with attachment.id + colon + attachment.sha256; verify allowed, denied and stale retrieval."
+  ]
+}

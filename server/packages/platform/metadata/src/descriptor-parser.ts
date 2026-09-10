@@ -1,4 +1,6 @@
+import { parseEntityAuthorizationRuntime } from "@athyper/server-contract-metadata";
 import { parseEntityAiDescriptor } from "@athyper/server-contract-metadata";
+import { parseEntityAuthorizationProfile } from "@athyper/server-contract-metadata";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import { parseEntityRecordPresentation, validateRecordPresentationReferences, validateRelatedPresentationOwner } from "@athyper/contract-platform-entity-runtime";
 import { parseCollectionRelationship } from "@athyper/server-contract-metadata";
@@ -29,13 +31,20 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
   const operationsValue = object(value["operations"], "operations");
   const operations = Object.fromEntries(Object.entries(operationsValue).map(([key, operation]) => {
     const item = object(operation, `operations.${key}`);
-    return [key, { code: string(item["code"], `operations.${key}.code`), permissionCode: string(item["permissionCode"], `operations.${key}.permissionCode`) }];
+    return [key, { code: string(item["code"], `operations.${key}.code`), permissionCode: string(item["permissionCode"], `operations.${key}.permissionCode`), ...(item["authorizationMode"] === undefined ? {} : { authorizationMode: oneOf(item["authorizationMode"], ["bound_operation", "permission_only"] as const, "operation.authorizationMode") }) }];
   }));
   for (const action of [...(listPresentation?.experience?.actions ?? []), ...(listPresentation?.experience?.navigation ?? [])]) {
     const permission = action.permissions.find(item => item.plane === planeKey);
     if (permission && operations[action.operationKey]?.permissionCode !== permission.permissionCode) throw new TypeError("List action must reference a published operation with its exact plane permission");
   }
   const recordPresentation = value["recordPresentation"] === undefined ? undefined : parseEntityRecordPresentation(value["recordPresentation"]);
+  const authorization = value["authorization"] === undefined ? undefined : parseEntityAuthorizationProfile(value["authorization"], {
+    entityCode: row.entity_code, planeKey, fields: fields.map(field => field.key), operations,
+  });
+  const authorizationRuntime = value["authorizationRuntime"] === undefined ? undefined : (() => {
+    if (!authorization) throw new TypeError("Authorization runtime requires profile");
+    return parseEntityAuthorizationRuntime(value["authorizationRuntime"], authorization);
+  })();
   if (recordPresentation) validateRecordPresentationReferences(recordPresentation, fields.map(field => field.key), Object.keys(operations));
   if (recordPresentation?.related) validateRelatedPresentationOwner(recordPresentation.related, row.entity_code);
   const collectionRelationship = value["collectionRelationship"] === undefined ? undefined : parseCollectionRelationship(value["collectionRelationship"], {schema:String(storage["schema"]),object:String(storage["object"]),idField:String(storage["idField"]),tenantField:storage["tenantField"] as string|undefined});
@@ -66,6 +75,8 @@ export function parseEntityRuntimeDescriptor(row: RuntimeDescriptorRow): EntityR
       ...(storage["statusField"] ? { statusField: identifier(storage["statusField"], "storage.statusField") } : {}),
     },
     fields,
+    ...(authorization ? { authorization } : {}),
+    ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
     ...(recordPresentation ? { recordPresentation } : {}),
     ...(value["directoryScope"] === undefined ? {} : { directoryScope: parseEntityDirectoryScope(value["directoryScope"]) }),
@@ -233,7 +244,7 @@ function parseField(raw: unknown): EntityFieldDescriptor {
     for (const operator of list.filterOperators) if (!allowed.includes(operator)) throw new Error(`Filter operator ${operator} is not valid for field type ${type}`);
   }
   if (list?.aggregations && new Set(list.aggregations).size !== list.aggregations.length) throw new Error(`Duplicate aggregation configured for field: ${item["key"]}`);
-  return { key: identifier(item["key"], "field.key"), storagePath: identifier(item["storagePath"], "field.storagePath"), type, required: item["required"] === true, writableOn: writableOn as ("create" | "patch")[], ...(item["filterable"] === true ? { filterable: true } : {}), ...(item["sortable"] === true ? { sortable: true } : {}), ...(item["searchable"] === true ? { searchable: true } : {}), ...(item["validation"] && typeof item["validation"] === "object" ? { validation: item["validation"] as Readonly<Record<string, unknown>> } : {}), ...(list ? { list } : {}) };
+  return { ...(item["readPermissionCode"] === undefined ? {} : { readPermissionCode: code(item["readPermissionCode"], "field.readPermissionCode") }), ...(item["writePermissionCode"] === undefined ? {} : { writePermissionCode: code(item["writePermissionCode"], "field.writePermissionCode") }), ...(item["classification"] === undefined ? {} : { classification: oneOf(item["classification"], ["public", "internal", "confidential", "pii", "sensitive_pii"] as const, "field.classification") }), ...(item["retentionPolicyCode"] === undefined ? {} : { retentionPolicyCode: code(item["retentionPolicyCode"], "field.retentionPolicyCode") }), key: identifier(item["key"], "field.key"), storagePath: identifier(item["storagePath"], "field.storagePath"), type, required: item["required"] === true, writableOn: writableOn as ("create" | "patch")[], ...(item["filterable"] === true ? { filterable: true } : {}), ...(item["sortable"] === true ? { sortable: true } : {}), ...(item["searchable"] === true ? { searchable: true } : {}), ...(item["validation"] && typeof item["validation"] === "object" ? { validation: item["validation"] as Readonly<Record<string, unknown>> } : {}), ...(list ? { list } : {}) };
 }
 
 function object(value: unknown, name: string): Record<string, unknown> { if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error(`${name} must be an object`); return value as Record<string, unknown>; }

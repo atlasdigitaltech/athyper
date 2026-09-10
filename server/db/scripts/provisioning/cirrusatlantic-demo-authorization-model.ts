@@ -136,11 +136,17 @@ export function validateCirrusAtlanticDemoAuthorizationModel(): void {
       throw new Error("member_companies propagation is forbidden in the local demo overlay");
     }
   }
-  if (CIRRUSATLANTIC_OWNER_REVIEWER.permissions.length !== 3 ||
-      !CIRRUSATLANTIC_OWNER_REVIEWER.permissions.includes("neon.relationship.entity_case.decide")) {
+  const requiredReviewerPermissions = [
+    "neon.relationship.business_partner.read",
+    "neon.relationship.entity_case.read",
+    "neon.relationship.entity_case.decide",
+    "workflow.work_item.read",
+  ] as const;
+  if (requiredReviewerPermissions.some((permission) =>
+      !CIRRUSATLANTIC_OWNER_REVIEWER.permissions.includes(permission))) {
     throw new Error("CirrusAtlantic owner reviewer permissions are incomplete");
   }
-  if (CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.requester.username === CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.reviewer.username ||
+  if (new Set([CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.requester.username, CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.reviewer.username]).size !== 2 ||
       CIRRUSATLANTIC_NORTHWIND_ACCOUNT_LINK.scope.propagation !== "exact") {
     throw new Error("Northwind account-link maker/checker separation is invalid");
   }

@@ -378,6 +378,9 @@ export interface ListSupplierPreferencesQuery {
 }
 
 export interface BusinessPartnerEligibilityService {
+  /** Read-only creation readiness; command-specific validation and mutation remain
+   * owned by createQualification, with no authorization performed recursively. */
+  preflightQualification?(query: {readonly context: VerifiedRequestContext; readonly businessPartnerId: string; readonly operatingOrganizationId: string; readonly companyCodeId?: string; readonly historical?: boolean}): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
   resolve(
     query: ResolvePartnerEligibilityQuery,
   ): Promise<PartnerEligibilityDecision>;

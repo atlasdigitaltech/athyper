@@ -1,0 +1,25 @@
+{
+  "capturedAt": "2026-09-10T07:54:57.725Z",
+  "qualified": true,
+  "results": [
+    {
+      "readBindings": 1,
+      "permissions": [
+        "neon.relationship.bp_target.read"
+      ]
+    },
+    {
+      "readBindings": 0,
+      "permissions": null
+    },
+    {
+      "readBindings": 1,
+      "permissions": [
+        "neon.relationship.bp_target.read"
+      ]
+    }
+  ],
+  "isolatedOnly": true,
+  "bindingRetirementCommitted": false,
+  "globalFallbackAfterRetirement": false
+}

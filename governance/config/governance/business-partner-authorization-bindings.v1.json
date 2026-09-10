@@ -1,0 +1,635 @@
+{
+  "schemaVersion": 1,
+  "entityCode": "business_partner",
+  "planeKey": "neon",
+  "runtimeContractVersion": "entity-authorization.v1",
+  "handlers": [
+    {
+      "key": "application",
+      "source": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": ["createEntityListService", "async applicationDescriptor("]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "directory",
+      "source": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": ["createEntityListService", "async list("]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "record",
+      "source": {
+        "path": "server/packages/services/records/src/entity-list-service.ts",
+        "anchors": ["createEntityListService", "async record("]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_read",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "createBusinessPartnerRequestService",
+          "async list(",
+          "async get("
+        ]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "section",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": ["createBusinessPartner360Service", "async section("]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "summary",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": ["createBusinessPartner360Service", "async summary("]
+      },
+      "workflow": "read",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "tax_reveal",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": ["async revealTaxRegistration("]
+      },
+      "workflow": "reveal",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "bank_reveal",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": ["async revealBankAccount("]
+      },
+      "workflow": "reveal",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_create",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async create("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_update",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async patch("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_validate",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async validate("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_submit",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async submit("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_decide",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async decide("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "case_materialize",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": ["createBusinessPartnerRequestService", "async apply("]
+      },
+      "workflow": "case",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "import",
+      "source": {
+        "path": "server/packages/services/records/src/transfer/transfer-service.ts",
+        "anchors": ["createRecordTransferService", "async beginImport("]
+      },
+      "workflow": "transfer",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "export",
+      "source": {
+        "path": "server/packages/services/records/src/transfer/transfer-service.ts",
+        "anchors": ["createRecordTransferService", "async requestExport("]
+      },
+      "workflow": "transfer",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "create",
+      "source": {
+        "path": "server/packages/services/records/src/mutation-service.ts",
+        "anchors": ["createRecordMutationService", "async function create<"]
+      },
+      "workflow": "direct_mutation",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "update",
+      "source": {
+        "path": "server/packages/services/records/src/mutation-service.ts",
+        "anchors": ["createRecordMutationService", "async function patch<"]
+      },
+      "workflow": "direct_mutation",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    },
+    {
+      "key": "qualification",
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+        "anchors": [
+          "createBusinessPartnerEligibilityService",
+          "async createQualification(",
+          "async decideQualification("
+        ]
+      },
+      "workflow": "qualification",
+      "requirement": "Bind the referenced service entry point through the target authorization adapter; source existence does not qualify deployment."
+    }
+  ],
+  "workflows": [
+    {
+      "key": "read",
+      "preflight": false,
+      "requirements": [
+        "Fresh authorization and authorized projection; no workflow execution."
+      ],
+      "source": null
+    },
+    {
+      "key": "case",
+      "preflight": true,
+      "requirements": [
+        "Resolve the verified local case schema and workflow by request kind.",
+        "Submit pins workflow version and hash; decide verifies assigned task, version and separation of duties.",
+        "Apply requires approval, fresh authorization, idempotency and audit/outbox."
+      ],
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-request-service.ts",
+        "anchors": [
+          "export function createBusinessPartnerRequestService",
+          "validateWorkflowDefinition",
+          "assertDecisionTask"
+        ]
+      }
+    },
+    {
+      "key": "reveal",
+      "preflight": true,
+      "requirements": [
+        "Reauthorize the protected child value and parent.",
+        "Require purpose, unexpired purpose binding, reveal replay protection and audit; honor MFA decision."
+      ],
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-360-service.ts",
+        "anchors": [
+          "claimRestrictedReveal",
+          "purposeExpiresAt",
+          "revealTaxRegistration",
+          "revealBankAccount"
+        ]
+      }
+    },
+    {
+      "key": "transfer",
+      "preflight": true,
+      "requirements": [
+        "Reauthorize import/export start, worker execution and result retrieval.",
+        "Import read permission is a gateway only; per-mutation permissions are still required.",
+        "Target integration and export field projection require qualification."
+      ],
+      "source": {
+        "path": "server/packages/services/records/src/transfer/transfer-service.ts",
+        "anchors": [
+          "createRecordTransferService",
+          "beginImport",
+          "requestExport"
+        ]
+      }
+    },
+    {
+      "key": "direct_mutation",
+      "preflight": true,
+      "requirements": [
+        "Retain candidate direct create/update mapping only; steward versus governed-request semantics need review.",
+        "Fresh record/field authorization, expected version, idempotency and audit/outbox required."
+      ],
+      "source": {
+        "path": "server/packages/services/records/src/mutation-service.ts",
+        "anchors": ["createRecordMutationService", "executeRecordCommand"]
+      }
+    },
+    {
+      "key": "qualification",
+      "preflight": true,
+      "requirements": [
+        "Retain existing qualification state, organization/company compatibility, maker/checker and audit checks.",
+        "Creation and decision require separate execution qualification."
+      ],
+      "source": {
+        "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+        "anchors": [
+          "createBusinessPartnerEligibilityService",
+          "createQualification",
+          "decideQualification"
+        ]
+      }
+    }
+  ],
+  "operations": [
+    {
+      "key": "enter",
+      "handler": "application",
+      "variant": "default",
+      "disposition": "review_required",
+      "reason": "New application capability requires catalog and named reader review; no implicit grant."
+    },
+    {
+      "key": "discover",
+      "handler": "directory",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "read",
+      "handler": "record",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "navigate_manage",
+      "handler": "directory",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "navigate_overview",
+      "handler": "directory",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "export",
+      "handler": "export",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "navigate_review",
+      "handler": "case_read",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "request_supplier",
+      "handler": "case_create",
+      "variant": "new_partner (requestedRole=supplier)",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "add_role",
+      "handler": "case_create",
+      "variant": "add_supplier | add_customer (selected role)",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "amend_partner",
+      "handler": "case_create",
+      "variant": "amend_partner",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "assign_organization",
+      "handler": "case_create",
+      "variant": "assign_organization",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "configure_company",
+      "handler": "case_create",
+      "variant": "configure_company",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "change_bank",
+      "handler": "case_create",
+      "variant": "change_bank",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "lifecycle",
+      "handler": "case_create",
+      "variant": "activate_supplier | deactivate | reactivate | archive (selected transition)",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "certification",
+      "handler": "case_create",
+      "variant": "unresolved case kind",
+      "disposition": "review_required",
+      "reason": "Candidate certification has no dedicated kind in the request route contract. Author a supported amendment payload/schema or an explicit new governed kind before publication."
+    },
+    {
+      "key": "import",
+      "handler": "import",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "identity_read",
+      "handler": "section",
+      "variant": "identity",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "contacts_read",
+      "handler": "section",
+      "variant": "contacts",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "addresses_read",
+      "handler": "section",
+      "variant": "addresses",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "identifier_read",
+      "handler": "section",
+      "variant": "identifiers-tax",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "tax_read",
+      "handler": "section",
+      "variant": "identifiers-tax",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "bank_read",
+      "handler": "section",
+      "variant": "banking",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "qualification_read",
+      "handler": "section",
+      "variant": "qualifications-certificates",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "certificate_read",
+      "handler": "section",
+      "variant": "qualifications-certificates",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "credit_read",
+      "handler": "section",
+      "variant": "credit",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "requests_read",
+      "handler": "section",
+      "variant": "requests",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "activity_read",
+      "handler": "section",
+      "variant": "activity",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "network_read",
+      "handler": "section",
+      "variant": "network",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "comments_read",
+      "handler": "section",
+      "variant": "comments",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "attachments_read",
+      "handler": "section",
+      "variant": "attachments",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "bank_reveal",
+      "handler": "bank_reveal",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "tax_reveal",
+      "handler": "tax_reveal",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "person_read",
+      "handler": "summary",
+      "variant": "person_read",
+      "disposition": "review_required",
+      "reason": "Sensitive/category capability observed at summary admission; nested field and independent ownership boundaries require provider qualification before publication."
+    },
+    {
+      "key": "person_sensitive_read",
+      "handler": "summary",
+      "variant": "person_sensitive_read",
+      "disposition": "review_required",
+      "reason": "Sensitive/category capability observed at summary admission; nested field and independent ownership boundaries require provider qualification before publication."
+    },
+    {
+      "key": "workforce_read",
+      "handler": "summary",
+      "variant": "workforce_read",
+      "disposition": "review_required",
+      "reason": "Sensitive/category capability observed at summary admission; nested field and independent ownership boundaries require provider qualification before publication."
+    },
+    {
+      "key": "contact_sensitive_read",
+      "handler": "summary",
+      "variant": "contact_sensitive_read",
+      "disposition": "review_required",
+      "reason": "Sensitive/category capability observed at summary admission; nested field and independent ownership boundaries require provider qualification before publication."
+    },
+    {
+      "key": "address_sensitive_read",
+      "handler": "summary",
+      "variant": "address_sensitive_read",
+      "disposition": "review_required",
+      "reason": "Sensitive/category capability observed at summary admission; nested field and independent ownership boundaries require provider qualification before publication."
+    },
+    {
+      "key": "case_create",
+      "handler": "case_create",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_read",
+      "handler": "case_read",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_update",
+      "handler": "case_update",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_validate",
+      "handler": "case_validate",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_submit",
+      "handler": "case_submit",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_decide",
+      "handler": "case_decide",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "case_materialize",
+      "handler": "case_materialize",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "section_propose_change",
+      "handler": "case_create",
+      "variant": "amend_partner",
+      "disposition": "review_required",
+      "reason": "Legacy section amendment capability differs from entity_case.create. Preserve the distinction until the entry-to-command capability contract is reviewed."
+    },
+    {
+      "key": "create",
+      "handler": "create",
+      "variant": "default",
+      "disposition": "review_required",
+      "reason": "Direct master mutation remains a candidate only; decide explicit stewardship versus governed case flow without promoting current administrators."
+    },
+    {
+      "key": "update",
+      "handler": "update",
+      "variant": "default",
+      "disposition": "review_required",
+      "reason": "Direct master mutation remains a candidate only; decide explicit stewardship versus governed case flow without promoting current administrators."
+    },
+    {
+      "key": "qualification",
+      "handler": "qualification",
+      "variant": "default",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "qualification_company",
+      "handler": "qualification",
+      "variant": "organization-company",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "supplier_company_read",
+      "handler": "section",
+      "variant": "supplier-company",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    },
+    {
+      "key": "customer_company_read",
+      "handler": "section",
+      "variant": "customer-company",
+      "disposition": "mapped",
+      "reason": "Existing service reference retained; execution integration is qualified separately."
+    }
+  ]
+}

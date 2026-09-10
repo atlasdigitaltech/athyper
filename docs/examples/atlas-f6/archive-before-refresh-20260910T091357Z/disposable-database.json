@@ -1,0 +1,27 @@
+{
+  "observedAt": "2026-09-10T07:10:21.307Z",
+  "command": "pnpm --filter @athyper/server-db test:integration:atlas-f5",
+  "basis": "Successful fresh execution after F6 Mesh publication and persona fixes; all three disposable plane suites passed.",
+  "passed": true,
+  "planes": [
+    "neon",
+    "mesh",
+    "studio"
+  ],
+  "checks": [
+    "fresh canonical foundation",
+    "canonical retrieval and live revocation including cache hits",
+    "supersession, deletion and cleanup retry",
+    "ingestion recovery and tenant isolation",
+    "attachment admission, scan/version/text freshness and link removal"
+  ],
+  "sourceHashes": {
+    "server/db/ddl/planes/neon/_manifest.txt": "990d997801258b5c891916fa6cc28f3c72abf180809416c1b66e658e835e8ca0",
+    "server/db/ddl/planes/mesh/_manifest.txt": "ad41872a582571f57fa2561239a5d3bdb48bd30c2fc24e9b60593e52c13d23c9",
+    "server/db/ddl/planes/studio/_manifest.txt": "0f55328879369ca9dc7e694c20d80487d3d06fd93dd7edae60b618f1eec79ec1",
+    "server/db/scripts/tests/integration/atlas/retrieval.mts": "bafad32a5960605f3193532def0b12dea298eeb53b40de99c8b01cd956a23ec2",
+    "server/db/ddl/planes/studio/metadata/12_baseline_import.sql": "5893f9f024e91405e02350efa30dfea755803bfed1f56709a70211027d9b00a6",
+    "server/db/ddl/common/runtime_meta/12_baseline_precondition.sql": "7a81f837a716b03e8f22dc7d8f68a90b921ae867b31234949593800234459678",
+    "server/db/ddl/common/ai/05_constraints.sql": "23ed7f17b20ae07ad7e70d49eb745faff485ba27ede7f12f5633888c48b8d973"
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-10T01:17:42.747Z",
+  "packetRevision": "27aa45af20554e6360ef022acd72160de795f82e205d0848c917ab3d45d5b956",
+  "receipts": [
+    {
+      "reference": "neon-operation-review:47d65f2d-0ea4-431c-90a8-9bdfb7c1339e",
+      "recordedAt": "2026-09-10T01:16:17.763Z",
+      "packetRevision": "27aa45af20554e6360ef022acd72160de795f82e205d0848c917ab3d45d5b956",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.owner",
+        "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "case_update",
+          "decision": "approve",
+          "proposalSha256": "8df625ca84022160a96857a4c40d3ad4e031c2ce59b1108fe5b319c057d48639",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_validate",
+          "decision": "approve",
+          "proposalSha256": "eddbbd20bc6a286893d3fac97bd62d767ff6da19106a7a98e6ef183031cc5cb8",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_submit",
+          "decision": "approve",
+          "proposalSha256": "02aedf85b1a8ce6fd971e8539056bce5c581221e5619a1e761c7ddd40671dd12",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_decide",
+          "decision": "approve",
+          "proposalSha256": "a68983b474fd18752cba20960daf76aeb321ac26a260bd4eab9c56eeb8785e8e",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_materialize",
+          "decision": "approve",
+          "proposalSha256": "70cb9e68c22c20dcc76b970a67fc2f89cb2d6bd4af5ba559867f35e774796aa4",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        }
+      ],
+      "submissionId": "bf66b8dc-34bd-4700-8625-017babeb642d",
+      "commandHash": "37bbaf545bb33403ce6dd8f4d8bd2836ceef2c12f433157e3ad8a9b6e5f4c7cc",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    },
+    {
+      "reference": "neon-operation-review:b7845873-a295-4a2a-8724-0a67e9cf3f2a",
+      "recordedAt": "2026-09-10T01:17:16.712Z",
+      "packetRevision": "27aa45af20554e6360ef022acd72160de795f82e205d0848c917ab3d45d5b956",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.admin",
+        "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "case_update",
+          "decision": "approve",
+          "proposalSha256": "8df625ca84022160a96857a4c40d3ad4e031c2ce59b1108fe5b319c057d48639",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_validate",
+          "decision": "approve",
+          "proposalSha256": "eddbbd20bc6a286893d3fac97bd62d767ff6da19106a7a98e6ef183031cc5cb8",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_submit",
+          "decision": "approve",
+          "proposalSha256": "02aedf85b1a8ce6fd971e8539056bce5c581221e5619a1e761c7ddd40671dd12",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_decide",
+          "decision": "approve",
+          "proposalSha256": "a68983b474fd18752cba20960daf76aeb321ac26a260bd4eab9c56eeb8785e8e",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        },
+        {
+          "operation": "case_materialize",
+          "decision": "approve",
+          "proposalSha256": "70cb9e68c22c20dcc76b970a67fc2f89cb2d6bd4af5ba559867f35e774796aa4",
+          "reason": "Explicit user-approved correction: these five commands address existing independently owned requests. Use current stored case ownership; retain exact permissions, organization scopes, MFA and separation of duties. Original approvals remain historical. No grant, publication or activation approval."
+        }
+      ],
+      "submissionId": "bf82f351-94de-41e9-bef4-3014c768c3a0",
+      "commandHash": "bc91f86c124abc19d7dc047df01a5f761ca4d3247709c3b9e380172d798a6932",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    }
+  ],
+  "assessment": {
+    "rows": [
+      {
+        "operation": "case_update",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      },
+      {
+        "operation": "case_validate",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      },
+      {
+        "operation": "case_submit",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      },
+      {
+        "operation": "case_decide",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      },
+      {
+        "operation": "case_materialize",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      }
+    ],
+    "remainingRows": 0,
+    "unresolvedRows": 0,
+    "proposalReviewComplete": true,
+    "publicationEligible": false,
+    "activationAuthorized": false,
+    "grantChanges": []
+  },
+  "grantChanges": [],
+  "activationAuthorized": false
+}

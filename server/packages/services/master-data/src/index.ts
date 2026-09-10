@@ -2,6 +2,8 @@ export * from "./errors.js";
 export * from "./normalization.js";
 export * from "./services.js";
 export * from "./business-partner-request-service.js";
+export * from "./business-partner-governed-import.js";
+export * from "./business-partner-governed-import-routes.js";
 export * from "./business-partner-onboarding-cycle.js";
 export * from "./business-partner-notifications.js";
 export * from "./business-partner-360-service.js";

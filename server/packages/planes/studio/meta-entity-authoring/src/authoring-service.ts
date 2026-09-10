@@ -2,10 +2,11 @@ import type { ArtifactSigner, BreakGlassEvidence, MetaEntityAuthoringRepository,
 import { AuthoringPolicyError } from "@athyper/server-contract-meta-entity-authoring";
 import { compileGraph, runContractTests, validateGraph } from "./deterministic.js";
 
-export interface AuthoringServiceOptions { repository: MetaEntityAuthoringRepository; signer: ArtifactSigner; publication: MetaEntityPublicationPort; }
+export interface AuthoringServiceOptions { learning?: {assertPublishable(changeSetId: string, graph: MetaEntityGraph): Promise<void>}; repository: MetaEntityAuthoringRepository; signer: ArtifactSigner; publication: MetaEntityPublicationPort; }
 
 export class MetaEntityAuthoringService {
   constructor(private readonly options: AuthoringServiceOptions) {}
+  async assertTenant(changeSetId: string, tenantId: string, allowPlatform = false) { const current = await this.required(changeSetId); if (current.tenantId !== tenantId && !(allowPlatform && current.tenantId === null)) throw new AuthoringPolicyError("FORBIDDEN", "The tenant change set is unavailable"); }
   createDraft(input: Parameters<MetaEntityAuthoringRepository["createDraft"]>[0]) { return this.options.repository.createDraft(input); }
   replaceGraph(input: { changeSetId: string; expectedRevision: number; graph: MetaEntityGraph; actorId: string }) { return this.options.repository.replaceGraph(input); }
 
@@ -29,12 +30,18 @@ export class MetaEntityAuthoringService {
 
   async publish(input: { changeSetId: string; expectedRevision: number; actorId: string; targetPlanes: readonly ("studio" | "neon" | "mesh")[] }) {
     const changeSet = await this.required(input.changeSetId); if (changeSet.status !== "approved") throw new AuthoringPolicyError("APPROVAL_REQUIRED", "Only approved change sets may publish");
-    const compiled = compileGraph(await this.options.repository.loadGraph(input.changeSetId)); const signature = await this.options.signer.sign(compiled);
+    const graph = await this.options.repository.loadGraph(input.changeSetId);
+    const hasLearning = graph.surfaces?.some(surface => (surface.layoutConfig?.ai as {vocabulary?: unknown} | undefined)?.vocabulary);
+    if (hasLearning && !this.options.learning) throw new AuthoringPolicyError("LEARNING_REVIEW_UNAVAILABLE", "Learning publication review is unavailable");
+    await this.options.learning?.assertPublishable(input.changeSetId, graph);
+    await this.options.repository.recordValidation(input.changeSetId, changeSet.revision, validateGraph(graph), input.actorId);
+    const compiled = compileGraph(graph); const signature = await this.options.signer.sign(compiled);
     const artifact: SignedMetaEntityArtifact = { ...compiled, ...signature };
     const release = await this.options.repository.createRelease({ changeSetId: input.changeSetId, expectedRevision: input.expectedRevision, actorId: input.actorId, artifact, targetPlanes: input.targetPlanes, releaseKind: "publish" });
     await this.options.publication.publish({ releaseId: release.id, artifact, targetPlanes: input.targetPlanes });
     return { release, artifact };
   }
+  async redispatch(input: {releaseId: string; targetPlanes: readonly ("studio" | "neon" | "mesh")[]}) { const artifact = await this.options.repository.getSignedRelease(input.releaseId); if (!artifact?.signature) throw new AuthoringPolicyError("SIGNED_RELEASE_REQUIRED", "Retry requires a signed release"); await this.options.publication.publish({...input, artifact}); return {releaseId: input.releaseId, queued: true}; }
   async activate(input: { releaseId: string; plane: "studio" | "neon" | "mesh"; actorId: string }) {
     const artifact = await this.options.repository.getSignedRelease(input.releaseId); if (!artifact?.signature) throw new AuthoringPolicyError("SIGNED_RELEASE_REQUIRED", "Runtime activation requires a signed compiled release");
     const event = await this.options.publication.activate(input); await this.options.publication.appendGenerationEvent(event); return event;

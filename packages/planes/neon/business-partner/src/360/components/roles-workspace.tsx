@@ -1,4 +1,5 @@
 "use client";
+import { BusinessPartnerAction } from "./governed-action";
 import {useEffect,useState} from "react";
 import {Card} from "@athyper/platform-ui";
 import {useNeonOperatingOrganization,useNeonWorkContext} from "@athyper/product-neon-shell";
@@ -24,13 +25,12 @@ export function RolesWorkspace(){
  const compatible=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===(pendingCompany||companyId)));
  const chooseCompany=(id:string)=>{if(!id)return;const choices=operating.organizations.filter(o=>o.companyAssignments.some(a=>a.companyCodeId===id));if(choices.length===1){setPendingCompany("");selectScope?.(choices[0]!.id,id);}else setPendingCompany(id);};
  const switchTab=(next:string)=>{setTab(next);const url=new URL(window.location.href);url.searchParams.set("roleTab",next);window.history.replaceState(window.history.state,"",url);};
- const action=summary.recordHeader?.actions.find(a=>a.key==="configure_company"&&a.href&&!a.disabledReason)??summary.recordHeader?.actions.find(a=>a.key==="assign_organization"&&a.href&&!a.disabledReason);
- const extensionHref=action?.href?(()=>{const u=new URL(action.href,"https://local.test");if(companyId)u.searchParams.set("companyCodeId",companyId);if(orgId)u.searchParams.set("operatingOrganizationId",orgId);u.searchParams.set("role",tab==="selling"?"customer":"supplier");u.searchParams.set("kind","configure_company");return u.pathname+u.search;})():undefined;
+ const action=summary.recordHeader?.actions.find(a=>(a.operationKey??a.key)==="configure_company");
  return <div className="bp360-section-list bp-roles-workspace">
   <Card className="bp360-section-card"><h2>Roles &amp; scope</h2><p>Choose a company to manage buying, selling and bank account usage.</p>
    <div className="bp-actions" aria-label="Partner roles">{summary.roles.filter(r=>r.code==="supplier"||r.code==="customer").map(r=><span key={r.code}>{r.code==="supplier"?"Supplier":"Customer"} · {r.status}</span>)}</div>
    {relationships.error?<p role="alert">Company relationships could not be loaded. <button onClick={relationships.retry}>Retry</button></p>:!relationships.rows?<p role="status">Loading company relationships…</p>:companies.length?<div className="bp-company-table"><table><thead><tr><th>Company</th><th>Buying</th><th>Selling</th><th>Action</th></tr></thead><tbody>{companies.map(([id,name])=><tr key={id} aria-selected={id===companyId}><th scope="row">{name}</th>{(["supplier","customer"] as const).map(role=>{const rows=relationships.rows!.filter(r=>r.companyCodeId===id&&r.role===role);return <td key={role}>{rows.length?[...new Set(rows.map(relationshipStatus))].join(" · "):"Not enabled or not visible"}</td>;})}<td><button onClick={()=>chooseCompany(id)}>Configure <span className="sr-only">{name}</span></button></td></tr>)}</tbody></table></div>:<p>No company extensions are visible. Extend this partner to an authorized company to begin setup.</p>}
-   {extensionHref&&!summary.completeness.readOnly?<a className="a-button a-button--secondary" href={extensionHref}>Extend to company</a>:null}
+   {action?<BusinessPartnerAction action={action}/>:null}
   </Card>
   <Card className="bp360-section-card"><label htmlFor="roles-company">Selected company</label><select id="roles-company" value={pendingCompany||companyId||""} onChange={e=>chooseCompany(e.target.value)}><option value="" disabled>Select company</option>{work.companies.map(c=><option key={c.companyCodeId} value={c.companyCodeId}>{c.displayName}</option>)}</select>
    {pendingCompany?<label>Operating organization<select value="" onChange={e=>{if(e.target.value){selectScope?.(e.target.value,pendingCompany);setPendingCompany("");}}}><option value="">Select organization</option>{compatible.map(o=><option key={o.id} value={o.id}>{o.displayName}</option>)}</select>{!compatible.length?<span>No authorized organization is available for this company.</span>:null}</label>:org?<p>Operating organization: {org.displayName}</p>:null}

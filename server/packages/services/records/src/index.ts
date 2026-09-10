@@ -30,3 +30,8 @@ export * from "./snapshots/kysely-snapshot-repository.js";
 export * from "./snapshots/snapshot-routes.js";
 export * from "./locking/lock-service.js";
 export * from "./actions/action-service.js";
+export * from "./entity-authorization.js";
+export * from "./entity-authorization-rollout.js";
+export * from "./entity-scope-adapter.js";
+
+export * from "./entity-backend-authorizer.js";

@@ -1,0 +1,136 @@
+{
+  "schemaVersion": 1,
+  "kind": "atlas_permission_catalogue",
+  "environment": "dev",
+  "authorizationSource": "User explicitly requested permission publication and writer qualification in this task.",
+  "definitions": [
+    {
+      "plane": "studio",
+      "id": "b730b08a-a54f-437d-aa11-3a602e8064fd",
+      "code": "metadata.entity.author",
+      "module": "meta",
+      "kind": "capability",
+      "risk": "medium",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "4e666b24-1637-43e8-b4aa-0856128813c9",
+      "code": "metadata.entity.validate",
+      "module": "meta",
+      "kind": "capability",
+      "risk": "low",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "47868f89-23b0-4067-868d-8db587ab24ca",
+      "code": "metadata.entity.test",
+      "module": "meta",
+      "kind": "capability",
+      "risk": "low",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "976caab4-7b27-4514-a685-ac7336dc8568",
+      "code": "metadata.entity.submit",
+      "module": "meta",
+      "kind": "capability",
+      "risk": "medium",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "edff0e6c-278e-410e-97de-ea71fd6687f0",
+      "code": "metadata.entity.review",
+      "module": "meta",
+      "kind": "capability",
+      "risk": "medium",
+      "mfa": true,
+      "sod": true,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "1d3f24a9-cfbc-425d-8cc3-9f35e40c60aa",
+      "code": "metadata.entity.publish",
+      "module": "pub",
+      "kind": "capability",
+      "risk": "high",
+      "mfa": true,
+      "sod": true,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "e9ef8b71-7313-4e02-a061-8ea48b233fd2",
+      "code": "metadata.entity.activate",
+      "module": "pub",
+      "kind": "capability",
+      "risk": "high",
+      "mfa": true,
+      "sod": true,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "8a794ba4-b38b-4238-9664-6e4b21c858b1",
+      "code": "authorization.management.read",
+      "module": "iam",
+      "kind": "capability",
+      "risk": "low",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "studio",
+      "id": "5c8adc85-b33a-44b9-863a-3031c792df7d",
+      "code": "authorization.management.manage",
+      "module": "iam",
+      "kind": "capability",
+      "risk": "high",
+      "mfa": true,
+      "sod": false,
+      "scope": "tenant"
+    },
+    {
+      "plane": "neon",
+      "id": "f6af45b7-f806-5665-9627-6bce00f23b45",
+      "code": "neon.collaboration.attachment.create",
+      "module": "cms",
+      "kind": "entity_operation",
+      "risk": "medium",
+      "mfa": false,
+      "sod": false,
+      "scope": "resource"
+    },
+    {
+      "plane": "neon",
+      "id": "c0f93896-6f21-5a13-ad73-abaa3f1606da",
+      "code": "neon.collaboration.attachment.read",
+      "module": "cms",
+      "kind": "entity_operation",
+      "risk": "low",
+      "mfa": false,
+      "sod": false,
+      "scope": "resource"
+    }
+  ],
+  "grants": [],
+  "constraints": [
+    "Existing catalogue definitions must match exactly; never overwrite conflicting definitions.",
+    "No assignment or override changes.",
+    "Release approval still requires a separate reviewer.",
+    "Tenant-scoped authoring routes currently cannot restrict authoring to BP alone; resolve this before granting broad authoring rights for a BP-only task."
+  ]
+}

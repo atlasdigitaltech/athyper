@@ -345,3 +345,34 @@ CREATE TABLE runtime_meta.applied_release_payload (
 
 COMMENT ON TABLE runtime_meta.applied_release_payload IS
   'Immutable offline-safe payload for a locally applied non-Entity publication artifact. Release lifecycle and activation are owned only by applied_release and release_activation_head.';
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+CREATE TABLE runtime_meta.experience_surface_projection (
+    id uuid DEFAULT shared.uuidv7() NOT NULL,
+    tenant_id uuid NOT NULL,
+    plane_code text NOT NULL,
+    surface_key text NOT NULL,
+    layer text NOT NULL,
+    source_release_id uuid NOT NULL,
+    source_revision bigint NOT NULL,
+    definition jsonb NOT NULL,
+    content_hash character(64) NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    applied_at timestamp with time zone DEFAULT now() NOT NULL,
+    applied_by uuid NOT NULL,
+    retired_at timestamp with time zone,
+    retired_by uuid,
+    CONSTRAINT experience_surface_projection_definition_chk CHECK ((((jsonb_typeof(definition) = 'object'::text) AND ((definition ->> 'schema'::text) = 'athyper-experience-surface/1'::text) AND ((definition ->> 'id'::text) = surface_key) AND (octet_length((definition)::text) <= 262144))) IS TRUE),
+    CONSTRAINT experience_surface_projection_hash_chk CHECK ((content_hash ~ '^[0-9a-f]{64}$'::text)),
+    CONSTRAINT experience_surface_projection_key_chk CHECK ((surface_key ~ '^[a-z][a-z0-9_.-]{1,126}$'::text)),
+    CONSTRAINT experience_surface_projection_layer_chk CHECK ((layer = ANY (ARRAY['shared'::text, 'tenant'::text]))),
+    CONSTRAINT experience_surface_projection_local_plane_chk CHECK (((plane_code = current_setting('app.database_plane'::text, true)) AND (plane_code = substring(current_database() from 9))) IS TRUE),
+    CONSTRAINT experience_surface_projection_plane_chk CHECK ((plane_code = ANY (ARRAY['studio'::text, 'neon'::text, 'mesh'::text]))),
+    CONSTRAINT experience_surface_projection_retirement_chk CHECK ((((status = 'active'::text) AND (retired_at IS NULL) AND (retired_by IS NULL)) OR ((status = 'retired'::text) AND (retired_at IS NOT NULL) AND (retired_by IS NOT NULL)))),
+    CONSTRAINT experience_surface_projection_revision_chk CHECK ((source_revision > 0)),
+    CONSTRAINT experience_surface_projection_status_chk CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text])))
+);
+
+COMMENT ON TABLE runtime_meta.experience_surface_projection IS 'Verified plane-local experience projection. Application planes never read Studio authoring tables at request time.';
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

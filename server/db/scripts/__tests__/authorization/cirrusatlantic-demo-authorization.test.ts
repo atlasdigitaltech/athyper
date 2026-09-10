@@ -35,6 +35,7 @@ test("CirrusAtlantic demo authorization gives all three users explicit business 
   }
   assert.equal(CIRRUSATLANTIC_OWNER_REVIEWER.username, "catl.owner");
   assert.deepEqual(CIRRUSATLANTIC_OWNER_REVIEWER.permissions, [
+    "neon.relationship.business_partner.read",
     "neon.relationship.entity_case.read",
     "neon.relationship.entity_case.decide",
     "workflow.work_item.read",

@@ -5,6 +5,7 @@ import type { AtlasToolAccess, AtlasToolRisk } from "./tools.js";
 
 export const ATLAS_SSE_PROTOCOL = "atlas.sse/1" as const;
 export type AtlasPublicStreamEvent =
+  | { readonly type: "intent.resolved"; readonly intent: import("./intent.js").AtlasIntentV1 }
   | { readonly type: "run.started"; readonly publicModelId: AtlasPublicModelId; readonly bindingRevision: string; readonly policyRevision: string; readonly promptRevision: string }
   | { readonly type: "message.delta"; readonly messageId: string; readonly text: string }
   | { readonly type: "tool.previewed"; readonly callId: string; readonly toolCode: string; readonly proposalId: string; readonly summary: string; readonly access: AtlasToolAccess; readonly risk: AtlasToolRisk; readonly confirmationRequired: boolean; readonly confirmationToken?: string; readonly arguments?: Readonly<Record<string, unknown>>; readonly affectedEntityType?: string; readonly affectedEntityId?: string; readonly expectedRowVersion?: number; readonly expiresAt?: string }

@@ -31,6 +31,20 @@ const EMPTY_COUNTS = Object.freeze({
  * Persistence and commands are exclusively owned by document.entity_case.
  */
 export class KyselyBusinessPartnerCaseRepository implements BusinessPartnerRequestRepository<Tx> {
+  async matchesGovernedImportCreation(input: Parameters<NonNullable<BusinessPartnerRequestRepository<Tx>["matchesGovernedImportCreation"]>>[0], transaction: Tx): Promise<boolean> {
+    const {command,context,existing,schema}=input;
+    if(command.kind!=="new_partner"||command.source.kind!=="import"||Object.keys(command.source).length!==1||command.registrationMode!=="integration"||existing.tenantId!==context.tenantId||existing.createdBy!==context.principalId)return false;
+    const payload=casePayload(command,existing.requestNo);
+    const rows=await sql`SELECT 1 FROM document.entity_case c
+      JOIN document.entity_case_command_evidence e ON e.tenant_id=c.tenant_id AND e.entity_case_id=c.id
+      JOIN snapshot.entity_snapshot s ON s.tenant_id=e.tenant_id AND s.snapshot_id=e.result_snapshot_id
+      WHERE c.tenant_id=${context.tenantId}::uuid AND c.id=${existing.id}::uuid
+        AND c.idempotency_key=${command.idempotencyKey} AND c.created_by=${context.principalId}::uuid
+        AND c.form_template_release_id=${schema.releaseId??null}::uuid
+        AND e.command_code='entity.case.draft.write' AND e.before_version=0
+        AND s.payload_json=${JSON.stringify(payload)}::jsonb`.execute(transaction);
+    return rows.rows.length===1;
+  }
   async findByIdempotencyKey(tenantId: string, key: string, transaction: Tx) {
     const row = await readOne(transaction, tenantId, "c.idempotency_key", key);
     return row ? mapCase(row) : null;
@@ -1186,7 +1200,7 @@ function mapCase(row: Row): BusinessPartnerRequest {
     source,
     registrationMode: String(
       row["invitation_registration_mode"] ??
-        (source.kind === "mesh" ? "integration" : "direct"),
+        (["mesh", "import", "api"].includes(source.kind) ? "integration" : "direct"),
     ) as BusinessPartnerRequest["registrationMode"],
     ...optionalValue(row, "invitation_id", "invitationId"),
     ...optionalValue(row, "applicant_principal_id", "applicantPrincipalId"),
@@ -1300,6 +1314,7 @@ function sourceFromPayload(
       ...(payloadHash ? { payloadHash } : {}),
     };
   }
+  if (channel === "import" || channel === "api") return {kind: channel};
   if (channel === "invitation" || channel === "customer_onboarding")
     return { kind: "portal" };
   return { kind: "manual" };
@@ -1317,6 +1332,7 @@ function casePayload(
   const external =
     command.source.kind === "portal" || command.source.kind === "mesh";
   const channel =
+    command.source.kind === "import" || command.source.kind === "api" ? command.source.kind :
     command.source.kind === "mesh"
       ? "mesh_proposal"
       : command.source.kind === "portal"
@@ -1359,16 +1375,25 @@ function casePayload(
         ownershipClass: text(targetIdentity, "ownership_class"),
       }
     : {};
+  const ownershipClass = String(
+    targetIdentity?.["ownership_class"] ?? proposed["ownershipClass"] ?? (external ? "external" : "internal"),
+  );
+  // Freeze the role subtype in the draft that is validated and approved. SQL
+  // consumes this explicit value instead of applying its general/corporate fallback.
+  const commercialRoleDefaults = role && ["new_partner", "add_supplier", "add_customer"].includes(command.kind)
+    ? role === "supplier"
+      ? { supplierType: proposed["supplierType"] ?? (ownershipClass === "internal" ? "intercompany" : "general") }
+      : { customerType: proposed["customerType"] ?? (ownershipClass === "internal" ? "intercompany" : "corporate") }
+    : {};
   return {
     ...proposed,
+    ...commercialRoleDefaults,
     ...(command.extensions
       ? { relationshipProposals: command.extensions }
       : {}),
     businessPartnerCode: code,
     name,
-    ownershipClass: String(
-      proposed["ownershipClass"] ?? (external ? "external" : "internal"),
-    ),
+    ownershipClass,
     ...immutableTargetIdentity,
     ...(role
       ? {
@@ -1385,7 +1410,7 @@ function casePayload(
           ),
         }
       : {}),
-    registrationChannel: String(proposed["registrationChannel"] ?? channel),
+    registrationChannel: command.source.kind === "import" || command.source.kind === "api" ? channel : String(proposed["registrationChannel"] ?? channel),
     ...(command.operatingOrganizationId
       ? { operatingOrganizationId: command.operatingOrganizationId }
       : {}),

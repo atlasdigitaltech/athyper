@@ -76,6 +76,8 @@ export type AtlasProviderCredentialLease = AtlasApiKeyCredentialLease | {
 };
 
 export interface AtlasProviderInvocation {
+  /** Internal callback; never serialized into provider payloads. */
+  readonly reauthorize?: () => Promise<boolean>;
   readonly binding: AtlasModelBinding;
   readonly credential: AtlasProviderCredentialLease;
   readonly prompt: AtlasModelPrompt;
@@ -93,7 +95,7 @@ export interface AtlasProviderInvocation {
 
 export type AtlasFinishReason = "stop" | "length" | "tool_call" | "content_filter" | "refusal" | "cancelled" | "incomplete" | "error";
 export type AtlasProviderErrorClass = "authentication" | "permission" | "invalid_request" | "model_unavailable" | "rate_limited" | "quota_exhausted" | "overloaded" | "timeout" | "safety_block" | "stream_incomplete" | "protocol_error" | "upstream_error" | "cancelled";
-export interface AtlasProviderError { readonly errorClass: AtlasProviderErrorClass; readonly code: string; readonly safeMessage: string; readonly retryable: boolean; readonly retryAfterMs?: number }
+export interface AtlasProviderError { readonly errorClass: AtlasProviderErrorClass; readonly code: string; readonly safeMessage: string; readonly retryable: boolean; readonly retryAfterMs?: number; readonly diagnostics?: { readonly modelDigest: string; readonly queueWaitMs: number; readonly loadDurationMs: number; readonly readinessChecks: number } }
 export interface AtlasProviderUsage { readonly inputTokens?: number; readonly outputTokens?: number; readonly cacheReadTokens?: number; readonly cacheWriteTokens?: number; readonly reasoningTokens?: number }
 
 export type AtlasProviderEvent =

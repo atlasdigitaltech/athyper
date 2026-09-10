@@ -127,6 +127,7 @@ describe("loadConfig", () => {
   );
   keys.push(
     "PUBLICATION_API_ENABLED",
+    "PUBLICATION_AUTHORING_ENABLED",
     "PUBLICATION_COMPILE_ENABLED",
     "PUBLICATION_DISPATCH_ENABLED",
     "PUBLICATION_APPLY_ENABLED",
@@ -702,6 +703,22 @@ describe("loadConfig", () => {
         token: "token",
         workspaceId: "workspace",
       },
+    });
+  });
+
+  it("requires explicit API enablement and both key references for authoring", () => {
+    process.env["PUBLICATION_TARGET_PLANES"] = "studio,neon,mesh";
+    process.env["PUBLICATION_AUTHORING_ENABLED"] = "true";
+    expect(() => loadConfig()).toThrow("Publication authoring requires");
+    process.env["PUBLICATION_API_ENABLED"] = "true";
+    process.env["PUBLICATION_SIGNING_KEY_ID"] = "key-v1";
+    process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"] = "publication/public";
+    expect(() => loadConfig()).toThrow("Publication authoring requires");
+    process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"] = "publication/private";
+    expect(loadConfig().publication).toMatchObject({
+      authoringEnabled: true,
+      compileEnabled: false,
+      dispatchEnabled: false,
     });
   });
 

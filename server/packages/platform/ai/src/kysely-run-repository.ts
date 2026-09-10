@@ -1,3 +1,4 @@
+import { atlasGuidance } from "@athyper/server-contract-ai";
 import { atlasEvidenceHash, createAtlasMessageLineage } from "./message-lineage.js";
 import type { AtlasMessageLineage, AtlasReplayCompletion } from "@athyper/server-contract-ai";
 import { createHash } from "node:crypto";
@@ -288,11 +289,15 @@ export class KyselyAtlasRunRepository
         directRead = read.rows[0]?.present === true;
       }
     }
-    if (status === "completed" && !available && !directRead)
+    const guidanceCode = replayCompletion?.guidance;
+    const guidanceOnly = status === "completed" && calls.length === 0 && !!guidanceCode && Object.hasOwn(atlasGuidance, guidanceCode) && replayCompletion?.reads.length === 0 && content.length === 1 && content[0]?.type === "text" && !content[0].citations?.length && content[0].text === atlasGuidance[guidanceCode];
+    if (guidanceCode && !guidanceOnly) throw new AtlasServiceError("PROVIDER_PROTOCOL_ERROR", "Invalid static guidance completion.");
+    if (status === "completed" && !available && !directRead && !guidanceOnly)
       throw new AtlasServiceError(
         "PROVIDER_PROTOCOL_ERROR",
         "Completion requires recorded provider usage.",
       );
+    const toolCallCount = Number((await sql<{count: string | number}>`SELECT count(*) AS count FROM ai.ai_tool_invocation WHERE tenant_id=${c.tenantId}::uuid AND run_id=${r.id}::uuid AND principal_id=${c.principalId}::uuid AND plane=${c.planeKey}`.execute(tx)).rows[0]?.count ?? 0);
     const cost =
       calls.length && calls.every((v) => v.totalCostUsd !== null)
         ? calls.reduce((n, v) => n + v.totalCostUsd!, 0)
@@ -301,8 +306,8 @@ export class KyselyAtlasRunRepository
       await sql<{ at: Date }>`SELECT clock_timestamp() AS at`.execute(tx)
     ).rows[0]!.at;
     const cfg = r.generation_config;
-    await sql`INSERT INTO ai.ai_agent_run(id,tenant_id,principal_id,thread_id,client_request_id,response_message_id,plane,policy_revision,requested_model_id,resolved_binding_id,resolved_provider_id,actual_model_id,adapter_version,provider_region,provider_account_class,prompt_version,outcome,finish_reason,error_category,usage_source,input_tokens,cache_read_tokens,output_tokens,model_call_count,tool_call_count,cost_amount,cost_basis,price_version,duration_ms,started_at,completed_at,created_by)
-      VALUES(${r.id}::uuid,${c.tenantId}::uuid,${c.principalId}::uuid,${r.conversation_id}::uuid,${r.client_request_id}::uuid,${r.output_message_id}::uuid,${c.planeKey},${cfg.policyRevision ?? null},${cfg.publicModelId ?? "unknown"},${cfg.bindingId ?? null},${last?.providerId ?? null},${last?.actualModelId ?? null},${last?.adapterVersion ?? null},${last?.providerRegion ?? null},${last?.providerId === "ollama" ? "local" : null},${cfg.promptRevision ?? null},${status},${status === "completed" ? (last?.finishReason ?? "stop") : status === "cancelled" ? "cancelled" : "error"},${error},${available ? (status === "completed" ? "provider_final" : "provider_stream") : "unavailable"},${available ? tokens("inputTokens") : null},${available ? tokens("cacheReadTokens") : null},${available ? tokens("outputTokens") : null},${calls.length},${directRead ? 1 : 0},${cost},${cost === null ? null : "catalog_estimate"},${cost === null ? null : (last?.priceVersion ?? null)},${Math.max(0, at.getTime() - new Date(r.started_at).getTime())},${r.started_at}::timestamptz,${at}::timestamptz,${c.principalId}::uuid)`.execute(
+    await sql`INSERT INTO ai.ai_agent_run(id,tenant_id,principal_id,thread_id,client_request_id,response_message_id,plane,policy_revision,requested_model_id,resolved_binding_id,resolved_provider_id,actual_model_id,adapter_version,provider_region,provider_account_class,prompt_version,outcome,finish_reason,error_category,usage_source,input_tokens,cache_read_tokens,output_tokens,model_call_count,tool_call_count,cost_amount,cost_basis,price_version,duration_ms,started_at,completed_at,created_by,guidance_code)
+      VALUES(${r.id}::uuid,${c.tenantId}::uuid,${c.principalId}::uuid,${r.conversation_id}::uuid,${r.client_request_id}::uuid,${r.output_message_id}::uuid,${c.planeKey},${cfg.policyRevision ?? null},${cfg.publicModelId ?? "unknown"},${cfg.bindingId ?? null},${last?.providerId ?? null},${last?.actualModelId ?? null},${last?.adapterVersion ?? null},${last?.providerRegion ?? null},${last?.providerId === "ollama" ? "local" : null},${cfg.promptRevision ?? null},${status},${status === "completed" ? (last?.finishReason ?? "stop") : status === "cancelled" ? "cancelled" : "error"},${error},${available ? (status === "completed" ? "provider_final" : "provider_stream") : "unavailable"},${available ? tokens("inputTokens") : null},${available ? tokens("cacheReadTokens") : null},${available ? tokens("outputTokens") : null},${calls.length},${toolCallCount},${cost},${cost === null ? null : "catalog_estimate"},${cost === null ? null : (last?.priceVersion ?? null)},${Math.max(0, at.getTime() - new Date(r.started_at).getTime())},${r.started_at}::timestamptz,${at}::timestamptz,${c.principalId}::uuid,${guidanceOnly ? guidanceCode : null})`.execute(
       tx,
     );
     for (const [i, call] of calls.entries()) {

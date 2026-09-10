@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "enabled": true,
+  "aliases": ["Business partner", "Supplier", "Customer"],
+  "description": "Saved Business Partner identity and authorized owner sections",
+  "summaryFieldKeys": ["code", "display_name", "status", "partner_category"],
+  "searchFieldKeys": ["code", "display_name"],
+  "relationshipKeys": [],
+  "contextKinds": ["record", "manage"],
+  "insightProviders": [
+    {"id": "entity_read_record", "version": 1},
+    {"id": "bp_read_summary", "version": 1},
+    {"id": "bp_read_contacts", "version": 1},
+    {"id": "bp_read_addresses", "version": 1},
+    {"id": "bp_read_brief", "version": 1},
+    {"id": "bp_explain_readiness", "version": 1},
+    {"id": "bp_check_eligibility", "version": 1},
+    {"id": "bp_explain_case_validation", "version": 1},
+    {"id": "bp_explain_case_diff", "version": 1},
+    {"id": "bp_read_list_insights", "version": 1}
+  ],
+  "actions": [{"id": "open_record", "version": 1, "operationKey": "read"}],
+  "presentationProfiles": [{"id": "record_brief", "version": 1}, {"id": "list_brief", "version": 1}]
+}

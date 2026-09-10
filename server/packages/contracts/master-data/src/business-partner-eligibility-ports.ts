@@ -23,6 +23,7 @@ import type {
 } from "./business-partner-eligibility.js";
 
 export interface BusinessPartnerEligibilityRepository<Transaction = unknown> {
+  qualificationTargetReady?(input: {readonly tenantId: string; readonly businessPartnerId: string; readonly operatingOrganizationId: string; readonly companyCodeId?: string}, transaction: Transaction): Promise<boolean>;
   findQualificationByIdempotencyKey(
     tenantId: string,
     idempotencyKey: string,

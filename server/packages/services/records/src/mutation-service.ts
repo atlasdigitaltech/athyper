@@ -1,3 +1,4 @@
+import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import type { MetadataReader } from "@athyper/server-contract-metadata";
 import type { Authorizer } from "@athyper/server-contract-auth";
 import type {
@@ -57,6 +58,7 @@ async function create<Transaction>(options: RecordMutationServiceOptions<Transac
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "create", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
+    if (usesEntityBackendAuthorization(options.authorizer,command.context,descriptor) && !await allowed(options.authorizer, command, descriptor.operations["create"]?.permissionCode, "create")) return {kind:"Forbidden" as const};
     return executeRecordCommand(options, command, transaction, "create", async () => {
       const record = await options.repository.create(descriptor, command.context.tenantId, command.input, transaction);
       const recordId = String(record[descriptor.storage.idField] ?? "");
@@ -77,6 +79,7 @@ async function patch<Transaction>(options: RecordMutationServiceOptions<Transact
   const fields = mergeFieldViolations(validateRecordInput(descriptor, "patch", command.input), await validateFieldWriteAuthorization(options.authorizer, command.context, descriptor, command.input));
   if (Object.keys(fields).length) return { kind: "FieldsNotWritable", fields };
   return options.transactions.run(command.context.planeKey, { tenantId: command.context.tenantId, principalId: command.context.principalId }, async (transaction) => {
+    if (usesEntityBackendAuthorization(options.authorizer,command.context,descriptor) && !await allowed(options.authorizer, command, permission, descriptor.operations["patch"] ? "patch" : "update")) return {kind:"Forbidden" as const};
     return executeRecordCommand(options, command, transaction, "patch", async () => {
       const result = await options.repository.patch(descriptor, command.context.tenantId, command.recordId, command.input, command.expectedVersion, transaction);
       if (result.versionConflict !== undefined) return { kind: "VersionConflict", expectedVersion: command.expectedVersion!, currentVersion: result.versionConflict };
@@ -108,7 +111,7 @@ async function remove<Transaction>(options: RecordMutationServiceOptions<Transac
 async function safeDescriptor(metadata: MetadataReader, command: { context: CreateRecordCommand["context"]; entityCode: string }) { try { return await descriptorFor(metadata, command.context, command.entityCode); } catch { return null; } }
 async function allowed(
   authorizer: Authorizer,
-  command: { context: CreateRecordCommand["context"]; entityCode: string; recordId?: string },
+  command: { context: CreateRecordCommand["context"]; entityCode: string; recordId?: string; input?: Readonly<Record<string,unknown>> },
   permissionCode: string | undefined,
   operationKey: string,
 ): Promise<boolean> {
@@ -120,6 +123,7 @@ async function allowed(
       entityCode: command.entityCode,
       operationKey,
       resourceCode: command.entityCode,
+      ...(command.input ? { authorizationWriteFields: Object.keys(command.input) } : {}),
       ...(command.recordId ? { recordId: command.recordId } : {}),
     },
   })).allowed);

@@ -1,3 +1,5 @@
+import { executeAuthorizedAggregate } from "./authorized-aggregate.js";
+import { usesEntityBackendAuthorization } from "./entity-backend-authorizer.js";
 import { createHash } from "node:crypto";
 import type { AuthorizationDecision, Authorizer } from "@athyper/server-contract-auth";
 import type { EntityFieldDescriptor, EntityRuntimeDescriptor, MetadataReader } from "@athyper/server-contract-metadata";
@@ -31,6 +33,7 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
   return Object.freeze({
     async execute(query: ListRecordsQuery) {
       const descriptor = await descriptorFor(options.metadata, query.context, query.entityCode);
+      const enforced=usesEntityBackendAuthorization(options.authorizer,query.context,descriptor);
       const collectionScope = await resolveCollectionScope(options.collectionScopes, query, descriptor);
       if (collectionScope.status === "context_required") throw new RecordServiceError(409, "RECORD_LIST_SCOPE_REQUIRED", "Select a validated work context before listing scoped records");
       if (collectionScope.status === "forbidden") throw new RecordServiceError(403, collectionScope.code, collectionScope.message);
@@ -40,6 +43,18 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
       const readableKeys = new Set(readableFields.map((field) => field.key));
       validateQueryFields(descriptor.fields, query, readableKeys);
       const responseFields = responseProjection(descriptor, readableFields, query);
+      if (enforced) {
+        const authorizationFieldUses = [
+          ...responseFields.map(field => ({field:field.key,use:"read"})),
+          ...(query.filters??[]).map(filter=>({field:filter.field,use:"filter"})),
+          ...(query.sort??[]).map(sort=>({field:sort.field,use:"sort"})),
+          ...(query.group?[{field:query.group,use:"group"}]:[]),
+          ...(query.search?readableFields.filter(field=>field.searchable).map(field=>({field:field.key,use:"search"})):[]),
+        ];
+        const directory = descriptor.authorization!.operations.find(operation => operation.key === descriptor.authorization!.directory.operation)!;
+        const permitted = await options.authorizer.authorize({context:query.context,permissionCode:directory.permissionCode,resource:{...collectionScope.authorizationResource,tenantId:query.context.tenantId,entityCode:descriptor.entityCode,operationKey:directory.key,authorizationFieldUses}});
+        if(!permitted.allowed) throw new RecordServiceError(403,"ENTITY_FIELD_QUERY_FORBIDDEN","Requested field use is not permitted");
+      }
       const projection = [...new Set([...responseFields.map((field) => field.key), ...(query.sort ?? []).map((sort) => sort.field)])];
       const limit = query.limit ?? 50;
       if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RecordServiceError(400, "INVALID_LIMIT", "Record list limit must be between 1 and 100");
@@ -51,13 +66,27 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
       const minimumQueryLength = descriptor.listPresentation?.search?.minimumQueryLength ?? 1;
       if (query.search && query.search.trim().length < minimumQueryLength) throw new RecordServiceError(400, "SEARCH_TOO_SHORT", `Record search must contain at least ${minimumQueryLength} characters`);
       if (query.hydrateReferences) throw new RecordServiceError(409, "REFERENCE_HYDRATION_UNAVAILABLE", "Reference hydration is not available for this list endpoint");
-      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.list({ descriptor: {
+      const repositoryResult = await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, async (transaction) => { const input = { descriptor: {
         ...descriptor,
         // Both SQL and in-memory repositories derive search predicates from this
         // descriptor. Hidden fields must not influence matches or exact counts.
         fields: descriptor.fields.map(field => field.searchable && !readableKeys.has(field.key) ? { ...field, searchable: false } : field),
-      }, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.viewRelationships?{viewRelationships:query.viewRelationships}:{}), ...(query.recordIds !== undefined ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) }, transaction));
-      const result = restrictResponseProjection(repositoryResult, descriptor, responseFields);
+      }, tenantId: query.context.tenantId, limit, filters: query.filters ?? [], sort: query.sort ?? [], countMode: query.countMode ?? "none", projection, cursorScope: cursorScope(query.context, collectionScope), collectionScope: collectionScope.constraints, ...(query.viewRelationships?{viewRelationships:query.viewRelationships}:{}), ...(query.recordIds !== undefined ? { recordIds: Object.freeze([...new Set(query.recordIds)]) } : {}), ...(query.group ? { group: query.group } : {}), ...(query.cursor ? { cursor: query.cursor } : {}), ...(query.search ? { search: query.search } : {}) };
+        if (enforced && (query.group || (query.countMode && query.countMode !== "none"))) return executeAuthorizedAggregate({repository:options.repository,query:input,transaction,authorize:async recordId => {
+          const decision = await options.authorizer.authorize({context:query.context,permissionCode:descriptor.operations["read"]!.permissionCode,resource:{...collectionScope.authorizationResource,tenantId:query.context.tenantId,entityCode:descriptor.entityCode,resourceCode:descriptor.entityCode,operationKey:"read",recordId}});
+          if (!decision.allowed && ["entity_authorization_unavailable","entity_authorization_unmapped"].includes(decision.reason ?? "")) throw new RecordServiceError(503,"ENTITY_AGGREGATE_AUTHORIZATION_UNAVAILABLE","Aggregate authorization is unavailable");
+          return decision.allowed;
+        }});
+        return options.repository.list(input,transaction);
+      });
+      if (enforced) {
+        for (const row of repositoryResult.data) {
+          const id=row[descriptor.storage.idField];
+          if(typeof id!=="string" && typeof id!=="number")throw new RecordServiceError(403,"ENTITY_RECORD_IDENTITY_REQUIRED","Record authorization identity is unavailable");
+          await authorizeRecordListRead(options.authorizer,query.context,descriptor,{...collectionScope.authorizationResource,recordId:String(id)});
+        }
+      }
+      const result = restrictResponseProjection(repositoryResult, descriptor, responseFields,enforced);
       return Object.freeze({ descriptor, collectionScope, authorization, readableFields, responseFields, result });
     },
   });
@@ -65,8 +94,9 @@ export function createRecordListExecutor<Transaction = unknown>(options: RecordQ
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
-function restrictResponseProjection(result: RecordListResult, descriptor: EntityRuntimeDescriptor, responseFields: readonly EntityFieldDescriptor[]): RecordListResult {
+function restrictResponseProjection(result: RecordListResult, descriptor: EntityRuntimeDescriptor, responseFields: readonly EntityFieldDescriptor[],enforced=false): RecordListResult {
   const visible = new Set<string>(responseFields.map((field) => field.key));
+  if (enforced) for (const row of result.data) assertProfiledScalarProjection(row,[...visible]);
   // Repository-only storage coordinates are retained for the record envelope and
   // optimistic concurrency, but query-internal sort columns never escape.
   for (const key of [descriptor.storage.idField, descriptor.storage.versionField, descriptor.storage.statusField]) if (key) visible.add(key);
@@ -81,6 +111,7 @@ export function createRecordQueryService<Transaction = unknown>(options: RecordQ
     async list(query) { return (await listExecutor.execute(query)).result; },
     async get(query) {
       const descriptor = await descriptorFor(options.metadata, query.context, query.entityCode);
+      const enforced=usesEntityBackendAuthorization(options.authorizer,query.context,descriptor);
       if (descriptor.directoryScope) {
         await authorizeRecordListRead(options.authorizer, query.context, descriptor, { recordId: query.recordId });
         const result = await listExecutor.execute({ context: query.context, entityCode: query.entityCode, recordIds: [query.recordId], limit: 1 });
@@ -94,7 +125,9 @@ export function createRecordQueryService<Transaction = unknown>(options: RecordQ
         recordId: query.recordId,
       });
       const projection = (await readableRecordFields(options.authorizer, query.context, descriptor)).map((field) => field.key);
-      return { data: await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.get(descriptor, query.context.tenantId, query.recordId, projection, transaction)) };
+      const data=await options.transactions.run(query.context.planeKey, { tenantId: query.context.tenantId, principalId: query.context.principalId }, (transaction) => options.repository.get(descriptor, query.context.tenantId, query.recordId, projection, transaction));
+      if(data && enforced)assertProfiledScalarProjection(data,projection);
+      return {data};
     },
   };
 }
@@ -152,4 +185,10 @@ export async function authorize(
   const decision = await authorizer.authorize({ context, permissionCode, resource });
   if (!decision.allowed) throw new RecordServiceError(403, "FORBIDDEN", "Record operation is not permitted");
   return decision;
+}
+
+/** Nested JSON requires an owning provider profile, not a root scalar field grant. */
+function assertProfiledScalarProjection(row:Readonly<Record<string,unknown>>,fields:readonly string[]):void {
+  if(fields.some(field=>row[field]!==null && typeof row[field]==="object" && !(row[field] instanceof Date)))
+    throw new RecordServiceError(403,"ENTITY_NESTED_PROVIDER_REQUIRED","Nested values require an authorized provider projection");
 }

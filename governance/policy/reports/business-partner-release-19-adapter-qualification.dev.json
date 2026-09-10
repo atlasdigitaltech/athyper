@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_review_adapter_qualification",
+  "capturedAt": "2026-09-10T05:37:45.793Z",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "checks": [
+    {
+      "check": "current_reviewer",
+      "account": "catl.owner",
+      "passed": true
+    },
+    {
+      "check": "current_reviewer",
+      "account": "catl.admin",
+      "passed": true
+    },
+    {
+      "check": "current_source",
+      "passed": true
+    },
+    {
+      "check": "changed_predecessor_rejected",
+      "passed": true
+    },
+    {
+      "check": "changed_evidence_rejected",
+      "passed": true
+    },
+    {
+      "check": "path_escape_rejected",
+      "passed": true
+    },
+    {
+      "check": "changed_reviewer_epoch_rejected",
+      "passed": true
+    }
+  ],
+  "passed": true,
+  "readOnly": true,
+  "signed": false,
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "receipt": {
+    "receiptSha256": "78bd9a49e5d791182721ed44453f482eb05f09fe540b831aa7a656b3cf815e73"
+  }
+}

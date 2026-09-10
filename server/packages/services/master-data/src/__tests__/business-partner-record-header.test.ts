@@ -12,9 +12,10 @@ const summary = {
     lifecycleStatus: "active",
     category: "organization",
   },
+  scope: {businessPartnerId: "bp-1", asOf: "2026-09-08"},
   roles: [{ code: "supplier" }],
   asOf: "2026-09-08",
-  completeness: { readOnly: false },
+  completeness: { readOnly: false, fingerprint: "test-revision" },
   sections: [
     { code: "overview", authorization: "granted" },
     { code: "contacts", authorization: "restricted", count: 99 },
@@ -68,4 +69,19 @@ describe("Business Partner record header", () => {
     expect(header.actions).toEqual([]);
     expect(header.readOnly).toBe(true);
   });
+});
+
+it("binds header and related actions to the same operation, context and authority revision", () => {
+  const header = businessPartnerRecordHeader(
+    {...summary, scope: {...summary.scope, operatingOrganizationId: "org-1", companyCodeId: "company-1"}},
+    {add_role: {code: "add_role", label: "Add role", href: "/roles/new", authority: "entity_case", permission: "create"}},
+    {...businessPartnerRecordPresentation, actions: [{key: "role-button", operationKey: "add_role", label: "Add role", placement: "primary"}]},
+    "legacy:current-profile",
+  );
+  const action = header.actions[0]!;
+  expect(action.operationKey).toBe("add_role");
+  expect(action.key).toBe("role-button");
+  expect(action.href).toBe("/roles/new?operatingOrganizationId=org-1&companyCodeId=company-1");
+  expect(action.decision).toMatchObject({state: "allowed", operationKey: "add_role", authorityRevision: "legacy:current-profile"});
+  expect(header.relatedActions?.[0]).toMatchObject({operationKey: action.operationKey, href: action.href, decision: action.decision});
 });

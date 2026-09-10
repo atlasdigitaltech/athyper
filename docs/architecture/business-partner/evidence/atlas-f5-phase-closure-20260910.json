@@ -1,0 +1,32 @@
+{
+  "phase": "F5",
+  "status": "closed",
+  "scope": "DEV CirrusAtlantic Business Partner prototype, including hybrid retrieval and document-grounded chat",
+  "closedAt": "2026-09-10T05:28:57.597112+00:00",
+  "basis": "Recorded qualification evidence; this documentation update does not represent a new deployment or test run.",
+  "exitCriteria": {
+    "freshness": "Canonical source/version/checksum checks; tested stale extraction; live saved-answer withdrawal and restoration.",
+    "authorization": "Current parent and attachment owner admission, tenant isolation, and fail-closed model/disclosure checks.",
+    "performance": "Bounded-cache and assessment batching tests; recorded synthetic batching benchmark; measured authenticated retrieval requests.",
+    "documentGroundedChat": "Authenticated browser answer and saved history with verified source and character offsets.",
+    "hybridRetrieval": "Pinned local embeddings, canonical passage indexing, three positive and three no-match regression cases."
+  },
+  "evidence": {
+    "deployment": "docs/examples/atlas-f5/cirrus-attachment-enablement.verified.json",
+    "semantic": "docs/examples/atlas-f5/cirrus-semantic-retrieval.qualification.json",
+    "chat": "docs/examples/atlas-f5/cirrus-document-chat.qualification.json",
+    "history": "docs/examples/atlas-f5/cirrus-document-history.qualification.json",
+    "foundation": "docs/architecture/business-partner/evidence/atlas-f5-retrieval-batching-20260910.json"
+  },
+  "deferredQualification": [
+    "Production concurrency, memory and p95/p99 latency qualification.",
+    "Larger independent relevance benchmark and threshold calibration.",
+    "Live later-passage and multiple-document qualification; current live fixture contains one chunk and later-passage loading has local tests.",
+    "Additional Meta Entity/source-owner adapters beyond the qualified entity-linked attachment path.",
+    "Automated recovery for abandoned indexing work and failed index cleanup."
+  ],
+  "operationalConstraints": {
+    "temporaryAttachmentGrantExpiresAt": "2026-09-11T01:15:12.051Z",
+    "resourceBounds": "Existing context, passage, candidate and batch limits remain enforced."
+  }
+}

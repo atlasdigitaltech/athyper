@@ -1,3 +1,4 @@
+import { createAuthorizationWriterDatabases } from "./authorization-writer-databases.js";
 import {
   createKeycloakAuthAdapter,
   type KeycloakAuthAdapter,
@@ -451,7 +452,13 @@ export function registerAdapters(
     lifecycle.onShutdown(() => meshDatabase.close());
   }
 
-  const publicationEnabled=config.publication?.compileEnabled||config.publication?.dispatchEnabled||config.publication?.applyEnabled;
+  if (config.wave0.authorizationWriterConnectionsPath) {
+    const writers = createAuthorizationWriterDatabases(config.wave0.authorizationWriterConnectionsPath);
+    container.adapters.authorizationWriterDatabases = writers.databases;
+    lifecycle.onReady(() => writers.qualify());
+    lifecycle.onShutdown(() => writers.close());
+  }
+  const publicationEnabled=config.publication?.authoringEnabled||config.publication?.compileEnabled||config.publication?.dispatchEnabled||config.publication?.applyEnabled;
   if(publicationEnabled){
     if(!container.adapters.objectStorage||!container.adapters.objectStorageBucket)throw new Error("Publication requires configured object storage");
     container.adapters.publicationArtifactStore=new ImmutablePublicationArtifactStore({storage:container.adapters.objectStorage,bucket:container.adapters.objectStorageBucket,canonicalizer:{sha256}});
@@ -462,8 +469,8 @@ export function registerAdapters(
     if(!config.publication.signingKeyId||!config.publication.publicKeyReference)throw new Error("Publication requires signing key ID and public key reference");
     const resolver=new CachedPublicationKeyResolver(secretStore,[{keyId:config.publication.signingKeyId,...(config.publication.privateKeyReference?{privateKeyReference:config.publication.privateKeyReference}:{}),publicKeyReferences:[config.publication.publicKeyReference]}]);
     container.adapters.publicationVerifier=new Ed25519PublicationVerifier(resolver);
-    if(config.publication.compileEnabled||config.publication.dispatchEnabled){if(!config.publication.privateKeyReference)throw new Error("Publication authority requires private signing key reference");container.adapters.publicationSigner=new Ed25519PublicationSigner(resolver);}
-    container.runtimes.health.register("publication.trust-keys",async()=>{const result=await resolver.health(config.publication.signingKeyId!,config.publication.compileEnabled||config.publication.dispatchEnabled);return{status:result.healthy?"healthy":"unhealthy",...(result.message?{message:result.message}:{})};});
+    if(config.publication.authoringEnabled||config.publication.compileEnabled||config.publication.dispatchEnabled){if(!config.publication.privateKeyReference)throw new Error("Publication authority requires private signing key reference");container.adapters.publicationSigner=new Ed25519PublicationSigner(resolver);}
+    container.runtimes.health.register("publication.trust-keys",async()=>{const result=await resolver.health(config.publication.signingKeyId!,!!config.publication.authoringEnabled||config.publication.compileEnabled||config.publication.dispatchEnabled);return{status:result.healthy?"healthy":"unhealthy",...(result.message?{message:result.message}:{})};});
   }
 
   if (config.mode === "worker" && config.jobs.workerDatabaseUrls.neon) {

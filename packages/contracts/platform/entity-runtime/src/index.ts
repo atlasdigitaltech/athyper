@@ -28,3 +28,4 @@ function fail(name: string): never { throw new TypeError(`${name} is invalid`); 
 export * from "./record-360-panel";
 
 export * from "./related-presentation";
+export * from "./access-decision";

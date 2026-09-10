@@ -44,22 +44,36 @@ export async function applyFoundation(options: {
   const entries = await loadEntries(await readFile(resolve(databaseRoot, plan.manifest), "utf8"));
   const start = options.resumeFrom ? entries.findIndex((entry) => entry.path === options.resumeFrom) : 0;
   if (start < 0) throw new Error(`resume path is absent from ${plan.manifest}: ${options.resumeFrom}`);
+  const recordReceipts = options.recordReceipts !== false;
+  const ledgerIndex = entries.findIndex((entry) => entry.path === "common/_database/02_schema_provisions.sql");
+  if (recordReceipts && ledgerIndex < 0) throw new Error("foundation manifest is missing the provisioning ledger");
+  if (start > 0 && (!recordReceipts || start <= ledgerIndex)) {
+    throw new Error("foundation resume requires a receipted prefix; restart pre-ledger failures on a fresh database");
+  }
   if (options.dockerContainer) {
     await createDatabase(options.plane, options.dockerContainer, options.databaseUser ?? "postgres");
   }
   const target = options.dockerContainer
     ? dockerTarget(options.dockerContainer, options.databaseUser ?? "postgres", plan.database)
     : urlTarget(requiredUrl(options.plane, options.databaseUrl), plan.database);
-  await target.assertIdentity();
-  if (!options.resumeFrom) await target.assertFresh();
-  for (const entry of entries.slice(start)) {
-    const pendingReceipts = entries.slice(0, entry.ordinal);
-    await target.execute(entry.sql, options.recordReceipts === false ? "" : receiptSql(options.plane, plan.manifestSha256, pendingReceipts), entry.path);
+  try {
+    await target.assertIdentity();
+    if (start === 0) await target.assertFresh();
+    else reconcileReceipts(entries.slice(0, start), await target.receipts(), options.plane, plan.manifestSha256);
+    // Only bootstrap files executed in this run may receive delayed receipts.
+    let pendingReceipts: Entry[] = [];
+    for (const entry of entries.slice(start)) {
+      pendingReceipts.push(entry);
+      const canRecord = recordReceipts && entry.ordinal > ledgerIndex;
+      await target.execute(entry.sql, canRecord ? receiptSql(options.plane, plan.manifestSha256, pendingReceipts) : "", entry.path);
+      if (canRecord) pendingReceipts = [];
+    }
+    const receipts = recordReceipts ? await target.receipts() : [];
+    if (recordReceipts) reconcileReceipts(entries, receipts, options.plane, plan.manifestSha256);
+    return Object.freeze({ ...plan, mode: "applied", receiptCount: receipts.length, appliedAt: new Date().toISOString() });
+  } finally {
+    await target.close();
   }
-  const receipts = options.recordReceipts === false ? [] : await target.receipts();
-  if (options.recordReceipts !== false) reconcileReceipts(entries, receipts, options.plane, plan.manifestSha256);
-  await target.close();
-  return Object.freeze({ ...plan, mode: "applied", receiptCount: receipts.length, appliedAt: new Date().toISOString() });
 }
 
 async function loadEntries(manifest: string): Promise<Entry[]> {
@@ -74,7 +88,6 @@ async function loadEntries(manifest: string): Promise<Entry[]> {
 }
 
 function receiptSql(plane: Plane, manifestSha256: string, entries: readonly Entry[]): string {
-  if (!entries.some((entry) => entry.path === "common/_database/02_schema_provisions.sql")) return "";
   const values = entries.map((entry) => `('${plane}','${manifestSha256}',${entry.ordinal},${literal(entry.path)},'${entry.sha256}')`).join(",\n");
   return `
 INSERT INTO public.schema_provisions(plane,manifest_checksum,manifest_ordinal,file_name,checksum)

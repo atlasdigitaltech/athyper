@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-09-10T05:19:27.072Z",
+  "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+  "attachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+  "checks": [
+    "live saved answer withheld while canonical synthetic source disabled",
+    "same saved answer accessible after source restored"
+  ],
+  "sourceRestored": true,
+  "passed": true
+}

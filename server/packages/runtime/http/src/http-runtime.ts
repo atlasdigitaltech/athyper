@@ -20,6 +20,8 @@ export interface HttpRuntimeOptions {
   /** Host startup gate; dependencies are checked only after initialization completes. */
   readonly isReady?: () => boolean;
   readonly jsonLimit?: string;
+  /** Trusted exact-route overrides; other routes retain the global JSON limit. */
+  readonly jsonRouteLimits?: readonly {readonly method: "POST" | "PUT" | "PATCH"; readonly path: string; readonly maxBytes: number}[];
   readonly configure?: (application: Application) => void;
   readonly exposeErrorDetails?: boolean;
   readonly environment?: "local" | "staging" | "production";
@@ -115,14 +117,21 @@ export function createHttpApplication(options: HttpRuntimeOptions = {}): Applica
   const openApi = options.openApi === false ? undefined : options.openApi ?? { title: "Athyper API", version: "0.1.0" };
   app.disable("x-powered-by");
   app.use(createRequestCancellationMiddleware(options.requestDeadlineMs, options.drainController));
-  const parseJson = express.json({limit:options.jsonLimit??"256kb",verify:(request,_response,buffer)=>{(request as Request&{rawBody?:Uint8Array}).rawBody=Uint8Array.from(buffer);}});
+  const captureBody = (request: import("node:http").IncomingMessage, _response: import("node:http").ServerResponse, buffer: Buffer) => {(request as Request&{rawBody?:Uint8Array}).rawBody=Uint8Array.from(buffer);};
+  const parseJson = express.json({limit:options.jsonLimit??"256kb",verify:captureBody});
+  const routeParsers = new Map<string, ReturnType<typeof express.json>>();
+  for (const limit of options.jsonRouteLimits ?? []) {
+    const key = `${limit.method} ${limit.path}`;
+    if (!["POST", "PUT", "PATCH"].includes(limit.method) || !/^\/api\/[A-Za-z0-9/_-]+$/.test(limit.path) || limit.path.endsWith("/") || !Number.isSafeInteger(limit.maxBytes) || limit.maxBytes < 1 || routeParsers.has(key)) throw new TypeError("Invalid or duplicate JSON route limit");
+    routeParsers.set(key, express.json({limit:limit.maxBytes,verify:captureBody}));
+  }
   app.use((request, response, next) => {
     // Webhook signatures cover the original bytes; the route owns parsing and limits.
     if (request.method === "POST" && /^\/api\/webhooks\/[^/]+\/?$/i.test(request.path)) {
       next();
       return;
     }
-    parseJson(request, response, next);
+    (routeParsers.get(`${request.method} ${request.path.replace(/\/$/, "")}`) ?? parseJson)(request, response, next);
   });
   app.use((request, response, next) => {
     const requestId = headerValue(request, "x-request-id") ?? randomUUID();

@@ -63,3 +63,14 @@ it("releases a stalled stream when the client disconnects", async () => {
   socket.emit("close"); await writing;
   expect(socket.end).not.toHaveBeenCalled(); expect(finalized).toHaveBeenCalledOnce(); expect(socket.listenerCount("drain")).toBe(0);
 });
+
+it("registers a strict response-feedback contract only with its service", async () => {
+ const {default: express} = await import("express");
+ const {routeContracts} = await import("@athyper/server-runtime-http");
+ const {registerAtlasRoutes} = await import("../atlas-routes.js");
+ const app = express();
+ registerAtlasRoutes(app, {authenticate: (_request, _response, next) => next(), readContext: () => ({} as never), admission: {} as never, threads: {} as never, feedback: {} as never});
+ const contract = routeContracts(app).find(item => item.operationId === "atlas.submitResponseFeedback")!;
+ expect(contract.path).toBe("/api/atlas/feedback");
+ expect(contract.request?.body).toMatchObject({additionalProperties: false, required: ["schemaVersion", "feedbackId", "runId", "messageId", "category", "verdict"]});
+});

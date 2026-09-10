@@ -108,3 +108,10 @@ DO $$ BEGIN
     GRANT EXECUTE ON FUNCTION runtime_meta.fn_active_release(text),runtime_meta.fn_active_entity_descriptor(text,text),runtime_meta.fn_active_business_partner_definition(text) TO athyperapp;
   END IF;
 END $$;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+REVOKE ALL ON TABLE runtime_meta.experience_surface_projection FROM PUBLIC;
+GRANT SELECT,INSERT,UPDATE ON TABLE runtime_meta.experience_surface_projection TO athyperapp;
+GRANT ALL ON TABLE runtime_meta.experience_surface_projection TO athyperadmin;
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

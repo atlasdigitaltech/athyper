@@ -219,4 +219,7 @@ common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
 planes/neon/master/15_bank_account_company_usage.sql
+common/master/19_entity_saved_views.sql
+common/runtime_meta/12_baseline_precondition.sql
+planes/neon/ai/12_attachment_knowledge.sql
 common/shared/99_security_definer_hardening.sql

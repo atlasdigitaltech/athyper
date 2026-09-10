@@ -117,6 +117,7 @@ describe("published list header and action authority", () => {
     expect(authorizer.authorize).toHaveBeenCalledWith({
       context,
       permissionCode: "request.create",
+      observation: { entityCode: "partner", operationKey: "request_create", surface: "action", phase: "discover" },
       resource: {
         tenantId: "tenant",
         entityCode: "partner",

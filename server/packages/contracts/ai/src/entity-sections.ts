@@ -5,6 +5,8 @@ export interface AtlasEntitySectionContext {
   readonly entityCode: string;
   readonly sectionKey: string;
   readonly aliases: readonly string[];
+  /** Active published terms; stripped before provider requests with section metadata. */
+  readonly semanticAliases?: readonly string[];
   readonly resultKey?: string;
   readonly label?: string;
   readonly searchFields?: readonly string[];

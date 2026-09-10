@@ -1,0 +1,119 @@
+{
+  "observedAt": "2026-09-10T05:19:16.134Z",
+  "checks": [
+    "browser question grounded in current authorized synthetic document",
+    "rendered completed answer includes the document source",
+    "authorized persisted conversation retains grounded answer and source"
+  ],
+  "status": 200,
+  "context": {
+    "kind": "record",
+    "entityCode": "business_partner",
+    "recordId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+    "section": "overview",
+    "savedRevision": "8",
+    "roleLens": "all",
+    "dirty": false,
+    "locale": "en",
+    "schemaVersion": 1,
+    "generationId": "90d4ca49-0498-4f98-a2ab-580527abe41f"
+  },
+  "events": [
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 1,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:21.723Z",
+      "event": {
+        "type": "run.started",
+        "publicModelId": "atlas-re-1.0-local",
+        "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "policyRevision": "atlas-local-v3:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true",
+        "promptRevision": "atlas-local-chat-v3"
+      }
+    },
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 2,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:21.723Z",
+      "event": {
+        "type": "intent.resolved",
+        "intent": {
+          "schemaVersion": 1,
+          "kind": "delegate",
+          "strategy": "model",
+          "reason": "unsupported",
+          "capabilityIds": []
+        }
+      }
+    },
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 3,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:25.950Z",
+      "event": {
+        "type": "usage.updated",
+        "usage": {
+          "inputTokens": 638,
+          "outputTokens": 56,
+          "cacheReadTokens": 0,
+          "cacheWriteTokens": 0,
+          "reasoningTokens": 0
+        }
+      }
+    },
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 4,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:26.283Z",
+      "event": {
+        "type": "attachment.cited",
+        "attachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+        "fileName": "cirrus-synthetic-bp-document.txt",
+        "contentType": "text/plain",
+        "sha256": "21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024"
+      }
+    },
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 5,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:26.283Z",
+      "event": {
+        "type": "message.delta",
+        "messageId": "01e862a3-86cb-45c1-9ac9-41e790501965",
+        "text": "The make-believe initiative is called **Indigo Lantern**, and evaluations occur every **17 days**. \n\nCited from the synthetic document:  \n- \"The fictional project is called Indigo Lantern.\"  \n- \"Its fictional review interval is 17 days.\"\n\nSources: cirrus-synthetic-bp-document.txt (characters 0–1473)"
+      }
+    },
+    {
+      "contextGenerationId": "90d4ca49-0498-4f98-a2ab-580527abe41f",
+      "protocol": "atlas.sse/1",
+      "sequence": 6,
+      "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+      "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+      "emittedAt": "2026-09-10T05:19:26.283Z",
+      "event": {
+        "type": "run.completed",
+        "messageId": "01e862a3-86cb-45c1-9ac9-41e790501965",
+        "reason": "stop"
+      }
+    }
+  ],
+  "answer": "The make-believe initiative is called **Indigo Lantern**, and evaluations occur every **17 days**. \n\nCited from the synthetic document:  \n- \"The fictional project is called Indigo Lantern.\"  \n- \"Its fictional review interval is 17 days.\"\n\nSources: cirrus-synthetic-bp-document.txt (characters 0–1473)",
+  "threadId": "3d9ac72e-1283-4496-9a9e-1c9a6199db52",
+  "runId": "dcfd2e6e-da2f-48c0-b55b-dc86da9aaada",
+  "passed": true
+}

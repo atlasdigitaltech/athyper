@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { sql, type Kysely } from "kysely";
+import { sql, type Kysely, type Transaction } from "kysely";
 import type { ContractTestReport, MetaEntityAuthoringRepository, MetaEntityChangeSet, MetaEntityGraph, SignedMetaEntityArtifact, ValidationReport } from "@athyper/server-contract-meta-entity-authoring";
 import { AuthoringConflictError } from "@athyper/server-contract-meta-entity-authoring";
 import { canonicalJson, sha256, validateGraph } from "./deterministic.js";
@@ -10,13 +10,13 @@ interface EntityHeaderRow { readonly entity_code: unknown; readonly entity_class
 interface ChangeSetRow { readonly id:unknown;readonly tenant_id:unknown;readonly entity_id:unknown;readonly entity_code?:unknown;readonly branch_code:unknown;readonly status:unknown;readonly lock_version:unknown;readonly created_by:unknown;readonly submitted_by?:unknown;readonly reviewed_by?:unknown;readonly approved_by?:unknown }
 interface CoordinateRow { readonly tenant_id:unknown;readonly entity_id:unknown }
 interface AdvanceRow { readonly revision:unknown }
-interface RevisionRow { readonly id:unknown;readonly revision_no:unknown;readonly revision_hash:unknown;readonly contract_hash:unknown }
+interface RevisionRow { readonly id:unknown;readonly revision_no:unknown;readonly revision_hash:unknown;readonly contract_hash:unknown;readonly contract_json?:unknown }
 interface ParentRevisionRow { readonly id:unknown;readonly revision_hash:unknown }
 interface ReleaseRow { readonly id:unknown;readonly release_no:unknown;readonly revision_id?:unknown;readonly contract_hash?:unknown;readonly revision_hash?:unknown }
 interface ArtifactRow { readonly contract_hash:unknown;readonly signature_algorithm:unknown;readonly signing_key_id:unknown;readonly contract_signature:unknown;readonly compiled_hash:unknown;readonly compiled_json:unknown }
 
 export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringRepository {
-  constructor(private readonly database: Kysely<Database>) {}
+  constructor(private readonly database: Kysely<Database>, private readonly prepareRelease?: (database: Kysely<Database>, input: {releaseId: string; artifact: SignedMetaEntityArtifact; targetPlanes: readonly string[]}) => Promise<void>) {}
   async createDraft(input: Parameters<MetaEntityAuthoringRepository["createDraft"]>[0]) {
     const id=randomUUID(), code=`${input.branchCode.replace(/[^a-z0-9_.-]/g,"-")}.${id}`.slice(0,127);
     const result=await sql<ChangeSetRow>`INSERT INTO metadata.entity_change_set(id,tenant_id,entity_id,change_set_code,branch_code,title,created_by)
@@ -32,7 +32,7 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
   }
   async replaceGraph(input:Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0]){
     const validation=validateGraph(input.graph);if(validation.issues.length)throw new AuthoringConflictError(`Invalid graph: ${validation.issues[0]?.path}`);
-    await this.database.transaction().execute(tx=>replaceGraphInTransaction(tx,input)); return required(await this.get(input.changeSetId));
+    await atomic(this.database, tx=>replaceGraphInTransaction(tx,input)); return required(await this.get(input.changeSetId));
   }
   /** Keeps imported draft creation and graph replacement inside the transfer transaction. */
   async replaceGraphInTransaction(input:Parameters<MetaEntityAuthoringRepository["replaceGraph"]>[0],transaction:Kysely<Database>){
@@ -44,10 +44,19 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
     const graph=await this.loadGraph(id), current=required(await this.get(id));
     if(current.revision!==revision)throw new AuthoringConflictError("Validation revision is stale");
     if(sha256(graph)!==report.contractHash)throw new AuthoringConflictError("Validation report does not match the current graph");
-    const parent=(await sql<ParentRevisionRow>`SELECT id,revision_hash FROM snapshot.entity_contract_revision WHERE change_set_id=${id}::uuid AND revision_no<${revision} ORDER BY revision_no DESC LIMIT 1`.execute(this.database)).rows[0];
-    await sql`INSERT INTO snapshot.entity_contract_revision(tenant_id,entity_id,change_set_id,revision_no,parent_revision_id,parent_revision_hash,contract_schema_code,contract_schema_version,contract_json,contract_hash,revision_hash,payload_size_bytes,validation_status,validation_diagnostics,captured_by)
-      VALUES(${current.tenantId}::uuid,${current.entityId}::uuid,${id}::uuid,${revision},${parent?.["id"]??null}::uuid,${parent?.["revision_hash"]??null},'athyper.meta-entity-contract','2.1',${canonicalJson(graph)}::jsonb,${report.contractHash},${sha256({report,revision})},${Buffer.byteLength(canonicalJson(graph))},${report.issues.length?"invalid":"valid"},${JSON.stringify(report.issues)}::jsonb,${actorId}::uuid) ON CONFLICT DO NOTHING`.execute(this.database);
+    await atomic(this.database, async tx => {
+      const locked=(await sql`SELECT id FROM metadata.entity_change_set WHERE id=${id}::uuid AND lock_version=${revision} FOR UPDATE`.execute(tx)).rows[0];
+      if(!locked)throw new AuthoringConflictError("Validation revision is stale");
+      const parent=(await sql<{id:string;revision_no:number;revision_hash:string;contract_json:unknown;validation_status:string}>`SELECT id,revision_no,revision_hash,contract_json,validation_status FROM snapshot.entity_contract_revision WHERE change_set_id=${id}::uuid ORDER BY revision_no DESC LIMIT 1`.execute(tx)).rows[0];
+      const status=report.issues.length?"invalid":"valid";
+      if(parent && sha256(parent.contract_json)===report.contractHash && parent.validation_status===status)return;
+      // Snapshot revision numbers form their own contiguous chain; authoring lock
+      // versions also advance during submit/review and are not snapshot numbers.
+      await sql`INSERT INTO snapshot.entity_contract_revision(tenant_id,entity_id,change_set_id,revision_no,parent_revision_id,parent_revision_hash,base_release_id,contract_schema_code,contract_schema_version,contract_json,contract_hash,revision_hash,payload_size_bytes,validation_status,validation_diagnostics,captured_by)
+        SELECT ${current.tenantId}::uuid,${current.entityId}::uuid,${id}::uuid,${parent?Number(parent.revision_no)+1:1},${parent?.id??null}::uuid,${parent?.revision_hash??null},base_release_id,'athyper.meta-entity-contract','2.1',${canonicalJson(graph)}::jsonb,${report.contractHash},${sha256({report,revision})},${Buffer.byteLength(canonicalJson(graph))},${status},${JSON.stringify(report.issues)}::jsonb,${actorId}::uuid FROM metadata.entity_change_set WHERE id=${id}::uuid`.execute(tx);
+    });
   }
+
   async recordTestRun(id:string,revision:number,report:ContractTestReport,actorId:string){
     const graph=await this.loadGraph(id), current=required(await this.get(id));
     if(current.revision!==revision)throw new AuthoringConflictError("Test revision is stale");
@@ -57,16 +66,18 @@ export class KyselyMetaEntityAuthoringRepository implements MetaEntityAuthoringR
       VALUES(${current.tenantId}::uuid,${current.tenantId}::uuid,${current.entityId}::uuid,${id}::uuid,${revision},'athyper.meta-entity-contract','2.1',${canonicalJson(graph)}::jsonb,${report.contractHash},'athyper.contract-tests','1.0.0',${report.passed?"passed":"failed"},${report.results.length},${report.results.filter(x=>x.passed).length},${report.results.filter(x=>!x.passed).length},0,0,${sha256(report)},${actorId}::uuid)`.execute(this.database);
   }
   async transition(input:Parameters<MetaEntityAuthoringRepository["transition"]>[0]){const result=await sql<ChangeSetRow>`UPDATE metadata.entity_change_set SET status=${input.to}::metadata.entity_change_set_status_d,status_changed_by=${input.actorId}::uuid,rejection_reason=${input.to==="rejected"?(input.breakGlass?.reason??"Rejected by reviewer"):null} WHERE id=${input.changeSetId}::uuid AND lock_version=${input.expectedRevision} AND status=${input.from}::metadata.entity_change_set_status_d RETURNING *`.execute(this.database);if(!result.rows[0])throw new AuthoringConflictError("Stale authoring revision or state");return this.map(result.rows[0]);}
-  async createRelease(input:Parameters<MetaEntityAuthoringRepository["createRelease"]>[0]){return this.database.transaction().execute(async tx=>{
+  async createRelease(input:Parameters<MetaEntityAuthoringRepository["createRelease"]>[0]){return atomic(this.database, async tx=>{
     const cs=required((await sql<ChangeSetRow>`SELECT * FROM metadata.entity_change_set WHERE id=${input.changeSetId}::uuid AND lock_version=${input.expectedRevision} AND status='approved' FOR UPDATE`.execute(tx)).rows[0]);
     await sql`SELECT pg_advisory_xact_lock(hashtextextended(${`${cs["tenant_id"]??"global"}:${cs["entity_id"]}`},0))`.execute(tx);
     const revision=input.releaseKind==="rollback"
       ?required((await sql<RevisionRow>`SELECT revision.id,revision.revision_no,revision.revision_hash,revision.contract_hash FROM metadata.entity_release prior JOIN snapshot.entity_contract_revision revision ON revision.id=prior.revision_id WHERE prior.id=${input.rollbackOfReleaseId??null}::uuid AND prior.entity_id=${cs["entity_id"]}::uuid AND prior.tenant_id IS NOT DISTINCT FROM ${cs["tenant_id"]}::uuid LIMIT 1`.execute(tx)).rows[0])
-      :required((await sql<RevisionRow>`SELECT id,revision_no,revision_hash,contract_hash FROM snapshot.entity_contract_revision WHERE change_set_id=${input.changeSetId}::uuid AND revision_no=${input.expectedRevision} AND validation_status='valid' ORDER BY captured_at DESC LIMIT 1`.execute(tx)).rows[0]);
-    if(String(revision["contract_hash"])!==input.artifact.contractHash)throw new AuthoringConflictError("Signed artifact does not match the current validated revision");
-    const previous=(await sql<ReleaseRow>`SELECT id,release_no FROM metadata.entity_release WHERE entity_id=${cs["entity_id"]}::uuid AND tenant_id IS NOT DISTINCT FROM ${cs["tenant_id"]}::uuid ORDER BY release_no DESC LIMIT 1 FOR UPDATE`.execute(tx)).rows[0];
+      :required((await sql<RevisionRow>`SELECT id,revision_no,revision_hash,contract_hash,contract_json FROM snapshot.entity_contract_revision WHERE change_set_id=${input.changeSetId}::uuid AND validation_status='valid' ORDER BY revision_no DESC LIMIT 1`.execute(tx)).rows[0]);
+    if((revision.contract_json ? sha256(revision.contract_json) : String(revision["contract_hash"]))!==input.artifact.contractHash)throw new AuthoringConflictError("Signed artifact does not match the current validated revision");
+    const previous=(await sql<ReleaseRow>`SELECT id,release_no FROM metadata.entity_release WHERE entity_id=${cs["entity_id"]}::uuid AND tenant_id IS NOT DISTINCT FROM ${cs["tenant_id"]}::uuid ORDER BY release_no DESC LIMIT 1`.execute(tx)).rows[0];
     const releaseId=randomUUID(),releaseNo=previous?Number(previous["release_no"])+1:1;
-    await sql`INSERT INTO metadata.entity_release(id,tenant_id,entity_id,change_set_id,revision_id,release_no,release_kind,supersedes_release_id,rollback_of_release_id,contract_schema_code,contract_schema_version,contract_hash,revision_hash,release_hash,compatibility_level,target_planes,signature_algorithm,signing_key_id,contract_signature,published_by) VALUES(${releaseId}::uuid,${cs["tenant_id"]??null}::uuid,${cs["entity_id"]}::uuid,${input.changeSetId}::uuid,${revision["id"]}::uuid,${releaseNo},${input.releaseKind},${previous?.["id"]??null}::uuid,${input.rollbackOfReleaseId??null}::uuid,'athyper.meta-entity-contract','2.1',${input.artifact.contractHash},${revision["revision_hash"]},${input.artifact.descriptorHash},'backward_compatible',${input.targetPlanes}::text[],${input.artifact.signatureAlgorithm},${input.artifact.signingKeyId},${input.artifact.signature},${input.actorId}::uuid)`.execute(tx);return{id:releaseId,releaseNo};});}
+    await sql`INSERT INTO metadata.entity_release(id,tenant_id,entity_id,change_set_id,revision_id,release_no,release_kind,supersedes_release_id,rollback_of_release_id,contract_schema_code,contract_schema_version,contract_hash,revision_hash,release_hash,compatibility_level,target_planes,signature_algorithm,signing_key_id,contract_signature,published_by) VALUES(${releaseId}::uuid,${cs["tenant_id"]??null}::uuid,${cs["entity_id"]}::uuid,${input.changeSetId}::uuid,${revision["id"]}::uuid,${releaseNo},${input.releaseKind},${previous?.["id"]??null}::uuid,${input.rollbackOfReleaseId??null}::uuid,'athyper.meta-entity-contract','2.1',${input.artifact.contractHash},${revision["revision_hash"]},${input.artifact.descriptorHash},'backward_compatible',${input.targetPlanes}::text[],${input.artifact.signatureAlgorithm},${input.artifact.signingKeyId},${input.artifact.signature},${input.actorId}::uuid)`.execute(tx);
+    if (this.prepareRelease) await this.prepareRelease(tx, {releaseId, artifact: input.artifact, targetPlanes: input.targetPlanes});
+    return{id:releaseId,releaseNo};});}
   async getSignedRelease(id:string){const result=await sql<ArtifactRow>`SELECT r.contract_hash,r.signature_algorithm,r.signing_key_id,r.contract_signature,a.compiled_hash,a.compiled_json FROM metadata.entity_release r JOIN snapshot.entity_release_artifact a ON a.source_release_id=r.id WHERE r.id=${id}::uuid ORDER BY a.plane_key LIMIT 1`.execute(this.database);const row=result.rows[0];if(!row)return null;return{schema:"athyper.entity-runtime-descriptor/1.0",compiler:{name:"@athyper/meta-entity-compiler",version:"1.0.0"},contractHash:string(row,"contract_hash"),descriptorHash:string(row,"compiled_hash"),descriptor:object(row["compiled_json"]),signatureAlgorithm:string(row,"signature_algorithm"),signingKeyId:string(row,"signing_key_id"),signature:string(row,"contract_signature")} as SignedMetaEntityArtifact;}
   private map(row:ChangeSetRow):MetaEntityChangeSet{return{id:string(row,"id"),tenantId:row.tenant_id===null?null:string(row,"tenant_id"),entityId:string(row,"entity_id"),entityCode:typeof row.entity_code==="string"?row.entity_code:"unknown",branchCode:string(row,"branch_code"),status:string(row,"status") as MetaEntityChangeSet["status"],revision:Number(row.lock_version),createdBy:string(row,"created_by"),...(typeof row.submitted_by==="string"?{submittedBy:row.submitted_by}:{}),...(typeof row.reviewed_by==="string"?{reviewedBy:row.reviewed_by}:{}),...(typeof row.approved_by==="string"?{approvedBy:row.approved_by}:{})};}
 }
@@ -100,3 +111,5 @@ const BRANCH_COLUMNS={
   entity_policy_binding:["id","entityOperationId","policyDefinitionId","bindingKey","bindingStage","enforcement","priority","inputMapping","status"],entity_field_policy_binding:["id","entityFieldId","entityOperationId","policyDefinitionId","bindingKey","bindingStage","enforcement","priority","inputMapping","status"],entity_contract_test_case:["id","testKey","testKind","title","description","targetPlane","entityOperationId","entityFlowId","inputContext","expectedOutcome","expectedDiagnosticCodes","status"],
   entity_lifecycle_binding:["id","entityFieldId","bindingKey","targetPlane","lifecycleCode","lifecycleRevision","required","status"],entity_lifecycle_operation_binding:["id","entityLifecycleBindingId","entityOperationId","mappingKey","transitionCode","status"],entity_numbering_binding:["id","entityFieldId","entityOperationId","bindingKey","targetPlane","policyCode","policyRevision","assignmentMode","required","status"],entity_operation_scope_binding:["id","entityOperationId","bindingKey","targetPlane","decisionMode","scopeKind","coordinateSource","coordinateKey","resolverKey","missingValueBehavior","status"],
 } as const;
+
+function atomic<T>(database:Kysely<Database>,work:(transaction:Transaction<Database>)=>Promise<T>):Promise<T>{return database.isTransaction?work(database as Transaction<Database>):database.transaction().execute(work);}

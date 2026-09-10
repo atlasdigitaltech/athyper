@@ -12,6 +12,7 @@ test("Atlas answer client streams text and preserves authorized record citations
       if (path === "/api/atlas/threads") return { threadId: "thread-1" };
       return stream([
         event("run.started", { publicModelId: "atlas-fast" }),
+        event("intent.resolved", {intent: {schemaVersion: 1, kind: "read", strategy: "exact_terms", reason: "matched", capabilityIds: ["business_partner_read"]}}),
         event("source.cited", { callId: "call-1", toolCode: "business_partner_read", coordinate: { entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1" } }),
         event("message.delta", { messageId: "message-1", text: "Supplier BP-1 is active." }),
         event("run.completed", { messageId: "message-1", reason: "stop" }),
@@ -21,6 +22,8 @@ test("Atlas answer client streams text and preserves authorized record citations
   const progress: string[] = [];
   const answer = await createAtlasAnswerClient({ client, createId: () => "request-1" }).answer("What is the supplier status?", { onProgress: (item) => progress.push(item.kind) });
   assert.equal(answer.text, "Supplier BP-1 is active.");
+  assert.equal(answer.messageId, "message-1");
+  assert.equal(answer.intent?.kind, "read");
   assert.deepEqual(answer.actions, []);
   assert.deepEqual(answer.citations, [{ entityCode: "business_partner", recordId: "bp-1", revision: "7", descriptorHash: "descriptor-1", toolCode: "business_partner_read" }]);
   assert.deepEqual(progress, ["started", "citation", "text", "completed"]);
@@ -146,4 +149,28 @@ test("Atlas fullscreen history restores only server-persisted source coordinates
   assert.equal((await atlas.messages("t1")).items[0]?.answer, undefined);
   inherited = true;
   assert.deepEqual((await atlas.messages("t1")).items[0]?.answer?.citations, [{ ...coordinate, toolCode: "bp_read_summary" }]);
+});
+
+
+test("response feedback sends exact response coordinates with stable retry identity and no transcript", async () => {
+ const calls: any[] = [];
+ const client = {request: async (operation: any, options: any) => {calls.push({operation, options}); return {accepted: true};}} as HttpClient;
+ const atlas = createAtlasAnswerClient({client});
+ const feedback = {schemaVersion: 1, feedbackId: "10000000-0000-4000-8000-000000000001", runId: "10000000-0000-4000-8000-000000000002", messageId: "10000000-0000-4000-8000-000000000003", category: "intent", verdict: "wrong"} as const;
+ await atlas.feedback!(feedback); await atlas.feedback!(feedback);
+ assert.equal(calls[0].operation.path, "/api/atlas/feedback");
+ assert.deepEqual(calls[0].options.body, feedback);
+ assert.equal(calls[0].options.idempotencyKey, calls[1].options.idempotencyKey);
+ await assert.rejects(atlas.feedback!({...feedback, prompt: "private"} as never));
+ assert.equal(calls.length, 2);
+});
+
+test("Atlas vocabulary proposals carry only the explicit term and reuse their receipt for delivery retry",async()=>{
+ const calls:any[]=[];
+ const client={request:async(operation:any,options:any)=>{calls.push({path:operation.path,options});return {accepted:true};}} as unknown as HttpClient;
+ const api=createAtlasAnswerClient({client,createId:()=>"unused"});
+ const proposal={schemaVersion:1,candidateId:"00000000-0000-4000-8000-000000000001",feedbackId:"00000000-0000-4000-8000-000000000002",phrase:"company snapshot",locale:"en",capabilityId:"entity_read_record"} as const;
+ await api.proposeVocabulary!(proposal);await api.proposeVocabulary!(proposal);
+ assert.equal(calls[0].path,"/api/atlas/learning-candidates");assert.deepEqual(calls[0].options.body,proposal);assert.equal(calls[0].options.idempotencyKey,calls[1].options.idempotencyKey);
+ assert.equal(JSON.stringify(calls).includes("userText"),false);
 });

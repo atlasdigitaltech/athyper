@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-09-09T19:32:15.158Z",
+  "account": "catl.admin",
+  "reviewerId": "catl.admin",
+  "status": 200,
+  "assurance": "baseline",
+  "rows": 51,
+  "receipts": 0,
+  "allDecisionsInitiallyEmpty": true,
+  "recordInitiallyDisabled": true,
+  "pageErrors": [],
+  "missingCsrfStatus": 403,
+  "realDecisionsSubmitted": false,
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "baselineWriteRejected": {
+    "status": 403,
+    "code": "REVIEW_STEP_UP_REQUIRED",
+    "emptyBody": true
+  }
+}

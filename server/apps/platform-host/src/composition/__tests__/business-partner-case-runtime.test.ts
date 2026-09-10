@@ -1,0 +1,31 @@
+import { readFileSync } from "node:fs";
+import { expect, it, vi } from "vitest";
+import type { BusinessPartnerRequestService } from "@athyper/server-contract-master-data";
+import type { EntityScopeAdapter } from "@athyper/server-service-records";
+import { assertBusinessPartnerCaseRuntimeSemantics, createBusinessPartnerCaseRuntimeRegistrations } from "../business-partner-case-runtime.js";
+const selected = () => JSON.parse(readFileSync(new URL("../../../../../../governance/policy/reports/business-partner-accepted-operations.dev.json", import.meta.url),"utf8")).descriptor.authorization;
+const stored = ["case_update","case_validate","case_submit","case_decide","case_materialize"];
+it("rejects each proposed-resource binding for an existing case before publication", () => {
+  const profile = selected();
+  expect(() => assertBusinessPartnerCaseRuntimeSemantics(profile)).toThrow("case_update");
+  const corrected = {...profile,operations:profile.operations.map((o: {key:string})=>stored.includes(o.key)?{...o,target:"existing"}:o)};
+  expect(() => assertBusinessPartnerCaseRuntimeSemantics(corrected)).not.toThrow();
+  for(const key of stored) expect(()=>assertBusinessPartnerCaseRuntimeSemantics({...corrected,operations:corrected.operations.map((o:{key:string})=>o.key===key?{...o,target:"proposed"}:o)})).toThrow(key);
+});
+it("registers real owning methods, translates case ownership and workflow names, and rejects another operation", async () => {
+  const methods = Object.fromEntries(["create","list","patch","validate","submit","decide","apply"].map(k=>[k,vi.fn(async function(this:unknown,arg:unknown){return {receiver:this,arg};})]));
+  const scopes:EntityScopeAdapter = {resolve:vi.fn(async()=>({state:"resolved",coordinates:{operatingOrganizationId:"stored-org"}})),preflight:vi.fn(async()=>"workflow_blocked")};
+  const entries = createBusinessPartnerCaseRuntimeRegistrations(methods as unknown as BusinessPartnerRequestService,scopes);
+  expect(entries).toHaveLength(7);
+  const entry=entries.find(e=>e.operation.key==="case_submit")!;
+  const command={requestId:"stored-case"};
+  expect(await Reflect.apply(entry.handler.invoke,null,[command])).toEqual({receiver:methods,arg:command});
+  expect(methods.submit).toHaveBeenCalledOnce();
+  const input={operationKey:"case_submit",entityCode:"business_partner",recordId:"stored-case",context:{tenantId:"tenant"},target:"proposed",resolver:"tenant.record.v1"};
+  await Reflect.apply(entry.resolver.resolve,null,[input]);
+  expect(scopes.resolve).toHaveBeenCalledWith({...input,entityCode:"entity_case",operationKey:"submit",target:"existing",resolver:"organization.record.v1"});
+  expect(await Reflect.apply(entry.preflight!.check,null,[input])).toBe("workflow_blocked");
+  expect(scopes.preflight).toHaveBeenCalledWith({...input,operationKey:"submit"});
+  expect(()=>Reflect.apply(entry.resolver.resolve,null,[{...input,operationKey:"case_create"}])).toThrow("MISMATCH");
+  expect(entries.find(e=>e.operation.key==="case_read")!.preflight).toBeUndefined();
+});

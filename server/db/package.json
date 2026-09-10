@@ -4,6 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "db:verify:atlas-learning": "node scripts/checks/ddl/atlas-learning.mjs",
+    "db:generate:atlas-learning": "node scripts/checks/ddl/atlas-learning.mjs --write",
+    "test:integration:atlas-f4": "tsx scripts/tests/integration/atlas/learning-inbox.mts",
+    "test:integration:database-tooling": "tsx scripts/tests/integration/database-tooling.ts",
+    "db:verify:experience-foundation": "node scripts/checks/ddl/experience-foundation.mjs --check",
+    "db:generate:experience-foundation": "node scripts/checks/ddl/experience-foundation.mjs --write",
+    "test:integration:experience-foundation": "node scripts/tests/integration/experience-foundation.mjs",
     "test": "tsx --test scripts/__tests__/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "db:codegen:pull:neon": "node prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma --force",
@@ -81,7 +88,6 @@
     "db:rotate:local:postgres-admin": "tsx scripts/operations/security/rotate-local-postgres-admin-secret.ts",
     "db:operate:authorization:clean-slate-reset": "tsx scripts/operations/authorization/reset-authorization-clean-slate.ts",
     "db:reconcile:iam-runtime-subjects": "tsx scripts/operations/iam/reconcile-runtime-subjects.ts",
-    "db:operate:mesh:sync-shared": "tsx scripts/operations/mesh/sync-shared-to-mesh.ts",
     "db:operate:repair:tenant-ledgers": "tsx scripts/operations/repair/repair-tenant-ledger-hashes.ts",
     "db:operate:studio:meta-entity-authority": "tsx scripts/operations/studio/provision-meta-entity-authority.ts",
     "db:operate:studio:project-admin-identities": "tsx scripts/operations/studio/project-meta-entity-admin-identities.ts",
@@ -141,8 +147,11 @@
     "test:integration:business-partner-r6-delivery": "tsx scripts/tests/integration/business-partner-r6-delivery.ts",
     "db:evidence:business-partner-r5-downstream": "tsx scripts/business-partner-360/collect-customer-downstream-evidence.ts",
     "test:integration:business-partner-r6-amendment": "tsx scripts/tests/integration/run-sql-file.ts scripts/tests/integration/business-partner-r6-amendment.sql",
+    "test:integration:db-review": "node scripts/tests/integration/db-review/run.mjs",
     "test:integration:identity-replay": "tsx scripts/tests/integration/identity-replay-live.mjs",
-    "db:verify:business-partner-360-reads": "tsx scripts/business-partner-360/verify-business-partner-360-reads.ts"
+    "db:verify:business-partner-360-reads": "tsx scripts/business-partner-360/verify-business-partner-360-reads.ts",
+    "test:integration:atlas-f3": "tsx scripts/tests/integration/atlas/intent-feedback.mts",
+    "test:integration:atlas-f5": "tsx scripts/tests/integration/atlas/retrieval.mts"
   },
   "dependencies": {
     "@athyper/platform-temporal": "workspace:*",

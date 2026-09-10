@@ -270,3 +270,15 @@ it("BP-AI-07: admits case context only through the owner with the parent record 
   read.mockRejectedValueOnce(new Error("protected owner denial"));
   await expect(fixture(undefined, {read}).resolver.resolve(context, page)).rejects.toMatchObject({code: "PERMISSION_DENIED", message: "The requested Atlas business context is unavailable."});
 });
+
+it('admits Mesh records only through the selected account owner and fails closed on membership denial',async()=>{
+ const get=vi.fn(async()=>{throw Error('Unscoped get must not run');});
+ const list=vi.fn(async()=>({rows:[{id}],descriptorHash:'mesh-hash',scopeFingerprint:'account-scope'}));
+ const resolver=createAtlasBusinessContextResolver({metadata:{getEntityDescriptor:async()=>({entityCode:'network_relationship',planeKey:'mesh',compiledHash:'mesh-hash',ai:{enabled:true,contextKinds:['record'],insightProviders:[{id:'entity_read_record',version:1}]}})} as never,records:{get} as never,list:list as never});
+ const actor={...(context as any),planeKey:'mesh',permissions:{...(context as any).permissions,planeKey:'mesh'}} as never;
+ const page={...base,entityCode:'network_relationship',kind:'record',recordId:id,dirty:false,workContext:{networkAccountId:id}};
+ await expect(resolver.resolve(actor,page)).resolves.toMatchObject({descriptorHash:'mesh-hash'});
+ expect(get).not.toHaveBeenCalled();expect(list).toHaveBeenCalledWith(expect.objectContaining({scopeCoordinate:{networkAccountId:id},recordIds:[id]}));
+ list.mockRejectedValueOnce(Error('Membership revoked'));
+ await expect(resolver.resolve(actor,page)).rejects.toThrow();
+});

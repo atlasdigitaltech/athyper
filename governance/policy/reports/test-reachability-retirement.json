@@ -160,6 +160,10 @@
       "runner": "test:plane-contracts"
     },
     {
+      "path": "tests/contracts/studio-authoring-relay.test.ts",
+      "runner": "test:plane-contracts"
+    },
+    {
       "path": "tests/contracts/studio-publication-navigation.test.ts",
       "runner": "test:plane-contracts"
     },
@@ -392,6 +396,10 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/atlas-foundation-baseline.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
       "runner": "test:operations"
     },
@@ -428,6 +436,38 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/activation-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/authenticated-operation-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-approval-workflow.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-recommendations.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/named-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/policy-differences.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
       "runner": "test:operations"
     },
@@ -437,6 +477,10 @@
     },
     {
       "path": "tooling/scripts/verification/master-data-prerequisites.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/plan-entity-authorization-migration.test.mjs",
       "runner": "test:operations"
     },
     {

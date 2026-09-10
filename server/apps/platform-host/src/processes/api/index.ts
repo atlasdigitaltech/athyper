@@ -25,6 +25,7 @@ export async function start(): Promise<void> {
   const drainController = new HttpDrainController();
   let startupComplete = false;
   const app = createHttpApplication({
+    jsonRouteLimits: [{method: "POST", path: "/api/neon/business-partner-imports", maxBytes: 4 * 1024 * 1024 + 4096}],
     isReady: () => startupComplete,
     healthRegistry: container.runtimes.health,
     environment: config.env,

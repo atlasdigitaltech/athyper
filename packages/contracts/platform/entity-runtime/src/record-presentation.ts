@@ -1,3 +1,4 @@
+import type { EntityAccessDecisionV1 } from "./access-decision";
 import { parseRelatedPresentations, type RelatedPresentationV1 } from "./related-presentation";
 import {
   parseRecord360Panel,
@@ -34,7 +35,7 @@ export interface EntityRecordPresentationV1 {
   }[];
 }
 export interface EntityRecordHeaderV1 {
-  readonly relatedActions?: readonly { readonly operationKey: string; readonly href: string }[];
+  readonly relatedActions?: readonly { readonly operationKey: string; readonly href: string; readonly decision?: EntityAccessDecisionV1 }[];
   readonly related?: readonly RelatedPresentationV1[];
   readonly panel?: EntityRecord360PanelV1;
   readonly title: string;
@@ -57,6 +58,8 @@ export interface EntityRecordHeaderV1 {
     readonly href?: string;
     readonly placement: "primary" | "secondary" | "overflow";
     readonly disabledReason?: string;
+    readonly operationKey?: string;
+    readonly decision?: EntityAccessDecisionV1;
   }[];
   readonly sections: readonly {
     readonly key: string;

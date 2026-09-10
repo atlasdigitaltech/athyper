@@ -20,12 +20,13 @@ const version = {
   required: ["expectedRowVersion"],
   properties: { expectedRowVersion: integer },
 };
-const body = (properties: Record<string, unknown>, required: string[]) => ({
-  body: { type: "object", properties, required },
+const body = (properties: Record<string, unknown>, required: string[], strict = false) => ({
+  body: { type: "object", properties, required, ...(strict ? {additionalProperties: false} : {}) },
 });
 
 export const atlasRequests: Readonly<Record<string, RouteContract["request"]>> =
   {
+    "atlas.submitLearningCandidate": body({schemaVersion: {const: 1}, candidateId: uuid, feedbackId: uuid, locale: {const: "en"}, phrase: {...text, maxLength: 80}, capabilityId: {const: "entity_read_record"}}, ["schemaVersion", "candidateId", "feedbackId", "locale", "phrase", "capabilityId"], true),
     "atlas.createThread": body({ title }, []),
     "atlas.listThreads": {
       query: {
@@ -54,6 +55,7 @@ export const atlasRequests: Readonly<Record<string, RouteContract["request"]>> =
       ["role", "expectedRowVersion"],
     ),
     "atlas.revokeThreadParticipant": { body: version },
+    "atlas.submitResponseFeedback": body({schemaVersion: {const: 1}, feedbackId: uuid, runId: uuid, messageId: uuid, category: {enum: ["vocabulary", "intent", "missing_context", "unsupported_capability", "owner_failure", "evidence", "presentation"]}, verdict: {enum: ["correct", "wrong", "partial", "missing"]}}, ["schemaVersion", "feedbackId", "runId", "messageId", "category", "verdict"], true),
     "atlas.runThread": body(
       {
         clientRequestId: uuid,

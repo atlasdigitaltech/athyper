@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "kind": "historical_live_causal_correlation",
+  "source": "governance/policy/reports/business-partner-causal-shadow.admin.dev.json",
+  "historicalSource": "governance/policy/reports/business-partner-shadow-attestation.dev.json",
+  "groups": [
+    {
+      "operation": "navigate_overview",
+      "historicalCount": 2,
+      "currentMatchingObservations": 2,
+      "currentCandidateTraces": [
+        "navigate_overview:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "navigate_overview:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "navigate_manage",
+      "historicalCount": 2,
+      "currentMatchingObservations": 2,
+      "currentCandidateTraces": [
+        "navigate_manage:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "navigate_manage:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "navigate_review",
+      "historicalCount": 2,
+      "currentMatchingObservations": 2,
+      "currentCandidateTraces": [
+        "navigate_review:context:denied"
+      ],
+      "currentInstalledTraces": [
+        "navigate_review:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "discover",
+      "historicalCount": 25,
+      "currentMatchingObservations": 25,
+      "currentCandidateTraces": [
+        "discover:ownership:denied",
+        "discover:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "discover:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "update",
+      "historicalCount": 8,
+      "currentMatchingObservations": 8,
+      "currentCandidateTraces": [
+        "update:record:denied"
+      ],
+      "currentInstalledTraces": [
+        "update:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "create",
+      "historicalCount": 6,
+      "currentMatchingObservations": 6,
+      "currentCandidateTraces": [
+        "create:preflight:preflight_required"
+      ],
+      "currentInstalledTraces": [
+        "create:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "read",
+      "historicalCount": 112,
+      "currentMatchingObservations": 106,
+      "currentCandidateTraces": [
+        "read:ownership:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "identity_read",
+      "historicalCount": 44,
+      "currentMatchingObservations": 42,
+      "currentCandidateTraces": [
+        "identity_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "identity_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "contacts_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "contacts_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "contacts_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "addresses_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "addresses_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "addresses_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "identifier_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "identifier_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "identifier_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "tax_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "read:verification:denied",
+        "tax_read:parent_read:denied"
+      ],
+      "currentInstalledTraces": [
+        "tax_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "bank_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "bank_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "bank_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "qualification_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "qualification_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "qualification_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "certificate_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "certificate_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "certificate_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "requests_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "read:verification:denied",
+        "requests_read:parent_read:denied"
+      ],
+      "currentInstalledTraces": [
+        "requests_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "activity_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "activity_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "activity_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "network_read",
+      "historicalCount": 22,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "network_read:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "network_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "supplier_company_read",
+      "historicalCount": 21,
+      "currentMatchingObservations": 21,
+      "currentCandidateTraces": [
+        "read:verification:denied",
+        "supplier_company_read:parent_read:denied"
+      ],
+      "currentInstalledTraces": [
+        "supplier_company_read:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "section_propose_change",
+      "historicalCount": 70,
+      "currentMatchingObservations": 70,
+      "currentCandidateTraces": [
+        "read:verification:denied",
+        "section_propose_change:parent_read:denied"
+      ],
+      "currentInstalledTraces": [
+        "section_propose_change:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "amend_partner",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "amend_partner:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "amend_partner:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "add_role",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "add_role:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "add_role:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "assign_organization",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "assign_organization:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "assign_organization:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "configure_company",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "configure_company:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "configure_company:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "change_bank",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "change_bank:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "change_bank:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "lifecycle",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "lifecycle:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "lifecycle:binding:denied"
+      ],
+      "acceptance": null
+    },
+    {
+      "operation": "certification",
+      "historicalCount": 1,
+      "currentMatchingObservations": 1,
+      "currentCandidateTraces": [
+        "certification:parent_read:denied",
+        "read:verification:denied"
+      ],
+      "currentInstalledTraces": [
+        "certification:binding:denied"
+      ],
+      "acceptance": null
+    }
+  ],
+  "sameSignedRelease": false,
+  "policyDifferencesAccepted": false,
+  "unavailableCandidateObservations": 54,
+  "grantChanges": [],
+  "activationAuthorized": false
+}

@@ -1,3 +1,5 @@
+import { loadDeploymentEntityReleaseReview } from "../../composition/entity-release-review-deployment.js";
+import type { Kysely } from "kysely";
 import { loadConfig } from "../../config/index.js";
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { createContainer } from "../../composition/create-container.js";
@@ -19,7 +21,13 @@ export async function start(): Promise<void> {
   registerAdapters(container, config, lifecycle);
   registerRuntimes(container, config, lifecycle);
   registerPlatform(container, config);
-  registerServices(container, {}, config);
+  const reviewConfigPath=process.env.ENTITY_RELEASE_REVIEW_CONFIG_PATH;
+  if(reviewConfigPath&&(!container.adapters.neonDatabase||!container.adapters.athyperDatabase))throw Error("RELEASE_REVIEW_DATABASES_REQUIRED");
+  const releaseReview=reviewConfigPath?loadDeploymentEntityReleaseReview(reviewConfigPath,{
+    neon:container.adapters.neonDatabase!.database as unknown as Kysely<Record<string,never>>,
+    studio:container.adapters.athyperDatabase!.database as unknown as Kysely<Record<string,never>>,
+  }):undefined;
+  registerServices(container, releaseReview?{entityAuthorizationReleaseReview:releaseReview}:{}, config);
   registerInvalidationWorkers(container, config, lifecycle);
   await startRuntimes(container, config.mode);
   const metrics=container.adapters.processMetrics?await startProcessMetricsEndpoint(container.adapters.processMetrics):undefined;

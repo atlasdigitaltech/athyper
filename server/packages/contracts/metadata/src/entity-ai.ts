@@ -9,6 +9,7 @@ export interface EntityAiDescriptorV1 {
   readonly enabled: boolean;
   readonly aliases: readonly string[];
   readonly description?: string;
+  readonly vocabulary?: EntityAiVocabularyV1;
   /** Display order is semantic and is preserved. */
   readonly summaryFieldKeys: readonly string[];
   readonly searchFieldKeys: readonly string[];
@@ -31,6 +32,10 @@ export interface EntityAiReferenceContext {
 // Versioned publication vocabulary. Entries do not install/enable runtime tools.
 // New owner capabilities must extend this catalogue together with conformance tests.
 const providers = Object.freeze({
+  entity_read_record: { entityCode: "*", planeKey: "*", contextKind: "record" },
+  bp_read_list_insights: { entityCode: "business_partner", planeKey: "neon", contextKind: "manage" },
+  bp_read_contacts: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
+  bp_read_addresses: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
   bp_read_brief: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
   bp_explain_case_validation: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
   bp_explain_case_diff: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
@@ -38,11 +43,14 @@ const providers = Object.freeze({
   bp_check_eligibility: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
   bp_read_summary: { entityCode: "business_partner", planeKey: "neon", contextKind: "record" },
 } as const);
+export function entityAiProviderContextKind(id: string): EntityAiContextKind | undefined {
+  return Object.hasOwn(providers, id) ? providers[id as keyof typeof providers].contextKind : undefined;
+}
 const profiles = Object.freeze({ record_brief: "record", list_brief: "manage", comparison: "manage" } as const);
 
 export function parseEntityAiDescriptor(value: unknown, context: EntityAiReferenceContext): EntityAiDescriptorV1 {
   const item = object(value, "ai");
-  exactKeys(item, ["schemaVersion", "enabled", "aliases", "description", "summaryFieldKeys", "searchFieldKeys", "relationshipKeys", "contextKinds", "insightProviders", "actions", "presentationProfiles"], "ai");
+  exactKeys(item, ["schemaVersion", "enabled", "aliases", "description", "summaryFieldKeys", "searchFieldKeys", "relationshipKeys", "contextKinds", "insightProviders", "actions", "presentationProfiles", "vocabulary"], "ai");
   if (item.schemaVersion !== 1) invalid("ai.schemaVersion", "unsupported version");
   if (typeof item.enabled !== "boolean") invalid("ai.enabled", "must be boolean");
   const aliases = strings(item.aliases, "ai.aliases", 20, false);
@@ -61,9 +69,10 @@ export function parseEntityAiDescriptor(value: unknown, context: EntityAiReferen
   const insightProviders = refs(item.insightProviders, "ai.insightProviders").map(ref => {
     if (!Object.hasOwn(providers, ref.id)) invalid("ai.insightProviders", `unregistered provider ${ref.id}`);
     const provider = providers[ref.id as keyof typeof providers];
-    if (provider.entityCode !== context.entityCode || (context.planeKey !== undefined && provider.planeKey !== context.planeKey)) invalid("ai.insightProviders", "provider coordinate mismatch");
+    if (provider.entityCode !== "*" && (provider.entityCode !== context.entityCode || (context.planeKey !== undefined && provider.planeKey !== context.planeKey))) invalid("ai.insightProviders", "provider coordinate mismatch");
     if (!context.operationKeys.includes("read")) invalid("ai.insightProviders", "provider requires published read operation");
-    if (!contextKinds.includes(provider.contextKind)) invalid("ai.insightProviders", "provider requires record context");
+    if (!contextKinds.includes(provider.contextKind)) invalid("ai.insightProviders", `provider requires ${provider.contextKind} context`);
+    if (ref.id === "entity_read_record" && !summaryFieldKeys.length) invalid("ai.summaryFieldKeys", "record provider requires summary fields");
     return ref;
   });
   const actions = array(item.actions, "ai.actions", 16).map(raw => {
@@ -84,7 +93,8 @@ export function parseEntityAiDescriptor(value: unknown, context: EntityAiReferen
     if (!contextKinds.includes(profiles[ref.id as keyof typeof profiles])) invalid("ai.presentationProfiles", "profile context is not enabled");
     return ref;
   });
-  return Object.freeze({ schemaVersion: 1, enabled: item.enabled, aliases: Object.freeze(aliases),
+  const vocabulary = item.vocabulary === undefined ? undefined : parseEntityAiVocabulary(item.vocabulary, insightProviders.map(ref => ref.id));
+  return Object.freeze({ ...(vocabulary ? {vocabulary} : {}), schemaVersion: 1, enabled: item.enabled, aliases: Object.freeze(aliases),
     ...(item.description === undefined ? {} : { description: text(item.description, "ai.description", 1024) }),
     summaryFieldKeys: Object.freeze(summaryFieldKeys), searchFieldKeys: Object.freeze(searchFieldKeys),
     relationshipKeys: Object.freeze(relationshipKeys), contextKinds: Object.freeze(contextKinds),
@@ -133,3 +143,37 @@ function refs(value: unknown, path: string): EntityAiCapabilityRefV1[] {
   return result;
 }
 function invalid(path: string, message: string): never { throw new TypeError(`${path}: ${message}`); }
+
+/** English exact-term vocabulary. Origin is review provenance, never executable input. */
+export interface EntityAiVocabularyV1 {
+  readonly schemaVersion: 1;
+  readonly locale: "en";
+  readonly terms: readonly EntityAiSemanticTerm[];
+}
+export interface EntityAiSemanticTerm {
+  readonly phrase: string;
+  readonly capabilityId: string;
+  readonly origin: {readonly plane: "neon" | "mesh" | "studio"; readonly candidateId: string; readonly proposalHash: string};
+}
+export function normalizeEntityAiPhrase(value: unknown): string {
+  const phrase = text(value, "phrase", 80).normalize("NFKC").toLocaleLowerCase("en-US").replace(/\s+/gu, " ");
+  if (!/^[\p{L}][\p{L}\p{N} -]*$/u.test(phrase) || phrase.split(" ").length > 8) invalid("phrase", "use a short vocabulary phrase without record data or instructions");
+  return phrase;
+}
+export function parseEntityAiVocabulary(value: unknown, capabilityIds: readonly string[]): EntityAiVocabularyV1 {
+  const vocabulary = object(value, "vocabulary");
+  exactKeys(vocabulary, ["schemaVersion", "locale", "terms"], "vocabulary");
+  if (vocabulary.schemaVersion !== 1 || vocabulary.locale !== "en") invalid("vocabulary", "only English vocabulary version 1 is supported");
+  const terms = array(vocabulary.terms, "vocabulary.terms", 64).map(raw => {
+    const term = object(raw, "term"); exactKeys(term, ["phrase", "capabilityId", "origin"], "term");
+    const phrase = normalizeEntityAiPhrase(term.phrase), capabilityId = code(term.capabilityId, "capabilityId");
+    if (!capabilityIds.includes(capabilityId)) invalid("capabilityId", "term must reference a declared provider");
+    const origin = object(term.origin, "origin"); exactKeys(origin, ["plane", "candidateId", "proposalHash"], "origin");
+    if (origin.plane !== "neon" && origin.plane !== "mesh" && origin.plane !== "studio") invalid("origin.plane", "unknown plane");
+    if (typeof origin.candidateId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(origin.candidateId)) invalid("origin.candidateId", "invalid UUID");
+    if (typeof origin.proposalHash !== "string" || !/^[0-9a-f]{64}$/.test(origin.proposalHash)) invalid("origin.proposalHash", "invalid hash");
+    return Object.freeze({phrase, capabilityId, origin: Object.freeze({plane: origin.plane, candidateId: origin.candidateId, proposalHash: origin.proposalHash})});
+  });
+  unique(terms.map(term => `${term.phrase}:${term.capabilityId}`), "vocabulary.terms");
+  return Object.freeze({schemaVersion: 1, locale: "en", terms: Object.freeze(terms)});
+}

@@ -1,5 +1,9 @@
 # Only needed for the local self-signed development TLS certificate.
 services:
+  api:
+    environment:
+      NODE_EXTRA_CA_CERTS: /run/secrets/publication-tls-certificate
+    secrets: [publication-tls-certificate]
   worker:
     environment:
       NODE_EXTRA_CA_CERTS: /run/secrets/publication-tls-certificate

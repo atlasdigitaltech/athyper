@@ -3,6 +3,7 @@ import React, { useEffect, useId, useRef, type ReactNode } from "react";
 import type { EntityRecordHeaderV1 } from "@athyper/contract-platform-entity-runtime";
 import { resolveIcon } from "@athyper/platform-icons";
 import { PageHeader, useRecordBreadcrumb } from "@athyper/platform-shell";
+import { EntityRecordAction, type EntityActionHandlers } from "./record-action";
 import { Badge } from "@athyper/platform-ui";
 
 export function EntityRecordHeader({
@@ -12,8 +13,10 @@ export function EntityRecordHeader({
   contextControls,
   technicalDetails,
   breadcrumbLabel,
+  actionHandlers,
 }: {
   readonly header: EntityRecordHeaderV1;
+  readonly actionHandlers?: EntityActionHandlers;
   readonly activeSection?: string;
   readonly onSelectSection?: (key: string) => void;
   readonly contextControls?: ReactNode;
@@ -63,25 +66,7 @@ export function EntityRecordHeader({
     (item) => !primarySections.includes(item),
   );
   const action = (item: EntityRecordHeaderV1["actions"][number]) =>
-    item.href && !item.disabledReason ? (
-      <a
-        key={item.key}
-        className={`a-button a-button--${item.placement === "primary" ? "primary" : "secondary"}`}
-        href={item.href}
-        onClick={(event) =>
-          event.currentTarget.closest("details")?.removeAttribute("open")
-        }
-      >
-        {item.label}
-      </a>
-    ) : (
-      <span key={item.key} className="a-record-header__disabled">
-        <button type="button" className="a-button a-button--secondary" disabled>
-          {item.label}
-        </button>
-        {item.disabledReason ? <small>{item.disabledReason}</small> : null}
-      </span>
-    );
+    <EntityRecordAction key={item.key} action={item} handlers={actionHandlers} readOnly={header.readOnly} />;
   const section = (item: EntityRecordHeaderV1["sections"][number]) => (
     <button
       key={item.key}

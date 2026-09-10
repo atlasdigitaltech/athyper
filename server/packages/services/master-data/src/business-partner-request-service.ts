@@ -43,10 +43,23 @@ export interface BusinessPartnerRequestServiceOptions<Transaction> {
 export function createBusinessPartnerRequestService<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>): BusinessPartnerRequestService {
   const requestNo = options.createRequestNo ?? (() => `BPR-${randomUUID().replaceAll("-", "").toUpperCase()}`);
   return {
+    async preflightCreate(command) {
+      assertContext(command.context);
+      validateCreate(command);
+      await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, {...scope(command.operatingOrganizationId, command.companyCodeId), entityCode: "entity_case", operationKey: "create", authorizationTarget: "proposed"});
+      if (!options.validator.validateProposed) throw new MasterDataError(503, "BUSINESS_PARTNER_DRAFT_VALIDATOR_UNAVAILABLE", "Draft validation is unavailable");
+      const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind, ...(command.requestedRole ? {requestedRole: command.requestedRole} : {}) });
+      validateSchema(schema);
+      if (!schema.releaseId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(schema.releaseId)) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_SCHEMA_INVALID", "Published request schema release identity is invalid");
+      if (command.expectedForm && JSON.stringify([command.expectedForm.code, command.expectedForm.version, command.expectedForm.hash, command.expectedForm.releaseId]) !== JSON.stringify([schema.code, schema.version, schema.hash, schema.releaseId])) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_FORM_CHANGED", "Reload the published request form");
+      const validation = await options.transactions.run("neon", actor(command.context), transaction => options.validator.validateProposed!({ context: command.context, request: command }, transaction));
+      validateValidationResult(validation);
+      return {schema: {...schema, releaseId: schema.releaseId}, validation};
+    },
     async create(command) {
       assertContext(command.context);
       validateCreate(command);
-      await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, scope(command.operatingOrganizationId, command.companyCodeId));
+      await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.create, {...scope(command.operatingOrganizationId, command.companyCodeId),entityCode:"entity_case",operationKey:"create",authorizationTarget:"proposed"});
       const schema = await options.schemas.resolve({ context: command.context, kind: command.kind, sourceKind: command.source.kind, ...(command.requestedRole?{requestedRole:command.requestedRole}:{}) });
       validateSchema(schema);
       if (!schema.releaseId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(schema.releaseId)) throw new MasterDataError(503, "BUSINESS_PARTNER_REQUEST_SCHEMA_INVALID", "Published request schema release identity is invalid");
@@ -54,7 +67,10 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       return options.transactions.run("neon", actor(command.context), async (transaction) => {
         const existing = await options.repository.findByIdempotencyKey(command.context.tenantId, command.idempotencyKey, transaction);
         if (existing) {
-          if (creationFingerprint(existing) !== commandFingerprint(command, schema)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_IDEMPOTENCY_CONFLICT", "Idempotency key was reused with different request content");
+          const matches = command.source.kind === "import" && command.kind === "new_partner" && options.repository.matchesGovernedImportCreation
+            ? await options.repository.matchesGovernedImportCreation({context: command.context, command: withoutContext(command), schema, existing}, transaction)
+            : creationFingerprint(existing) === commandFingerprint(command, schema);
+          if (!matches) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_IDEMPOTENCY_CONFLICT", "Idempotency key was reused with different request content");
           return { request: existing, case: existing, replayed: true };
         }
         const created = await options.repository.create({ tenantId: command.context.tenantId, requestNo: requestNo(), command: withoutContext(command), schema, createdBy: command.context.principalId }, transaction);
@@ -67,7 +83,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       return options.transactions.run("neon", actor(query.context), async (transaction) => {
         const request = await options.repository.get(query.context.tenantId, query.requestId, transaction);
         if (!request) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
-        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(request.operatingOrganizationId, request.companyCodeId));
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, caseScope(request));
         return request;
       });
     },
@@ -77,13 +93,13 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       return options.transactions.run("neon", actor(query.context), async transaction => {
         const view = await options.repository.getView(query.context.tenantId, query.requestId, transaction);
         if (!view) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Case explanation is unavailable");
-        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(view.request.operatingOrganizationId, view.request.companyCodeId));
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, caseScope(view.request));
         if (query.businessPartnerId && query.businessPartnerId !== view.request.targetBusinessPartnerId && query.businessPartnerId !== view.request.materializedBusinessPartnerId) throw new MasterDataError(403, "FORBIDDEN", "Case explanation is unavailable");
         if (query.expectedVersion !== undefined && query.expectedVersion !== view.request.rowVersion) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Saved case changed; refresh the explanation");
         let baselineAllowed = false;
         if (view.previousSnapshot) {
           const payload = view.previousSnapshot.payload;
-          const decision = await options.authorizer.authorize({context: query.context, permissionCode: businessPartnerRequestPermissions.read, resource: scope(typeof payload.operatingOrganizationId === "string" ? payload.operatingOrganizationId : undefined, typeof payload.companyCodeId === "string" ? payload.companyCodeId : undefined)});
+          const decision = await options.authorizer.authorize({context: query.context, observation:{entityCode:"business_partner",surface:"record",phase:"discover"}, permissionCode: businessPartnerRequestPermissions.read, resource: scope(typeof payload.operatingOrganizationId === "string" ? payload.operatingOrganizationId : undefined, typeof payload.companyCodeId === "string" ? payload.companyCodeId : undefined)});
           baselineAllowed = decision.allowed;
         }
         return projectBusinessPartnerCaseExplanation(view, baselineAllowed);
@@ -94,7 +110,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       return options.transactions.run("neon", actor(query.context), async (transaction) => {
         const view = await options.repository.getView(query.context.tenantId, query.requestId, transaction);
         if (!view) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
-        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(view.request.operatingOrganizationId, view.request.companyCodeId));
+        await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, caseScope(view.request));
         const { previousSnapshot: _baseline, ...publicView } = view;
         return publicView;
       });
@@ -103,8 +119,17 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
       assertContext(query.context);
       if (query.beforeCreatedAt !== undefined && !Number.isFinite(parseInstant(query.beforeCreatedAt))) throw invalid("beforeCreatedAt must be a valid timestamp");
       if (query.limit !== undefined && (!Number.isInteger(query.limit) || query.limit < 1 || query.limit > 200)) throw invalid("limit must be between 1 and 200");
-      await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, scope(query.operatingOrganizationId));
-      return options.transactions.run("neon", actor(query.context), transaction => options.repository.list({ tenantId: query.context.tenantId, operatingOrganizationId: query.operatingOrganizationId, ...(query.status ? { status: query.status } : {}), ...(query.limit ? { limit: query.limit } : {}), ...(query.beforeCreatedAt ? { beforeCreatedAt: query.beforeCreatedAt } : {}) }, transaction));
+      await authorize(options.authorizer, query.context, businessPartnerRequestPermissions.read, {...scope(query.operatingOrganizationId),entityCode:"entity_case",operationKey:"discover"});
+      return options.transactions.run("neon", actor(query.context), async transaction => {
+        const rows = await options.repository.list({ tenantId: query.context.tenantId, operatingOrganizationId: query.operatingOrganizationId, ...(query.status ? { status: query.status } : {}), ...(query.limit ? { limit: query.limit } : {}), ...(query.beforeCreatedAt ? { beforeCreatedAt: query.beforeCreatedAt } : {}) }, transaction);
+        const visible: BusinessPartnerRequest[] = [];
+        for (const row of rows) {
+          if (row.tenantId !== query.context.tenantId) throw new MasterDataError(403,"FORBIDDEN","Case ownership mismatch");
+          const decision = await options.authorizer.authorize({context:query.context,permissionCode:businessPartnerRequestPermissions.read,resource:caseScope(row)});
+          if (decision.allowed) visible.push(row);
+        }
+        return visible;
+      });
     },
     async getAggregate(query) {
       assertContext(query.context);
@@ -126,8 +151,9 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         if(command.extensions!==undefined)validateExtensionApplicability(current.kind,current.requestedRole,command.extensions);
         validatePayloadBoundary({source:current.source,requestedRole:current.requestedRole,proposedPayload:command.proposedPayload} as CreateBusinessPartnerRequestCommand);
         if (!["draft", "validation_failed", "returned"].includes(current.status)) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_EDITABLE", "Only draft, validation-failed, or returned requests can be edited");
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.update, caseScope(current));
         const organizationId = command.operatingOrganizationId ?? current.operatingOrganizationId;
-        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.update, scope(organizationId, command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined));
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.update, { ...caseScope(current), ...scope(organizationId, command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined), companyCodeId: command.companyCodeId === undefined ? current.companyCodeId : command.companyCodeId ?? undefined, authorizationTarget: "proposed" });
         const updated = await options.repository.patch({ tenantId: command.context.tenantId, requestId: command.requestId, expectedVersion: command.expectedVersion, proposedPayload: command.proposedPayload, ...(command.extensions!==undefined?{extensions:command.extensions}:{}), ...(command.operatingOrganizationId ? { operatingOrganizationId: command.operatingOrganizationId } : {}), ...(command.companyCodeId !== undefined ? { companyCodeId: command.companyCodeId } : {}), ...(command.requestedRole !== undefined ? { requestedRole: command.requestedRole } : {}), updatedBy: command.context.principalId }, transaction);
         if (!updated) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version or editable state changed");
         await effects(options, command.context, transaction, "business_partner.case.updated", updated, { priorVersion: command.expectedVersion });
@@ -166,6 +192,8 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         if (current.status !== "draft") throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_NOT_SUBMITTABLE", "Only a validated draft can be submitted");
         if (current.rowVersion !== command.expectedVersion) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_VERSION_CONFLICT", "Request version changed before submission");
         assertPassedValidation(current);
+        const submissionValidation = await options.validator.validate({context:command.context,request:current},transaction);
+        if(!submissionValidation.valid)throw new MasterDataError(409,"BUSINESS_PARTNER_REQUEST_SUBMISSION_VALIDATION_FAILED","Request no longer satisfies current validation rules; validate and correct the draft before submission");
         if (current.registrationMode === "on_behalf" && !current.representationEvidenceId) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_REPRESENTATION_EVIDENCE_REQUIRED", "On-behalf registration requires representation evidence before submission");
         const definition = await options.workflows.resolve({ context: command.context, request: current }, transaction);
         validateWorkflowDefinition(definition, command.context.principalId);
@@ -186,7 +214,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         if (current.workflowRequestId !== command.workflowRequestId) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_WORKFLOW_MISMATCH", "Decision does not address the request's pinned workflow");
         if (command.decision === "approve" && current.submittedBy === command.context.principalId) throw new MasterDataError(403, "BUSINESS_PARTNER_REQUEST_SELF_APPROVAL_FORBIDDEN", "The submitter cannot approve their own Business Partner request");
         assertDecisionTask(view.workflow, command);
-        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.decide, { ...scope(current.operatingOrganizationId, current.companyCodeId), tenantId: current.tenantId, requestId: current.id, workflowRequestId: command.workflowRequestId, submittedBy: current.submittedBy });
+        await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.decide, { ...caseScope(current), tenantId: current.tenantId, requestId: current.id, workflowRequestId: command.workflowRequestId, submittedBy: current.submittedBy });
         const fingerprint = decisionFingerprint(current, command);
         const result = await options.repository.decide({ tenantId: command.context.tenantId, command: withoutDecisionContext(command), decidedBy: command.context.principalId, decisionFingerprint: fingerprint }, transaction);
         if (!result) throw new MasterDataError(409, "BUSINESS_PARTNER_REQUEST_DECISION_CONFLICT", "Request or work-item state/version changed, or the actor is not eligible");
@@ -201,13 +229,13 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
         const current = await options.repository.get(command.context.tenantId, command.requestId, transaction);
         if (!current) throw new MasterDataError(404, "BUSINESS_PARTNER_REQUEST_NOT_FOUND", "Business Partner request was not found");
         await authorize(options.authorizer, command.context, businessPartnerRequestPermissions.apply, {
-          ...scope(current.operatingOrganizationId, current.companyCodeId),
+          ...caseScope(current),
           tenantId: current.tenantId,
           requestId: current.id,
           approvedBy: current.approvedBy,
           approvedEvidencePinned: Boolean(current.approvedAt && current.approvedBy && current.decisionFingerprint),
         });
-        if(current.kind==="activate_supplier")await authorize(options.authorizer,command.context,businessPartnerQualificationPermissions.activateSupplier,{...scope(current.operatingOrganizationId,current.companyCodeId),businessPartnerId:current.targetBusinessPartnerId,activationCaseId:current.id,approvedEvidencePinned:Boolean(current.approvedAt&&current.approvedBy&&current.decisionFingerprint),requiresElevatedAssurance:true});
+        if(current.kind==="activate_supplier")await authorize(options.authorizer,command.context,businessPartnerQualificationPermissions.activateSupplier,{...caseScope(current),businessPartnerId:current.targetBusinessPartnerId,activationCaseId:current.id,approvedEvidencePinned:Boolean(current.approvedAt&&current.approvedBy&&current.decisionFingerprint),requiresElevatedAssurance:true});
         assertRoleMaterializable(current);
         if(current.status!=="applied"){
           const volatileValidation=await options.validator.validate({context:command.context,request:current},transaction);
@@ -244,7 +272,7 @@ export function createBusinessPartnerRequestService<Transaction>(options: Busine
   };
 }
 
-async function authorizeCaseMutation(authorizer:Authorizer,context:VerifiedRequestContext,request:BusinessPartnerRequest,action:"validate"|"submit"){if(request.source.kind==="portal"&&request.registrationMode==="self_service"&&request.applicantPrincipalId===context.principalId&&(request.requestedRole==="supplier"||request.requestedRole==="customer")){await authorize(authorizer,context,request.requestedRole==="supplier"?"neon.supplier_registration.external.respond":"neon.customer_registration.external.respond",{...scope(request.operatingOrganizationId,request.companyCodeId),tenantId:request.tenantId,requestId:request.id,externalApplicant:true,restrictedSessionRequired:true,ownedRequestRequired:true,operation:action,makerCheckerEnforced:true});return;}await authorize(authorizer,context,action==="validate"?businessPartnerRequestPermissions.validate:businessPartnerRequestPermissions.submit,{...scope(request.operatingOrganizationId,request.companyCodeId),...(action==="submit"?{tenantId:request.tenantId,requestId:request.id,makerCheckerEnforced:true}:{})});}
+async function authorizeCaseMutation(authorizer:Authorizer,context:VerifiedRequestContext,request:BusinessPartnerRequest,action:"validate"|"submit"){if(request.source.kind==="portal"&&request.registrationMode==="self_service"&&request.applicantPrincipalId===context.principalId&&(request.requestedRole==="supplier"||request.requestedRole==="customer")){await authorize(authorizer,context,request.requestedRole==="supplier"?"neon.supplier_registration.external.respond":"neon.customer_registration.external.respond",{...caseScope(request),tenantId:request.tenantId,requestId:request.id,externalApplicant:true,restrictedSessionRequired:true,ownedRequestRequired:true,operation:action,makerCheckerEnforced:true});return;}await authorize(authorizer,context,action==="validate"?businessPartnerRequestPermissions.validate:businessPartnerRequestPermissions.submit,{...caseScope(request),...(action==="submit"?{tenantId:request.tenantId,requestId:request.id,makerCheckerEnforced:true}:{})});}
 
 function assertContext(context: VerifiedRequestContext): void { if (context.planeKey !== "neon") throw new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_NEON_REQUIRED", "Business Partner requests execute only in NEON"); }
 function validateCreate(command: CreateBusinessPartnerRequestCommand): void {
@@ -337,7 +365,7 @@ function validateWorkflowDefinition(definition: BusinessPartnerRequestWorkflowDe
 function placeholderDefinition(): BusinessPartnerRequestWorkflowDefinition { return { code: "replay", version: 1, hash: "0".repeat(64), stageCode: "replay", stageName: "Replay", approverPrincipalIds: [] }; }
 function isHash(value: unknown): value is string { return typeof value === "string" && /^[a-f0-9]{64}$/.test(value); }
 function invalid(message: string): MasterDataError { return new MasterDataError(400, "BUSINESS_PARTNER_REQUEST_INVALID", message); }
-async function authorize(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string, resource: Readonly<Record<string, unknown>>): Promise<void> { const decision = await authorizer.authorize({ context, permissionCode, resource }); if (!decision.allowed) { if (decision.reason === "mfa_required") throw new MasterDataError(403, "BUSINESS_PARTNER_REQUEST_STEP_UP_REQUIRED", `MFA verification is required for ${permissionCode}`); throw new MasterDataError(403, "FORBIDDEN", `Permission denied: ${permissionCode}`); } }
+async function authorize(authorizer: Authorizer, context: VerifiedRequestContext, permissionCode: string, resource: Readonly<Record<string, unknown>>): Promise<void> { const decision = await authorizer.authorize({ context, permissionCode, resource, observation: { entityCode: "business_partner", surface: "command", phase: permissionCode.endsWith(".read") ? "discover" : "execute" } }); if (!decision.allowed) { if (decision.reason === "mfa_required") throw new MasterDataError(403, "BUSINESS_PARTNER_REQUEST_STEP_UP_REQUIRED", `MFA verification is required for ${permissionCode}`); throw new MasterDataError(403, "FORBIDDEN", `Permission denied: ${permissionCode}`); } }
 function scope(operatingOrganizationId?: string, companyCodeId?: string): Readonly<Record<string, unknown>> { return { ...(operatingOrganizationId ? { operatingOrganizationId } : {}), ...(companyCodeId ? { companyCodeId } : {}) }; }
 function actor(context: VerifiedRequestContext) { return { tenantId: context.tenantId, principalId: context.principalId }; }
 function withoutContext(command: CreateBusinessPartnerRequestCommand): Omit<CreateBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
@@ -352,3 +380,9 @@ function applicationFingerprint(request: BusinessPartnerRequest, command: ApplyB
 function withoutDecisionContext(command: DecideBusinessPartnerRequestCommand): Omit<DecideBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
 function withoutApplyContext(command: ApplyBusinessPartnerRequestCommand): Omit<ApplyBusinessPartnerRequestCommand, "context"> { const { context: _context, ...result } = command; return result; }
 async function effects<Transaction>(options: BusinessPartnerRequestServiceOptions<Transaction>, context: VerifiedRequestContext, transaction: Transaction, eventCode: string, request: BusinessPartnerRequest, metadata: Readonly<Record<string, unknown>>): Promise<void> { const safeMetadata={extensionMode:request.extensionSummary.mode,extensionCounts:request.extensionSummary.counts,...metadata};await options.onboardingCycles?.advance({tenantId:context.tenantId,principalId:context.principalId,eventCode,request,...(request.invitationId?{invitationId:request.invitationId}:{}),metadata:safeMetadata},transaction);const notification=projectBusinessPartnerNotification(eventCode,request,context.principalId,metadata);await options.outbox.append({ tenantId: context.tenantId, topic: "business-partner-governed-case", eventType: eventCode, ...(notification?{eventKey:notification.event.deduplicationKey}:{}), entityType: "entity_case", entityId: request.id, actorId: context.principalId, correlationId: context.correlationId, payload: { caseId: request.id, caseNo: request.requestNo, status: request.status, rowVersion: request.rowVersion, ...safeMetadata, ...(notification?{notification:notification.event,recipient_principal_ids:notification.recipientPrincipalIds}:{}) } }, transaction); const action=eventCode.endsWith("created")?"create":eventCode.endsWith("approved")?"approve":eventCode.endsWith("rejected")?"reject":"update"; await options.audit.record({ eventCode, action, outcome: "success", actor: { kind: "user", principalId: context.principalId }, tenantId: context.tenantId, entityType: "entity_case", entityId: request.id, requestId: context.requestId, ...(context.correlationId ? { correlationId: context.correlationId } : {}), metadata:safeMetadata }, transaction); }
+
+/** Child ownership is loaded from the case repository, independently of the BP parent. */
+function caseScope(request: BusinessPartnerRequest): Readonly<Record<string,unknown>> {
+  return { ...scope(request.operatingOrganizationId,request.companyCodeId), tenantId:request.tenantId,
+    entityCode:"entity_case", resourceCode:"entity_case", recordId:request.id, requestId:request.id, authorizationTarget:"existing" };
+}

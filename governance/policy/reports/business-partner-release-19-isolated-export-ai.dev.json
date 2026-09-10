@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 1,
+  "kind": "isolated_export_ai_retrieval",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "capturedAt": "2026-09-10T07:56:39.495Z",
+  "checks": [
+    {
+      "name": "ai_authorized_summary",
+      "account": "catl.admin",
+      "status": 200,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:40.622Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "ai_wrong_descriptor",
+      "account": "catl.admin",
+      "status": 409,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:41.457Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "ai_arbitrary_field_rejected",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:42.259Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "ai_missing_record",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:43.260Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "export_request",
+      "account": "catl.admin",
+      "status": 202,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:44.172Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "export_download_authorized",
+      "account": "catl.admin",
+      "status": 200,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:50.959Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    },
+    {
+      "name": "export_sensitive_field_denied",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:56:51.956Z",
+      "authorityHash": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf"
+    }
+  ],
+  "exportQualified": true,
+  "aiRetrievalQualified": true,
+  "fullAtlasConversationQualified": false,
+  "aiSources": [
+    {
+      "coordinate": {
+        "entityCode": "business_partner",
+        "recordId": "01a08a39-b146-7553-803b-87e5a47e2e8a",
+        "revision": "content-sha256:4e071b27c14ab9b52bf5fc1012deafcc7f66bf1d16d1b5c6670394f320a3ebfc",
+        "descriptorHash": "83ca015f869bfe90bce4a8bb4eedc5d5ffa48f50523faa8a04997dd9b4d923ec"
+      }
+    }
+  ],
+  "exportRequestId": "26284a77-bb90-4420-9b87-cc1df2e91dfd",
+  "persisted": {
+    "status": "completed",
+    "rows": 125,
+    "receipt": {
+      "rowCount": 125,
+      "artifactKey": "record-transfers/44444444-4444-4444-8444-444444444444/exports/26284a77-bb90-4420-9b87-cc1df2e91dfd/business_partner.json",
+      "completedAt": "2026-09-10T07:56:49.570Z",
+      "schemaVersion": 1,
+      "descriptorHash": "83ca015f869bfe90bce4a8bb4eedc5d5ffa48f50523faa8a04997dd9b4d923ec"
+    },
+    "error": null
+  },
+  "download": {
+    "sha256": "6eb0741bdcd0f15cf900d07140d07aca6bf1fcfa7b2828ff89ea9ab5625ce865",
+    "rows": 125,
+    "keys": [
+      "id",
+      "legal_name"
+    ]
+  },
+  "workerReceipt": {
+    "kind": "isolated_job_execution",
+    "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+    "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+    "queue": "records.transfer",
+    "name": "records.export.execute",
+    "jobRef": "e411f496308cf1bad5dbc59ab12a03e4c0db1fcb6e1c4bf88394931b635e72bc",
+    "status": "completed",
+    "instance": "bp-release19-isolated",
+    "mode": "worker"
+  },
+  "execution": [
+    {
+      "id": "e05b62a88eeff8941c58680d990f79a9c5eb6f078060c42715e68f3593b6ea26",
+      "image": "sha256:61686a2a5cdd813eb51466c84636835e106b17241a5e94a12dc4d56be0a89617",
+      "startedAt": "2026-09-10T07:56:22.29229067Z"
+    },
+    {
+      "id": "62274f5a127a71da0e76543ed2e32ec1304de3b938ea6074664618ff5bc0d68f",
+      "image": "sha256:61686a2a5cdd813eb51466c84636835e106b17241a5e94a12dc4d56be0a89617",
+      "startedAt": "2026-09-10T07:56:22.530088506Z"
+    }
+  ],
+  "completedAt": "2026-09-10T07:56:52.059Z"
+}

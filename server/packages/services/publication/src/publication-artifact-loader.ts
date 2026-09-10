@@ -1,3 +1,6 @@
+import { parseEntityRuntimeDescriptor } from "@athyper/server-platform-metadata";
+import { authoredAuthorization } from "./entity-authorization-compiler.js";
+import { parseEntityAuthorizationProfile, parseEntityAuthorizationRuntime } from "@athyper/server-contract-metadata";
 import {
   parsePublicationArtifactEnvelope,
   PublicationContractError,
@@ -17,6 +20,7 @@ export interface PublicationArtifactLoaderOptions {
   readonly verifier: PublicationVerifier;
   readonly canonicalizer: PublicationCanonicalizer;
   readonly runtimeVersion: string;
+  readonly authorizationRuntime?: { qualify(profile: unknown, bindings: unknown): void };
 }
 
 export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoader {
@@ -54,11 +58,47 @@ export class VerifiedPublicationArtifactLoader implements PublicationArtifactLoa
       const compileReportHash=this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(report));
       if(manifest.evidence?.["compiledBundleHash"]!==payload.bundleHash||manifest.evidence?.["sourceBundleHash"]!==payload.sourceBundleHash||manifest.evidence?.["compileReportHash"]!==compileReportHash)throw failure("ARTIFACT_MANIFEST_INVALID");
     }
-    if (envelope.artifactKind === "entity_runtime" && envelope.payload.entityDescriptor.descriptorKind === "entity_case_runtime") {
+    const hasLearning = envelope.artifactKind === "entity_runtime" && Boolean((envelope.payload.entityDescriptor.descriptor["ai"] as {vocabulary?:unknown}|undefined)?.vocabulary);
+    if (envelope.artifactKind === "entity_runtime" && (manifest.evidence?.["importedBaseline"] !== undefined || hasLearning || envelope.payload.entityDescriptor.descriptorKind === "entity_case_runtime" || envelope.payload.entityDescriptor.descriptor["authorizationRuntime"] !== undefined)) {
       const c=envelope.payload.entityContract,d=envelope.payload.entityDescriptor;
       const contractBytes=this.options.canonicalizer.canonicalBytes(c.contract);
       if (c.contractHash!==this.options.canonicalizer.sha256(contractBytes) || d.sourceContractHash!==c.contractHash || d.compiledHash!==this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(d.descriptor))) throw failure("ARTIFACT_HASH_MISMATCH");
       if (c.signature.algorithm!=="Ed25519" || c.signature.keyId!==manifest.signingKeyId || !(await this.options.verifier.verify({keyId:c.signature.keyId,algorithm:c.signature.algorithm,bytes:contractBytes,signature:c.signature.signature}))) throw failure("ARTIFACT_SIGNATURE_INVALID");
+    }
+    if (envelope.artifactKind === "entity_runtime" && manifest.evidence?.["importedBaseline"] !== undefined) {
+      const c=envelope.payload.entityContract,d=envelope.payload.entityDescriptor;
+      try {
+        parseEntityRuntimeDescriptor({entity_code:c.entityCode,release_id:c.releaseId,release_no:c.releaseNo,entity_contract_hash:c.contractHash,plane_code:d.plane,compiled_hash:d.compiledHash,compiled_json:d.descriptor});
+      } catch { throw failure("ARTIFACT_PAYLOAD_INVALID"); }
+    }
+    if (envelope.artifactKind === "entity_runtime" && hasLearning && manifest.evidence?.["importedBaseline"] === undefined) {
+      const c=envelope.payload.entityContract,d=envelope.payload.entityDescriptor;
+      try {
+        parseEntityRuntimeDescriptor({entity_code:c.entityCode,release_id:c.releaseId,release_no:c.releaseNo,entity_contract_hash:c.contractHash,plane_code:d.plane,compiled_hash:d.compiledHash,compiled_json:d.descriptor});
+        const surfaces=c.contract["surfaces"];
+        const authored=Array.isArray(surfaces)?surfaces.filter(surface=>surface.status!=="deprecated"&&surface.layoutConfig?.ai!==undefined):[];
+        const hash=(value:unknown)=>this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(value));
+        if(authored.length!==1||hash(authored[0].layoutConfig.ai)!==hash(d.descriptor["ai"]))throw failure("ARTIFACT_PAYLOAD_INVALID");
+      } catch(error) { if(error instanceof PublicationContractError)throw error;throw failure("ARTIFACT_PAYLOAD_INVALID"); }
+    }
+    if (envelope.artifactKind === "entity_runtime" && envelope.payload.entityDescriptor.descriptor["authorizationRuntime"] !== undefined) {
+      const c = envelope.payload.entityContract, d = envelope.payload.entityDescriptor;
+      try {
+        parseEntityRuntimeDescriptor({entity_code:c.entityCode,release_id:c.releaseId,release_no:c.releaseNo,entity_contract_hash:c.contractHash,plane_code:d.plane,compiled_hash:d.compiledHash,compiled_json:d.descriptor});
+        const profile = parseEntityAuthorizationProfile(d.descriptor["authorization"]);
+        const runtime = parseEntityAuthorizationRuntime(d.descriptor["authorizationRuntime"], profile);
+        const hash = (value: unknown) => this.options.canonicalizer.sha256(this.options.canonicalizer.canonicalBytes(value));
+        if (profile.entityCode !== c.entityCode || profile.planeKey !== envelope.targetPlane || d.plane !== envelope.targetPlane ||
+            c.publicationKey !== envelope.publicationKey || c.releaseId !== envelope.releaseId || c.releaseNo !== envelope.releaseNo ||
+            hash(authoredAuthorization(c.contract)["authorization"]) !== hash(profile) || hash(authoredAuthorization(c.contract)["authorizationRuntime"]) !== hash(runtime) ||
+            manifest.evidence?.["authorizationProfileHash"] !== hash(profile) || manifest.evidence?.["authorizationRuntimeVersion"] !== runtime.runtimeVersion)
+          throw failure("ARTIFACT_PAYLOAD_INVALID");
+        if (!this.options.authorizationRuntime) throw failure("RUNTIME_INCOMPATIBLE");
+        this.options.authorizationRuntime.qualify(profile, runtime);
+      } catch (error) {
+        if (error instanceof PublicationContractError) throw error;
+        throw failure("RUNTIME_INCOMPATIBLE");
+      }
     }
     const projectionEvidence = envelope.artifactKind === "entity_runtime"
       ? {

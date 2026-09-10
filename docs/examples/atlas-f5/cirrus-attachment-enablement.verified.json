@@ -1,0 +1,71 @@
+{
+  "semanticRetrievalEnabled": true,
+  "semanticQualification": "cirrus-semantic-retrieval.qualification.json",
+  "embeddingModel": "nomic-embed-text:v1.5",
+  "embeddingDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+  "embeddingDimensions": 768,
+  "semanticIndex": "atlas_attachment_passages_neon_nomic_v15_0a109f",
+  "semanticRatio": 0.75,
+  "scoreThreshold": 0.78,
+  "observedAt": "2026-09-10T05:19:31.598Z",
+  "environment": "dev",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "principal": "catl.admin",
+  "documentUploaded": true,
+  "retrievalEnabled": true,
+  "capability": "owner-authorized hybrid semantic and keyword passage retrieval with document-grounded chat",
+  "chatPassageLoadingEnabled": true,
+  "chatQualification": "cirrus-document-chat.qualification.json",
+  "historyQualification": "cirrus-document-history.qualification.json",
+  "attachment": {
+    "sha256": "21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+    "status": "active",
+    "scanned": true,
+    "recordId": "f7688c3d-8c92-5651-a469-da3f4f786375",
+    "seriesId": "abc5b379-bf54-4ef7-b205-9251cfa53a71",
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "chunkCount": 1,
+    "entityCode": "business_partner",
+    "revisionId": "6f2a53ae-330a-442a-81bf-61f329422e68",
+    "attachmentId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6",
+    "currentVersion": true,
+    "revisionStatus": "ready",
+    "sourceVersionId": "fc668e33-9d67-4015-83ba-8be70dfbb2c6:21d82db385726457aff268204b19222a47d98aeb14426e1b9946e67c47478024",
+    "extractionStatus": "extracted",
+    "revisionChecksum": "852954e63c1a9af0256d84d568d8e7ec66cd6e61ae1c301967ec705af3cc01e4",
+    "sourcePermission": "neon.collaboration.attachment.read",
+    "extractedCharacters": 1473
+  },
+  "containers": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:atlas-baseline-api-20260910",
+      "digest": "sha256:64fa194285c237c3b176179d137ecee6c20f0bdd4edf631674da89bcfe0d7166",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "athyper-runtime-server:atlas-baseline-worker-20260910",
+      "digest": "sha256:b696741cba9449d4b7a6a89f0e613f3dec3a6ef8776d4521f765240f252b7b80",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    }
+  ],
+  "tests": {
+    "unitAndContractPassed": 48,
+    "liveHttpChecksPassed": 5,
+    "databaseRowSecurityChecksPassed": true,
+    "aiSuitePassed": 362,
+    "aiSuiteSkipped": 1,
+    "hostRetrievalAndGroundingPassed": 25,
+    "postBudgetFixRuntimePassed": 4,
+    "authenticatedBrowserChatPassed": true,
+    "liveHistoryWithdrawalAndRestorationPassed": true
+  },
+  "temporaryAttachmentGrantExpiresAt": "2026-09-11T01:15:12.051Z"
+}

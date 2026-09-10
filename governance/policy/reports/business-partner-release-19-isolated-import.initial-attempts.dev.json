@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "kind": "release19_authenticated_governed_import",
+  "runId": "b89b6ff0-ea27-4d86-8702-ad9e2df478c5",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "checks": [
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "4869680df8130379cf118e6a26c2b8ee0d1ee19aca9d0872fce8b38a68ffb216",
+      "checkedAt": "2026-09-10T07:19:49.344Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "e7d57a919c8c50e13f27b0b80099764612f7495e263a2e5b6911586c962766ab",
+      "checkedAt": "2026-09-10T07:19:50.117Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 404,
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "ROUTE_NOT_FOUND",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "023d945f2a879cf0b2497ad128a0f4eb291382534e61d91cfdd1282e2c5f1718",
+      "checkedAt": "2026-09-10T07:19:50.829Z"
+    },
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "03924ba4decb902d7cde1234433586cd5d93ec29c48908b3eee27a899d221065",
+      "checkedAt": "2026-09-10T07:21:56.352Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "15828263482949e5d360fd57cb72b0cd1fbcdbfa3f846da96bfe55b211a579a2",
+      "checkedAt": "2026-09-10T07:21:57.144Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 503,
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "BP_GOVERNED_IMPORT_UNAVAILABLE",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "897c45c5333e2493d3d6730b757472c5c5382502daecca305f31c15e4e27bce2",
+      "checkedAt": "2026-09-10T07:21:57.926Z"
+    },
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "02a44d282dffcf0d3da79846cfb14ab4f2d3c97f33b77d549d6d145ad39a2ed1",
+      "checkedAt": "2026-09-10T07:23:14.424Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "6ea512577848de59dabfb86f88a03987979c0b9ff02ab326e6cb371507442896",
+      "checkedAt": "2026-09-10T07:23:15.158Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 403,
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "BP_GOVERNED_IMPORT_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "3ded30d15f2acf0cac393ba889c340829c1b113de4ab3940698c24b69c28299f",
+      "checkedAt": "2026-09-10T07:23:15.998Z"
+    },
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "94207f336b22e33adae8132b4973553a01af42a446f1248ba8f8ef8d8885a167",
+      "checkedAt": "2026-09-10T07:24:16.649Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "a1c77ffeaef914a7133b0fffb079db8f3d5d07bb612c4bd155a628ff2578a12f",
+      "checkedAt": "2026-09-10T07:24:17.395Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 503,
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "BUSINESS_PARTNER_DRAFT_VALIDATOR_UNAVAILABLE",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "4924165adf8bcd97f98c539d0935b2bdea34261a945fca4664670613db18634c",
+      "checkedAt": "2026-09-10T07:24:18.309Z"
+    },
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "46e9a4928cfd5fc0618dcdf9afb578cc8a01c88b08966d711cda8721a6b120df",
+      "checkedAt": "2026-09-10T07:25:25.376Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "ad9f826dc15fa695b8efd3929522b6e5ecf359f49cdbc251678e4c85aaad0c0d",
+      "checkedAt": "2026-09-10T07:25:26.152Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 400,
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "BP_GOVERNED_IMPORT_VALIDATION_FAILED",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "0a4985b7912fd8b57cbbb1fbe2d3a8def9e481425b850b8e7fa0e5840473d491",
+      "checkedAt": "2026-09-10T07:25:27.110Z"
+    },
+    {
+      "name": "direct_create_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "e03b0e0d4931ee5abbe5ec274c38545ce9c011f1959ba6604836cf791f9cce1f",
+      "checkedAt": "2026-09-10T07:25:56.553Z"
+    },
+    {
+      "name": "direct_update_deferred",
+      "status": 403,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "code": "RECORD_FORBIDDEN",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "0f6b3444881ac6c66bcf5f752d29493d19a1aec5bb03ffa3741803cc049136a3",
+      "checkedAt": "2026-09-10T07:25:57.322Z"
+    },
+    {
+      "name": "governed_import",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "8ff84ad72855c422c1a2fd8f80e5ab569a6d7f16ee71d13b190f1196481dceca",
+      "checkedAt": "2026-09-10T07:25:58.591Z"
+    },
+    {
+      "name": "import_governed_draft",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "requestRef": "112efe0dc6c675e3db41601fb347899eba2f78e73562f67f8621da69f592f93d",
+      "checkedAt": "2026-09-10T07:25:59.426Z"
+    }
+  ],
+  "importQualified": false,
+  "directWritesRejected": true,
+  "blocker": "IMPORT_GOVERNANCE_BOUNDARY_FAILED",
+  "importRequestId": "92a3dc64-f554-4540-8f54-6fecd2f6712d"
+}

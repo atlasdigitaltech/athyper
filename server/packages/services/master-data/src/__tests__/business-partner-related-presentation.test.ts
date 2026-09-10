@@ -43,6 +43,7 @@ const bindingParity: [
 const summary = {
   identity: { id: "bp", displayName: "Partner", lifecycleStatus: "active" },
   roles: [],
+  scope: {},
   asOf: "2026-09-09",
   completeness: { readOnly: false },
   sections: [

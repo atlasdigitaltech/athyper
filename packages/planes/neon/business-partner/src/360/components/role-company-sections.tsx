@@ -1,3 +1,4 @@
+import { BusinessPartnerAction } from "./governed-action";
 import { businessLabel } from "../display-values";
 import {
   useApiClient,
@@ -220,7 +221,7 @@ function Actions({ code }: { id: string; code: RoleCompanySectionCode }) {
     ? []
     : (summary.recordHeader?.actions.filter(
         (action) =>
-          keys.includes(action.key) && action.href && !action.disabledReason,
+          keys.includes(action.operationKey ?? action.key),
       ) ?? []);
   if (!actions.length) return null;
   return (
@@ -228,9 +229,7 @@ function Actions({ code }: { id: string; code: RoleCompanySectionCode }) {
       <h2>Setup actions</h2>
       <div className="bp-actions">
         {actions.map((action) => (
-          <a key={action.key} href={scopedActionHref(action.href!,summary,code,action.key)}>
-            {action.label}
-          </a>
+          <BusinessPartnerAction key={action.key} action={action} />
         ))}
       </div>
     </Card>
@@ -342,13 +341,4 @@ function label(value: string) {
   return value
     .replace(/([A-Z])/g, " $1")
     .replace(/^./, (letter) => letter.toUpperCase());
-}
-
-function scopedActionHref(href:string,summary:import("../business-partner-360-client").Summary,code:RoleCompanySectionCode,action:string){
- const url=new URL(href,"https://local.test");
- if(summary.scope.companyCodeId)url.searchParams.set("companyCodeId",summary.scope.companyCodeId);
- if(summary.scope.operatingOrganizationId)url.searchParams.set("operatingOrganizationId",summary.scope.operatingOrganizationId);
- if(code!=="roles-scope")url.searchParams.set("role",code==="customer-company"?"customer":"supplier");
- if(action==="configure_company"||action==="assign_organization")url.searchParams.set("kind",action);
- return url.pathname+url.search;
 }

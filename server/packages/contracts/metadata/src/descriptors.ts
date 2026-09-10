@@ -1,3 +1,4 @@
+import type { EntityAuthorizationRuntimeV1 } from "./entity-authorization-runtime.js";
 import type { PlaneKey } from "@athyper/server-foundation/context";
 
 export type EntityFieldType = "string" | "text" | "integer" | "decimal" | "money" | "boolean" | "date" | "datetime" | "uuid" | "enum" | "reference" | "json";
@@ -168,6 +169,8 @@ export interface EntityRuntimeDescriptor {
   readonly ai?: import("./entity-ai.js").EntityAiDescriptorV1;
   readonly recordPresentation?: import("@athyper/contract-platform-entity-runtime").EntityRecordPresentationV1;
   readonly directoryScope?: import("./directory-scope.js").EntityDirectoryScopeV1;
+  readonly authorizationRuntime?: EntityAuthorizationRuntimeV1;
+  readonly authorization?: import("./entity-authorization.js").EntityAuthorizationProfileV1;
   readonly collectionRelationship?: import("./collection-relationship.js").CollectionRelationshipV1;
   readonly schema: "athyper.entity-runtime-descriptor/1.0";
   readonly entityCode: string;

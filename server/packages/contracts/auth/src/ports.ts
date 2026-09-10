@@ -16,6 +16,8 @@ export interface PermissionResolver {
 }
 
 export interface Authorizer {
+  /** Server-selected enforcement profile hash. Metadata alone never activates a policy. */
+  enforcedEntityProfile?(planeKey: PlaneKey, entityCode: string): string | undefined;
   authorize(request: AuthorizationRequest): Promise<AuthorizationDecision>;
 }
 

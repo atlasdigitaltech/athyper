@@ -23,3 +23,6 @@ export * from "./insight-disclosure.js";
 export * from "./entity-sections.js";
 
 export type { AtlasCaseExplanation, AtlasCaseExplanationOwner } from "./case-explanation.js";
+
+export * from "./intent.js";
+export * from "./feedback.js";

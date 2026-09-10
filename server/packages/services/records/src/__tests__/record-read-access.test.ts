@@ -20,6 +20,7 @@ describe("record read authorization modes", () => {
     expect(authorize).toHaveBeenCalledWith({
       context,
       permissionCode: "studio.metadata.contract.view",
+      observation: { entityCode: "metadata_entity", operationKey: "discover", surface: "list", phase: "discover" },
       resource: { tenantId: "tenant-1" },
     });
   });

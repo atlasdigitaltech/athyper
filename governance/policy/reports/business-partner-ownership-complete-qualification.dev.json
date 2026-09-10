@@ -1,0 +1,121 @@
+{
+  "schemaVersion": 1,
+  "runId": "0541dbdc-90dd-462d-9309-30d84d33ecab",
+  "generatedAt": "2026-09-09T19:05:30.546Z",
+  "evidence": "authenticated_bff_commands",
+  "targetBackendQualified": false,
+  "activationAuthorized": false,
+  "grantChanges": [],
+  "checks": [
+    {
+      "name": "anonymous_create_denied",
+      "status": 401,
+      "passed": true,
+      "code": "AUTHENTICATION_REQUIRED"
+    },
+    {
+      "name": "approver_without_create_denied",
+      "status": 403,
+      "passed": true,
+      "code": "FORBIDDEN",
+      "requestRef": "66b882faf3a956a8fdeefa2060948321e7f847159c856a5d5f417e962c608281"
+    },
+    {
+      "name": "create_incompatible_ownership",
+      "status": 201,
+      "passed": true,
+      "requestRef": "8f58bb89511d0d249dc385241ace8259128941f5d892d2ddaddbbb9314c8c595"
+    },
+    {
+      "name": "validate_incompatible_ownership",
+      "status": 200,
+      "passed": true,
+      "requestRef": "cab9eb286d59e4b6e768a6f50a71be429cdeb0928d91de31daea068642c436c2"
+    },
+    {
+      "name": "submit_incompatible_ownership_denied",
+      "status": 409,
+      "passed": true,
+      "code": "BUSINESS_PARTNER_REQUEST_NOT_SUBMITTABLE",
+      "requestRef": "42ce880308110bf66eaf3ae914c679a51d3640841945e229e1c050ce641c930a"
+    },
+    {
+      "name": "create",
+      "status": 201,
+      "passed": true,
+      "requestRef": "d10989164a1b3419621cf2919d2df5b189b298a8c546fa0f32326369b484463f"
+    },
+    {
+      "name": "apply_before_approval_denied",
+      "status": 403,
+      "passed": true,
+      "code": "FORBIDDEN",
+      "requestRef": "1ac9680895418da919298b7cb7f9dc62db1fdf1cf2aa519bc92c759bb08d288e"
+    },
+    {
+      "name": "validate",
+      "status": 200,
+      "passed": true,
+      "requestRef": "57683bcffff0f1306370f80c052693da803201e5cf1d814691c484c60872e6b1"
+    },
+    {
+      "name": "submit",
+      "status": 201,
+      "passed": true,
+      "requestRef": "4314f45ffdb0e2239dc6dcdb1e83b1a1de1fda61ab53b62060f081e1c96e242c"
+    },
+    {
+      "name": "maker_cannot_approve",
+      "status": 403,
+      "passed": true,
+      "code": "BUSINESS_PARTNER_REQUEST_SELF_APPROVAL_FORBIDDEN",
+      "requestRef": "f6b8c34ff640102ffa20b2bb28e581986e23701017f2956d0af578c48662394f"
+    },
+    {
+      "name": "assigned_approver_decides_stage_1",
+      "status": 200,
+      "passed": true,
+      "requestRef": "65444c5059871619e3b07f8c0b70e21eb9d483d9987c8d4498bb67743eae7644"
+    },
+    {
+      "name": "assigned_approver_decides_stage_2",
+      "status": 200,
+      "passed": true,
+      "requestRef": "8cb05a1a8e69201267e5c9c826a5e0c496e88600e1ffcf6f508824095336b02e"
+    },
+    {
+      "name": "apply",
+      "status": 409,
+      "passed": false,
+      "code": "BUSINESS_PARTNER_CASE_COMMAND_CONFLICT",
+      "requestRef": "48625d7633cb6cf708d8f6af5afd9b6038ccb65706d80358105579cd986c3093"
+    }
+  ],
+  "requester": {
+    "principalRef": "76db65b4f8572cb6d2ec05799a8a028e51fd73cb2d61a241076e7602f9387ed7",
+    "authEpoch": 0,
+    "permissions": [
+      "neon.relationship.entity_case.create",
+      "neon.relationship.entity_case.decide",
+      "neon.relationship.entity_case.materialize",
+      "neon.relationship.entity_case.read",
+      "neon.relationship.entity_case.submit",
+      "neon.relationship.entity_case.update",
+      "neon.relationship.entity_case.validate"
+    ]
+  },
+  "approver": {
+    "principalRef": "d0fecd16671cbedb09e8d97a08a345c84f082c4453a5d57dbc508d2f73967620",
+    "authEpoch": 0,
+    "permissions": [
+      "neon.relationship.entity_case.decide",
+      "neon.relationship.entity_case.read"
+    ]
+  },
+  "invalidOwnershipCaseId": "6227b02d-dc89-4b9c-9dd5-64ada96bee27",
+  "ownershipRegressionPassed": true,
+  "testCaseId": "e7351907-aa78-4c27-a709-de2503c5a73f",
+  "validationValid": true,
+  "commandJourneyCompleted": false,
+  "blocker": "apply:409:BUSINESS_PARTNER_CASE_COMMAND_CONFLICT"
+}

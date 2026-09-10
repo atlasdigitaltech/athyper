@@ -67,3 +67,15 @@ ALTER TABLE runtime_meta.applied_release_payload
         FOREIGN KEY (tenant_id) REFERENCES master.tenant(id) ON DELETE RESTRICT,
     ADD CONSTRAINT runtime_applied_release_payload_release_fk
         FOREIGN KEY (applied_release_id) REFERENCES runtime_meta.applied_release(id) ON DELETE RESTRICT;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_coordinate_uq UNIQUE (tenant_id, id);
+
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY runtime_meta.experience_surface_projection
+    ADD CONSTRAINT experience_surface_projection_source_uq UNIQUE (tenant_id, source_release_id);
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

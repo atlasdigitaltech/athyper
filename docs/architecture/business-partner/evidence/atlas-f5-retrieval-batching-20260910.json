@@ -1,0 +1,92 @@
+{
+  "phase": "F5",
+  "status": "implemented; local qualification passed; deployed qualification pending",
+  "capturedAt": "2026-09-09T19:17:39.083279+00:00",
+  "gitHead": "421dd872b9df44086abcd815034a9978809112f4",
+  "sourceState": "uncommitted working tree with prior phases and unrelated changes",
+  "tests": {
+    "ai": 362,
+    "host": 8,
+    "typechecks": [
+      "AI contracts",
+      "AI platform (source and tests)",
+      "platform host"
+    ],
+    "postgresql": {
+      "version": "16.13-bookworm",
+      "planes": [
+        "neon",
+        "mesh",
+        "studio"
+      ],
+      "disposable": true,
+      "checks": [
+        "canonical tenant-scoped admission",
+        "live owner revocation on cache hit",
+        "superseded candidate exclusion",
+        "source deletion despite failed index cleanup",
+        "idempotent cleanup retry",
+        "failed ingestion retry and ready replay",
+        "tenant isolation under application role"
+      ]
+    },
+    "reachability": "passed",
+    "diffCheck": "passed"
+  },
+  "benchmark": {
+    "fixture": "synthetic owner delay; real coordinator/list tool; no model or network database",
+    "measurements": [
+      {
+        "concurrency": 1,
+        "records": 20,
+        "simulatedOwnerDelayMs": 10,
+        "repetitions": 5,
+        "ownerCallsPerRun": 20,
+        "medianMs": 209.160298,
+        "maxMs": 216.03554600000007
+      },
+      {
+        "concurrency": 4,
+        "records": 20,
+        "simulatedOwnerDelayMs": 10,
+        "repetitions": 5,
+        "ownerCallsPerRun": 20,
+        "medianMs": 53.74068300000022,
+        "maxMs": 54.175816999999824
+      }
+    ]
+  },
+  "candidateCacheProof": {
+    "identicalSearches": 2,
+    "indexCalls": 1,
+    "canonicalAdmissionCalls": 2,
+    "ownerAdmissionCalls": 2
+  },
+  "limits": {
+    "assessmentConcurrency": 4,
+    "assessmentRecords": 20,
+    "cacheEntries": 128,
+    "cacheSerializedBytes": 524288,
+    "cacheTtlMs": 5000,
+    "retrievalCandidates": 50
+  },
+  "limitations": [
+    "Host must configure live owner admission; missing adapter returns no hits",
+    "No new passage loader or deployed document/scan adapter qualification",
+    "Batching retains per-record owner/Records call counts",
+    "Synthetic benchmark does not establish deployed load or p95/p99 latency",
+    "No background worker for abandoned indexing revisions or failed index cleanup",
+    "No live migrations or deployment"
+  ],
+  "sourceSha256": {
+    "server/packages/contracts/ai/src/operations.ts": "d356ce2581659070df04ec5124e9aff6f4d7f39ebe031505025d63efb3fabcf5",
+    "server/packages/platform/ai/src/knowledge.ts": "dc525875c4a12ff8931e45df525b1810e00e53763bec3a280e0a5ed90b19c086",
+    "server/packages/platform/ai/src/bounded-cache.ts": "ce1026b58dc3533802d16ad32036f8f3e0efa9c25e52b91a8d27cdb463aebcf5",
+    "server/packages/platform/ai/src/business-partner-list-insights.ts": "3d19bab98e11fdb459afbf75a5ce3a51a4aaabc66d03337c7c70fc89d484d794",
+    "server/packages/platform/ai/src/business-partner-insight-tools.ts": "3d03e8b43f99ffcdf9b4514bc7caa10d0c8f91634d8d45a1997aa067edd68bb9",
+    "server/packages/platform/ai/src/a2-composition.ts": "0b577881e547c9fd68d89c243890661cd66c01f67639265de751fedeb7d3b3b3",
+    "server/packages/platform/ai/src/__tests__/retrieval-f5.test.ts": "d911c2d29fc0b0072901bc06a4bf7e12b368321769b654f14de49cbb4d489be1",
+    "server/db/scripts/tests/integration/atlas/retrieval.mts": "efcb3c5ecafcf269c430e0670f3c9a6db65c156228343c39683fd9a85e795786",
+    "server/db/scripts/tests/integration/atlas/retrieval-qualification.mts": "f60300805d157967276c03343dfda9f45ac34694579ad8f5e80329c6a0db062f"
+  }
+}

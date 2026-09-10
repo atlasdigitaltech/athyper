@@ -72,13 +72,14 @@ export function AtlasValidatedAnswer({ answer, envelope = answer.envelope, autho
 
 export function atlasStarterQuestions(context?: AtlasBusinessContextV1): readonly string[] {
   if (!context) return ["What can you help me with on this page?"];
+  if (context.kind === "manage" && context.entityCode !== "business_partner") return ["What can you help me with for these records?"];
   if (context.kind === "manage") return context.analysisTarget === "selection" && context.selectedIds.length
     ? ["Compare my selected business partners.", "Which selected partners need attention?"]
     : ["Which partners in these filtered results need attention?", "Summarize these filtered partners and show the coverage."];
   if (context.asOf) return ["Summarize this historical record using available evidence.", "What does this historical view cover?"];
   if (context.dirty) return ["Summarize the saved record, excluding my unsaved edits.", "Explain the saved information in this section."];
   if (context.caseId) return ["Explain this case using available evidence.", "What information is available about this record?"];
-  return ["Summarize this business partner.", `Explain the saved information in ${context.section ?? "this record"}.`];
+  return [context.entityCode === "business_partner" ? "Summarize this business partner." : "Show this record summary", `Explain the saved information in ${context.section ?? "this record"}.`];
 }
 
 /** Replayed tool results have already passed server lineage authorization; still validate the wire shape. */

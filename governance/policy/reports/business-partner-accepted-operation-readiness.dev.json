@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "selectionSha256": "9d9c1a6ec6dede37e108f7a2cd73daea91e34d5364963cea7c36a07058924861",
+  "packetRevision": "23a4203d695989429bd7b1c3adbeca108400d742683c050dda35b061f8538382",
+  "catalogCapturedAt": "2026-09-10T01:18:33.566879+00:00",
+  "base": {
+    "tenantId": "44444444-4444-4444-8444-444444444444",
+    "planeKey": "neon",
+    "entityCode": "business_partner",
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+    "appliedReleaseId": "01a08532-31a1-7493-8953-ca4528dda3de",
+    "headVersion": 17,
+    "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+    "releaseNo": 17,
+    "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+    "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+    "eligibleHeadsHash": "a358d053e03c836c23251be16944e8521e70385234922928e996b829a0a746fe"
+  },
+  "nativeDescriptorParsing": "passed",
+  "runtimeCandidatePath": "governance/policy/reports/business-partner-corrected-release.dev.json",
+  "runtimeCandidateHash": "317b7702a505b2de402d5e8e0f888a916bf810cf42ef197eb750ca702ab22fdc",
+  "owningCaseSemantics": "passed",
+  "correctionReview": "approved",
+  "missingCatalogPermissions": [],
+  "dependencyBlocks": [
+    {
+      "operation": "import",
+      "code": "NO_APPROVED_IMPORT_MUTATION_MODES",
+      "reason": "The approved gateway still requires per-mutation authorization. All existing bulk modes depend on deferred create/update; they remain unavailable. A governed-request import adapter requires a separately reviewed proposal."
+    }
+  ],
+  "callableRuntimeRegistration": "not_qualified",
+  "signedArtifact": null,
+  "sameReleaseAuthenticatedQualification": "not_complete",
+  "policyDifferenceAcceptance": "separate_gate",
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "publicationEligible": false
+}

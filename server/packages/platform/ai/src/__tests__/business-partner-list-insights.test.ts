@@ -22,7 +22,7 @@ const candidate = <T>(value: T) => ({
   claims: [permission],
   value,
 });
-function harness(size = 2) {
+function harness(size = 2, concurrency = 4) {
   const all = Array.from({ length: size }, (_, i) => ({ id: id(i + 1) }));
   const page: Extract<AtlasBusinessContextV1, { kind: "manage" }> = {
     schemaVersion: 1,
@@ -119,7 +119,7 @@ function harness(size = 2) {
     }),
   );
   const registry = new AtlasToolRegistry(
-    createBusinessPartnerInsightTools({ read }, list),
+    createBusinessPartnerInsightTools({ read }, list, { concurrency }),
   );
   const service = new AtlasToolService({
     registry,
@@ -378,13 +378,11 @@ it("stops admitting owner reads at the time budget and handles cancellation", as
 });
 it("routes natural Manage comparisons to one list tool", () => {
   const h = harness();
-  const definitions = h.registry
-    .list()
-    .map((t) => ({
-      name: t.manifest.toolCode,
-      description: t.manifest.description,
-      inputSchema: t.manifest.inputSchema,
-    }));
+  const definitions = h.registry.list().map((t) => ({
+    name: t.manifest.toolCode,
+    description: t.manifest.description,
+    inputSchema: t.manifest.inputSchema,
+  }));
   expect(
     selectLocalBusinessPartnerTools(
       definitions,
@@ -411,3 +409,92 @@ it("finishes large results with authoritative counts without another model pass"
   expect(message).toContain("Issue counts overlap");
   expect(message).toContain("Coverage is partial");
 });
+
+it("bounds assessment concurrency to four while preserving population order", async () => {
+  const h = harness(20),
+    original = h.read.getMockImplementation()!;
+  let active = 0,
+    peak = 0;
+  h.read.mockImplementation(async (input) => {
+    active++;
+    peak = Math.max(peak, active);
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    try {
+      return await original(input);
+    } finally {
+      active--;
+    }
+  });
+  const result = await h.run();
+  expect(peak).toBe(4);
+  expect(active).toBe(0);
+  expect(h.read.mock.calls.map(([input]) => input.recordId)).toEqual(
+    h.all.map((row) => row.id),
+  );
+  expect(result.insight.coverage.evaluatedCount).toBe(20);
+});
+it("drains a failed batch and schedules no later assessment batch", async () => {
+  const h = harness(20),
+    original = h.read.getMockImplementation()!;
+  let active = 0;
+  h.read.mockImplementation(async (input) => {
+    active++;
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      if (input.recordId === id(1)) throw new Error("owner failed");
+      return await original(input);
+    } finally {
+      active--;
+    }
+  });
+  await expect(h.run()).rejects.toThrow();
+  expect(active).toBe(0);
+  expect(h.read).toHaveBeenCalledTimes(4);
+});
+
+// Opt-in reproducible wall-clock measurement through the real list/coordinator path.
+it.skipIf(!process.env.ATLAS_F5_BENCHMARK)(
+  "measures sequential and batched owner latency",
+  async () => {
+    const measurements: Record<string, unknown>[] = [];
+    for (const concurrency of [1, 4]) {
+      const durations: number[] = [];
+      for (let repeat = 0; repeat < 5; repeat++) {
+        const h = harness(20, concurrency),
+          original = h.read.getMockImplementation()!;
+        h.read.mockImplementation(async (input) => {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return original(input);
+        });
+        const start = performance.now();
+        const result = await h.run();
+        durations.push(performance.now() - start);
+        expect(result.insight.coverage.evaluatedCount).toBe(20);
+        expect(h.read).toHaveBeenCalledTimes(20);
+      }
+      durations.sort((a, b) => a - b);
+      measurements.push({
+        concurrency,
+        records: 20,
+        simulatedOwnerDelayMs: 10,
+        repetitions: 5,
+        ownerCallsPerRun: 20,
+        medianMs: durations[2],
+        maxMs: durations[4],
+      });
+    }
+    const { writeFileSync } = await import("node:fs");
+    writeFileSync(
+      "/tmp/atlas-f5-benchmark.json",
+      JSON.stringify(
+        {
+          fixture:
+            "synthetic owner delay; real coordinator/list tool; no model or network database",
+          measurements,
+        },
+        null,
+        2,
+      ),
+    );
+  },
+);

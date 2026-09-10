@@ -10,7 +10,7 @@ import { projectAtlasInsight } from "./insight-disclosure.js";
 
 const uuid = {type: "string", format: "uuid"};
 const kinds = {bp_read_brief: "brief", bp_explain_readiness: "readiness", bp_check_eligibility: "eligibility"} as const;
-export function createBusinessPartnerInsightTools(owner: AtlasBusinessPartnerInsightOwner, list?: AtlasBusinessPartnerList): readonly AtlasRegisteredTool[] {
+export function createBusinessPartnerInsightTools(owner: AtlasBusinessPartnerInsightOwner, list?: AtlasBusinessPartnerList, options: { concurrency?: number } = {}): readonly AtlasRegisteredTool[] {
   const tools: AtlasRegisteredTool[] = Object.entries(kinds).map(([toolCode, kind]) => ({
     manifest: {
       schema: "atlas-tool-manifest/1", version: "1", toolCode,
@@ -67,7 +67,7 @@ export function createBusinessPartnerInsightTools(owner: AtlasBusinessPartnerIns
     toolCode: `bp_read_${sectionKey}`, readPermission: "neon.relationship.business_partner.read",
     admissionField: "code", resultKey: "items", maxRows: 5, fields: {displayName: {type: "string"}},
   }));
-  if (list) tools.push(createBusinessPartnerListInsightTool(list, tools[1]!));
+  if (list) tools.push(createBusinessPartnerListInsightTool(list, tools[1]!, options));
   return tools;
 }
 function validate(args: Readonly<Record<string, unknown>>, kind: string) {

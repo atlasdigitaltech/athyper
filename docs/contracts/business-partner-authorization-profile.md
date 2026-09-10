@@ -163,3 +163,62 @@ Minimum BP acceptance journeys:
 
 Acceptance means all relevant layers conform to the generic contract. Restoring
 the four header buttons alone is not completion of this adoption.
+
+## Shadow integration supplement (unapproved candidate only)
+
+The runtime shadow adapter observes the installed permission gates and the
+candidate profile independently. Legacy results remain authoritative. Candidate
+operation bindings are projected only into a cloned verified snapshot; grants,
+denials, ACLs, assurance and entitlements are unchanged. An installed-binding
+result is recorded separately from this candidate-binding preview.
+
+BP request create/read/update/validate/submit/decide/materialize gateways use an
+organization coordinate verified by the existing owning request service and a
+read-only catalog check. These gateway previews do not establish independent
+case-record ownership, maker/checker execution parity or workflow eligibility.
+Their candidate keys are `case_*`; create and subsequent mutations always require
+preflight before execution. The BP Requests tab remains a parent-gated master
+record section and is distinct from the organization-owned case directory.
+
+Person/contact/address sensitive reads are separate capabilities; revealing bank
+or tax values remains distinct from reading their masked representation. The
+candidate includes person/workforce and sensitive master-data capabilities so
+these existing provider gates can be compared. Capability grants remain subject
+to named review. No new sensitive grant follows from general BP read access.
+
+Unmapped or ambiguous installed operations are recorded as mapping gaps, never
+silently mapped to a broader permission or counted as parity. Generic create/update now have preflight-required candidate mappings described
+below. Unpublished direct-write operations remain unmapped. No candidate mapping
+is approved for enforcement before the steward/requester review.
+
+### Mapping decisions for the remaining observed DEV gates
+
+These are shadow-only candidate mappings, not approved grants or activation:
+
+- Canonical BP `create` is a proposed tenant-owned master operation. Canonical
+  `update` (including the generic handler's `patch` key) is an existing tenant-owned
+  master operation. Both require preflight; update also requires parent read.
+  A candidate `preflight_required` result does not confer stewardship, prove an
+  approved change, or authorize direct writes. Named role review remains mandatory
+  before enforcing these candidate bindings.
+- `neon.supplier.qualification.admin` retains the qualification service's coverage:
+  organization coverage without a company, organization/company coverage when a
+  company is specified. The candidate keys are `qualification` and
+  `qualification_company`. These are proposed qualification gateways, not global
+  BP master writes. The observer preserves the verified qualification control,
+  maker/checker and creator facts supplied by the owning service. It never runs
+  qualification creation/approval or its preflight a second time.
+- Observation metadata identifies qualification service calls even when their
+  authorization resources contain only scope coordinates. No BP ID is invented
+  for an independently governed qualification. This qualifies gateway comparison,
+  not independent record ownership or command execution parity.
+
+### Authenticated provider qualification refinements
+
+Supplier/customer company sections and per-assignment reads use explicit
+`supplier_company_read` / `customer_company_read` candidates with validated
+organization/company coordinates and parent admission. Sharing the canonical BP
+read permission does not collapse those provider gates into global master reads.
+The Requests tab preserves its `requests_read` identity through legacy directory
+retries; it must not be compared as the separate organization-owned case directory.
+These refinements affect advisory comparison only.

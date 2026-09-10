@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-09T17:19:16.022Z",
+  "evidence": "database_backed_read_only_adapters",
+  "authenticatedCommandEvidence": false,
+  "databaseRole": "athyper_runtime (deployed database role)",
+  "grantChanges": [],
+  "checks": [
+    {
+      "name": "reload_current_database_permissions",
+      "passed": true
+    },
+    {
+      "name": "reject_epoch_substitution",
+      "passed": true
+    },
+    {
+      "name": "global_bp_ownership_does_not_inherit_shell_organization",
+      "passed": true
+    },
+    {
+      "name": "child_reads_its_stored_organization",
+      "passed": true
+    },
+    {
+      "name": "missing_child_closed",
+      "passed": true
+    },
+    {
+      "name": "cross_tenant_owner_closed",
+      "passed": true
+    },
+    {
+      "name": "sql_case_count_excludes_unauthorized_children",
+      "passed": true
+    },
+    {
+      "name": "sql_empty_child_set_has_zero_count",
+      "passed": true
+    },
+    {
+      "name": "generic_sql_aggregate_excludes_hidden_rows",
+      "passed": true
+    },
+    {
+      "name": "generic_sql_aggregate_empty_set_is_closed",
+      "passed": true
+    },
+    {
+      "name": "command_preflight_blocks_baseline_assurance",
+      "passed": true
+    }
+  ]
+}

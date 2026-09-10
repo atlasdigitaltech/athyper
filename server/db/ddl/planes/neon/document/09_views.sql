@@ -3,12 +3,14 @@ SELECT id,tenant_id,invitation_no,requested_role AS registration_role,requested_
 FROM document.business_partner_invitation WHERE journey_kind='supplier';
 COMMENT ON VIEW document.supplier_registration_invitation IS 'Read-only supplier compatibility projection; controlled writes use the generalized invitation service and this view is retired after consumer cutover.';
 
-CREATE VIEW document.active_attachment AS
+CREATE VIEW document.active_attachment
+WITH (security_invoker = true, security_barrier = true) AS
 SELECT *
   FROM document.attachment
  WHERE status NOT IN ('deleted', 'expired', 'rejected');
 
-CREATE VIEW document.active_comment AS
+CREATE VIEW document.active_comment
+WITH (security_invoker = true, security_barrier = true) AS
 SELECT *
   FROM document.comment
  WHERE deleted_at IS NULL

@@ -28,6 +28,7 @@ export interface BusinessPartnerRequestValidatorOptions<Transaction> {
 }
 
 const ruleDefinitions = Object.freeze([
+  { code: "role.ownership_subtype.compatible", severity: "error", fieldPath: "$.ownershipClass" },
   { code: "identity.legal_name.required", severity: "error", fieldPath: "$.legalName" },
   { code: "role.requested.required", severity: "error", fieldPath: "$.requestedRole" },
   { code: "role.request_kind.compatible", severity: "error", fieldPath: "$.requestKind" },
@@ -50,15 +51,14 @@ const ruleDefinitions = Object.freeze([
 
 export const businessPartnerRequestRuleset = Object.freeze({
   code: "neon.business_partner.entity_case.phase1",
-  version: 1,
+  version: 3,
   hash: createHash("sha256").update(JSON.stringify(ruleDefinitions)).digest("hex"),
 });
 
 export function createBusinessPartnerRequestValidator<Transaction>(options: BusinessPartnerRequestValidatorOptions<Transaction>): BusinessPartnerRequestValidator<Transaction> {
   const createEvaluationId = options.createEvaluationId ?? randomUUID;
   const now = options.now ?? (() => new Date());
-  return {
-    async validate({ context, request }, transaction) {
+  const validate = async ({ context, request }: { context: Parameters<BusinessPartnerRequestValidator<Transaction>["validate"]>[0]["context"]; request: Pick<BusinessPartnerRequest, "kind" | "source" | "requestedRole" | "operatingOrganizationId" | "companyCodeId" | "targetBusinessPartnerId" | "proposedPayload"> }, transaction: Transaction) => {
       const legalName = stringValue(request.proposedPayload, "legalName", "legal_name", "name");
       const registrationCountryCode = stringValue(request.proposedPayload, "registrationCountryCode", "registration_country_code");
       const isNew = request.kind === "new_partner";
@@ -67,11 +67,17 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
       const requestedCategory=stringValue(request.proposedPayload,"partnerCategory","partner_category");
       const ownershipClass=stringValue(request.proposedPayload,"ownershipClass","ownership_class");
       const qualificationTypeCode=stringValue(request.proposedPayload,"qualificationTypeCode","qualification_type_code");
+      const createsCommercialRole=["new_partner","add_supplier","add_customer"].includes(request.kind);
+      const subtypeField=customer?"customerType":"supplierType";
+      // Match SQL fallback for legacy/malformed snapshots; never repair an approved payload here.
+      const subtype=stringValue(request.proposedPayload,subtypeField)??(customer?"corporate":"general");
+      const ownershipSubtypeCompatible=(ownershipClass==="internal"||ownershipClass==="external")
+        && (ownershipClass==="internal") === (subtype==="intercompany");
       const externalSupplier=request.requestedRole==="supplier"&&ownershipClass==="external";
       const organizationCategory=!requestedCategory||requestedCategory==="organization";
       const relationships=recordValue(request.proposedPayload["relationshipProposals"]),addresses=arrayValue(relationships["addresses"]),contactPersons=arrayValue(relationships["contactPersons"]),contactChannels=arrayValue(relationships["contactChannels"]);
       const primaryAddresses=addresses.filter(item=>item["isPrimary"]===true),primaryContacts=contactPersons.filter(item=>item["isPrimary"]===true),primaryContactKey=primaryContacts.length===1?primaryContacts[0]?.["clientItemKey"]:undefined,primaryChannels=contactChannels.filter(item=>item["isPrimary"]===true&&item["contactClientItemKey"]===primaryContactKey);
-      const relationshipRulesApply=isNew&&organizationCategory&&request.proposedPayload["relationshipProposals"]!==undefined;
+      const relationshipRulesApply=isNew&&organizationCategory;
       const lifecycle=["deactivate","reactivate","archive"].includes(request.kind);
       const lifecycleDependencies=request.proposedPayload["dependencies"];
       const requiredDependencyCodes=["supplier_roles","customer_roles","active_organization_assignments","active_employments","effective_blocks","effective_qualifications"];
@@ -98,6 +104,7 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
           }, transaction)
         : [];
       const findings: BusinessPartnerRequestValidationFinding[] = [
+        createsCommercialRole ? finding("role.ownership_subtype.compatible","error","$."+subtypeField,ownershipSubtypeCompatible,"BUSINESS_PARTNER_OWNERSHIP_ROLE_MISMATCH",{ownershipClass:ownershipClass??null,subtype}) : skipped("role.ownership_subtype.compatible","error","$."+subtypeField,"ROLE_NOT_CREATED"),
         isNew ? finding("identity.legal_name.required", "error", "$.legalName", Boolean(legalName), "LEGAL_NAME_REQUIRED", { valuePresent: Boolean(legalName) }) : skipped("identity.legal_name.required", "error", "$.legalName", "EXISTING_IDENTITY_REUSED"),
         roleless ? skipped("role.requested.required", "error", "$.requestedRole", "ROLE_NOT_APPLICABLE") : finding("role.requested.required", "error", "$.requestedRole", Boolean(request.requestedRole), "REQUESTED_ROLE_REQUIRED", { requestedRole: request.requestedRole ?? null }),
         finding("role.request_kind.compatible", "error", "$.requestKind", roleKindCompatible, "REQUEST_KIND_ROLE_MISMATCH", { requestKind: request.kind, requestedRole: request.requestedRole ?? null }),
@@ -145,8 +152,8 @@ export function createBusinessPartnerRequestValidator<Transaction>(options: Busi
           targetBusinessPartnerId: request.targetBusinessPartnerId ?? null,
         },
       };
-    },
-  };
+    };
+  return { validate, validateProposed: ({context, request}, transaction) => validate({context, request: {...request, proposedPayload: {...request.proposedPayload, ...(request.extensions ? {relationshipProposals: request.extensions} : {})}}}, transaction) };
 }
 
 function finding(ruleCode: string, severity: BusinessPartnerRequestValidationFinding["severity"], fieldPath: string, passed: boolean, messageCode: string, evidenceReference: Readonly<Record<string, unknown>>): BusinessPartnerRequestValidationFinding {

@@ -27,6 +27,7 @@ if (!publicationRoute) throw new Error("Studio publication catalog route is requ
 
 export const studioRoutes = definePlaneRoutes([
   ...catalogRoutes,
+  {...publicationRoute, id: "studio.entity.pub.atlas-learning", href: "/atlas/learning", label: "Atlas learning inbox", requiredPermissions: ["metadata.entity.review"], navigation: "secondary"},
   {
     ...publicationRoute,
     id: "studio.entity.pub.mdg",

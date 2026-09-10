@@ -1,0 +1,7 @@
+{
+  "baseImage": "sha256:8862a63a1acfa29a7a1b46d6b38913ad2060872e4e5c351efa6b4e3e58e7560c",
+  "imageId": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+  "scope": "Compile exact reviewed scope subset from compatible permission catalog",
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

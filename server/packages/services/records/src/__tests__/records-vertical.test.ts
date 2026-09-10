@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { describe, expect, it, vi } from "vitest";
 import type { AuditEvent, AuditRecordInput } from "@athyper/server-contract-audit";
 import type { Authorizer, VerifiedRequestContext } from "@athyper/server-contract-auth";
 import type { OutboxEventInput } from "@athyper/server-contract-events";
@@ -175,4 +176,21 @@ it("excludes unreadable search predicates and rejects hidden query operations", 
   for (const query of [{ filters: [{ field: "secret", operator: "eq" as const, value: "HIDDEN-SENTINEL" }] }, { sort: [{ field: "secret", direction: "asc" as const }] }, { group: "secret" }, { fields: ["secret"] }, { filters: [{ field: "linked.secret", operator: "eq" as const, value: "x" }] }]) {
     await expect(queries.list({ context, entityCode: secured.entityCode, ...query })).rejects.toThrow();
   }
+});
+
+it("accepted BP target selection blocks direct create and patch despite a permissive legacy authorizer", async () => {
+  const selection = JSON.parse(readFileSync(new URL("../../../../../../governance/policy/reports/business-partner-accepted-operations.dev.json", import.meta.url), "utf8"));
+  const selected: EntityRuntimeDescriptor = { ...descriptor, ...selection.descriptor };
+  const persistence = createInMemoryRecordPersistence();
+  const authorize = vi.fn(async () => ({ allowed: true as const }));
+  const record = vi.fn(), append = vi.fn();
+  const mutations = createRecordMutationService({
+    metadata: { getEntityDescriptor: async () => selected }, authorizer: { authorize },
+    repository: persistence.repository, transactions: persistence.transactions,
+    commandExecutions: createInMemoryCommandExecutionStore(), audit: { record }, outbox: { append },
+  });
+  const command = { context, entityCode: "business_partner", input: { name: "Deferred" }, origin: "classic", validationMode: "strict", idempotencyKey: "deferred-create-operation" } as const;
+  expect(await mutations.create(command)).toMatchObject({ kind: "Forbidden" });
+  expect(await mutations.patch({ ...command, recordId: "bp", expectedVersion: 1, idempotencyKey: "deferred-patch-operation" })).toMatchObject({ kind: "Forbidden" });
+  expect(authorize).not.toHaveBeenCalled(); expect(record).not.toHaveBeenCalled(); expect(append).not.toHaveBeenCalled();
 });

@@ -31,7 +31,7 @@ export function RelationshipOverview(){
  const href=rolesHref(summary.identity.id,company||undefined,company===summary.scope.companyCodeId?summary.scope.operatingOrganizationId:undefined);
  return <>
   <Card className="bp360-section-card"><h2>Relationship summary</h2>
-   <div className="bp360-fields"><label>Company<select aria-label="Overview company" value={company} onChange={e=>setCompany(e.target.value)}><option value="">All authorized companies</option>{work.companies.map(c=><option key={c.companyCodeId} value={c.companyCodeId}>{c.displayName}</option>)}</select></label></div>
+   <p>Overview filters affect this summary only. They do not change transaction context or action access.</p><div className="bp360-fields"><label>Overview company filter<select aria-label="Overview company" value={company} onChange={e=>setCompany(e.target.value)}><option value="">All authorized companies</option>{work.companies.map(c=><option key={c.companyCodeId} value={c.companyCodeId}>{c.displayName}</option>)}</select></label></div>
    <p>{company?companyName??"Selected company":"All authorized companies"} · Setup as of {summary.asOf.slice(0,10)}</p>
    {counts?<p className="bp-relationship-summary">Buying in {counts.buying} {counts.buying===1?"company":"companies"} · Selling in {counts.selling} {counts.selling===1?"company":"companies"} · {counts.gaps} setup {counts.gaps===1?"gap":"gaps"}</p>:<p>{relationships.error?"Company relationships unavailable":relationships.allowed?"Loading company relationships…":"Company relationships are not available to you."}</p>}
    {pending!==undefined?<p>{pending} company account {pending===1?"assignment requires":"assignments require"} acceptance review</p>:null}

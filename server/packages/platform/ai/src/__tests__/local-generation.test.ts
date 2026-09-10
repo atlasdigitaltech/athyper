@@ -14,9 +14,27 @@ it('composes basic local generation without optional admin or knowledge dependen
  }
  expect(services.binding.routingPolicyId).toBe('no-fallback-v1');expect(services.binding.credentialPolicy).toBe('local_transport');
 });
-it('advertises staged tools only in Neon and when the owning capability exists',async()=>{
+it('admits generic reads across planes while mutations remain Neon only',async()=>{
  for(const mutationsEnabled of [false,true]){
   const services=createAtlasLocalGenerationServices({transactions:{} as never,config:parseAtlasLocalConfiguration(config),provider:{providerId:'ollama',adapterId:'ollama-native',adapterVersion:'1',async*invoke(){}},tools:{readEnabled:true,mutationsEnabled,available:()=>true,coordinator:{async definitions(){return[];},async handle(){throw Error('not used');}}}});
-  for(const plane of ['neon','mesh','studio']as const){const c={...context,planeKey:plane,permissions:{...context.permissions,planeKey:plane,allowed:[`${plane}.ai.agent.use`]}};expect(await services.admission.resolve(c)).toMatchObject({readToolsAllowed:plane==='neon',mutationToolsAllowed:plane==='neon'&&mutationsEnabled});}
+  for(const plane of ['neon','mesh','studio']as const){const c={...context,planeKey:plane,permissions:{...context.permissions,planeKey:plane,allowed:[`${plane}.ai.agent.use`]}};expect(await services.admission.resolve(c)).toMatchObject({readToolsAllowed:true,mutationToolsAllowed:plane==='neon'&&mutationsEnabled});}
  }
+});
+
+it('does not admit reads when the Records owner is unavailable', async () => {
+ const services=createAtlasLocalGenerationServices({transactions:{} as never,config:parseAtlasLocalConfiguration(config),provider:{providerId:'ollama',adapterId:'ollama-native',adapterVersion:'1',async*invoke(){}},tools:{readEnabled:true,mutationsEnabled:true,available:()=>false,coordinator:{async definitions(){return[];},async handle(){throw Error('not used');}}}});
+ expect(await services.admission.resolve({...context,permissions:{...context.permissions,allowed:['neon.ai.agent.use']}})).toMatchObject({readToolsAllowed:false,mutationToolsAllowed:false});
+});
+
+it('honors the live admission policy for chat, generation and conversation access',async()=>{
+ let allowed=false,providerCalls=0;
+ const services=createAtlasLocalGenerationServices({authorizeAdmission:async()=>allowed,transactions:{} as never,config:parseAtlasLocalConfiguration(config),provider:{providerId:'ollama',adapterId:'ollama-native',adapterVersion:'1',async*invoke(){providerCalls++;}}});
+ const c={...context,permissions:{...context.permissions,allowed:['neon.ai.agent.use']}};
+ expect(await services.admission.resolve(c)).toMatchObject({chatAllowed:false,persistenceAllowed:false});
+ expect(await services.authorizer.authorize({context:c,operation:'create'})).toBe(false);
+ const execute=async()=>{for await(const _event of services.runtime.run({context:c,threadId:'thread',clientRequestId:'denied',publicModelId:'atlas-re-1.0-local',dataClass:'internal',catalogPolicyRevision:(await services.admission.resolve(c)).policyRevision,userText:'Synthetic admission probe'})){} };
+ await expect(execute()).rejects.toThrow();expect(providerCalls).toBe(0);
+ allowed=true;expect(await services.admission.resolve(c)).toMatchObject({chatAllowed:true,persistenceAllowed:true});
+ expect(await services.authorizer.authorize({context:c,operation:'create'})).toBe(true);
+ allowed=false;expect(await services.authorizer.authorize({context:c,operation:'read'})).toBe(false);
 });

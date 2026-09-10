@@ -1,7 +1,7 @@
 import { createLifecycle } from "@athyper/server-foundation/lifecycle";
 import { describe, expect, it, vi } from "vitest";
 
-import type { HostConfig } from "../../config/index.js";
+import { loadConfig, type HostConfig } from "../../config/index.js";
 import { createContainer } from "../create-container.js";
 import { registerAdapters } from "../register-adapters.js";
 
@@ -535,6 +535,7 @@ function adapter(name: string, shutdownOrder: string[]) {
 
 function config(connectionString?: string): HostConfig {
   return {
+    wave0: { ...loadConfig().wave0, authorizationWriterConnectionsPath: undefined },
     port: 4000,
     logLevel: "info",
     shutdownTimeoutMs: 15_000,

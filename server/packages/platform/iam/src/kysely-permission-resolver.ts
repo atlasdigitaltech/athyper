@@ -222,6 +222,18 @@ export function createKyselyPermissionResolver(
           LEFT JOIN authz.entity_operation_scope_binding scope ON scope.entity_operation_binding_id=binding.id
           WHERE binding.plane_code=${identity.planeKey} AND (binding.tenant_id IS NULL OR binding.tenant_id=${identity.tenantId}::uuid)
             AND binding.status='published' AND binding.effective_from<=statement_timestamp()
+            -- Select bindings from the same active tenant artifact as metadata.
+            -- A missing/revoked binding in that artifact must not fall back to a
+            -- global catalog or another release of the entity.
+            AND NOT EXISTS (
+              SELECT 1 FROM runtime_meta.entity_descriptor selected
+              JOIN runtime_meta.entity_contract contract ON contract.id=selected.entity_contract_id
+              JOIN runtime_meta.release_activation_head head ON head.applied_release_id=selected.applied_release_id
+              WHERE selected.tenant_id=${identity.tenantId}::uuid
+                AND selected.plane_code=binding.plane_code AND contract.entity_code=binding.entity_code
+                AND selected.status='active'
+                AND selected.applied_release_id IS DISTINCT FROM binding.applied_release_id
+            )
             AND (binding.effective_until IS NULL OR binding.effective_until>statement_timestamp())
           GROUP BY binding.id,binding.entity_code,binding.operation_key,permission.canonical_code,binding.decision_mode
         `.execute(transaction);

@@ -1,3 +1,4 @@
+import { usesEntityBackendAuthorization } from "../entity-backend-authorizer.js";
 import { createHash, randomUUID } from "node:crypto";
 import type { VerifiedRequestContext, Authorizer } from "@athyper/server-contract-auth";
 import type { AuditRecorder } from "@athyper/server-contract-audit";
@@ -60,7 +61,33 @@ export function createRecordTransferService<Transaction>(options: {
 }) {
   const now = options.now ?? (() => new Date());
   const createId = options.createId ?? randomUUID;
+  const prepareExport = async (context: VerifiedRequestContext, entityCode: string, filter: Readonly<Record<string, unknown>>) => {
+      assertBusinessPartnerExportPrivacy(entityCode,filter);
+      const exactFilter = structuredClone(filter);
+      const descriptor = await descriptorFor(options.metadata, context, entityCode);
+      if (!descriptor.operations["export"]) throw new RecordServiceError(409,"ENTITY_OPERATION_UNAVAILABLE","Export is not selected");
+      const requestedTransfer = exactFilter["_transfer"];
+      if (usesEntityBackendAuthorization(options.authorizer,context,descriptor) && exactFilter["fields"] === undefined && requestedTransfer && typeof requestedTransfer === "object" && !Array.isArray(requestedTransfer) && "fields" in requestedTransfer)
+        (exactFilter as Record<string,unknown>)["fields"] = (requestedTransfer as Record<string,unknown>)["fields"];
+      if(usesEntityBackendAuthorization(options.authorizer,context,descriptor) && exactFilter["fields"]===undefined) (exactFilter as Record<string,unknown>)["fields"]=descriptor.fields.filter(field=>descriptor.authorization!.fieldPolicies.some(policy=>policy.fields.includes(field.key)&&policy.queryUses.includes("export")&&policy.representation==="plain")).map(field=>field.key);
+      if (usesEntityBackendAuthorization(options.authorizer,context,descriptor)) {
+        const transfer = exactFilter["_transfer"];
+        const settings = transfer && typeof transfer === "object" && !Array.isArray(transfer) ? transfer as Record<string,unknown> : {};
+        if (settings["fields"] !== undefined && JSON.stringify(settings["fields"]) !== JSON.stringify(exactFilter["fields"]))
+          throw new RecordServiceError(400,"EXPORT_FIELD_PROJECTION_MISMATCH","Export worker and authorization fields must match");
+        (exactFilter as Record<string,unknown>)["_transfer"] = {...settings,fields:exactFilter["fields"]};
+      }
+      const scope = await resolveTransferScope(options.collectionScopes, context, descriptor, "export", scopeCoordinate(exactFilter));
+      const exportFields=exactFilter["fields"];
+      if(usesEntityBackendAuthorization(options.authorizer,context,descriptor) && (!Array.isArray(exportFields)||!exportFields.length||exportFields.some(field=>typeof field!=="string")))throw new RecordServiceError(403,"EXPORT_AUTHORIZATION_FIELDS_MISSING","Export fields are unavailable");
+      return {descriptor, exactFilter, scope, exportFields};
+  };
   return {
+    async preflightExport(context: VerifiedRequestContext, entityCode: string, filter: Readonly<Record<string, unknown>>) {
+      // No export authorization recursion, enqueue, state, audit or outbox writes.
+      // Execution still authorizes exact fields and each worker/download boundary.
+      await prepareExport(context, entityCode, filter);
+    },
     async beginImport(context: VerifiedRequestContext, entityCode: string, sessionId = createId(), operation: RecordImportOperation = "create", configuration: { readonly scopeCoordinate?: Readonly<Record<string, string>>; readonly conflictPolicy?: RecordImportConflictPolicy; readonly atomicity?: RecordImportAtomicity } = {}) {
       const descriptor = await descriptorFor(options.metadata, context, entityCode);
       const scope = await resolveImportScope(options.collectionScopes, context, descriptor, configuration.scopeCoordinate);
@@ -231,15 +258,19 @@ export function createRecordTransferService<Transaction>(options: {
       if (!options.errorReports) throw new Error("Import error reports are not configured");
       const staged = await options.transactions.run(context.planeKey, context, (tx) => options.staging.get(context.tenantId, sessionId, tx));
       if (!staged?.session.errorReportKey) throw new Error("Import error report is unavailable");requireOwner(staged.session,context);
+      const descriptor = await descriptorFor(options.metadata, context, staged.session.entityCode);
+      if (usesEntityBackendAuthorization(options.authorizer,context,descriptor)) {
+        const scope = await resolveImportScope(options.collectionScopes,context,descriptor,staged.session.scopeCoordinate);
+        await authorizeDescriptorOperation(options.authorizer,context,descriptor,"import",scope.authorizationResource);
+        await authorizeImportMode(options.authorizer,context,descriptor,staged.session.operation,scope.authorizationResource);
+      }
       return { sessionId, url: await options.errorReports.createDownloadUrl(staged.session.errorReportKey, Math.min(Math.max(expirySeconds, 30), 3600)), expiresInSeconds: Math.min(Math.max(expirySeconds, 30), 3600) };
     },
 
     async requestExport(context: VerifiedRequestContext, entityCode: string, filter: Readonly<Record<string, unknown>>, requestId?: string) {
-      assertBusinessPartnerExportPrivacy(entityCode,filter);
-      const exportRequestId = requestId ?? createId(), jobId = `records:export:${exportRequestId}`, exactFilter = structuredClone(filter);
-      const descriptor = await descriptorFor(options.metadata, context, entityCode);
-      const scope = await resolveTransferScope(options.collectionScopes, context, descriptor, "export", scopeCoordinate(exactFilter));
-      await authorizeDescriptorOperation(options.authorizer, context, descriptor, "export", scope.authorizationResource);
+      const exportRequestId = requestId ?? createId(), jobId = `records:export:${exportRequestId}`;
+      const {descriptor, exactFilter, scope, exportFields} = await prepareExport(context, entityCode, filter);
+      await authorizeDescriptorOperation(options.authorizer, context, descriptor, "export", {...scope.authorizationResource,...(usesEntityBackendAuthorization(options.authorizer,context,descriptor)?{authorizationFieldUses:(exportFields as string[]).map(field=>({field,use:"export"}))}:{})});
       await options.transactions.run(context.planeKey, context, async (tx) => {
         const state = await options.staging.saveExportRequest({ id: exportRequestId, tenantId: context.tenantId, entityCode, exactFilter, actorPrincipalId: context.principalId, status: "queued" }, tx);
         if (state === "replayed") return;
@@ -272,7 +303,16 @@ export function createRecordTransferService<Transaction>(options: {
       return{exportRequestId,jobId,status:"queued"as const};
     },
     async getImport(context:VerifiedRequestContext,sessionId:string){const staged=await options.transactions.run(context.planeKey,context,tx=>options.staging.get(context.tenantId,sessionId,tx));if(!staged)throw new Error("Import session is unavailable");requireOwner(staged.session,context);return staged.session;},
-    async downloadExport(context:VerifiedRequestContext,exportRequestId:string,expirySeconds=300){if(!options.errorReports||!options.staging.getExport)throw new Error("Export downloads are not configured");const request=await options.transactions.run(context.planeKey,context,tx=>options.staging.getExport!(context.tenantId,exportRequestId,tx));if(!request||request.actorPrincipalId!==context.principalId||request.status!=="completed"||!request.artifactKey)throw new Error("Export artifact is unavailable");const ttl=Math.min(Math.max(expirySeconds,30),3600);return{exportRequestId,rowCount:request.rowCount??0,url:await options.errorReports.createDownloadUrl(request.artifactKey,ttl),expiresInSeconds:ttl};},
+    async downloadExport(context:VerifiedRequestContext,exportRequestId:string,expirySeconds=300){if(!options.errorReports||!options.staging.getExport)throw new Error("Export downloads are not configured");const request=await options.transactions.run(context.planeKey,context,tx=>options.staging.getExport!(context.tenantId,exportRequestId,tx));if(!request||request.actorPrincipalId!==context.principalId||request.status!=="completed"||!request.artifactKey)throw new Error("Export artifact is unavailable");
+      const descriptor=await descriptorFor(options.metadata,context,request.entityCode);
+      if(usesEntityBackendAuthorization(options.authorizer,context,descriptor)){
+        if(!request.exactFilter)throw new RecordServiceError(403,"EXPORT_AUTHORIZATION_CONTEXT_MISSING","Export scope is unavailable");
+        const scope=await resolveTransferScope(options.collectionScopes,context,descriptor,"export",scopeCoordinate(request.exactFilter));
+        const fields=request.exactFilter["fields"];
+        if(!Array.isArray(fields)||!fields.length||fields.some(field=>typeof field!=="string"))throw new RecordServiceError(403,"EXPORT_AUTHORIZATION_FIELDS_MISSING","Export fields are unavailable");
+        await authorizeDescriptorOperation(options.authorizer,context,descriptor,"export",{...scope.authorizationResource,authorizationFieldUses:fields.map(field=>({field,use:"export"}))});
+      }
+      const ttl=Math.min(Math.max(expirySeconds,30),3600);return{exportRequestId,rowCount:request.rowCount??0,url:await options.errorReports.createDownloadUrl(request.artifactKey,ttl),expiresInSeconds:ttl};},
     async listTransfers(context:VerifiedRequestContext,limit=50){if(!options.staging.listOwned)throw new Error("Transfer workspace is not configured");const safe=Math.min(Math.max(limit,1),100);return{items:await options.transactions.run(context.planeKey,context,tx=>options.staging.listOwned!(context.tenantId,context.principalId,safe,tx))};},
   };
 
@@ -311,7 +351,7 @@ function stable(value: unknown): string { if (value === null || typeof value !==
 function summarize(rows: readonly ImportValidationRow[], sampleSize: number): ImportValidationSummary { const invalid = rows.filter((row) => !row.valid); const errorsByCode: Record<string, number> = {}; for (const row of invalid) for (const error of row.errors) { const code = error.split(":", 1)[0]!.trim() || "VALIDATION_ERROR"; errorsByCode[code] = (errorsByCode[code] ?? 0) + 1; } return { totalCount: rows.length, validCount: rows.length - invalid.length, invalidCount: invalid.length, errorsByCode, sample: invalid.slice(0, Math.max(0, sampleSize)), truncated: invalid.length > sampleSize }; }
 function preview(sessionId: string, rows: readonly ImportValidationRow[], summary: ImportValidationSummary): RecordImportPreview { return { sessionId, rows, validCount: summary.validCount, invalidCount: summary.invalidCount, summary }; }
 async function* errorLines(rows: readonly ImportValidationRow[]) { const encoder = new TextEncoder(); for (const row of rows) if (!row.valid) yield encoder.encode(`${JSON.stringify(row)}\n`); }
-async function authorizeDescriptorOperation(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: Awaited<ReturnType<typeof descriptorFor>>, operation: "import" | "export", resource: Readonly<Record<string, string>>) { const permissionCode = descriptor.operations[operation]?.permissionCode; if (!permissionCode || !(await authorizer.authorize({ context, permissionCode, resource: { tenantId: context.tenantId, ...resource } })).allowed) throw new RecordServiceError(403, "FORBIDDEN", `Record ${operation} is not permitted`); }
+async function authorizeDescriptorOperation(authorizer: Authorizer, context: VerifiedRequestContext, descriptor: Awaited<ReturnType<typeof descriptorFor>>, operation: "import" | "export", resource: Readonly<Record<string, unknown>>) { const permissionCode = descriptor.operations[operation]?.permissionCode; if (!permissionCode || !(await authorizer.authorize({ context, permissionCode, observation: { entityCode: descriptor.entityCode, operationKey: operation, surface: "transfer", phase: "execute" }, resource: { tenantId: context.tenantId, ...resource, ...(usesEntityBackendAuthorization(authorizer,context,descriptor) ? {entityCode:descriptor.entityCode,operationKey:operation} : {}) } })).allowed) throw new RecordServiceError(403, "FORBIDDEN", `Record ${operation} is not permitted`); }
 async function authorizeImportMode(authorizer:Authorizer,context:VerifiedRequestContext,descriptor:Awaited<ReturnType<typeof descriptorFor>>,operation:RecordImportOperation,resource:Readonly<Record<string,string>>){const permissions=descriptor.listPresentation?.dataOperations?.importOperationPermissions?.[operation]??[];if(!permissions.length)throw new RecordServiceError(403,"IMPORT_MODE_NOT_PUBLISHED",`Import ${operation} is not published for this entity`);for(const permissionCode of permissions)if(!(await authorizer.authorize({context,permissionCode,resource:{tenantId:context.tenantId,...resource}})).allowed)throw new RecordServiceError(403,"FORBIDDEN",`Import ${operation} is not permitted`);}
 async function resolveImportScope(resolver: RecordCollectionScopeResolver | undefined, context: VerifiedRequestContext, descriptor: Awaited<ReturnType<typeof descriptorFor>>, coordinate?: Readonly<Record<string, string>>): Promise<Extract<RecordCollectionScopeResolution, { readonly status: "ready" }>> {
   const resolution = resolver ? await resolver.resolve({ context, descriptor, operationCode: "import", ...(coordinate ? { coordinate } : {}) }) : { status: "ready" as const, authorizationResource: Object.freeze({}), constraints: Object.freeze([]), labels: Object.freeze([]), fingerprintMaterial: Object.freeze({ mode: "tenant" }) };

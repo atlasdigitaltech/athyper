@@ -9,7 +9,7 @@ import type {
 export const OLLAMA_ADAPTER_ID = "ollama-native";
 export const OLLAMA_ADAPTER_VERSION = "1";
 const ENDPOINT = "http://atlas-inference:11434";
-class LocalError extends Error {
+export class LocalError extends Error {
   constructor(
     readonly classification: AtlasProviderErrorClass,
     readonly code: string,
@@ -26,7 +26,15 @@ export class LocalInferenceQueue {
   constructor(
     private readonly limit = 8,
     private readonly timeoutMs = 5000,
-  ) {}
+  ) {
+    if (
+      !Number.isSafeInteger(limit) ||
+      limit < 0 ||
+      !Number.isFinite(timeoutMs) ||
+      timeoutMs <= 0
+    )
+      throw new TypeError("Invalid inference queue bounds");
+  }
   async acquire(signal: AbortSignal): Promise<() => void> {
     if (signal.aborted) throw signal.reason;
     if (this.active) {
@@ -67,31 +75,122 @@ export class LocalInferenceQueue {
     };
   }
 }
+/** One shared budget for every Atlas inference client in the supported single API process. */
+export interface InferenceAdmission {
+  acquire(
+    signal: AbortSignal,
+    onLost?: (error: Error) => void,
+  ): Promise<() => void | Promise<void>>;
+}
+export let sharedAtlasInferenceQueue: InferenceAdmission =
+  new LocalInferenceQueue();
+export function configureSharedAtlasInferenceAdmission(
+  queue: InferenceAdmission,
+): void {
+  sharedAtlasInferenceQueue = queue;
+}
+export interface InferenceDiagnostic {
+  readonly workload: "generation" | "embedding";
+  readonly phase: string;
+  readonly model: string;
+  readonly modelDigest: string;
+  readonly runId?: string;
+  readonly providerCallId?: string;
+  readonly operationId?: string;
+  readonly attempt: number;
+  readonly queueWaitMs: number;
+  readonly loadDurationMs: number | null;
+  readonly elapsedMs: number;
+  readonly code?: string;
+}
+export function recordInferenceDiagnostic(value: InferenceDiagnostic): void {
+  console.info(
+    JSON.stringify({ event: "atlas.inference.diagnostic", ...value }),
+  );
+}
 export interface OllamaAdapterOptions {
   readonly modelDigest: string;
   readonly engineVersion: string;
   readonly fetch?: typeof fetch;
   readonly timeoutMs?: number;
-  readonly queue?: LocalInferenceQueue;
+  readonly queue?: InferenceAdmission;
+  readonly readinessTimeoutMs?: number;
+  readonly readinessPollMs?: number;
+  readonly observe?: (event: InferenceDiagnostic) => void;
 }
 export class OllamaModelProvider implements AtlasModelProvider {
   readonly providerId = "ollama" as const;
   readonly adapterId = OLLAMA_ADAPTER_ID;
   readonly adapterVersion = OLLAMA_ADAPTER_VERSION;
   private readonly fetcher: typeof fetch;
-  private readonly queue: LocalInferenceQueue;
+  private readonly queue: InferenceAdmission;
   constructor(private readonly options: OllamaAdapterOptions) {
     if (
       !/^sha256:[a-f0-9]{64}$/.test(options.modelDigest) ||
       !options.engineVersion.trim()
     )
       throw new TypeError("Pinned Ollama artifact required");
+    for (const value of [
+      options.timeoutMs,
+      options.readinessTimeoutMs,
+      options.readinessPollMs,
+    ])
+      if (value !== undefined && (!Number.isFinite(value) || value <= 0))
+        throw new TypeError("Invalid inference time bound");
     this.fetcher = options.fetch ?? fetch;
-    this.queue = options.queue ?? new LocalInferenceQueue();
+    this.queue = options.queue ?? sharedAtlasInferenceQueue;
   }
   async *invoke(
     input: AtlasProviderInvocation,
   ): AsyncIterable<AtlasProviderEvent> {
+    const started = Date.now();
+    let queueWaitMs = 0,
+      loadDurationMs = 0,
+      attempt = 0,
+      waitingSince = 0;
+    const diagnostic = (phase: string, code?: string) => {
+      const event: InferenceDiagnostic = {
+        workload: "generation",
+        phase,
+        model: input.binding.upstreamModelId,
+        modelDigest: this.options.modelDigest,
+        runId: input.trace.runId,
+        providerCallId: input.trace.providerCallId,
+        attempt,
+        queueWaitMs,
+        loadDurationMs,
+        elapsedMs: Date.now() - started,
+        ...(code ? { code } : {}),
+      };
+      try {
+        (this.options.observe ?? recordInferenceDiagnostic)(event);
+      } catch {
+        /* Observation cannot alter dispatch or leak inputs. */
+      }
+    };
+    const reauthorize = async (signal: AbortSignal = controller.signal) => {
+      if (!input.reauthorize) return;
+      let allowed = false;
+      try {
+        allowed = await new Promise<boolean>((resolve, reject) => {
+          const abort = () => reject(signal.reason);
+          signal.addEventListener("abort", abort, { once: true });
+          if (signal.aborted) {
+            signal.removeEventListener("abort", abort);
+            reject(signal.reason);
+            return;
+          }
+          Promise.resolve()
+            .then(() => input.reauthorize!())
+            .then(resolve, reject)
+            .finally(() => signal.removeEventListener("abort", abort));
+        });
+      } catch {
+        if (signal.aborted) throw signal.reason;
+        /* Authorization failure denies dispatch without exposing service details. */
+      }
+      if (!allowed) throw new LocalError("permission", "authorization_changed");
+    };
     const controller = new AbortController();
     const abort = () => controller.abort(input.signal?.reason);
     input.signal?.addEventListener("abort", abort, { once: true });
@@ -101,7 +200,8 @@ export class OllamaModelProvider implements AtlasModelProvider {
       timedOut = true;
       controller.abort();
     }, this.options.timeoutMs ?? 120000);
-    let release: (() => void) | undefined;
+    let release: (() => void | Promise<void>) | undefined;
+    let admissionFailure: Error | undefined;
     let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
     try {
       const b = input.binding;
@@ -133,10 +233,24 @@ export class OllamaModelProvider implements AtlasModelProvider {
           4096
       )
         throw new LocalError("invalid_request", "context_budget_exceeded");
-      release = await this.queue.acquire(controller.signal);
-      const request = async (path: string, body?: unknown) => {
+      const queued = Date.now();
+      waitingSince = queued;
+      diagnostic("queued");
+      release = await this.queue.acquire(controller.signal, (error) => {
+        admissionFailure = error;
+        controller.abort(error);
+      });
+      queueWaitMs = Date.now() - queued;
+      waitingSince = 0;
+      diagnostic("admitted");
+      await reauthorize();
+      const request = async (
+        path: string,
+        body?: unknown,
+        signal: AbortSignal = controller.signal,
+      ) => {
         const response = await this.fetcher(ENDPOINT + path, {
-          signal: controller.signal,
+          signal,
           redirect: "error",
           ...(body
             ? {
@@ -162,34 +276,134 @@ export class OllamaModelProvider implements AtlasModelProvider {
       const version = (await (await request("/api/version")).json()) as any;
       const tags = (await (await request("/api/tags")).json()) as any;
       const model = tags.models?.find((m: any) => m.name === b.upstreamModelId);
+      if (version.version !== this.options.engineVersion)
+        throw new LocalError("model_unavailable", "engine_version_mismatch");
+      if (!model)
+        throw new LocalError("model_unavailable", "model_not_installed");
       if (
-        version.version !== this.options.engineVersion ||
-        !model ||
         "sha256:" + String(model.digest).replace(/^sha256:/, "") !==
-          b.modelDigest
+        b.modelDigest
       )
-        throw new LocalError("model_unavailable", "artifact_mismatch");
-      let ps = (await (await request("/api/ps")).json()) as any;
-      if (!ps.models?.some((m: any) => m.name === b.upstreamModelId)) {
-        await (
-          await request("/api/generate", {
-            model: b.upstreamModelId,
-            keep_alive: "5m",
-            stream: false,
-            options: { num_ctx: 4096 },
-          })
-        ).json();
-        ps = (await (await request("/api/ps")).json()) as any;
+        throw new LocalError("model_unavailable", "registry_digest_mismatch");
+      const readyDeadline =
+        Date.now() + (this.options.readinessTimeoutMs ?? 30_000);
+      let loads = 0;
+      try {
+        while (true) {
+          attempt++;
+          if (Date.now() >= readyDeadline)
+            throw new LocalError(
+              "model_unavailable",
+              "readiness_deadline_exceeded",
+            );
+          const readySignal = AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(Math.max(1, readyDeadline - Date.now())),
+          ]);
+          const ps = (await (
+            await request("/api/ps", undefined, readySignal)
+          ).json()) as any;
+          const loaded = ps.models?.find(
+            (m: any) => m.name === b.upstreamModelId,
+          );
+          if (loaded) {
+            if (
+              "sha256:" + String(loaded.digest).replace(/^sha256:/, "") !==
+              b.modelDigest
+            )
+              throw new LocalError(
+                "model_unavailable",
+                "loaded_digest_mismatch",
+              );
+            if (loaded.context_length !== 4096)
+              throw new LocalError(
+                "model_unavailable",
+                "context_length_mismatch",
+              );
+            if (!(loaded.size > 0))
+              throw new LocalError("model_unavailable", "model_size_invalid");
+            if (!(loaded.size_vram >= loaded.size))
+              throw new LocalError(
+                "model_unavailable",
+                "gpu_residency_insufficient",
+              );
+            diagnostic("ready");
+            break;
+          }
+          diagnostic("readiness_wait", "model_not_resident");
+          if (Date.now() >= readyDeadline)
+            throw new LocalError(
+              "model_unavailable",
+              "readiness_deadline_exceeded",
+            );
+          if (loads < 2 && (loads === 0 || input.reauthorize)) {
+            await reauthorize(readySignal);
+            loads++;
+            const loading = Date.now();
+            diagnostic("warmup_started");
+            // Warm-up contains no prompt. Never retry /api/chat or a stream.
+            const warmController = AbortSignal.any([
+              controller.signal,
+              AbortSignal.timeout(Math.max(1, readyDeadline - Date.now())),
+            ]);
+            try {
+              const warm = await this.fetcher(ENDPOINT + "/api/generate", {
+                signal: warmController,
+                redirect: "error",
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                  model: b.upstreamModelId,
+                  keep_alive: "5m",
+                  stream: false,
+                  options: { num_ctx: 4096 },
+                }),
+              });
+              if (!warm.ok) {
+                await warm.body?.cancel();
+                throw new LocalError(
+                  warm.status === 503 ? "overloaded" : "upstream_error",
+                  `warmup_http_${warm.status}`,
+                );
+              }
+              await warm.json();
+            } finally {
+              loadDurationMs += Date.now() - loading;
+            }
+            diagnostic("warmup_completed");
+          } else {
+            await new Promise<void>((resolve, reject) => {
+              const abort = () => {
+                clearTimeout(timer);
+                reject(controller.signal.reason);
+              };
+              const timer = setTimeout(
+                () => {
+                  controller.signal.removeEventListener("abort", abort);
+                  resolve();
+                },
+                Math.min(
+                  this.options.readinessPollMs ?? 100,
+                  Math.max(1, readyDeadline - Date.now()),
+                ),
+              );
+              controller.signal.addEventListener("abort", abort, {
+                once: true,
+              });
+              if (controller.signal.aborted) abort();
+            });
+          }
+        }
+      } catch (error) {
+        if (Date.now() >= readyDeadline && !controller.signal.aborted)
+          throw new LocalError(
+            "model_unavailable",
+            "readiness_deadline_exceeded",
+          );
+        throw error;
       }
-      const loaded = ps.models?.find((m: any) => m.name === b.upstreamModelId);
-      if (
-        !loaded ||
-        loaded.context_length !== 4096 ||
-        "sha256:" + String(loaded.digest).replace(/^sha256:/, "") !== b.modelDigest ||
-        !(loaded.size > 0) ||
-        loaded.size_vram < loaded.size
-      )
-        throw new LocalError("model_unavailable", "gpu_offload_required");
+      await reauthorize();
+      diagnostic("chat_dispatch");
       const response = await request("/api/chat", {
         model: b.upstreamModelId,
         stream: true,
@@ -337,7 +551,20 @@ export class OllamaModelProvider implements AtlasModelProvider {
         if (chunk.done && !done)
           throw new LocalError("stream_incomplete", "stream_incomplete");
       }
+      diagnostic("completed");
     } catch (error) {
+      if (admissionFailure) error = admissionFailure;
+      if (waitingSince) queueWaitMs = Date.now() - waitingSince;
+      diagnostic(
+        "failed",
+        input.signal?.aborted
+          ? "cancelled"
+          : timedOut
+            ? "ollama_timeout"
+            : error instanceof LocalError
+              ? error.code
+              : "ollama_request_failed",
+      );
       if (input.signal?.aborted) yield { kind: "cancelled" };
       else
         yield {
@@ -356,6 +583,12 @@ export class OllamaModelProvider implements AtlasModelProvider {
                 ? error.code
                 : "ollama_request_failed",
             safeMessage: "Local Atlas generation could not be completed.",
+            diagnostics: {
+              modelDigest: this.options.modelDigest,
+              queueWaitMs,
+              loadDurationMs,
+              readinessChecks: attempt,
+            },
             retryable: false,
           },
         };
@@ -363,7 +596,12 @@ export class OllamaModelProvider implements AtlasModelProvider {
       controller.abort();
       await reader?.cancel().catch(() => {});
       reader?.releaseLock();
-      release?.();
+      try {
+        await release?.();
+        diagnostic("released");
+      } catch {
+        diagnostic("release_failed", "inference_admission_unavailable");
+      }
       clearTimeout(timer);
       input.signal?.removeEventListener("abort", abort);
     }

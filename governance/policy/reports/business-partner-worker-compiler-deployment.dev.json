@@ -1,0 +1,19 @@
+{
+  "baseImage": "sha256:8862a63a1acfa29a7a1b46d6b38913ad2060872e4e5c351efa6b4e3e58e7560c",
+  "imageId": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+  "scope": "Compile exact reviewed scope subset from compatible permission catalog",
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "capturedAt": "2026-09-10T05:43:17.917614+00:00",
+  "applied": true,
+  "sourceConfigs": [
+    "/home/chandravel_natarajan/.athyper/instances/dev/deployments/atlas-baseline-bridge-20260910/worker/rollout.json",
+    "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-worker-20260910/override.json",
+    "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-catalog-20260910/override.json"
+  ],
+  "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-compiler-20260910/override.json",
+  "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-compiler-20260910/rollback.json",
+  "activationHoldRetained": true,
+  "catalogMatchesReviewed": true,
+  "regressionTestsPassed": 27
+}

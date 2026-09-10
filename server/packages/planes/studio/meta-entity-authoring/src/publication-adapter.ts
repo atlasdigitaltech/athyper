@@ -1,10 +1,10 @@
-import type { JobPublisher } from "@athyper/server-contract-jobs";
+import type { JobPublisher, JobExecutionCoordinate } from "@athyper/server-contract-jobs";
 import type { MetaEntityPublicationPort, MetadataGenerationEvent, SignedMetaEntityArtifact } from "@athyper/server-contract-meta-entity-authoring";
 import { sql, type Kysely } from "kysely";
-export interface PublicationServiceAdapterOptions { jobs:JobPublisher;activateLocal(input:{releaseId:string;plane:"studio"|"neon"|"mesh";actorId:string}):Promise<Omit<MetadataGenerationEvent,"eventId">>;appendDurableEvent(event:MetadataGenerationEvent):Promise<void>;createEventId():string; }
+export interface PublicationServiceAdapterOptions { jobs:JobPublisher & {retry?(queue:string,jobId:string):Promise<boolean>};execution():JobExecutionCoordinate;activateLocal(input:{releaseId:string;plane:"studio"|"neon"|"mesh";actorId:string}):Promise<Omit<MetadataGenerationEvent,"eventId">>;appendDurableEvent(event:MetadataGenerationEvent):Promise<void>;createEventId():string; }
 export class PublicationServiceMetaEntityAdapter implements MetaEntityPublicationPort {
   constructor(private readonly options:PublicationServiceAdapterOptions){}
-  async publish(input:{releaseId:string;artifact:SignedMetaEntityArtifact;targetPlanes:readonly ("studio"|"neon"|"mesh")[]}){await this.options.jobs.enqueue("publication.authority","publication.compile-artifact",{releaseId:input.releaseId},{jobId:`publication:${input.releaseId}:compile:1`,maxAttempts:5,payloadSchema:{name:"publication.compile-artifact",version:1},execution:{planeKey:"studio",scope:"plane",principalId:"meta-entity-authoring"}});}
+  async publish(input:{releaseId:string;artifact:SignedMetaEntityArtifact;targetPlanes:readonly ("studio"|"neon"|"mesh")[]}){const jobId=await this.options.jobs.enqueue("publication.authority","publication.compile-artifact",{releaseId:input.releaseId},{enqueueKey:`publication:${input.releaseId}:compile:1`,maxAttempts:5,payloadSchema:{name:"publication.compile-artifact",version:1},execution:this.options.execution()});await this.options.jobs.retry?.("publication.authority",jobId);}
   async activate(input:{releaseId:string;plane:"studio"|"neon"|"mesh";actorId:string}){return{eventId:this.options.createEventId(),...await this.options.activateLocal(input)};}
   appendGenerationEvent(event:MetadataGenerationEvent){return this.options.appendDurableEvent(event);}
 }

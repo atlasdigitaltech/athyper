@@ -6,6 +6,8 @@
     "node": "24.19.0"
   },
   "scripts": {
+    "atlas:baseline": "node tooling/scripts/verification/capture-atlas-foundation-baseline.mjs",
+    "test:atlas-baseline": "node --test tooling/scripts/verification/atlas-foundation-baseline.test.mjs",
     "athyper": "node deploy/stackctl/src/cli.mjs",
     "stack:v2:test": "node --test deploy/stackctl/tests/*.test.mjs deploy/compose/tests/*.test.mjs",
     "verify:platform": "node tooling/scripts/verification/run-platform-verification.mjs",

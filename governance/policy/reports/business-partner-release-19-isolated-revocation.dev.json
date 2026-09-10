@@ -1,0 +1,164 @@
+{
+  "schemaVersion": 1,
+  "kind": "release19_live_isolated_revocation",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "baseline": {
+    "capturedAt": "2026-09-10T07:57:34.401Z",
+    "tables": [
+      "authz.role",
+      "authz.role_permission",
+      "authz.group_member",
+      "authz.group_role",
+      "authz.plane_membership",
+      "authz.delegation_grant",
+      "authz.permission",
+      "authz.permission_scope_kind",
+      "authz.deny_rule",
+      "authz.record_acl",
+      "authz.override",
+      "authz.scope_target",
+      "authz.principal_group"
+    ],
+    "sha256": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf",
+    "sourceCloneMatch": true
+  },
+  "checks": [
+    {
+      "name": "owner_without_target_export",
+      "account": "catl.owner",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:34.728Z"
+    },
+    {
+      "name": "owner_without_target_ai_read",
+      "account": "catl.owner",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:37.007Z"
+    },
+    {
+      "name": "admin_read_before_revocation",
+      "account": "catl.admin",
+      "status": 200,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:37.566Z"
+    },
+    {
+      "name": "export_queued_before_revocation",
+      "account": "catl.admin",
+      "status": 202,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:37.981Z"
+    },
+    {
+      "name": "new_export_after_revocation",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:38.709Z"
+    },
+    {
+      "name": "download_after_revocation",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:39.026Z"
+    },
+    {
+      "name": "ai_after_revocation",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:39.350Z"
+    },
+    {
+      "name": "record_after_revocation",
+      "account": "catl.admin",
+      "status": 403,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "passed": true,
+      "checkedAt": "2026-09-10T07:57:39.675Z"
+    }
+  ],
+  "qualified": true,
+  "sharedDevGrantsChanged": false,
+  "revokedAccessRestored": false,
+  "queuedExport": "0c1ae42c-0603-471d-be02-60a91591361a",
+  "revocation": {
+    "schemaVersion": 1,
+    "kind": "bp_release_19_isolated_test_grant_cleanup",
+    "capturedAt": "2026-09-10T07:57:38.102Z",
+    "proposalRevision": "a4ef0dbcc40af46758034a70698463b5f6ec9bfbbe07a43497eefad1fe5c9176",
+    "assignmentsRevoked": 3,
+    "membershipsRevoked": 3,
+    "applied": true,
+    "rollbackRehearsal": false,
+    "oldGrantsRestored": false,
+    "activationAuthorized": false,
+    "isolatedOnly": true,
+    "sharedDevChanged": false
+  },
+  "after": {
+    "capturedAt": "2026-09-10T07:57:38.372Z",
+    "tables": [
+      "authz.role",
+      "authz.role_permission",
+      "authz.group_member",
+      "authz.group_role",
+      "authz.plane_membership",
+      "authz.delegation_grant",
+      "authz.permission",
+      "authz.permission_scope_kind",
+      "authz.deny_rule",
+      "authz.record_acl",
+      "authz.override",
+      "authz.scope_target",
+      "authz.principal_group"
+    ],
+    "source": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf",
+    "clone": "3272ae45730722ef57820c4f9b443017dd5e943d64ef2e3323cbecb1ea3772e4"
+  },
+  "staleQueuedContext": {
+    "status": "failed",
+    "artifactKey": null,
+    "error": "ERROR",
+    "detail": "Record export authority was revoked before execution"
+  },
+  "final": {
+    "capturedAt": "2026-09-10T07:58:31.764Z",
+    "tables": [
+      "authz.role",
+      "authz.role_permission",
+      "authz.group_member",
+      "authz.group_role",
+      "authz.plane_membership",
+      "authz.delegation_grant",
+      "authz.permission",
+      "authz.permission_scope_kind",
+      "authz.deny_rule",
+      "authz.record_acl",
+      "authz.override",
+      "authz.scope_target",
+      "authz.principal_group"
+    ],
+    "source": "cd2c5495d0e99f3c1ba6f20a6907e2a7939536c931b815660a3e29f8db51cfcf",
+    "clone": "3272ae45730722ef57820c4f9b443017dd5e943d64ef2e3323cbecb1ea3772e4"
+  },
+  "completedAt": "2026-09-10T07:58:31.764Z",
+  "assertionCorrection": "Persisted job uses ERROR with explicit revocation detail, not FORBIDDEN; the initial assertion failure is preserved separately.",
+  "limitations": [
+    "Clone qualification assignments remain revoked. No access was restored.",
+    "Local live revocation including queued stale authority is qualified; continuous source-to-clone synchronization is not.",
+    "Previously minted presigned object URLs retain their bounded TTL; subsequent download URL issuance is denied.",
+    "AI scope is the real entity_read_record handler and Records gateway invoked through an authenticated isolated harness, not an Atlas conversation."
+  ]
+}

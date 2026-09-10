@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-09-10T03:13:01.959Z",
+  "environment": "dev",
+  "plane": "neon",
+  "migration": "20260910_operation_projection_release_identity.sql",
+  "sha256": "d7a11980d424719a0b3703299ee8f9c9e21a8fba4e054b12c67a97cad00c0afb",
+  "applied": false,
+  "runtimeHeadChanged": false
+}

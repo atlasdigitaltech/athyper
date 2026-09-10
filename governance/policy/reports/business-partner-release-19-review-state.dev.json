@@ -1,0 +1,668 @@
+{
+  "schemaVersion": 1,
+  "packetRevision": "d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01",
+  "receipts": [
+    {
+      "reference": "neon-operation-review:76318a27-8e00-40d2-b6c0-10e65834428e",
+      "recordedAt": "2026-09-10T04:55:56.201Z",
+      "packetRevision": "d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.owner",
+        "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "enter",
+          "decision": "approve",
+          "proposalSha256": "969e7d26d9abadc49ae55c3efe192b744f860d3175dadcfb37fcde8a564899a3",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "discover",
+          "decision": "approve",
+          "proposalSha256": "dba2d97891420b6d907149df8dea759e6d76c376e1a47b47d60631e62ae1ab73",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "read",
+          "decision": "approve",
+          "proposalSha256": "ae7211e114cb39b7065f536ab21d61f4e070623817803c14246b2df98426ec18",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_manage",
+          "decision": "approve",
+          "proposalSha256": "9879712192c5067528e4887db1d5fa3dcc9423e0ae2814854411659a0bdcdfb5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_overview",
+          "decision": "approve",
+          "proposalSha256": "c579af890028b877d501c2ad628fc73c49f9bb222750832d7d9c08d93ff36029",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "export",
+          "decision": "approve",
+          "proposalSha256": "5aaaeb4511a11e2e49e5c03f8ff81919ce767f79df00b2946d0eb74b6efefff3",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_review",
+          "decision": "approve",
+          "proposalSha256": "5aa6775b52691b9796d8cde16323f73f290c28a99334a29a5233d9e981b8249f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "request_supplier",
+          "decision": "approve",
+          "proposalSha256": "ec1a143bcfd9af791a91c17655609c693c5a7d239f31ace799621559808d7e83",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "add_role",
+          "decision": "approve",
+          "proposalSha256": "936f7992e62aa34c3004eb0ebf189bd3f0a307591a2557d13d7909f887fbd579",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "amend_partner",
+          "decision": "approve",
+          "proposalSha256": "7dea6e092872b0affb175df62de9965b3eaadb5f4616b5d397e8bd699f3d5abd",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "assign_organization",
+          "decision": "approve",
+          "proposalSha256": "3bbfc6816c79a4d8b8c9d48a6378fb47cfbed37b37c14d73b7b4f72ca1892ce2",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "configure_company",
+          "decision": "approve",
+          "proposalSha256": "09e418658e065f807805cdecf3ea9cc1d5ec7f13f547533764be0586f65a485b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "change_bank",
+          "decision": "approve",
+          "proposalSha256": "6e330cf59b3e9a135555df3e5767919e1862a674aa6609d574a2e8b8bbcefbbf",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "lifecycle",
+          "decision": "approve",
+          "proposalSha256": "7c940d885e7805a95853c48b3caadfad0bde556b5b18e4698fe073589478cbdf",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "certification",
+          "decision": "approve",
+          "proposalSha256": "c2622b8c9a29bdb4cf2f554cbd293b860f99d22a41bdbe8b10e2887c516958c9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "import",
+          "decision": "approve",
+          "proposalSha256": "66f96f7ba1c5b6a630bbb987e8012eaf830f566dd6cebd192ca12a096d0fb63f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "identity_read",
+          "decision": "approve",
+          "proposalSha256": "6c771a8d46684fb1ae956fcc9364654af65ac02751657104d8a70d4cef8e53f1",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "contacts_read",
+          "decision": "approve",
+          "proposalSha256": "db6b7ae12f4d2c3094c0699b42372cb058d19afe28a0014bf4934c70e6525b4a",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "addresses_read",
+          "decision": "approve",
+          "proposalSha256": "d0f7bf4fddb5c1b0018861997720d8eb2a569f2a350e427eb821d4f73495a9a9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "identifier_read",
+          "decision": "approve",
+          "proposalSha256": "9a88da3385c70cab49c3dd62a73f284018322e13427587983a2b9d30abc5e424",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "tax_read",
+          "decision": "approve",
+          "proposalSha256": "0c1570dc65ed557150730c0b3d17ca0d0cf9c8de7588a74b32f9e39dd9431485",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "bank_read",
+          "decision": "approve",
+          "proposalSha256": "426a0eee30084ce7a9158f5e6637187a82947f942b1b213e7a1eec1f02fb0bfe",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification_read",
+          "decision": "approve",
+          "proposalSha256": "e262f9433d874bc4c65c5ee6964f07d55bcf93773d683b5d409f13b7d62aab45",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "certificate_read",
+          "decision": "approve",
+          "proposalSha256": "4fb8c2092b2d73421cefd9a3ff21bd85b7edbb8d9948d693da53b963f3dcaba1",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "credit_read",
+          "decision": "approve",
+          "proposalSha256": "1e944b944e52c21cad4da7b15fae368340a6a75a7a23d51efd03568e049c1587",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "requests_read",
+          "decision": "approve",
+          "proposalSha256": "e0b7234121f4ba9aa6a226100359b4f45dfcc06d0bfb24ffe04c40a33e299784",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "activity_read",
+          "decision": "approve",
+          "proposalSha256": "854ebb4b613a7be76ec73e8cfdadc69c5a3db16292374977b69e65e0d6a58f4b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "network_read",
+          "decision": "approve",
+          "proposalSha256": "c57f67e28197b52e92c11aeab35a1b17cd5eba5a4cb23776a0341cd0865ee467",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "comments_read",
+          "decision": "approve",
+          "proposalSha256": "583d52869ba86417bafcd2ce8abefac444c67e01bb05c21fa6af83a6006a053f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "attachments_read",
+          "decision": "approve",
+          "proposalSha256": "317ee289f30f36fab5e005f74576098420c2b479c02693c55874b4e32d32b585",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "bank_reveal",
+          "decision": "approve",
+          "proposalSha256": "19ba1bb9dadc5fcec9e0ada66ea5e9f7a74dd8663498eaa0af132310601980b5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "tax_reveal",
+          "decision": "approve",
+          "proposalSha256": "73040febbe0bbbd2ade1792edc00fccdace0564b3e302700ea3ca65f0dbe00a9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "person_read",
+          "decision": "approve",
+          "proposalSha256": "8a64f2793dd089ec1a84fb9d8c083914f7e01a1fefc496cbcefc22f2fa9f3be9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "person_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "d4a318aa9a9d659d5ca29dd6f0b2f4628d48be39f82ba2c2e370488c3800652e",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "workforce_read",
+          "decision": "approve",
+          "proposalSha256": "0df27eee020215d5092091fb1574005c301d4db194d60a6ecc2a40151a02887b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "contact_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "023edca5b8fb0b370ff5a11c9bd2399cf0e5d32b354f5d99f5e562272760e85e",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "address_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "640723f7d5027f1d61e39476a66d29b93f9ae3b2f582c17ad0b83e2507bee747",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_create",
+          "decision": "approve",
+          "proposalSha256": "e2e327cc3ed01d7d3be4597b18659d6d0c426e30a8ed8ee518198890b63cf222",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_read",
+          "decision": "approve",
+          "proposalSha256": "6dd9761a07583b795531e90e0f31ee05ea074804d0c0b0c7ab714df0e47ffea9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_update",
+          "decision": "approve",
+          "proposalSha256": "87b8b3100acc6645467b9c9fc17468e63936045ff40c3c17be6f69595655adb4",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_validate",
+          "decision": "approve",
+          "proposalSha256": "e92ee32242a9d77ee8e867194e2b4ad4fef871e06633eb49bd416d1650bb770f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_submit",
+          "decision": "approve",
+          "proposalSha256": "982e0cfe6e3ec3867378d4ff2311988794a54d0097d9570f77727ad74de526d7",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_decide",
+          "decision": "approve",
+          "proposalSha256": "3a146ce34dfa6e4ae21bcd6417f403cdc9a91b279f7462b8f892f5b1e9292cd5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_materialize",
+          "decision": "approve",
+          "proposalSha256": "f1d34c327553b1b1bd65bbdbdf0fae3353b6fe9f1c48647f0f2d70318acdf614",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "section_propose_change",
+          "decision": "approve",
+          "proposalSha256": "7091608305f539c37a50c4993c6914cf7dd012dc0cf86d7320ceca010bc34eff",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "create",
+          "decision": "approve",
+          "proposalSha256": "ca4e9dd6b21c0665fc5164df43297c6b8a299233374568ddc6b380decc63a262",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "update",
+          "decision": "approve",
+          "proposalSha256": "a8e10c4b415fd01c258d5c7a226e69bff8dae289d6093fb89f97c86296864524",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification",
+          "decision": "approve",
+          "proposalSha256": "a2006cc1c032f0e3ac2a68109bbc22cc9596cbfc58d42b1736ba1f4255ce4e4f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification_company",
+          "decision": "approve",
+          "proposalSha256": "7797f1d7e761c81e65d48d44eb10985cf0eac4ebaa89b700933027aa0c40f9f2",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "supplier_company_read",
+          "decision": "approve",
+          "proposalSha256": "8220c71265d3e7ee27504f8500b473c71c8887991fdecc96ffbdf22ee6c8c2f7",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "customer_company_read",
+          "decision": "approve",
+          "proposalSha256": "424f21b79d07acb42c286755c6d52a28367794ac1d0f399fa52d7e899e93f9db",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        }
+      ],
+      "submissionId": "10b00ef0-88e2-497c-8ac4-d6bb1e7d47ff",
+      "commandHash": "d6a83a124dffa12014351cb5f7a5b18ba79a9fe176616762e472105115ee8d8d",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    },
+    {
+      "reference": "neon-operation-review:71893488-b534-4726-94fc-acb40c12ac30",
+      "recordedAt": "2026-09-10T04:57:15.852Z",
+      "packetRevision": "d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.admin",
+        "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "enter",
+          "decision": "approve",
+          "proposalSha256": "969e7d26d9abadc49ae55c3efe192b744f860d3175dadcfb37fcde8a564899a3",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "discover",
+          "decision": "approve",
+          "proposalSha256": "dba2d97891420b6d907149df8dea759e6d76c376e1a47b47d60631e62ae1ab73",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "read",
+          "decision": "approve",
+          "proposalSha256": "ae7211e114cb39b7065f536ab21d61f4e070623817803c14246b2df98426ec18",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_manage",
+          "decision": "approve",
+          "proposalSha256": "9879712192c5067528e4887db1d5fa3dcc9423e0ae2814854411659a0bdcdfb5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_overview",
+          "decision": "approve",
+          "proposalSha256": "c579af890028b877d501c2ad628fc73c49f9bb222750832d7d9c08d93ff36029",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "export",
+          "decision": "approve",
+          "proposalSha256": "5aaaeb4511a11e2e49e5c03f8ff81919ce767f79df00b2946d0eb74b6efefff3",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "navigate_review",
+          "decision": "approve",
+          "proposalSha256": "5aa6775b52691b9796d8cde16323f73f290c28a99334a29a5233d9e981b8249f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "request_supplier",
+          "decision": "approve",
+          "proposalSha256": "ec1a143bcfd9af791a91c17655609c693c5a7d239f31ace799621559808d7e83",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "add_role",
+          "decision": "approve",
+          "proposalSha256": "936f7992e62aa34c3004eb0ebf189bd3f0a307591a2557d13d7909f887fbd579",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "amend_partner",
+          "decision": "approve",
+          "proposalSha256": "7dea6e092872b0affb175df62de9965b3eaadb5f4616b5d397e8bd699f3d5abd",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "assign_organization",
+          "decision": "approve",
+          "proposalSha256": "3bbfc6816c79a4d8b8c9d48a6378fb47cfbed37b37c14d73b7b4f72ca1892ce2",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "configure_company",
+          "decision": "approve",
+          "proposalSha256": "09e418658e065f807805cdecf3ea9cc1d5ec7f13f547533764be0586f65a485b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "change_bank",
+          "decision": "approve",
+          "proposalSha256": "6e330cf59b3e9a135555df3e5767919e1862a674aa6609d574a2e8b8bbcefbbf",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "lifecycle",
+          "decision": "approve",
+          "proposalSha256": "7c940d885e7805a95853c48b3caadfad0bde556b5b18e4698fe073589478cbdf",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "certification",
+          "decision": "approve",
+          "proposalSha256": "c2622b8c9a29bdb4cf2f554cbd293b860f99d22a41bdbe8b10e2887c516958c9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "import",
+          "decision": "approve",
+          "proposalSha256": "66f96f7ba1c5b6a630bbb987e8012eaf830f566dd6cebd192ca12a096d0fb63f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "identity_read",
+          "decision": "approve",
+          "proposalSha256": "6c771a8d46684fb1ae956fcc9364654af65ac02751657104d8a70d4cef8e53f1",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "contacts_read",
+          "decision": "approve",
+          "proposalSha256": "db6b7ae12f4d2c3094c0699b42372cb058d19afe28a0014bf4934c70e6525b4a",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "addresses_read",
+          "decision": "approve",
+          "proposalSha256": "d0f7bf4fddb5c1b0018861997720d8eb2a569f2a350e427eb821d4f73495a9a9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "identifier_read",
+          "decision": "approve",
+          "proposalSha256": "9a88da3385c70cab49c3dd62a73f284018322e13427587983a2b9d30abc5e424",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "tax_read",
+          "decision": "approve",
+          "proposalSha256": "0c1570dc65ed557150730c0b3d17ca0d0cf9c8de7588a74b32f9e39dd9431485",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "bank_read",
+          "decision": "approve",
+          "proposalSha256": "426a0eee30084ce7a9158f5e6637187a82947f942b1b213e7a1eec1f02fb0bfe",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification_read",
+          "decision": "approve",
+          "proposalSha256": "e262f9433d874bc4c65c5ee6964f07d55bcf93773d683b5d409f13b7d62aab45",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "certificate_read",
+          "decision": "approve",
+          "proposalSha256": "4fb8c2092b2d73421cefd9a3ff21bd85b7edbb8d9948d693da53b963f3dcaba1",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "credit_read",
+          "decision": "approve",
+          "proposalSha256": "1e944b944e52c21cad4da7b15fae368340a6a75a7a23d51efd03568e049c1587",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "requests_read",
+          "decision": "approve",
+          "proposalSha256": "e0b7234121f4ba9aa6a226100359b4f45dfcc06d0bfb24ffe04c40a33e299784",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "activity_read",
+          "decision": "approve",
+          "proposalSha256": "854ebb4b613a7be76ec73e8cfdadc69c5a3db16292374977b69e65e0d6a58f4b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "network_read",
+          "decision": "approve",
+          "proposalSha256": "c57f67e28197b52e92c11aeab35a1b17cd5eba5a4cb23776a0341cd0865ee467",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "comments_read",
+          "decision": "approve",
+          "proposalSha256": "583d52869ba86417bafcd2ce8abefac444c67e01bb05c21fa6af83a6006a053f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "attachments_read",
+          "decision": "approve",
+          "proposalSha256": "317ee289f30f36fab5e005f74576098420c2b479c02693c55874b4e32d32b585",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "bank_reveal",
+          "decision": "approve",
+          "proposalSha256": "19ba1bb9dadc5fcec9e0ada66ea5e9f7a74dd8663498eaa0af132310601980b5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "tax_reveal",
+          "decision": "approve",
+          "proposalSha256": "73040febbe0bbbd2ade1792edc00fccdace0564b3e302700ea3ca65f0dbe00a9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "person_read",
+          "decision": "approve",
+          "proposalSha256": "8a64f2793dd089ec1a84fb9d8c083914f7e01a1fefc496cbcefc22f2fa9f3be9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "person_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "d4a318aa9a9d659d5ca29dd6f0b2f4628d48be39f82ba2c2e370488c3800652e",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "workforce_read",
+          "decision": "approve",
+          "proposalSha256": "0df27eee020215d5092091fb1574005c301d4db194d60a6ecc2a40151a02887b",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "contact_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "023edca5b8fb0b370ff5a11c9bd2399cf0e5d32b354f5d99f5e562272760e85e",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "address_sensitive_read",
+          "decision": "approve",
+          "proposalSha256": "640723f7d5027f1d61e39476a66d29b93f9ae3b2f582c17ad0b83e2507bee747",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_create",
+          "decision": "approve",
+          "proposalSha256": "e2e327cc3ed01d7d3be4597b18659d6d0c426e30a8ed8ee518198890b63cf222",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_read",
+          "decision": "approve",
+          "proposalSha256": "6dd9761a07583b795531e90e0f31ee05ea074804d0c0b0c7ab714df0e47ffea9",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_update",
+          "decision": "approve",
+          "proposalSha256": "87b8b3100acc6645467b9c9fc17468e63936045ff40c3c17be6f69595655adb4",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_validate",
+          "decision": "approve",
+          "proposalSha256": "e92ee32242a9d77ee8e867194e2b4ad4fef871e06633eb49bd416d1650bb770f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_submit",
+          "decision": "approve",
+          "proposalSha256": "982e0cfe6e3ec3867378d4ff2311988794a54d0097d9570f77727ad74de526d7",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_decide",
+          "decision": "approve",
+          "proposalSha256": "3a146ce34dfa6e4ae21bcd6417f403cdc9a91b279f7462b8f892f5b1e9292cd5",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "case_materialize",
+          "decision": "approve",
+          "proposalSha256": "f1d34c327553b1b1bd65bbdbdf0fae3353b6fe9f1c48647f0f2d70318acdf614",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "section_propose_change",
+          "decision": "approve",
+          "proposalSha256": "7091608305f539c37a50c4993c6914cf7dd012dc0cf86d7320ceca010bc34eff",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "create",
+          "decision": "approve",
+          "proposalSha256": "ca4e9dd6b21c0665fc5164df43297c6b8a299233374568ddc6b380decc63a262",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "update",
+          "decision": "approve",
+          "proposalSha256": "a8e10c4b415fd01c258d5c7a226e69bff8dae289d6093fb89f97c86296864524",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification",
+          "decision": "approve",
+          "proposalSha256": "a2006cc1c032f0e3ac2a68109bbc22cc9596cbfc58d42b1736ba1f4255ce4e4f",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "qualification_company",
+          "decision": "approve",
+          "proposalSha256": "7797f1d7e761c81e65d48d44eb10985cf0eac4ebaa89b700933027aa0c40f9f2",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "supplier_company_read",
+          "decision": "approve",
+          "proposalSha256": "8220c71265d3e7ee27504f8500b473c71c8887991fdecc96ffbdf22ee6c8c2f7",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        },
+        {
+          "operation": "customer_company_read",
+          "decision": "approve",
+          "proposalSha256": "424f21b79d07acb42c286755c6d52a28367794ac1d0f399fa52d7e899e93f9db",
+          "reason": "User-authorized review of release 19 ba383d04-9a18-4e59-ab4e-3d9726e934c6, packet d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01: 42 exact included operations and nine deferrals, pinned native contract, runtime bindings and catalog. Earlier operation decisions are provenance only. Local regression evidence does not establish deployed qualification. No grants, activation or acceptance of policy differences is authorized by this review."
+        }
+      ],
+      "submissionId": "dc0e307f-9685-47ef-acd8-25197b87c83d",
+      "commandHash": "2e4815c5544772175969f44a276ef9e2c30b7ff7ff7c8cf99d2255d4a0a2683f",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    }
+  ]
+}

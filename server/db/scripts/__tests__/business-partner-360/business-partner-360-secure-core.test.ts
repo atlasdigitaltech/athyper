@@ -23,15 +23,17 @@ test("BS360-02 keeps summary reads bounded, masked, tenant-bound, and owner-awar
 });
 
 test("BS360-02 wires safe routes, compatibility, and an explicit relay allowlist", async () => {
-  const [routes, legacy, relay, host] = await Promise.all([
+  const [routes, contracts, legacy, relay, host] = await Promise.all([
     read("packages/services/master-data/src/business-partner-360-routes.ts"),
+    read("packages/services/master-data/src/business-partner-360-route-contracts.ts"),
     read(
       "packages/services/master-data/src/business-partner-request-routes.ts",
     ),
     read("../packages/platform/gateway/bff-relay/src/index.ts"),
     read("apps/platform-host/src/composition/register-services.ts"),
   ]);
-  assert.match(routes, /\/360\/summary/);
+  assert.match(contracts, /\/360\/summary/);
+  assert.match(routes, /contracts.summary/);
   assert.match(routes, /private, no-store/);
   assert.match(legacy, /aggregate360\?\.legacyAggregate/);
   assert.match(relay, /BUSINESS_PARTNER_360_SUMMARY_OPERATION/);
@@ -58,15 +60,12 @@ test("BS360-02 wires safe routes, compatibility, and an explicit relay allowlist
 });
 
 test("BS360-02 ships a dark manifest-driven shell with deterministic cancellation-safe state", async () => {
-  const [shell, client, navigation, entry, page] = await Promise.all([
+  const [shell, client, entry, page] = await Promise.all([
     read(
       "../packages/planes/neon/business-partner/src/360/business-partner-360.tsx",
     ),
     read(
       "../packages/planes/neon/business-partner/src/360/business-partner-360-client.ts",
-    ),
-    read(
-      "../packages/planes/neon/business-partner/src/360/components/section-navigation.tsx",
     ),
     read("../packages/planes/neon/business-partner/src/index.tsx"),
     read("../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx"),
@@ -87,7 +86,7 @@ test("BS360-02 ships a dark manifest-driven shell with deterministic cancellatio
   assert.match(client, /authEpoch/);
   assert.match(client, /75\*1024/);
   assert.match(client, /bootstrap contains a restricted field/);
-  assert.match(navigation, /summary\.sections\.map/);
+  assert.match(shell, /summary\.sections\.map/);
   assert.match(entry, /useFeature\("neon\.business_partner\.view_360"\)/);
   assert.match(page, /BusinessPartnerRecord/);
 });
@@ -138,8 +137,8 @@ test("BS360-00 stages a v1 STUDIO descriptor and removes the legacy risk-band pr
   );
   assert.match(
     definition,
-    /neonPartner360:\{version:"1\.0\.0",schemaVersion:1/,
+    /neonPartner360:\s*\{\s*version:\s*"1\.0\.0",\s*schemaVersion:\s*1/,
   );
-  assert.match(definition, /excludedCapabilities:\["risk"\]/);
+  assert.match(definition, /excludedCapabilities:\s*\["risk"\]/);
   assert.doesNotMatch(legacyUi, /\["Risk band"/);
 });

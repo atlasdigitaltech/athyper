@@ -1,8 +1,34 @@
+import { RedisInferenceAdmission } from "./atlas-inference-admission.js";
+import { parseAtlasSemanticConfig } from "./atlas-semantic-index.js";
+import { createAtlasDocumentGrounding } from "./atlas-document-grounding.js";
+import { registerAtlasAttachmentKnowledge } from "./atlas-attachment-knowledge.js";
+import { createAuthenticatedEntityReleaseReview } from "@athyper/server-service-publication";
+import { getRequestContext as authoringRequestContext } from "@athyper/server-foundation/context";
+import { createMetaEntityAuthoringAuthorizer } from "./meta-entity-authoring-authorizer.js";
+import { createBusinessPartnerQualificationRuntimeRegistrations, qualificationPreflight } from "./business-partner-qualification-runtime.js";
+import { createBusinessPartnerRevealRuntimeRegistrations } from "./business-partner-reveal-runtime.js";
+import { createScopedMetaEntityAuthoringRepository } from "./scoped-meta-entity-authoring.js";
+import { createBusinessPartnerCaseRuntimeRegistrations, assertBusinessPartnerCaseRuntimeSemantics } from "./business-partner-case-runtime.js";
+import { createBusinessPartnerReadRuntimeRegistrations } from "./business-partner-read-runtime.js";
+import { createBusinessPartnerActionRuntimeRegistrations } from "./business-partner-action-runtime.js";
+import { createBusinessPartnerBoundImport, createBusinessPartnerImportRegistration } from "./business-partner-bound-import.js";
+import { createBusinessPartnerExportRegistration } from "./business-partner-export-runtime.js";
+import { registerBusinessPartnerGovernedImportRoutes } from "@athyper/server-service-master-data";
+import { createEntityAuthorizationRuntimeRegistry } from "@athyper/server-contract-metadata";
+import { createConfiguredAuthorizationManagement } from "./authorization-management-config.js";
+import { AtlasLearningCandidateService, isAtlasLearningSourceCurrent, evaluateAtlasLearningVocabulary } from "@athyper/server-platform-ai";
+import { AtlasLearningInbox, registerAtlasLearningInboxRoutes, prepareAtlasLearningRelease, prepareInitialBaselineRelease, prepareAuthorizationSuccessorRelease, baselineJsonHash, sha256 as baselineContentHash } from "@athyper/server-plane-studio";
+import { createBusinessPartnerStoredScopes } from "./business-partner-stored-scopes.js";
+import { createEntityCasePreflight } from "./entity-case-preflight.js";
+import { createEntityCaseBackendMapping } from "./entity-case-backend-mapping.js";
+import { createKyselyContextRefresh } from "@athyper/server-platform-iam";
+import { createBusinessPartnerBackendMapping } from "./business-partner-backend-mapping.js";
+import { createBusinessPartnerAuthorizationShadow, createBusinessPartnerShadowScopes } from "./business-partner-authorization-shadow.js";
 import { BankDirectoryService, registerBankDirectoryRoutes, registerBankDirectoryReferenceRoute, reconcileBankDirectoryReferences } from "@athyper/server-service-publication";
 import { createBankDirectoryAuthorizer } from "./bank-directory-authorizer.js";
 import { createAtlasBusinessContextResolver } from "@athyper/server-platform-ai";
 import { readFileSync } from "node:fs";
-import { OllamaModelProvider } from "@athyper/server-adapter-ai-ollama";
+import { configureSharedAtlasInferenceAdmission, OllamaModelProvider } from "@athyper/server-adapter-ai-ollama";
 import { createAtlasLocalGenerationServices, parseAtlasLocalConfiguration } from "@athyper/server-platform-ai";
 import { queueLocalVerificationEmail, localVerificationEmailHandler } from "./local-verification-delivery.js";
 import { KyselyContactChallengeRepository, createContactVerificationAuthority, createMasterDataAuthority } from "@athyper/server-service-master-data";
@@ -97,6 +123,7 @@ import type {
 import {
   createIamAuthenticationMiddleware,
   createPermissionAuthorizer,
+  createShadowAuthorizer,
   readVerifiedRequestContext,
 } from "@athyper/server-platform-iam";
 import {
@@ -210,6 +237,9 @@ import {
   AtlasBindingRegistry,
   AtlasProviderRegistry,
   AtlasRegisteredToolCoordinator,
+  AtlasResponseFeedbackService,
+  KyselyAtlasResponseFeedbackStore,
+  createAtlasEntityRecordTool,
   AtlasSurfaceDraftGenerator,
   AtlasThreadService,
   AtlasToolRegistry,
@@ -355,6 +385,7 @@ import {
   ATTACHMENT_MAINTENANCE_QUEUE,
   EXPIRE_ATTACHMENT_RESERVATIONS_JOB,
   createAttachmentLifecycle,
+  createAttachmentRetrievalAdmission,
   createAttachmentQuotaRecoveryHandler,
   createConfiguredAttachmentQuotaPolicyResolver,
   createKyselyAttachmentQuotaLedger,
@@ -483,6 +514,7 @@ import { registerFinanceRoutes } from "./finance-routes.js";
 import {
   createKyselyRecordRepository,
   createKyselyCommandExecutionStore,
+  createEntityBackendAuthorizer,
   createRecordMutationService,
   createRecordListExecutor,
   createRecordQueryService,
@@ -559,6 +591,14 @@ import { createHash, randomUUID } from "node:crypto";
 type RecordTransaction = Transaction<Record<string, never>>;
 
 export interface ServiceRegistrationDependencies {
+  /** Read-only, bounded observer. No grant changes or enforce selection through this port. */
+  /** Explicit deployment wiring to immutable authenticated review storage and
+   * current reviewer authority; absence remains a compiler denial. */
+  readonly entityAuthorizationReleaseReview?: Parameters<typeof createAuthenticatedEntityReleaseReview>[0];
+  readonly entityAuthorizationPublication?: NonNullable<ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["authorizationCompilation"]>;
+  readonly entityCaseBackendAuthorization?: Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority" | "owns" | "target" | "scopes" | "refreshContext"> & Partial<Pick<Parameters<typeof createEntityBackendAuthorizer>[0], "scopes" | "refreshContext">>;
+  readonly businessPartnerBackendAuthorization?: Omit<Parameters<typeof createEntityBackendAuthorizer>[0], "authority" | "owns" | "target" | "refreshContext"> & Partial<Pick<Parameters<typeof createEntityBackendAuthorizer>[0], "refreshContext">>;
+  readonly entityAuthorizationShadow?: Omit<Parameters<typeof createShadowAuthorizer>[0], "authority">;
   /** Immutable source/destination adapters required by qualified Neon finance slices. */
   readonly finance?: FinanceRegistrationPorts;
   readonly metadata?: MetadataReader;
@@ -656,6 +696,7 @@ export interface ServiceRegistrationDependencies {
     readonly credentialCipher: AtlasCredentialCipher;
     readonly credentialInvalidation: AtlasCredentialInvalidation;
     readonly knowledgeIndex: AtlasKnowledgeIndex;
+    readonly knowledgeAdmission?: import("@athyper/server-contract-ai").AtlasKnowledgeAdmission;
     readonly policyInvalidation: AtlasPolicyInvalidation;
     readonly driftAlerts: AtlasDriftAlertPublisher;
     readonly knowledgeJobAuthority: AtlasKnowledgeJobAuthority;
@@ -668,8 +709,56 @@ export function registerServices(
   dependencies: ServiceRegistrationDependencies = {},
   config?: HostConfig,
 ): void {
-  const { iam, authorizer, audit } = container.platform;
-  if (!iam || !authorizer || !audit) return;
+  const { iam, authorizer: baseAuthorizer, audit } = container.platform;
+  if (!iam || !baseAuthorizer || !audit) return;
+  const bpShadow = config?.businessPartnerAuthorizationShadow && container.adapters.neonDatabase
+    ? createBusinessPartnerAuthorizationShadow({ config: config.businessPartnerAuthorizationShadow,
+      scopes: createBusinessPartnerShadowScopes(container.adapters.neonDatabase.database as unknown as Kysely<Record<string, never>>),
+      emit: event => console.info(JSON.stringify(event)),
+    }) : undefined;
+  if (config?.businessPartnerAuthorizationShadow && !bpShadow) throw new Error("BP shadow requires the NEON database");
+  if (bpShadow) container.platform.httpRegistrars.push(application => bpShadow.register(application));
+  const refreshEntityContext = createKyselyContextRefresh({run:(identity,work)=>{
+    const adapter=identity.planeKey==="neon"?container.adapters.neonDatabase:identity.planeKey==="mesh"?container.adapters.meshDatabase:container.adapters.athyperDatabase;
+    if(!adapter)throw new Error("AUTHZ_PLANE_DATABASE_UNAVAILABLE");
+    return (adapter.database as unknown as Kysely<Record<string,never>>).transaction().execute(work);
+  }});
+  const caseScopes=()=>{
+    if(!container.adapters.neonDatabase)throw new Error("CASE_OWNERSHIP_DATABASE_UNAVAILABLE");
+    const database=container.adapters.neonDatabase.database as unknown as Kysely<Record<string,never>>;
+    return createBusinessPartnerStoredScopes(database,createEntityCasePreflight(database));
+  };
+  const observeAuthority = (authority: typeof baseAuthorizer) => {
+    if (bpShadow && dependencies.businessPartnerBackendAuthorization?.rollout.mode === "enforce") throw new Error("BP legacy shadow and target enforcement require separate rollout selections");
+    const bpBackend = dependencies.businessPartnerBackendAuthorization
+      ? createEntityBackendAuthorizer({ ...dependencies.businessPartnerBackendAuthorization, ...createBusinessPartnerBackendMapping(dependencies.businessPartnerBackendAuthorization.profile), ...(dependencies.entityCaseBackendAuthorization ? {owns:(request:import("@athyper/server-contract-auth").AuthorizationRequest)=>request.resource?.["entityCode"]!=="entity_case"&&createBusinessPartnerBackendMapping(dependencies.businessPartnerBackendAuthorization!.profile).owns(request)}:{}), scopes: {
+        resolve: input => dependencies.businessPartnerBackendAuthorization!.scopes.resolve(input),
+        preflight: async input => {
+          if (input.operationKey === "qualification" || input.operationKey === "qualification_company") {
+            const service = container.services.businessPartnerEligibility;
+            return service ? qualificationPreflight(service, input) : "not_applicable";
+          }
+          if (input.operationKey === "bank_reveal" || input.operationKey === "tax_reveal") {
+            if (!input.recordId) return "not_applicable";
+            return container.services.businessPartner360?.preflightReveal?.({context: input.context, businessPartnerId: input.recordId, kind: input.operationKey === "bank_reveal" ? "bank" : "tax", historical: input.historical}) ?? "not_applicable";
+          }
+          if (input.operationKey === "import") return container.services.businessPartnerGovernedImport?.preflight(input) ?? "not_applicable";
+          if (input.operationKey === "export") {
+            if (input.historical) return "workflow_blocked";
+            const transfers = container.services.records?.transfers;
+            if (!transfers) return "not_applicable";
+            await transfers.preflightExport(input.context, "business_partner", {...(input.coordinates ? {scopeCoordinate: input.coordinates} : {})});
+            return "allowed";
+          }
+          return dependencies.businessPartnerBackendAuthorization!.scopes.preflight(input);
+        },
+      }, refreshContext: dependencies.businessPartnerBackendAuthorization.refreshContext ?? refreshEntityContext, authority }) : authority;
+    const backend = dependencies.entityCaseBackendAuthorization ? createEntityBackendAuthorizer({...dependencies.entityCaseBackendAuthorization,...createEntityCaseBackendMapping(dependencies.entityCaseBackendAuthorization.profile),scopes:dependencies.entityCaseBackendAuthorization.scopes??caseScopes(),refreshContext:dependencies.entityCaseBackendAuthorization.refreshContext??refreshEntityContext,authority:bpBackend}) : bpBackend;
+    const selected = bpShadow ? bpShadow.wrap(backend) : backend;
+    return dependencies.entityAuthorizationShadow
+      ? createShadowAuthorizer({ ...dependencies.entityAuthorizationShadow, authority: selected }) : selected;
+  };
+  const authorizer = observeAuthority(baseAuthorizer);
 
   const recordDatabases = {
     ...(container.adapters.neonDatabase
@@ -770,6 +859,49 @@ export function registerServices(
       iam,
       authorizer,
       audit,
+      {
+        ...dependencies.entityAuthorizationPublication,
+        ...(dependencies.entityAuthorizationReleaseReview ? {review: createAuthenticatedEntityReleaseReview(dependencies.entityAuthorizationReleaseReview)} : {}),
+        runtime: { qualify(profile, bindings) {
+          assertBusinessPartnerCaseRuntimeSemantics(profile);
+          if (dependencies.entityAuthorizationPublication) {
+            dependencies.entityAuthorizationPublication.runtime.qualify(profile, bindings);
+            return;
+          }
+          const cases = container.services.businessPartnerRequests;
+          if (!cases) throw Error("BP_CASE_RUNTIME_SERVICE_UNAVAILABLE");
+          const records = container.services.records;
+          const providers = container.services.businessPartner360;
+          if (!records?.surfaces || !providers) throw Error("BP_READ_RUNTIME_SERVICE_UNAVAILABLE");
+          const imports = container.services.businessPartnerGovernedImport;
+          if (!imports) throw Error("BP_IMPORT_RUNTIME_SERVICE_UNAVAILABLE");
+          if (!records.transfers) throw Error("BP_EXPORT_RUNTIME_SERVICE_UNAVAILABLE");
+          const eligibility = container.services.businessPartnerEligibility;
+          if (!eligibility) throw Error("BP_QUALIFICATION_RUNTIME_SERVICE_UNAVAILABLE");
+          createEntityAuthorizationRuntimeRegistry([
+            ...createBusinessPartnerCaseRuntimeRegistrations(cases, caseScopes()),
+            ...createBusinessPartnerReadRuntimeRegistrations(records.surfaces, providers, caseScopes()),
+            ...createBusinessPartnerRevealRuntimeRegistrations(providers, caseScopes()),
+            ...createBusinessPartnerQualificationRuntimeRegistrations(eligibility, caseScopes()),
+            ...createBusinessPartnerActionRuntimeRegistrations(cases, records.queries, caseScopes()),
+            createBusinessPartnerImportRegistration(imports, caseScopes()),
+            createBusinessPartnerExportRegistration(records.transfers, caseScopes()),
+          ]).qualify(profile, bindings);
+        } },
+        catalog: dependencies.entityAuthorizationPublication?.catalog ?? (async plane => {
+          const db = metadataDatabases[plane];
+          if (!db) throw Error("PUBLICATION_CATALOG_PLANE_UNAVAILABLE");
+          // pg does not decode custom enum-array OIDs. Return text[] so the
+          // runtime hashes the same scope arrays as the reviewed JSON catalog.
+          const rows = (await sql<{id:string;code:string;kind:"entity_operation"|"capability";scopeKinds:string[]}>`
+            SELECT p.id,p.canonical_code code,p.permission_kind kind,
+              array_agg(DISTINCT s.scope_kind::text ORDER BY s.scope_kind::text) "scopeKinds"
+            FROM authz.permission p JOIN authz.permission_scope_kind s ON s.permission_id=p.id
+            WHERE p.status='published' AND s.status='active' AND p.permission_kind IN ('entity_operation','capability')
+            GROUP BY p.id,p.canonical_code,p.permission_kind ORDER BY p.canonical_code`.execute(db)).rows;
+          return rows;
+        }),
+      },
     );
   }
   if (
@@ -1374,12 +1506,14 @@ export function registerServices(
           storeFor: (context) => runtimeCommandStores.require(context.planeKey),
         })
       : undefined;
-  const authorizationOptions = dependencies.authorizationManagement;
+  if (config?.wave0.authorizationManagementRoutesEnabled && config.wave0.authorizationManagementMutationsEnabled && !dependencies.authorizationManagement && !config.wave0.authorizationManagementPolicyPath) throw new Error("Authorization mutations require configured writer-switch evidence");
+  if (config?.wave0.authorizationManagementMutationsEnabled && !dependencies.authorizationManagement && !container.adapters.authorizationWriterDatabases) throw new Error("Authorization mutations require dedicated writer connections");
+  const authorizationOptions: ServiceRegistrationDependencies["authorizationManagement"] = dependencies.authorizationManagement ?? (config?.wave0.authorizationManagementRoutesEnabled ? createConfiguredAuthorizationManagement(config.wave0.authorizationManagementPolicyPath) : undefined);
   const authorizationMode =
     config?.wave0.authorizationManagementMode ?? "legacy";
   const authorizationManagement = authorizationOptions
     ? createAuthorizationManagementService({
-        unitOfWork: authorizationOptions.unitOfWork ?? createKyselyAuthorizationManagementUnitOfWork(authorizationOptions.writerDatabases ?? metadataDatabases, authorizationOptions.legacyTransactionBinder),
+        unitOfWork: authorizationOptions.unitOfWork ?? createKyselyAuthorizationManagementUnitOfWork(authorizationOptions.writerDatabases ?? container.adapters.authorizationWriterDatabases ?? metadataDatabases, authorizationOptions.legacyTransactionBinder),
         authorizer,
         rollout: {
           async select(input) {
@@ -1417,7 +1551,7 @@ export function registerServices(
           async record(input) {
             await audit.record({
               eventCode: `authorization.management.${input.outcome}`,
-              action: input.mutationKind,
+              action: "manage_authorization",
               outcome: input.outcome === "success" ? "success" : "denied",
               actor: { kind: "user", principalId: input.principalId },
               tenantId: input.tenantId,
@@ -1428,6 +1562,7 @@ export function registerServices(
                 ? { correlationId: input.correlationId }
                 : {}),
               metadata: {
+                mutationKind: input.mutationKind,
                 planeKey: input.planeKey,
                 mode: input.mode,
                 writer: input.writer,
@@ -2453,7 +2588,7 @@ export function registerServices(
         operation: "all",
       });
     const repository = new KyselyBusinessPartnerCaseRepository();
-    const businessPartnerAuthorizer = createPermissionAuthorizer({
+    const businessPartnerAuthority = createPermissionAuthorizer({
       policyGate: {
         async evaluate(input) {
           if (["neon.supplier_registration.invitation.create", "neon.customer_registration.invitation.create"].includes(input.permissionCode)) {
@@ -2646,6 +2781,7 @@ export function registerServices(
         },
       },
     });
+    const businessPartnerAuthorizer = observeAuthority(businessPartnerAuthority);
     const validator = createBusinessPartnerRequestValidator<RecordTransaction>({
       duplicates: {
         async findExactLegalName(input, transaction) {
@@ -2718,6 +2854,13 @@ export function registerServices(
         : undefined;
     const businessPartner360 =
       createBusinessPartner360Service<RecordTransaction>({
+        refreshAuthorizationContext: refreshEntityContext,
+        authorizeCaseRead: async (query,caseId) => {
+          const cases=container.services.businessPartnerRequests;
+          if(!cases)throw new MasterDataError(503,"BP_CHILD_AUTHORIZATION_UNAVAILABLE","Case authorization is unavailable");
+          try {await cases.get({context:query.context,requestId:caseId});return true;}
+          catch(error){if(error instanceof MasterDataError && (error.status===403||error.status===404))return false;throw error;}
+        },
         authorizer: businessPartnerAuthorizer,
         repository: new KyselyBusinessPartner360Repository() as never,
         transactions,
@@ -2748,6 +2891,7 @@ export function registerServices(
         consumer: localDefinitions,
       }),
     );
+    container.services.businessPartner360 = businessPartner360;
     const businessPartnerRequests =
       createBusinessPartnerRequestService<RecordTransaction>({
         authorizer: businessPartnerAuthorizer,
@@ -2822,6 +2966,12 @@ export function registerServices(
         onboardingCycles: new KyselyBusinessPartnerOnboardingCycleCoordinator() as never,
       });
     container.services.businessPartnerRequests = businessPartnerRequests;
+    const governedImport = createBusinessPartnerBoundImport({requests: businessPartnerRequests, metadata,
+      authorizer: businessPartnerAuthorizer, scopes: caseScopes(), refreshContext: refreshEntityContext});
+    container.services.businessPartnerGovernedImport = governedImport;
+    container.platform.httpRegistrars.push(application => registerBusinessPartnerGovernedImportRoutes(application, {
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, service: governedImport,
+    }));
     const governedInternalBusinessPartnerCases =
       createGovernedInternalBusinessPartnerCaseService<RecordTransaction>({
         authorizer: businessPartnerAuthorizer,
@@ -3578,6 +3728,7 @@ export function registerServices(
     metadataDatabases.studio,
     iam,
     authorizer,
+    transactions,
   );
   registerStudioOnboarding(
     container,
@@ -4125,6 +4276,7 @@ export function registerServices(
           })
         : undefined;
     container.services.records = {
+      surfaces: lists,
       lists,
       queries,
       mutations,
@@ -4568,23 +4720,34 @@ export function registerAtlas(
     };
     return;
   }
+  const atlasMetadata = {getEntityDescriptor: (context: VerifiedRequestContext, entityCode: string) => {
+    const metadata = container.platform.metadata;
+    return metadata ? metadata.getEntityDescriptor(context, entityCode) : Promise.resolve(null);
+  }};
   const caseOwner = container.services.businessPartnerRequests?.explainCase ? {
     read: (input: Parameters<NonNullable<NonNullable<typeof container.services.businessPartnerRequests>["explainCase"]>>[0]) => container.services.businessPartnerRequests!.explainCase!(input),
   } : undefined;
+  configureSharedAtlasInferenceAdmission(new RedisInferenceAdmission(container.adapters.redisCache?.client));
+  const semanticConfigPath=process.env["ATLAS_SEMANTIC_RETRIEVAL_CONFIG_PATH"];
+  const semantic=semanticConfigPath?parseAtlasSemanticConfig(JSON.parse(readFileSync(semanticConfigPath,"utf8"))):undefined;
   if (!dependencies || config?.atlas.generationEnabled === false) {
+    if(config?.search.baseUrl&&config.search.apiKey&&container.platform.authorizer&&container.platform.metadata&&container.services.records){
+      container.platform.httpRegistrars.push(app=>registerAtlasAttachmentKnowledge(app as never,{semantic,authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,transactions,authorizer:container.platform.authorizer!,metadata:container.platform.metadata!,records:container.services.records!.queries,search:{baseUrl:config.search.baseUrl!,apiKey:config.search.apiKey!,indexUid:"atlas_attachment_knowledge_neon",timeoutMs:config.search.timeoutMs}}));
+    }
     if (toolsEnabled && !config?.atlas.localInferenceConfigPath) throw new Error("Atlas tools require a configured local runtime or full provider composition.");
-    const localRegistry = new AtlasToolRegistry([...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
+    const documentGrounding=config?.search.baseUrl&&config.search.apiKey&&container.platform.authorizer&&container.platform.metadata&&container.services.records?createAtlasDocumentGrounding({semantic,authenticate:createIamAuthenticationMiddleware(iam),readContext:readVerifiedRequestContext,transactions,authorizer:container.platform.authorizer,metadata:container.platform.metadata,records:container.services.records.queries,search:{baseUrl:config.search.baseUrl,apiKey:config.search.apiKey,indexUid:"atlas_attachment_knowledge_neon",timeoutMs:config.search.timeoutMs},refresh:createKyselyContextRefresh({run:(identity,work)=>{const db=databases[identity.planeKey];if(!db)throw new Error("Atlas plane unavailable");return db.transaction().execute(work);}})}):undefined;
+    const localRegistry = new AtlasToolRegistry([createAtlasEntityRecordTool(atlasMetadata), ...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
     const localAvailable = (access: "read" | "mutation" = "read") => Boolean(container.platform.metadata && container.services.records && (access === "read" || container.services.businessPartnerRequests));
     const localTools = toolsEnabled ? new AtlasToolService({
       registry: localRegistry, proposals: ledger,
       authority: { async authorize({context,manifest}) {
-        const allowed = context.planeKey === "neon" && localAvailable(manifest.access) &&
-          context.permissions.allowed.includes("neon.ai.agent.use") &&
-          !context.permissions.denied.includes("neon.ai.agent.use") &&
-          !context.permissions.planLocked.includes("neon.ai.agent.use") &&
-          !context.permissions.planeExcluded.includes("neon.ai.agent.use") &&
+        const allowed = (context.planeKey === "neon" || manifest.toolCode === "entity_read_record") && localAvailable(manifest.access) &&
+          context.permissions.allowed.includes(`${context.planeKey}.ai.agent.use`) &&
+          !context.permissions.denied.includes(`${context.planeKey}.ai.agent.use`) &&
+          !context.permissions.planLocked.includes(`${context.planeKey}.ai.agent.use`) &&
+          !context.permissions.planeExcluded.includes(`${context.planeKey}.ai.agent.use`) &&
           (manifest.access === "read" || Boolean(config?.atlas.mutationsEnabled));
-        return {allowed,policyRevision:`atlas-local-tools-v1:mutations-${Boolean(config?.atlas.mutationsEnabled)}`};
+        return {allowed,policyRevision:`atlas-local-tools-v2:mutations-${Boolean(config?.atlas.mutationsEnabled)}`};
       }},
       records: { async query(input) {
         const metadata = container.platform.metadata, records = container.services.records;
@@ -4609,14 +4772,15 @@ export function registerAtlas(
         return container.services.businessPartnerRequests.submit(command);
       }}),
     }) : undefined;
-    const localCoordinator = localTools ? new AtlasRegisteredToolCoordinator(localRegistry,localTools) : undefined;
+    const localCoordinator = localTools ? new AtlasRegisteredToolCoordinator(localRegistry,localTools,atlasMetadata) : undefined;
     const localConfig = config?.atlas.generationEnabled !== false && config?.atlas.localInferenceConfigPath ? parseAtlasLocalConfiguration(JSON.parse(readFileSync(config.atlas.localInferenceConfigPath,"utf8"))) : undefined;
-    const localServices = localConfig ? createAtlasLocalGenerationServices({businessContexts:{async resolve(context,value){const metadata=container.platform.metadata,records=container.services.records;if(!metadata||!records)throw new Error("Atlas business context unavailable");return createAtlasBusinessContextResolver({metadata,cases:caseOwner,records:records.queries,list:query=>records.lists.list(query)}).resolve(context,value);}},transactions,config:localConfig,provider:new OllamaModelProvider({modelDigest:localConfig.model.digest,engineVersion:localConfig.engine.version}),...(localCoordinator?{tools:{revalidate:(context,evidence)=>localTools!.revalidate(context,evidence),coordinator:localCoordinator,readEnabled:toolsEnabled,mutationsEnabled:Boolean(config?.atlas.mutationsEnabled),available:localAvailable}}:{})}) : undefined;
+    const localServices = localConfig ? createAtlasLocalGenerationServices({authorizeAdmission:async(context)=>Boolean(container.platform.authorizer&&(await container.platform.authorizer.authorize({context,permissionCode:`${context.planeKey}.ai.agent.use`,resource:{tenantId:context.tenantId}})).allowed),...(documentGrounding?{attachments:documentGrounding.attachments,documents:documentGrounding}:{}),businessContexts:{async resolve(context,value){const metadata=container.platform.metadata,records=container.services.records;if(!metadata||!records)throw new Error("Atlas business context unavailable");return createAtlasBusinessContextResolver({metadata,cases:caseOwner,records:records.queries,list:query=>records.lists.list(query)}).resolve(context,value);}},transactions,config:localConfig,provider:new OllamaModelProvider({modelDigest:localConfig.model.digest,engineVersion:localConfig.engine.version}),...(localCoordinator?{tools:{revalidate:(context,evidence)=>localTools!.revalidate(context,evidence),coordinator:localCoordinator,readEnabled:toolsEnabled,mutationsEnabled:Boolean(config?.atlas.mutationsEnabled),available:localAvailable}}:{})}) : undefined;
     const { threads, admission } = localServices ?? createAtlasConversationServices(transactions);
     const runtime = localServices?.runtime;
     container.platform.ai = { ledger, threads, ...(runtime ? {runtime} : {}), ...(localTools?{tools:localTools}:{}), routesEnabled: true, toolsEnabled };
     container.platform.httpRegistrars.push(application => registerAtlasRoutes(application as never, {
-      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, threads, admission, ...(runtime ? {runtime} : {}), ...(localTools&&localServices?{tools:localTools,runs:localServices.runs}:{}),
+      authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, threads, admission, feedback: new AtlasResponseFeedbackService(new KyselyAtlasResponseFeedbackStore(transactions), threads),
+      ...(atlasLearningInboxes.has(container) ? {learning: new AtlasLearningCandidateService(transactions, atlasMetadata, threads, atlasLearningInboxes.get(container)!)} : {}), ...(runtime ? {runtime} : {}), ...(localTools&&localServices?{tools:localTools,runs:localServices.runs}:{}),
     }));
     container.runtimes.health.register("atlas.conversation-persistence", async () => {
       await Promise.all(Object.values(databases).map(database => sql`SELECT conversation_id FROM ai.atlas_thread LIMIT 0`.execute(database!)));
@@ -4633,6 +4797,20 @@ export function registerAtlas(
     credentialCipher: dependencies.credentialCipher,
     credentialInvalidation: dependencies.credentialInvalidation,
     knowledgeIndex: dependencies.knowledgeIndex,
+    knowledgeAdmission: dependencies.knowledgeAdmission ?? (container.platform.authorizer ? createAttachmentRetrievalAdmission({
+      transactions,
+      authorizer: container.platform.authorizer,
+      async authorizeParent({context, entityCode, recordId}) {
+        const metadata = container.platform.metadata, records = container.services.records;
+        if (!metadata || !records) return false;
+        const descriptor = await metadata.getEntityDescriptor(context, entityCode);
+        if (!descriptor || descriptor.planeKey !== context.planeKey || descriptor.entityCode !== entityCode || !descriptor.ai?.enabled) return false;
+        const read = descriptor.operations["read"];
+        if (!read || !(await container.platform.authorizer!.authorize({context, permissionCode:read.permissionCode, resource:{tenantId:context.tenantId, entityCode, resourceCode:entityCode, operationKey:"read", recordId}})).allowed) return false;
+        const result = await records.queries.list({context, entityCode, fields:[descriptor.storage.idField], recordIds:[recordId], limit:1, countMode:"none", hydrateReferences:false});
+        return result.data.length === 1 && String(result.data[0]?.[descriptor.storage.idField]) === recordId;
+      },
+    }) : undefined),
     policyInvalidation: dependencies.policyInvalidation,
     driftAlerts: dependencies.driftAlerts,
   });
@@ -4647,7 +4825,7 @@ export function registerAtlas(
   const bindings = new AtlasBindingRegistry(dependencies.bindings);
   const providers = new AtlasProviderRegistry(dependencies.providers);
   for (const binding of dependencies.bindings) providers.resolve(binding);
-  const registry = new AtlasToolRegistry([...dependencies.registeredTools, ...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
+  const registry = new AtlasToolRegistry([createAtlasEntityRecordTool(atlasMetadata), ...dependencies.registeredTools, ...createBusinessPartnerAtlasTools(caseOwner), ...(caseOwner ? createBusinessPartnerCaseTools(caseOwner) : []), ...(container.services.businessPartnerAtlasInsights ? createBusinessPartnerInsightTools(container.services.businessPartnerAtlasInsights, async query => { const records = container.services.records; if (!records) throw new Error("Authorized Records runtime is unavailable."); return records.lists.list(query); }) : [])]);
   const tools = new AtlasToolService({
     registry,
     authority: dependencies.toolAuthority,
@@ -4664,7 +4842,7 @@ export function registerAtlas(
     }),
   });
   const coordinator = toolsEnabled
-    ? new AtlasRegisteredToolCoordinator(registry, tools)
+    ? new AtlasRegisteredToolCoordinator(registry, tools, atlasMetadata)
     : undefined;
   const quotas =
     dependencies.quotas ??
@@ -4722,6 +4900,8 @@ export function registerAtlas(
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
       admission: dependencies.admission,
+      feedback: new AtlasResponseFeedbackService(new KyselyAtlasResponseFeedbackStore(transactions), threads),
+      ...(atlasLearningInboxes.has(container) ? {learning: new AtlasLearningCandidateService(transactions, atlasMetadata, threads, atlasLearningInboxes.get(container)!)} : {}),
       threads,
       runtime,
       ...(toolsEnabled ? { tools, runs: dependencies.runs } : {}),
@@ -4814,13 +4994,17 @@ export function registerAtlas(
   }
 }
 
+const atlasLearningInboxes = new WeakMap<Container, AtlasLearningInbox>();
+
 function registerStudioAuthoring(
   container: Container,
   config: HostConfig | undefined,
   database: Kysely<Record<string, never>> | undefined,
   iam: NonNullable<Container["platform"]["iam"]>,
   authorizer: NonNullable<Container["platform"]["authorizer"]>,
+  transactions: PlaneTransactionCoordinator<RecordTransaction>,
 ): void {
+  if (config?.publication.authoringEnabled && (!database || !container.runtimes.jobs || !container.adapters.publicationSigner || !config.publication.signingKeyId)) throw new Error("Publication authoring requires Studio database, jobs and signer");
   if (
     !database ||
     !config?.publication.apiEnabled ||
@@ -4829,52 +5013,77 @@ function registerStudioAuthoring(
     !config.publication.signingKeyId
   )
     return;
-  const repository = new KyselyMetaEntityAuthoringRepository(database);
+  const learning = new AtlasLearningInbox({database, authorizer, sourceCurrent: proposal => isAtlasLearningSourceCurrent(transactions, proposal), evaluate: evaluateAtlasLearningVocabulary});
+  atlasLearningInboxes.set(container, learning);
+  const repository = createScopedMetaEntityAuthoringRepository(work => container.adapters.athyperDatabase!.withTenantTransaction(tx => work(tx as unknown as Kysely<Record<string, never>>)), db => new KyselyMetaEntityAuthoringRepository(db, async (tx, input) => {
+    const successor = await prepareAuthorizationSuccessorRelease(tx, input, async expected => transactions.run("neon", {tenantId:expected.tenantId,principalId:expected.actorId}, async source => {
+      const heads=(await sql<{source_release_id:string;source_release_no:number;applied_release_id:string;row_version:number;artifact_hash:string;compiled_json:Record<string,unknown>}>`SELECT a.source_release_id,h.source_release_no,h.applied_release_id,h.row_version,h.artifact_hash,d.compiled_json
+        FROM runtime_meta.release_activation_head h JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
+        JOIN runtime_meta.entity_contract c ON c.publication_key=h.publication_key AND c.release_id=a.source_release_id
+        JOIN runtime_meta.entity_descriptor d ON d.entity_contract_id=c.id AND d.applied_release_id=a.id
+        WHERE h.publication_key=${expected.publicationKey} AND c.tenant_id=${expected.tenantId}::uuid AND d.tenant_id=c.tenant_id
+          AND d.plane_code='neon' AND d.descriptor_kind='entity_runtime' AND d.status='active'
+          AND EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='runtime_meta.release_activation_head'::regclass AND tgname='baseline_activation_precondition' AND tgenabled IN ('O','A'))`.execute(source)).rows;
+      if(heads.length!==1)return null;
+      const head=heads[0]!;
+      return {sourceReleaseId:head.source_release_id,sourceReleaseNo:Number(head.source_release_no),appliedReleaseId:head.applied_release_id,rowVersion:Number(head.row_version),artifactHash:head.artifact_hash,descriptorHash:baselineJsonHash(head.compiled_json)};
+    }));
+    if(successor)return;
+    const prepared = await prepareInitialBaselineRelease(tx, input, async (baseline, actorId) => transactions.run(baseline.sourcePlane as "neon" | "mesh", {tenantId: baseline.tenantId, principalId: actorId}, async source => {
+      const rows = (await sql<{capture: unknown}>`SELECT jsonb_build_object('contract',to_jsonb(c),'descriptor',to_jsonb(d),'head',to_jsonb(h),'applied',to_jsonb(a)) AS capture
+        FROM runtime_meta.release_activation_head h JOIN runtime_meta.applied_release a ON a.id=h.applied_release_id
+        JOIN runtime_meta.entity_contract c ON c.publication_key=h.publication_key AND c.release_id=a.source_release_id
+        JOIN runtime_meta.entity_descriptor d ON d.entity_contract_id=c.id AND d.applied_release_id=a.id
+        WHERE ((c.tenant_id=${baseline.tenantId}::uuid AND d.tenant_id=c.tenant_id AND ${baseline.schema}='athyper.imported-entity-baseline/1') OR (c.tenant_id IS NULL AND d.tenant_id IS NULL AND ${baseline.schema}='athyper.imported-global-entity-baseline/1')) AND h.publication_key=${baseline.publicationKey}
+          AND d.plane_code=${baseline.sourcePlane} AND d.descriptor_kind='entity_runtime' AND d.status='active'
+          AND EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid='runtime_meta.release_activation_head'::regclass AND tgname='baseline_activation_precondition' AND tgenabled IN ('O','A'))`.execute(source)).rows;
+      return rows.length===1 && baselineContentHash(rows[0]!.capture)===baseline.contentHash;
+    }));
+    if (!prepared) await prepareAtlasLearningRelease(tx, input);
+  }));
   const publication = new PublicationServiceMetaEntityAdapter({
     jobs: container.runtimes.jobs,
+    execution: () => { const context=authoringRequestContext(); if(context.planeKey!=="studio"||!context.tenantId||!context.principalId)throw new Error("AUTHORING_EXECUTION_CONTEXT_REQUIRED");return {planeKey:"studio",scope:"tenant",tenantId:context.tenantId,principalId:context.principalId,...(context.correlationId?{correlationId:context.correlationId}:{})}; },
     createEventId: randomUUID,
-    activateLocal: async ({ releaseId, plane }) => {
-      const result = await sql<{
-        tenant_id: string | null;
-        entity_code: string;
-        release_no: string | number;
-      }>`SELECT r.tenant_id,e.entity_code,r.release_no FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id WHERE r.id=${releaseId}::uuid AND ${plane}=ANY(r.target_planes)`.execute(
-        database,
-      );
-      const release = result.rows[0];
+    activateLocal: async ({ releaseId, plane, actorId }) => {
+      const release = await container.adapters.athyperDatabase!.withTenantTransaction(async tx => (await sql<{
+        tenant_id:string; entity_code:string; release_no:string|number; release_key:string;
+      }>`SELECT r.tenant_id,e.entity_code,COALESCE(pr.release_no,r.release_no) AS release_no,COALESCE(pr.release_key,'metadata.entity.'||e.entity_code) AS release_key
+        FROM metadata.entity_release r JOIN metadata.entity e ON e.id=r.entity_id
+        LEFT JOIN publication.release pr ON pr.id=r.id AND pr.tenant_id IS NOT DISTINCT FROM r.tenant_id
+        WHERE r.id=${releaseId}::uuid AND ${plane}=ANY(r.target_planes)`.execute(tx)).rows[0]);
       if (!release) throw new Error("META_ENTITY_RELEASE_NOT_FOUND");
-      const active = await container.services.publication?.projections[
-        plane
-      ]?.findActiveEntity(`metadata.entity.${release.entity_code}`);
-      if (!active || active.releaseId !== releaseId)
+      const active = await transactions.run(plane,{tenantId:release.tenant_id,principalId:actorId},async tx =>
+        (await sql<{release_id:string;tenant_id:string}>`SELECT release_id,tenant_id FROM runtime_meta.fn_active_entity_descriptor(${release.release_key},'entity_runtime')`.execute(tx)).rows[0]);
+      if (!active || active.release_id !== releaseId || active.tenant_id !== release.tenant_id)
         throw new Error("META_ENTITY_RELEASE_NOT_ACTIVE");
-      return {
-        planeKey: plane,
-        tenantId: release.tenant_id,
-        entityCode: release.entity_code,
-        generation: Number(release.release_no),
-        releaseId,
-      };
+      return {planeKey:plane,tenantId:release.tenant_id,entityCode:release.entity_code,generation:Number(release.release_no),releaseId};
     },
     appendDurableEvent: async (event) => {
-      await sql`SELECT publication.fn_emit_outbox(r.tenant_id,'metadata.generation.advanced',${event.eventId},'metadata.entity_release',r.id,r.published_by,NULL::uuid,${JSON.stringify(event)}::jsonb) FROM metadata.entity_release r WHERE r.id=${event.releaseId}::uuid`.execute(
-        database,
-      );
+      await container.adapters.athyperDatabase!.withTenantTransaction(async tx => {
+        await sql`SELECT publication.fn_confirm_metadata_activation(${event.releaseId}::uuid,${event.planeKey},${event.eventId}::uuid)`.execute(tx);
+      });
     },
   });
   const service = new MetaEntityAuthoringService({
-    repository,
+    repository, learning,
     signer: new MetaEntityArtifactSigner(
       container.adapters.publicationSigner,
       config.publication.signingKeyId,
     ),
     publication,
   });
+  container.platform.httpRegistrars.push(application => registerAtlasLearningInboxRoutes(application, {authenticate: createIamAuthenticationMiddleware(iam), readContext: readVerifiedRequestContext, inbox: learning, authoring: service}));
+  const authoringAuthorizer = createMetaEntityAuthoringAuthorizer(authorizer, (context,id,kind) => container.adapters.athyperDatabase!.withTenantTransaction(async tx => {
+    const row=(await sql<{id:string;tenant_id:string;status:string;created_by:string;submitted_by:string|null;approved_by:string|null}>`SELECT cs.id,cs.tenant_id,cs.status,cs.created_by,cs.submitted_by,cs.approved_by FROM metadata.entity_change_set cs
+      WHERE cs.tenant_id=${context.tenantId}::uuid AND (${kind}='change_set' AND cs.id=${id}::uuid OR ${kind}='release' AND EXISTS(SELECT 1 FROM metadata.entity_release r WHERE r.id=${id}::uuid AND r.change_set_id=cs.id AND r.tenant_id=cs.tenant_id))`.execute(tx)).rows[0];
+    return row?{changeSetId:row.id,tenantId:row.tenant_id,status:row.status,createdBy:row.created_by,submittedBy:row.submitted_by,approvedBy:row.approved_by}:null;
+  }));
   container.platform.httpRegistrars.push((application) =>
     registerMetaEntityAuthoringRoutes(application, {
       authenticate: createIamAuthenticationMiddleware(iam),
       readContext: readVerifiedRequestContext,
-      authorizer,
+      authorizer: authoringAuthorizer,
       service,
     }),
   );
@@ -4992,6 +5201,7 @@ function registerPublication(
   iam: NonNullable<Container["platform"]["iam"]>,
   authorizer: NonNullable<Container["platform"]["authorizer"]>,
   audit: NonNullable<Container["platform"]["audit"]>,
+  authorizationCompilation?: ConstructorParameters<typeof KyselyPublicationAuthorityWork>[0]["authorizationCompilation"],
 ): void {
   const authorityDatabase = databases.studio;
   if (!authorityDatabase)
@@ -5029,6 +5239,7 @@ function registerPublication(
       verifier: container.adapters.publicationVerifier!,
       canonicalizer: { canonicalBytes, sha256 },
       runtimeVersion: config.publication.runtimeVersion,
+      ...(authorizationCompilation ? { authorizationRuntime: authorizationCompilation.runtime } : {}),
     });
     orchestrators[plane] = new TenantPublicationOrchestrator(
       authorityDatabase,
@@ -5164,6 +5375,7 @@ function registerPublication(
         "Publication authority signer and bucket are unavailable",
       );
     const work = new KyselyPublicationAuthorityWork({
+      ...(authorizationCompilation ? { authorizationCompilation } : {}),
       database: authorityDatabase,
       authority,
       store: container.adapters.publicationArtifactStore!,

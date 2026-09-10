@@ -490,6 +490,7 @@ async function cleanup() {
   await db.query("BEGIN");
   await db.query("SET LOCAL session_replication_role=replica");
   const tenants = [ids.buyerTenant, ids.supplierTenant];
+  await db.query("DELETE FROM mesh.network_discovery_receipt WHERE actor_tenant_id=ANY($1::uuid[])", [tenants]);
   await db.query("DELETE FROM event.outbox WHERE tenant_id=ANY($1::uuid[])", [
     tenants,
   ]);

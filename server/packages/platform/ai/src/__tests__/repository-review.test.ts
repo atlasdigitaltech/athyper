@@ -272,6 +272,7 @@ it.each([true, false])("completes a zero-model answer only with a matching durab
   const f = database(query => {
     if (query.sql.includes("FROM ai.atlas_run")) return [row];
     if (query.sql.includes("SELECT EXISTS")) return [{present}];
+    if (query.sql.includes("count(*) AS count FROM ai.ai_tool_invocation")) return [{count: present ? 1 : 0}];
     if (query.sql.includes("clock_timestamp() AS at")) return [{at: new Date(at)}];
     if (query.sql.startsWith("UPDATE ai.atlas_run")) return [{...row, status: "completed"}];
     return [];
@@ -300,4 +301,15 @@ it.each([true, false])("completes a zero-model answer only with a matching durab
   expect(check.sql).toContain("operation_class='read' AND status='completed'");
   expect(check.parameters).toEqual([context.tenantId, "run", context.principalId, context.planeKey, "call", "read_section"]);
   await f.db.destroy();
+});
+
+it("refuses readiness after source retraction before touching indexed chunks", async () => {
+  const f = database(() => []);
+  try {
+    const repository = new KyselyAtlasKnowledgeRepository(f.transactions);
+    await expect(repository.markReady({ context, sourceId: "removed", revisionId: "10000000-0000-4000-8000-000000000010", indexed: [{ ordinal: 0, indexReference: "stale", embeddingModel: "test" }], at })).rejects.toMatchObject({ code: "VERSION_CONFLICT" });
+    expect(f.queries).toHaveLength(1);
+    expect(f.queries[0]!.sql).toContain("FOR UPDATE OF s,r");
+    expect(f.queries[0]!.sql).toContain("s.status='active'");
+  } finally { await f.db.destroy(); }
 });

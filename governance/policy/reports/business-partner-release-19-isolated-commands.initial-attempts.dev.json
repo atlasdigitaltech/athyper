@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "kind": "release19_authenticated_commands_and_import",
+  "runId": "5671414f-7653-4ffd-85ec-13d506df7968",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "checks": [
+    {
+      "name": "authenticated_identity",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "04007fe066cfd8a3726317842cb0811d199d0d85285e9b754785307135ba3e0c",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:13:43.001Z"
+    },
+    {
+      "name": "create",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "4ccd1475fcbef4ea54d332eb4371b13176b3863b8147f2867142fc34a513bdde",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:13:43.781Z"
+    },
+    {
+      "name": "authenticated_identity",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "c307254cb13d6f515589606159981534e38166ea31a3e7929c7191faa786b440",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:15:50.468Z"
+    },
+    {
+      "name": "create",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "3587163eafcd35cfedd5df3916c010ea683a8e412ab80e33fbeb670ae652b24d",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:15:51.215Z"
+    },
+    {
+      "name": "authenticated_identity",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "f4a38aea191a88b9315ba0a3480b24d2c6ff4ba5640507df8cfe97ab215c6cb0",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:16:35.947Z"
+    },
+    {
+      "name": "create",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "43e3ba035101fd60b9e163a7c7e712a42b5d1246d4622de40fd4ec1de5881da7",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:16:36.747Z"
+    },
+    {
+      "name": "authenticated_identity",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "0e8856e923faba3518dd0381cdd927ff6a28e52378a54354ad29765443e37f59",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:44.558Z"
+    },
+    {
+      "name": "create",
+      "account": "catl.admin",
+      "status": 201,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "86884e7caef677b9ac13d4d6ef45588967ee715f45cab1ac0096564a6c41cab2",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:45.491Z"
+    },
+    {
+      "name": "requester_case_view",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "04e71b87fce6f44b0cc166c554b6f1bf8ce49e8e39725ed61f20dd4b9324c24a",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:46.317Z"
+    },
+    {
+      "name": "apply_before_approval_denied",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "b4d000e68cbd62d94b76983be2cc05a961bf5b1cb4224d91b8b491cf3e3f80cf",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:47.103Z"
+    },
+    {
+      "name": "validate",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "3bfd34d161e35cca2cec556808f970d9a91b453e66adfb03bf185b81ab2a189d",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:47.923Z"
+    },
+    {
+      "name": "submit",
+      "account": "catl.admin",
+      "status": 201,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "1e3f2017cca4885b12a102265d3620fe00ee64a04d79e67d6f0eb782ac0f5b44",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:48.800Z"
+    },
+    {
+      "name": "independent_approver_view",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "d66f9203d60489bcdbfd436e596d617c29d3c83bc611705270eaf6c288c11011",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:49.596Z"
+    },
+    {
+      "name": "requester_self_approval_denied",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "BUSINESS_PARTNER_REQUEST_SELF_APPROVAL_FORBIDDEN",
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "86c706b6e5a3bc01b3b6fb39b31c85165506b4663e499213a85b4919879ffaa7",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:50.390Z"
+    },
+    {
+      "name": "independent_approval_0",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "9b57563ff1b914973ebc54891884ffe51daea1bc0bdbca919687e2a6931410b7",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:51.274Z"
+    },
+    {
+      "name": "independent_approver_view",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "83c10a6bcb2ebaf8f2c7cb88ace84a75134b837ab7b2dd2a6de3c434afe0a104",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:52.094Z"
+    },
+    {
+      "name": "independent_approval_1",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "db126f9b0db5f5e73480fab4df812a4f5379293747ed73ef225fe728a1c15fa7",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:52.968Z"
+    },
+    {
+      "name": "independent_approver_view",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "9fd6c41b8c16a14f0317a8d910a06c21644270a76e2abef83bda7e65afd168ae",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:53.782Z"
+    },
+    {
+      "name": "approved_case_view",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "a2b35aa8029a3dd7a46942dc7fab5c96f7a7bfda7e559e24ca6524ad116dd6eb",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:54.603Z"
+    },
+    {
+      "name": "apply",
+      "account": "catl.admin",
+      "status": 403,
+      "code": "FORBIDDEN",
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "3d6b8a68d8c48303c9139437c73870c1d167d5addf0de5e6520999c810c17f14",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:18:55.481Z"
+    },
+    {
+      "name": "requester_case_view",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "e2538a17f4c82460859f387e80af87ecd255ceae72cf9f4b5bd0acf1f021319d",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:26.884Z"
+    },
+    {
+      "name": "independent_approver_view",
+      "account": "catl.owner",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "0723e59d3a8c3877e7d7f2ec66370798ed1478242ec9f7a9722d2e5053291f11",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:27.678Z"
+    },
+    {
+      "name": "approved_case_view",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "df7a6b6f57a740d1b2b4df521b451c998c3777bdaf2a03d2fa092777c04f0c96",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:28.450Z"
+    },
+    {
+      "name": "apply",
+      "account": "catl.admin",
+      "status": 201,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "25bd4d1f07018eac68f2d43b8a69228b15cc00cd14181004c6601137260e60f1",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:29.326Z"
+    },
+    {
+      "name": "persisted_application",
+      "account": "catl.admin",
+      "status": 200,
+      "passed": true,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "e88520ac208bb4a3b5a8d8ec2fdc1de87b2a50a58a46060c1948fee7390001d9",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:30.105Z"
+    },
+    {
+      "name": "governed_import",
+      "account": "catl.admin",
+      "status": 404,
+      "code": "ROUTE_NOT_FOUND",
+      "passed": false,
+      "artifact": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+      "requestRef": "866475d2d01b6460e642e93987ab6b99688cfde823e3967e7975825ac9fb7305",
+      "authorityHash": "937a2871f74924ed54bb4af8482e3c8c1d2e27d1b8927c8a19340800ae986891",
+      "checkedAt": "2026-09-10T07:20:30.791Z"
+    }
+  ],
+  "commandJourneyCompleted": true,
+  "importQualified": false,
+  "sharedDevActivationChanged": false,
+  "grantsChanged": false,
+  "startedAt": "2026-09-10T07:13:42.208Z",
+  "blocker": "governed_import:404:ROUTE_NOT_FOUND",
+  "lastAttemptAt": "2026-09-10T07:20:30.792Z",
+  "testCaseId": "b8609d9c-2890-47e4-a4dd-09d89ba45c68",
+  "validationValid": true,
+  "makerCheckerRejected": true,
+  "appliedCase": {
+    "id": "b8609d9c-2890-47e4-a4dd-09d89ba45c68",
+    "status": "applied",
+    "rowVersion": 5,
+    "targetBusinessPartnerId": "01a08a30-7e36-7cf4-b6f4-4f87a33c522e"
+  }
+}

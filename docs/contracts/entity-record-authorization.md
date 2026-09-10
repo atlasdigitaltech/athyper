@@ -3,6 +3,11 @@
 Status: proposed target contract; not an implemented runtime schema.
 Contract identifier: `entity-record-authorization/v1`.
 
+Implementation progress and exact remaining gates are recorded in the
+[adoption runbook](../runbooks/entity-authorization-adoption.md). The executable
+profile/parser and shared evaluation foundation are available; this target
+contract is not yet fully enforced by the existing applications.
+
 This document defines the generic boundary from application entry to individual
 record fields and commands. MUST, MUST NOT, and SHOULD describe requirements for
 adopters of this target contract. Existing implementations remain governed by

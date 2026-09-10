@@ -59,3 +59,5 @@ export { EntityRecordHeader } from "./record-header";
 export { EntityRecord360Panel, type Record360Section } from "./record-360-panel";
 
 export { RelatedRecord, RelatedSectionError, PostalAddress, AddressSummary, ContactSummary, postalAddressLines, detailValue, safeChannelHref } from "./related-record";
+
+export { EntityRecordAction, type EntityActionHandlers, type RecordAction } from "./record-action";

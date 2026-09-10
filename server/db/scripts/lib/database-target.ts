@@ -1,4 +1,4 @@
-const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1"]);
+const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "::1", "[::1]"]);
 
 export function assertLoopbackDatabaseTarget(connectionString: string, expectedDatabase: string): URL {
   const url = new URL(connectionString);
@@ -10,6 +10,7 @@ export function assertLoopbackDatabaseTarget(connectionString: string, expectedD
 
 export function isLocalDatabaseHost(hostname: string): boolean {
   if (LOOPBACK_HOSTS.has(hostname)) return true;
+  if (!/^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) return false;
   const octets = hostname.split(".").map(Number);
   return octets.length === 4
     && octets.every((octet) => Number.isInteger(octet) && octet >= 0 && octet <= 255)

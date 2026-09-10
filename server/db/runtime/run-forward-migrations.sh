@@ -3,7 +3,6 @@ set -eu
 
 MIGRATION_ROOT=${ATHYPER_MIGRATION_ROOT:-/app/migrations}
 PASSWORD_FILE=${ATHYPER_POSTGRES_PASSWORD_FILE:-/run/secrets/postgres-password}
-RUNNER_ID="$(date -u +%Y%m%dT%H%M%SZ)-$$"
 
 fail() {
   printf '%s\n' "forward migration: $*" >&2
@@ -14,6 +13,11 @@ fail() {
 [ -d "$MIGRATION_ROOT" ] || fail "migration directory is unavailable: $MIGRATION_ROOT"
 command -v psql >/dev/null 2>&1 || fail "psql is unavailable"
 command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is unavailable"
+
+# Container PID namespaces commonly reuse PID 1. Time plus PID is not unique
+# across simultaneous deployment containers claiming the same migration ledger.
+RUNNER_ID=$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')
+[ "${#RUNNER_ID}" -eq 32 ] || fail "cannot generate a migration runner identity"
 
 export PGPASSWORD
 PGPASSWORD=$(sed -n '1p' "$PASSWORD_FILE")

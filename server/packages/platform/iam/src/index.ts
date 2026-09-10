@@ -29,3 +29,6 @@ export { CUSTOMER_PORTAL_QUEUE, CUSTOMER_PORTAL_JOB, CustomerPortalIntentConsume
 export * from "./identity-replay-approval.js";
 export * from "./kysely-identity-replay-approval.js";
 export * from "./identity-replay-routes.js";
+export * from "./shadow-authorizer.js";
+
+export * from "./kysely-context-refresh.js";

@@ -1,3 +1,4 @@
+import type { VerifiedRequestContext } from "@athyper/server-contract-auth";
 import { AtlasDurableMessageAuthorizer } from "./message-lineage.js";
 import { KyselyAtlasMessageLineageReader } from "./kysely-message-lineage.js";
 import type { AtlasThreadServiceOptions } from "./thread-service.js";
@@ -16,11 +17,12 @@ import { AtlasThreadService } from "./thread-service.js";
 export function createAtlasConversationServices(
   transactions: PlaneTransactionCoordinator<Transaction<Record<string, never>>>,
   disclosure?: AtlasThreadServiceOptions["disclosure"],
+  authorizeAdmission?: (context: VerifiedRequestContext) => Promise<boolean>,
 ) {
   const authorizer: AtlasThreadAuthorizer = {
     async authorize({ context, operation, thread }) {
       assertAtlasContext(context);
-      if (!hasPermission(context, `${context.planeKey}.ai.agent.use`))
+      if (!hasPermission(context, `${context.planeKey}.ai.agent.use`) || (authorizeAdmission && !await authorizeAdmission(context)))
         return false;
       if (!thread) return operation === "create" || operation === "read";
       if (
@@ -75,7 +77,7 @@ export function createAtlasConversationServices(
       const allowed = hasPermission(
         context,
         `${context.planeKey}.ai.agent.use`,
-      );
+      ) && (!authorizeAdmission || await authorizeAdmission(context));
       return {
         schema: "atlas-plane-admission/1",
         planeKey: context.planeKey,

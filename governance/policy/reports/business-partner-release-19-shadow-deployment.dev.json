@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_shadow_profile_deployment",
+  "capturedAt": "2026-09-10T05:47:11.598390+00:00",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "profileHash": "5eb93daa4c0f02b6359ce14c5f914909384786959e8cca10cc5e2468a72c9fb1",
+  "apiImage": "sha256:8e2ac3cb49bb9ba4a76c291a450263f3751d9dd87fed1d2046d2bfcc517f1d38",
+  "mode": "shadow",
+  "sourceConfigs": [
+    "/home/chandravel_natarajan/.athyper/instances/dev/deployments/atlas-f6-pilot-20260910/current.json"
+  ],
+  "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-shadow-20260910/override.json",
+  "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-shadow-20260910/rollback.json",
+  "qualificationBoundary": "Only target policy profile is selected from the signed artifact; active descriptor remains release 18. This is not full exact-release command qualification.",
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "rolledBack": true,
+  "rolledBackAt": "2026-09-10T05:47:38.864594+00:00",
+  "blocker": "Deployed API authorization parser rejects release 19 profile: Unknown authorization property. Restore compatible API dependencies before selecting this profile."
+}

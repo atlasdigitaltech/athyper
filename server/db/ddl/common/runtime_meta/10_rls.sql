@@ -92,3 +92,11 @@ DO $$ BEGIN
     EXECUTE 'CREATE POLICY runtime_applied_release_payload_applier ON runtime_meta.applied_release_payload FOR ALL TO athyper_projection_applier USING(true) WITH CHECK(true)';
   END IF;
 END $$;
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+ALTER TABLE runtime_meta.experience_surface_projection ENABLE ROW LEVEL SECURITY;
+ALTER TABLE runtime_meta.experience_surface_projection FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_access ON runtime_meta.experience_surface_projection USING ((tenant_id = shared.current_tenant_id_soft())) WITH CHECK ((tenant_id = shared.current_tenant_id()));
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

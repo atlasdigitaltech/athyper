@@ -1,7 +1,9 @@
+import { readBusinessPartnerShadowConfig, type BusinessPartnerShadowConfig } from "../composition/business-partner-authorization-shadow.js";
 import { parseProviderVerificationKeys, type ProviderVerificationKey } from "@athyper/server-service-master-data";
 import { parseBusinessPartnerMetricsTargets, type BusinessPartnerMetricsTarget } from "../monitoring/business-partner-metrics.js";
 
 export interface HostConfig {
+  businessPartnerAuthorizationShadow?: BusinessPartnerShadowConfig;
   localContactDeliveryKey?: string;
   localContactChallenge?: import("@athyper/server-service-master-data").LocalChallengeConfiguration;
   masterDataVerificationKeys?: readonly ProviderVerificationKey[];
@@ -172,6 +174,7 @@ export interface HostConfig {
   };
   publication: {
     apiEnabled: boolean;
+    authoringEnabled?: boolean;
     compileEnabled: boolean;
     dispatchEnabled: boolean;
     applyEnabled: boolean;
@@ -212,6 +215,8 @@ export interface HostConfig {
     businessPartnerDeliveryEnabled?: boolean;
     businessPartnerReconciliationEnabled?: boolean;
     authorizationManagementRoutesEnabled: boolean;
+    authorizationManagementPolicyPath?: string;
+    authorizationWriterConnectionsPath?: string;
     authorizationManagementMutationsEnabled: boolean;
     authorizationManagementMode: "legacy" | "shadow" | "enforce";
     authorizationGoldenEvaluatorCorpusQualified: boolean;
@@ -658,6 +663,7 @@ export function loadConfig(): HostConfig {
   if (!/^[a-zA-Z0-9_-]{1,128}$/.test(searchIndexUid))
     throw new Error("SEARCHCORE_DOCUMENT_INDEX is invalid");
   const searchTimeoutMs = readPositiveInteger("SEARCHCORE_TIMEOUT_MS", 10_000);
+  const publicationAuthoringEnabled = readBoolean("PUBLICATION_AUTHORING_ENABLED", false);
   const publicationApiEnabled = readBoolean("PUBLICATION_API_ENABLED", false);
   const publicationCompileEnabled = readBoolean(
     "PUBLICATION_COMPILE_ENABLED",
@@ -699,6 +705,7 @@ export function loadConfig(): HostConfig {
     process.env["PUBLICATION_PRIVATE_KEY_REFERENCE"]?.trim();
   const publicationPublicKeyReference =
     process.env["PUBLICATION_PUBLIC_KEY_REFERENCE"]?.trim();
+  if (publicationAuthoringEnabled && (!publicationApiEnabled || !publicationSigningKeyId || !publicationPrivateKeyReference || !publicationPublicKeyReference)) throw new Error("Publication authoring requires API enablement and signing key references");
   const publicationRuntimeVersion =
     process.env["PUBLICATION_RUNTIME_VERSION"]?.trim() ||
     process.env["SERVICE_VERSION"]?.trim() ||
@@ -755,6 +762,7 @@ export function loadConfig(): HostConfig {
       connectionString: rawMeshDatabaseUrl || undefined,
       poolMax: meshPoolMax,
     },
+    businessPartnerAuthorizationShadow: readBusinessPartnerShadowConfig(process.env),
     businessPartner360: {
       meshLiveBaseUrl: bp360MeshLiveBaseUrl || undefined,
       meshLiveCredentialReference:
@@ -906,6 +914,7 @@ export function loadConfig(): HostConfig {
     },
     publication: {
       apiEnabled: publicationApiEnabled,
+      authoringEnabled: publicationAuthoringEnabled,
       compileEnabled: publicationCompileEnabled,
       dispatchEnabled: publicationDispatchEnabled,
       applyEnabled: publicationApplyEnabled,
@@ -982,6 +991,8 @@ export function loadConfig(): HostConfig {
         "BUSINESS_PARTNER_MESH_RECONCILIATION_ENABLED",
         false,
       ),
+      authorizationWriterConnectionsPath: process.env["AUTHORIZATION_WRITER_CONNECTIONS_PATH"]?.trim() || undefined,
+      authorizationManagementPolicyPath: process.env["AUTHORIZATION_MANAGEMENT_POLICY_PATH"]?.trim() || undefined,
       authorizationManagementRoutesEnabled: readBoolean(
         "AUTHORIZATION_MANAGEMENT_ROUTES_ENABLED",
         false,

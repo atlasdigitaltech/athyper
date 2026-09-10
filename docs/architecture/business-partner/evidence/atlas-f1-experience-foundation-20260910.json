@@ -1,0 +1,94 @@
+{
+  "schema": "atlas-experience-foundation-verification/1",
+  "capturedAt": "2026-09-09T17:14:44.112Z",
+  "checks": [
+    {
+      "name": "studio: complete fresh foundation manifest",
+      "passed": true
+    },
+    {
+      "name": "studio: migration is repeatable on fresh canonical tables",
+      "passed": true
+    },
+    {
+      "name": "studio: incompatible partial install aborts atomically; compatible table data preserved",
+      "passed": true
+    },
+    {
+      "name": "studio: missing-table upgrade matches fresh catalog",
+      "passed": true
+    },
+    {
+      "name": "studio: real DEV schema matches canonical; upgrade preserves populated rows",
+      "passed": true
+    },
+    {
+      "name": "studio: tenant isolation, read-only release grant, projection write, plane and lifecycle constraints",
+      "passed": true
+    },
+    {
+      "name": "neon: complete fresh foundation manifest",
+      "passed": true
+    },
+    {
+      "name": "neon: migration is repeatable on fresh canonical tables",
+      "passed": true
+    },
+    {
+      "name": "neon: incompatible partial install aborts atomically; compatible table data preserved",
+      "passed": true
+    },
+    {
+      "name": "neon: missing-table upgrade matches fresh catalog",
+      "passed": true
+    },
+    {
+      "name": "neon: real DEV schema matches canonical; upgrade preserves populated rows",
+      "passed": true
+    },
+    {
+      "name": "neon: tenant isolation, read-only release grant, projection write, plane and lifecycle constraints",
+      "passed": true
+    },
+    {
+      "name": "mesh: complete fresh foundation manifest",
+      "passed": true
+    },
+    {
+      "name": "mesh: migration is repeatable on fresh canonical tables",
+      "passed": true
+    },
+    {
+      "name": "mesh: incompatible partial install aborts atomically; compatible table data preserved",
+      "passed": true
+    },
+    {
+      "name": "mesh: missing-table upgrade matches fresh catalog",
+      "passed": true
+    },
+    {
+      "name": "mesh: real DEV schema matches canonical; upgrade preserves populated rows",
+      "passed": true
+    },
+    {
+      "name": "mesh: tenant isolation, read-only release grant, projection write, plane and lifecycle constraints",
+      "passed": true
+    }
+  ],
+  "liveReference": {
+    "target": "dev",
+    "readOnlySchemaExtraction": true,
+    "studio": {
+      "normalizedDumpSha256": "50186e07c45424013ff690f072749bf33f8bbe9a950cdcf7e0f81dee20b0c70c"
+    },
+    "neon": {
+      "normalizedDumpSha256": "50186e07c45424013ff690f072749bf33f8bbe9a950cdcf7e0f81dee20b0c70c"
+    },
+    "mesh": {
+      "normalizedDumpSha256": "50186e07c45424013ff690f072749bf33f8bbe9a950cdcf7e0f81dee20b0c70c"
+    }
+  },
+  "deploymentApplied": false,
+  "passed": true,
+  "completedAt": "2026-09-09T17:17:03.818Z"
+}

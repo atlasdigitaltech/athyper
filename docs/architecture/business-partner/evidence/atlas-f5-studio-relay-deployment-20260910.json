@@ -1,0 +1,25 @@
+{
+  "startedAt": "2026-09-09T20:00:13.850Z",
+  "oldImage": "sha256:19c15b00a888dfd09f60e20c70cf518da19248a284982e05b7cd000ef4de25a2",
+  "newImage": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+  "sourceCommit": "421dd872b9df44086abcd815034a9978809112f4",
+  "change": "Explicit Studio authoring and authorization-management relay routes",
+  "status": "healthy; live authenticated relay verified",
+  "verifiedAt": "2026-09-09T20:01:58.893056+00:00",
+  "checks": {
+    "studioSession": "authenticated catl.admin / cirrusatlantic",
+    "authorizationManagement": "upstream ROUTE_NOT_FOUND",
+    "metaEntityDraftCreation": "upstream ROUTE_NOT_FOUND"
+  },
+  "tests": {
+    "relayTests": 34,
+    "typechecks": 2,
+    "studioProductionBuild": "passed"
+  },
+  "remaining": [
+    "API has no publication signing-key configuration; Meta Entity authoring registration is skipped",
+    "API bootstrap supplies no authorizationManagement adapters; native management routes are absent",
+    "Local Atlas still lacks deployed knowledge-index and ingestion composition"
+  ],
+  "liveBusinessChanges": []
+}

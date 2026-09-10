@@ -81,6 +81,8 @@ export interface AtlasUsageLedgerEntry {
   readonly totalCostUsd: number | null;
   readonly finishReason: AtlasFinishReason;
   readonly errorClass: AtlasProviderErrorClass | null;
+  readonly errorCode?: string;
+  readonly readinessDiagnostics?: {readonly modelDigest:string;readonly queueWaitMs:number;readonly loadDurationMs:number;readonly readinessChecks:number};
   readonly durationMs: number;
   readonly recordedAt: string;
 }

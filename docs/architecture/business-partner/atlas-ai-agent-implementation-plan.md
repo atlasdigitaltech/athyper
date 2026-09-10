@@ -1,7 +1,7 @@
 # Business Partner Atlas AI Agent — implementation plan
 
 Date: 2026-09-08  
-Status: Implementation in progress; see work-package notes below for qualification and deployment scope
+Status: Open overall; BP-AI-00 baseline and F6 DEV pilot closed within their recorded scopes
 Scope: NEON Business Partner Manage, individual BP360 records, and related case assistance
 
 BP-AI-00 complete (DEV baseline, 2026-09-09): [inventory and authenticated closure report](bp-ai-00-baseline.md). A refreshed session passed 20 measured cited reads plus warm-up, a visible Atlas response check and the 94-test R9 regression gate. Observed p95: first text 1.901 s, complete response 4.889 s. Tenant-specific descriptor precedence is documented; later feature/persona qualification remains separate.
@@ -19,6 +19,37 @@ BP-AI-02 implementation: versioned shared page context, semantic Manage/record/B
 BP-AI-05 implemented and deployed to DEV (2026-09-09): [answer envelope and presentation contract](../../contracts/atlas-answer-envelope.md) includes strict reference validation, safe prose/owner-assessment rendering, inline source groups, context-specific starters and accessible dock/fullscreen layouts. Authorized source metadata survives history, follow-ups and replay under current lineage checks; streaming text retains exact whitespace. [Deployed qualification](evidence/bp-ai-05-deployed-20260909.md) passed 24 authenticated Chromium/live-model checks, including desktop/mobile accessibility scans, keyboard focus, computed contrast and screenshot review. Local checks and R9 pass. Broader BP-AI-09 persona/production rollout and physical screen-reader qualification retain their separate scope.
 
 BP-AI-07 implementation: [saved case explanations and confirmed-submit integration](../../contracts/atlas-case-explanation.md) are implemented in the working tree. Current-snapshot validation, partial routing-field diffs against the previous saved snapshot, baseline-scope authorization, case-context binding and owner-checked submit previews are covered by focused tests and R9. Protected field diffs remain withheld; deployment and authenticated browser/model qualification are not claimed.
+
+## Closure review — 2026-09-10
+
+**Do not mark this entire implementation plan closed.** The [BP-AI-00 baseline](bp-ai-00-baseline.md)
+is closed, and the [F6 DEV CirrusAtlantic BP/Mesh pilot](evidence/atlas-f6-phase-closure-distributed-20260910.json)
+is closed with all ten gates passed. F6's pilot checks do not satisfy every
+BP-AI work-package exit gate or the broader BP-AI-09 release rubric.
+
+The package notes above record their earlier implementation milestones. Later
+F6 evidence establishes reviewed tenant AI publication, generic BP/Mesh execution,
+document-grounded retrieval and inference reliability for its recorded fixtures;
+it supersedes earlier statements that no live AI publication occurred within that
+pilot. It does not establish release qualification for every BP insight or case tool.
+
+| Item | Closure decision | Remaining evidence or scope |
+| --- | --- | --- |
+| BP-AI-00 | Closed, DEV baseline | Historical inventory and measured single-record workload; not current performance certification |
+| F6 foundation pilot | Closed, recorded DEV BP/Mesh deployment | Ten gates and separate distributed inference qualification; documented limitations retained |
+| BP-AI-04/06/07 broader record, Manage and case scope | Keep release qualification open | Bind owner-backed readiness/eligibility, filtered/selected insights and confirmed-submit behavior to the target BP-AI release receipts |
+| BP-AI-08 automatic briefs | Keep open | Demonstrate proactive scheduling, cache invalidation/revocation, deduplication and accepted latency/budgets; shared inference admission alone does not qualify this package |
+| BP-AI-09 full BP release | Keep open | Complete version-bound target intake, eight required personas, package acceptance, live-model quality, performance and operations evidence |
+| BP-AI-10 extensions | Keep open for selected capabilities | Duplicate candidates and document-expiry owner/workflow qualification; optional draft preview has its own gate. Retrieval citations do not establish document validity or expiry decisions |
+
+Review verification: `pnpm qualify:business-partner-ai` exited 1 with
+`qualified: false` and 85 required gates for the default BP-AI-00–07 candidate.
+The checked-in [intake](../../../governance/config/governance/business-partner-ai-qualification.v1.json)
+still has no run identity, revision bindings or completed receipt paths. This is
+an evidence-readiness result, not 85 observed application failures. See the
+[BP-AI-09 runbook](../../runbooks/business-partner-ai-qualification.md) for the
+separate release contract. The retained F6 arithmetic failure also cannot be
+omitted from a future supported-task completion assessment.
 
 ## 1. Outcome and design commitments
 

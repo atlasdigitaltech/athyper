@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_compilation_retry",
+  "recordedAt": "2026-09-10T05:43:23.302Z",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "changeSetId": "9f8b8fd7-cd6e-4af7-a08b-7a650d70437b",
+  "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+  "status": 202,
+  "response": {
+    "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+    "queued": true
+  },
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

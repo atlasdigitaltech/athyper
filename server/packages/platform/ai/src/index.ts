@@ -39,3 +39,8 @@ export { createBusinessPartnerInsightTools } from "./business-partner-insight-to
 export { createAtlasEntitySectionTool } from "./entity-section-tool.js";
 
 export { createBusinessPartnerCaseTools } from "./business-partner-case-tools.js";
+
+export { createAtlasEntityRecordTool } from "./entity-record-tool.js";
+export * from "./response-feedback.js";
+export * from "./learning-candidates.js";
+export * from "./learning-evaluation.js";

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_combined_materialization_rehearsal",
+  "capturedAt": "2026-09-10T04:30:49.500Z",
+  "changeSetId": "9f8b8fd7-cd6e-4af7-a08b-7a650d70437b",
+  "changeSetRevision": 3,
+  "reviewRevision": "f89a3e8d172b456f739a3533b4fa92bb70d8f960a18d6cb729e744d950361dd3",
+  "contractHash": "b009c515ccb776a9b76999c77d06b81ab70127e42e9e15fc7637214ee1c10343",
+  "descriptorHash": "6dc7baed8589b2d5ba9e1c8bad1f277f4d89613cbf156daf2d1bbe02dab03df1",
+  "contentQualified": true,
+  "qualificationKind": "local_approved_snapshot_rehearsal",
+  "signed": false,
+  "releaseId": null,
+  "publicationEligible": false,
+  "grantChanges": [],
+  "activationAuthorized": false,
+  "unresolvedDifferences": 29,
+  "remainingGates": [
+    "Transactional combined materializer with current predecessor and revocation rechecks",
+    "Deployment of the combined materializer and runtime adapters",
+    "Reserved exact release coordinates and current catalog hash",
+    "Authenticated release-bound business/security review",
+    "Native signed compilation",
+    "Authenticated qualification against those signed artifacts",
+    "Explicit policy-difference acceptance with exact-release regression evidence"
+  ]
+}

@@ -13,13 +13,16 @@ export interface AtlasAttachmentContext {
   readonly contentType: string;
   readonly sha256: string;
   readonly text: string;
+  readonly provenance?: Readonly<Record<string,unknown>>;
 }
 
 export interface AtlasAttachmentContextResolver {
   resolve(input: {
     readonly context: VerifiedRequestContext;
+    readonly businessContext?: import("@athyper/server-contract-ai").AtlasBusinessContextV1;
     readonly attachmentContextId: string;
     readonly attachmentIds: readonly string[];
+    readonly attachmentChunkIds?: readonly string[];
     readonly dataClass: AtlasDataClass;
   }): Promise<readonly AtlasAttachmentContext[]>;
 }
@@ -30,7 +33,8 @@ export class KyselyAtlasAttachmentContextResolver implements AtlasAttachmentCont
     private readonly limits: { readonly maxAttachments?: number; readonly maxCharacters?: number; readonly maxCharactersPerAttachment?: number } = {},
   ) {}
 
-  resolve(input: { readonly context: VerifiedRequestContext; readonly attachmentContextId: string; readonly attachmentIds: readonly string[]; readonly dataClass: AtlasDataClass }): Promise<readonly AtlasAttachmentContext[]> {
+  resolve(input: { readonly context: VerifiedRequestContext; readonly attachmentContextId: string; readonly attachmentIds: readonly string[];
+    readonly attachmentChunkIds?: readonly string[]; readonly dataClass: AtlasDataClass }): Promise<readonly AtlasAttachmentContext[]> {
     const maxAttachments = this.limits.maxAttachments ?? 5;
     if (!uuid(input.attachmentContextId) || !input.attachmentIds.length || input.attachmentIds.length > maxAttachments || new Set(input.attachmentIds).size !== input.attachmentIds.length || input.attachmentIds.some((id) => !uuid(id))) {
       throw new AtlasServiceError("INVALID_ARGUMENT", `Atlas accepts between 1 and ${maxAttachments} unique attachment references.`);

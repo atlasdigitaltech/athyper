@@ -137,6 +137,7 @@ export function businessPartnerRecordHeader(
     Record<string, BusinessPartner360GovernedAction | undefined>
   >,
   presentation: EntityRecordPresentationV1 = businessPartnerRecordPresentation,
+  authorityRevision: string = "legacy:unversioned",
 ): EntityRecordHeaderV1 {
   // Only canonical, already authorized summary values can participate in header bindings.
   const values = {
@@ -149,19 +150,31 @@ export function businessPartnerRecordHeader(
     lifecycleStatus: summary.identity.lifecycleStatus,
     category: summary.identity.category,
   };
+  const bindings = new Map(Object.entries(authorizedActions).flatMap(([operationKey, action]) => action ? [[operationKey, {
+    operationKey,
+    href: scopedActionHref(action.href, summary),
+    decision: {
+      schemaVersion: 1 as const,
+      state: "allowed" as const,
+      reasonCode: "AUTHORIZED" as const,
+      operationKey,
+      authorityRevision,
+      decisionRef: `bp:${summary.identity.id}:${operationKey}`,
+    },
+  }] as const] : []));
   const header = resolveRecordHeader(presentation, values, {
     entityLabel: "Business Partner",
     fallbackTitle: summary.identity.displayName,
     readOnly: summary.completeness.readOnly,
     actions: presentation.actions.flatMap((placement) => {
-      const action = authorizedActions[placement.operationKey];
+      const action = bindings.get(placement.operationKey);
       return action
         ? [
             {
               key: placement.key,
               label: placement.label,
               placement: placement.placement,
-              href: action.href,
+              ...action,
             },
           ]
         : [];
@@ -172,7 +185,7 @@ export function businessPartnerRecordHeader(
   );
   return {
     ...header,
-    relatedActions: summary.completeness.readOnly ? [] : Object.entries(authorizedActions).flatMap(([operationKey, action]) => action?.href ? [{ operationKey, href: action.href }] : []),
+    relatedActions: summary.completeness.readOnly ? [] : [...bindings.values()],
     related: presentation.related?.filter(profile => summary.sections.some(section => section.code === profile.sectionKey && section.authorization === "granted")).map(profile => ({
       ...profile,
       actions: summary.completeness.readOnly ? [] : profile.actions.filter(action => Boolean(authorizedActions[action.operationKey])),
@@ -212,4 +225,12 @@ export function businessPartnerRecordHeader(
         };
       }),
   };
+}
+
+/** Context is bound by the server; presentation components must not rewrite action targets. */
+function scopedActionHref(href: string, summary: BusinessPartner360Summary): string {
+  const url = new URL(href, "https://local.test");
+  if (summary.scope.operatingOrganizationId) url.searchParams.set("operatingOrganizationId", summary.scope.operatingOrganizationId);
+  if (summary.scope.companyCodeId) url.searchParams.set("companyCodeId", summary.scope.companyCodeId);
+  return url.pathname + url.search + url.hash;
 }

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_native_authoring_readiness",
+  "capturedAt": "2026-09-10T03:05:19.365638+00:00",
+  "activeBaseReport": "governance/policy/reports/business-partner-native-authoring-publication.dev.json",
+  "activeReleaseNo": 17,
+  "pendingNativeRelease": {
+    "releaseId": "126721f6-a2e5-45e2-91bf-0d6a1b660c56",
+    "releaseNo": 18,
+    "status": "approved",
+    "publicationKey": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+    "sourceChangeSetId": "28081bdb-5b6e-43aa-8c63-2f60ceeb6aeb",
+    "sourceBranch": "atlas-f5-retrieval"
+  },
+  "authenticatedStudioIdentityChecks": [
+    {
+      "account": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "sessionState": "authenticated",
+      "iamStatus": 200,
+      "capabilitiesObserved": [
+        "metadata.entity.author",
+        "metadata.entity.publish",
+        "metadata.entity.submit",
+        "metadata.entity.test",
+        "metadata.entity.validate",
+        "metadata.entity.activate"
+      ]
+    },
+    {
+      "account": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "tenantId": "44444444-4444-4444-8444-444444444444",
+      "sessionState": "authenticated",
+      "iamStatus": 200,
+      "capabilitiesObserved": [
+        "metadata.entity.review",
+        "metadata.entity.test",
+        "metadata.entity.validate"
+      ]
+    }
+  ],
+  "interpretation": "Current Studio sessions and advertised capabilities establish available author/reviewer identities, not authorization of any particular write or release approval. NEON review nominations are separate from Studio principal IDs.",
+  "newReleaseAuthored": false,
+  "releaseReviewReceipts": [],
+  "signedArtifact": null,
+  "exactReleaseQualified": false,
+  "acceptedPolicyDifferences": 0,
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "sequencingQuestion": "Follow approved Atlas 18 or prepare a combined successor retaining its changes for new review; do not overwrite or activate 18 implicitly."
+}

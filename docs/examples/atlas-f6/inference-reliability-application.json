@@ -1,0 +1,735 @@
+{
+  "observedAt": "2026-09-10T08:10:26.906Z",
+  "kind": "authenticated-live-application-reliability",
+  "plane": "neon",
+  "actor": "catl.admin",
+  "imagesBefore": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:inference-reliability-20260910",
+      "digest": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "requests": [
+    {
+      "scenario": "warm",
+      "workload": "generation",
+      "threadId": "3aad4885-4990-4444-979f-5b32228b8497",
+      "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+      "status": "run.completed",
+      "elapsedMs": 3269,
+      "answerCorrect": true,
+      "replayedSameRun": true,
+      "providerEntries": [
+        {
+          "errorCode": null,
+          "errorClass": null,
+          "finishReason": "stop",
+          "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+          "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "readinessDiagnostics": null
+        }
+      ]
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "retrieval",
+      "httpStatus": 200,
+      "elapsedMs": 2039,
+      "citationCount": 1,
+      "expectedAttachment": true
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "generation",
+      "threadId": "59070f76-4681-4c2f-be6a-9a66dc18fc0a",
+      "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+      "status": "run.completed",
+      "elapsedMs": 5459,
+      "answerCorrect": true,
+      "replayedSameRun": true,
+      "providerEntries": [
+        {
+          "errorCode": null,
+          "errorClass": null,
+          "finishReason": "stop",
+          "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+          "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "readinessDiagnostics": null
+        }
+      ]
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "retrieval",
+      "httpStatus": 200,
+      "elapsedMs": 2396,
+      "citationCount": 1,
+      "expectedAttachment": true
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "generation",
+      "threadId": "d63f470a-4e33-4bc1-80b0-2f7879b6729d",
+      "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+      "status": "run.completed",
+      "elapsedMs": 5377,
+      "answerCorrect": true,
+      "replayedSameRun": true,
+      "providerEntries": [
+        {
+          "errorCode": null,
+          "errorClass": null,
+          "finishReason": "stop",
+          "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+          "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "readinessDiagnostics": null
+        }
+      ]
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "retrieval",
+      "httpStatus": 200,
+      "elapsedMs": 1865,
+      "citationCount": 1,
+      "expectedAttachment": true
+    },
+    {
+      "scenario": "mixed-2",
+      "workload": "generation",
+      "threadId": "15539239-e2ff-41ce-bc1c-88953e6ee4b6",
+      "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+      "status": "run.completed",
+      "elapsedMs": 4936,
+      "answerCorrect": true,
+      "replayedSameRun": true,
+      "providerEntries": [
+        {
+          "errorCode": null,
+          "errorClass": null,
+          "finishReason": "stop",
+          "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+          "bindingRevision": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "readinessDiagnostics": null
+        }
+      ]
+    }
+  ],
+  "assurance": "elevated",
+  "passed": true,
+  "imagesAfter": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "athyper-runtime-server:inference-reliability-20260910",
+      "digest": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "stableDeployment": true,
+  "inferenceDiagnostics": {
+    "observedUntil": "2026-09-10T08:11:49.194Z",
+    "events": [
+      {
+        "workload": "generation",
+        "phase": "queued",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 0,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "generation",
+        "phase": "admitted",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 0,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "generation",
+        "phase": "readiness_wait",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 9,
+        "code": "model_not_resident"
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_started",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 14
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 2861,
+        "elapsedMs": 2875
+      },
+      {
+        "workload": "generation",
+        "phase": "ready",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 2,
+        "queueWaitMs": 0,
+        "loadDurationMs": 2861,
+        "elapsedMs": 2877
+      },
+      {
+        "workload": "generation",
+        "phase": "chat_dispatch",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 2,
+        "queueWaitMs": 0,
+        "loadDurationMs": 2861,
+        "elapsedMs": 2883
+      },
+      {
+        "workload": "generation",
+        "phase": "completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 2,
+        "queueWaitMs": 0,
+        "loadDurationMs": 2861,
+        "elapsedMs": 3172
+      },
+      {
+        "workload": "generation",
+        "phase": "released",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "380bddd9-cbc7-4346-a125-16d4637ac933",
+        "providerCallId": "fe9ecbbf-5794-4a57-9830-dde255e30bd5",
+        "attempt": 2,
+        "queueWaitMs": 0,
+        "loadDurationMs": 2861,
+        "elapsedMs": 3172
+      },
+      {
+        "workload": "embedding",
+        "phase": "admitted",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "4a33e5c4-4b11-44d2-a3ce-f6e11eb65345",
+        "attempt": 1,
+        "queueWaitMs": 1,
+        "loadDurationMs": null,
+        "elapsedMs": 1
+      },
+      {
+        "workload": "generation",
+        "phase": "queued",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 0,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "embedding",
+        "phase": "completed",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "4a33e5c4-4b11-44d2-a3ce-f6e11eb65345",
+        "attempt": 1,
+        "queueWaitMs": 1,
+        "loadDurationMs": 1846.49221,
+        "elapsedMs": 1871
+      },
+      {
+        "workload": "embedding",
+        "phase": "released",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "4a33e5c4-4b11-44d2-a3ce-f6e11eb65345",
+        "attempt": 1,
+        "queueWaitMs": 1,
+        "loadDurationMs": 1846.49221,
+        "elapsedMs": 1871
+      },
+      {
+        "workload": "generation",
+        "phase": "admitted",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 0,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 0,
+        "elapsedMs": 1801
+      },
+      {
+        "workload": "generation",
+        "phase": "readiness_wait",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 1,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 0,
+        "elapsedMs": 1819,
+        "code": "model_not_resident"
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_started",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 1,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 0,
+        "elapsedMs": 1836
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 1,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 3181,
+        "elapsedMs": 5017
+      },
+      {
+        "workload": "generation",
+        "phase": "ready",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 2,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 3181,
+        "elapsedMs": 5020
+      },
+      {
+        "workload": "generation",
+        "phase": "chat_dispatch",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 2,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 3181,
+        "elapsedMs": 5026
+      },
+      {
+        "workload": "generation",
+        "phase": "completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 2,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 3181,
+        "elapsedMs": 5336
+      },
+      {
+        "workload": "generation",
+        "phase": "released",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "8f252bac-430b-4702-8477-8572a8ff754c",
+        "providerCallId": "e39a1ec7-64ee-4cc1-806e-9feb900e7c5f",
+        "attempt": 2,
+        "queueWaitMs": 1801,
+        "loadDurationMs": 3181,
+        "elapsedMs": 5336
+      },
+      {
+        "workload": "embedding",
+        "phase": "admitted",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "14d0ff6e-d345-45a8-8286-92c45411d401",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": null,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "generation",
+        "phase": "queued",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 0,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "embedding",
+        "phase": "completed",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "14d0ff6e-d345-45a8-8286-92c45411d401",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 1897.667891,
+        "elapsedMs": 1933
+      },
+      {
+        "workload": "embedding",
+        "phase": "released",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "14d0ff6e-d345-45a8-8286-92c45411d401",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 1897.667891,
+        "elapsedMs": 1933
+      },
+      {
+        "workload": "generation",
+        "phase": "admitted",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 0,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 0,
+        "elapsedMs": 1821
+      },
+      {
+        "workload": "generation",
+        "phase": "readiness_wait",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 1,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 0,
+        "elapsedMs": 2095,
+        "code": "model_not_resident"
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_started",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 1,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 0,
+        "elapsedMs": 2171
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 1,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 2813,
+        "elapsedMs": 4984
+      },
+      {
+        "workload": "generation",
+        "phase": "ready",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 2,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 2813,
+        "elapsedMs": 4986
+      },
+      {
+        "workload": "generation",
+        "phase": "chat_dispatch",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 2,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 2813,
+        "elapsedMs": 4994
+      },
+      {
+        "workload": "generation",
+        "phase": "completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 2,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 2813,
+        "elapsedMs": 5247
+      },
+      {
+        "workload": "generation",
+        "phase": "released",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "454002cf-f28a-4056-91e2-2891cd2e407e",
+        "providerCallId": "99d366dd-3c84-4674-8122-9a9ea769585f",
+        "attempt": 2,
+        "queueWaitMs": 1821,
+        "loadDurationMs": 2813,
+        "elapsedMs": 5247
+      },
+      {
+        "workload": "embedding",
+        "phase": "admitted",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "f816d64c-4a28-4e4f-b79e-c656dd30a81b",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": null,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "generation",
+        "phase": "queued",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 0,
+        "queueWaitMs": 0,
+        "loadDurationMs": 0,
+        "elapsedMs": 0
+      },
+      {
+        "workload": "embedding",
+        "phase": "completed",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "f816d64c-4a28-4e4f-b79e-c656dd30a81b",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 1748.294691,
+        "elapsedMs": 1769
+      },
+      {
+        "workload": "embedding",
+        "phase": "released",
+        "model": "nomic-embed-text:v1.5",
+        "modelDigest": "sha256:0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+        "operationId": "f816d64c-4a28-4e4f-b79e-c656dd30a81b",
+        "attempt": 1,
+        "queueWaitMs": 0,
+        "loadDurationMs": 1748.294691,
+        "elapsedMs": 1770
+      },
+      {
+        "workload": "generation",
+        "phase": "admitted",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 0,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 0,
+        "elapsedMs": 1683
+      },
+      {
+        "workload": "generation",
+        "phase": "readiness_wait",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 1,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 0,
+        "elapsedMs": 1700,
+        "code": "model_not_resident"
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_started",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 1,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 0,
+        "elapsedMs": 1708
+      },
+      {
+        "workload": "generation",
+        "phase": "warmup_completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 1,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 2822,
+        "elapsedMs": 4530
+      },
+      {
+        "workload": "generation",
+        "phase": "ready",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 2,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 2822,
+        "elapsedMs": 4533
+      },
+      {
+        "workload": "generation",
+        "phase": "chat_dispatch",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 2,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 2822,
+        "elapsedMs": 4540
+      },
+      {
+        "workload": "generation",
+        "phase": "completed",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 2,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 2822,
+        "elapsedMs": 4833
+      },
+      {
+        "workload": "generation",
+        "phase": "released",
+        "model": "qwen3:8b",
+        "modelDigest": "sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+        "runId": "bbf6236a-e515-46be-bb36-c6cb49fd0c8e",
+        "providerCallId": "7c3b8b75-1eb7-426f-bb17-ac5b38174f81",
+        "attempt": 2,
+        "queueWaitMs": 1683,
+        "loadDurationMs": 2822,
+        "elapsedMs": 4833
+      }
+    ],
+    "peakAdmitted": 1,
+    "unreleasedAtEnd": 0,
+    "scope": "API process diagnostics in the assessment interval; generation is correlated by provider call, embeddings by operation ID."
+  },
+  "sharedAdmissionVerified": true
+}

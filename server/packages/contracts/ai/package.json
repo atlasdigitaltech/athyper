@@ -7,7 +7,9 @@
     ".": "./src/index.ts",
     "./business-context": "./src/business-context.ts",
     "./answer": "./src/answer.ts",
-    "./insights": "./src/insights.ts"
+    "./insights": "./src/insights.ts",
+    "./feedback": "./src/feedback.ts",
+    "./intent": "./src/intent.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",

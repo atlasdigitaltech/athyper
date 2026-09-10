@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 CREATE OR REPLACE FUNCTION ai.trg_guard_ai_tool_invocation_mutation()
  RETURNS trigger

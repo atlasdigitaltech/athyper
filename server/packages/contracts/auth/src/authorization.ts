@@ -92,6 +92,14 @@ export interface VerifiedRequestContext extends VerifiedIdentity {
 }
 
 export interface AuthorizationRequest {
+  /** Trusted service annotation for advisory comparison only; never an authorization resource. */
+  readonly observation?: {
+    readonly entityCode: string;
+    readonly operationKey?: string;
+    readonly recordId?: string;
+    readonly surface?: "application" | "workspace" | "list" | "record" | "section" | "field" | "action" | "command" | "transfer";
+    readonly phase?: "discover" | "execute";
+  };
   readonly context: VerifiedRequestContext;
   readonly permissionCode: string;
   readonly resource?: Readonly<Record<string, unknown>>;

@@ -1,4 +1,6 @@
 "use client";
+import { EntityRecordAction, type EntityActionHandlers } from "./record-action";
+import type { EntityAccessDecisionV1 } from "@athyper/contract-platform-entity-runtime";
 import { useOptionalI18n } from "@athyper/platform-i18n/react";
 import { Badge, Button, Tooltip } from "@athyper/platform-ui";
 import { CopyIcon } from "@athyper/platform-icons";
@@ -374,6 +376,7 @@ export function RelatedRecord({
   locale: requestedLocale,
   restrictedFields = [],
   actions = [],
+  actionHandlers,
   summaryFooter,
   hideScope = false,
 }: {
@@ -382,7 +385,8 @@ export function RelatedRecord({
   compact?: boolean;
   locale?: string;
   restrictedFields?: readonly string[];
-  actions?: readonly { operationKey: string; href: string }[];
+  actions?: readonly { operationKey: string; href: string; decision?: EntityAccessDecisionV1 }[];
+  actionHandlers?: EntityActionHandlers;
   summaryFooter?: ReactNode;
   hideScope?: boolean;
 }) {
@@ -707,15 +711,7 @@ export function RelatedRecord({
             const resolved = actions.find(
               (a) => a.operationKey === action.operationKey,
             );
-            return resolved && /^\/(?!\/)/.test(resolved.href) ? (
-              <a
-                className="a-related-record__action"
-                key={action.key}
-                href={resolved.href}
-              >
-                {action.label}
-              </a>
-            ) : null;
+            return resolved ? <EntityRecordAction key={action.key} action={{ ...resolved, key: action.key, label: action.label, placement: "secondary" }} handlers={actionHandlers} /> : null;
           })
         : null}
     </article>

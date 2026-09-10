@@ -1,4 +1,5 @@
 import { compileEntityAi } from "./entity-ai.js";
+import { compileEntityAuthorization, compileEntityAuthorizationRuntime } from "./entity-authorization.js";
 import { parseEntityDirectoryScope } from "@athyper/server-contract-metadata";
 import { parseEntityRecordPresentation, validateRecordPresentationReferences, validateRelatedPresentationOwner } from "@athyper/contract-platform-entity-runtime";
 import { parseCollectionRelationship } from "@athyper/server-contract-metadata";
@@ -66,6 +67,9 @@ export function validateGraph(graph: MetaEntityGraph): ValidationReport {
   optionalReferences(graph.policyBindings,"entityOperationId",ids(graph.operations),"policyBindings",issues); optionalReferences(graph.fieldPolicyBindings,"entityOperationId",ids(graph.operations),"fieldPolicyBindings",issues); optionalReferences(graph.numberingBindings,"entityOperationId",ids(graph.operations),"numberingBindings",issues);
   validateOwners(graph,issues);
   validateListSurfaces(graph,issues);
+  try { compileEntityAuthorization(graph); compileEntityAuthorizationRuntime(graph); } catch (cause) {
+    issues.push({ code: "ENTITY_AUTHORIZATION_INVALID", path: "surfaces.authorization", message: cause instanceof Error ? cause.message : "Invalid authorization profile" });
+  }
   try { compileEntityAi(graph); } catch (cause) {
     issues.push({ code: "ENTITY_AI_INVALID", path: "surfaces.layoutConfig.ai", message: cause instanceof Error ? cause.message : "Invalid entity AI contract" });
   }
@@ -85,6 +89,8 @@ export function compileGraph(graph: MetaEntityGraph): CompiledMetaEntityArtifact
   const validation = validateGraph(graph);
   if (validation.issues.length) throw new Error("META_ENTITY_GRAPH_INVALID");
   const ai = compileEntityAi(graph);
+  const authorization = compileEntityAuthorization(graph);
+  const authorizationRuntime = compileEntityAuthorizationRuntime(graph);
   const listPresentation = compileListPresentation(graph);
   const recordSurfaces = (graph.surfaces ?? []).filter(surface => surface.status !== "deprecated" && surface.layoutConfig?.["recordPresentation"] !== undefined);
   if (recordSurfaces.length > 1) throw new Error("Only one record presentation may be published per entity");
@@ -96,6 +102,8 @@ export function compileGraph(graph: MetaEntityGraph): CompiledMetaEntityArtifact
   const relationshipBindings=(graph.surfaces??[]).flatMap(surface=>surface.layoutConfig?.["collectionRelationship"]===undefined?[]:[parseCollectionRelationship(surface.layoutConfig["collectionRelationship"])]);
   if(relationshipBindings.length>1)throw new Error("Only one collection relationship may be published per entity");
   const descriptor = canonicalValue({
+    ...(authorization ? { authorization } : {}),
+    ...(authorizationRuntime ? { authorizationRuntime } : {}),
     ...(ai ? { ai } : {}),
     ...(directoryRules[0]?{directoryScope:directoryRules[0]}:{}),
     ...(relationshipBindings[0]?{collectionRelationship:relationshipBindings[0]}:{}),

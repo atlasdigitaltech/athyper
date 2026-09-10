@@ -20,3 +20,10 @@ it("rejects invalid metadata at the runtime boundary even without Studio validat
   }
   expect(() => parseEntityRuntimeDescriptor({ ...row, plane_code: "mesh", compiled_json: { ...descriptor, planeKey: "mesh", ai } })).toThrow(/coordinate mismatch/);
 });
+
+it.each([["business_partner", "neon"], ["network_relationship", "mesh"]])("parses the generic record capability for %s in %s", (entityCode, planeKey) => {
+  const config = {...ai, insightProviders: [{id: "entity_read_record", version: 1}]};
+  const result = parseEntityRuntimeDescriptor({...row, entity_code: entityCode, plane_code: planeKey, compiled_json: {...descriptor, entityCode, planeKey, ai: config}});
+  expect(result.ai).toEqual(config);
+  expect(result.entityCode).toBe(entityCode);
+});

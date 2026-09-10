@@ -38,8 +38,12 @@ CREATE POLICY authority_access ON trustiam.identity_replay_approval FOR ALL
  USING(authority_tenant_id=shared.current_tenant_id_soft()) WITH CHECK(authority_tenant_id=shared.current_tenant_id());
 
 CREATE FUNCTION trustiam.trg_guard_identity_replay_approval() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,trustiam AS $$
-DECLARE actor uuid := nullif(current_setting('app.current_principal_id',true),'')::uuid;
+DECLARE actor uuid;
 BEGIN
+ BEGIN actor := nullif(current_setting('app.current_principal_id',true),'')::uuid;
+ EXCEPTION WHEN invalid_text_representation THEN
+   RAISE EXCEPTION 'invalid replay principal context' USING ERRCODE='23514';
+ END;
  IF TG_OP='DELETE' THEN RAISE EXCEPTION 'replay approval evidence is immutable' USING ERRCODE='23514'; END IF;
  IF TG_OP='INSERT' THEN
    IF NEW.requested_by IS DISTINCT FROM actor OR NEW.status<>'pending' OR NEW.approved_by IS NOT NULL OR NEW.revoked_by IS NOT NULL OR NEW.consumed_at IS NOT NULL THEN
@@ -63,14 +67,19 @@ CREATE TRIGGER identity_replay_approval_guard BEFORE INSERT OR UPDATE OR DELETE 
 
 -- The legacy repository/direct UPDATE cannot bypass durable evidence.
 CREATE FUNCTION trustiam.trg_require_identity_replay_approval() RETURNS trigger LANGUAGE plpgsql SET search_path=pg_catalog,trustiam AS $$
+DECLARE actor uuid;
 BEGIN
  IF NEW.replay_requested_at IS DISTINCT FROM OLD.replay_requested_at AND NEW.replay_requested_at IS NOT NULL THEN
+   BEGIN actor := nullif(current_setting('app.current_principal_id',true),'')::uuid;
+   EXCEPTION WHEN invalid_text_representation THEN
+     RAISE EXCEPTION 'invalid replay principal context' USING ERRCODE='23514';
+   END;
    IF NOT EXISTS(SELECT 1 FROM trustiam.identity_replay_approval a
       WHERE a.authority_tenant_id=NEW.authority_tenant_id AND a.attempt_id=NEW.id
         AND a.desired_version=NEW.desired_version AND a.desired_hash=NEW.desired_hash
         AND a.requested_by=NEW.replay_requested_by AND a.approved_by=NEW.replay_approved_by
         AND a.status='consumed' AND a.expires_at>clock_timestamp()
-        AND a.requested_by=nullif(current_setting('app.current_principal_id',true),'')::uuid) THEN
+        AND a.requested_by=actor) THEN
      RAISE EXCEPTION 'durable replay approval required' USING ERRCODE='23514';
    END IF;
  END IF;

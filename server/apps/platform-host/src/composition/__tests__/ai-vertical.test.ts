@@ -71,3 +71,30 @@ it.each([true, false])("registers owner tools exactly when the composed owner ex
     await expect(container.platform.ai!.tools!.preview({context: {tenantId: "t", principalId: "p", realmKey: "neon", planeKey: "neon", requestId: "r", profileHash: "h", authEpoch: 1, permissions: {tenantId: "t", principalId: "p", planeKey: "neon", profileHash: "h"}} as never, threadId: "t", runId: "r", callId: "c", toolCode, toolVersion: "1", arguments: {recordId: "invalid"}, summary: "test"})).rejects.toMatchObject({code: present ? "TOOL_INVALID" : "TOOL_DENIED"});
   }
 });
+
+it("wires default attachment retrieval to live metadata, parent authorization and Records", async () => {
+  const { KyselyAtlasKnowledgeRepository } = await import("@athyper/server-platform-ai");
+  const { createHash } = await import("node:crypto");
+  const container = createContainer(), config = loadConfig(), input = dependencies();
+  const id = "10000000-0000-4000-8000-000000000011", parentId = "10000000-0000-4000-8000-000000000012";
+  const permission = "neon.collaboration.attachment.read";
+  const context = { tenantId: "10000000-0000-4000-8000-000000000001", principalId: "10000000-0000-4000-8000-000000000002", planeKey: "neon", realmKey: "neon", profileHash: "p", authEpoch: 1, requestId: "r", permissions: { tenantId: "10000000-0000-4000-8000-000000000001", principalId: "10000000-0000-4000-8000-000000000002", planeKey: "neon", profileHash: "p", allowed: [permission], denied: [], planLocked: [], planeExcluded: [] } } as never;
+  const citation = { sourceId: id, sourceVersionId: "version", revisionId: id, chunkId: id, contentHash: createHash("sha256").update("fixture").digest("hex"), characterStart: 0, characterEnd: 7 };
+  const canonical = vi.spyOn(KyselyAtlasKnowledgeRepository.prototype, "admitCandidates").mockResolvedValue([{ citation, source: { id, tenantId: "10000000-0000-4000-8000-000000000001", sourceId: id, sourceKind: "attachment", entityCode: "business_partner", permissionCode: permission, status: "active", createdAt: new Date().toISOString() } }]);
+  const getEntityDescriptor = vi.fn(async () => ({ planeKey: "neon", entityCode: "business_partner", ai: { enabled: true }, storage: { idField: "id" }, operations: { read: { permissionCode: "neon.relationship.business_partner.read" } } }));
+  const list = vi.fn(async () => ({ data: [{ id: parentId }] }));
+  const authorize = vi.fn(async () => ({ allowed: true }));
+  container.platform.authorizer = { authorize } as never;
+  container.platform.metadata = { getEntityDescriptor } as never;
+  container.services.records = { queries: { list } } as never;
+  try {
+    registerAtlas(container, {...config, atlas: {enabled: true, persistenceEnabled: true, toolsEnabled: true}}, { ...input, knowledgeIndex: { ...input.knowledgeIndex, search: async () => [{ citation, permissionCode: permission, score: 1 }] } }, { neon: fakeDatabase }, { run: async () => [{ entity_id: parentId, text: "fixture" }] } as never, iam);
+    const search = () => container.platform.ai!.operations!.knowledge.search({ context, query: "fixture" });
+    expect(await search()).toEqual([{ citation, score: 1 }]);
+    expect(list).toHaveBeenCalledWith(expect.objectContaining({ entityCode: "business_partner", recordIds: [parentId], fields: ["id"], limit: 1 }));
+    expect(authorize).toHaveBeenCalledWith(expect.objectContaining({ permissionCode: "neon.relationship.business_partner.read", resource: expect.objectContaining({ recordId: parentId }) }));
+    list.mockRejectedValue(new Error("scope revoked"));
+    expect(await search()).toEqual([]);
+    expect(canonical).toHaveBeenCalledTimes(2);
+  } finally { canonical.mockRestore(); }
+});

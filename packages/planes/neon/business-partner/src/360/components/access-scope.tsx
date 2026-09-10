@@ -1,3 +1,4 @@
+import { BusinessPartnerAction } from "./governed-action";
 import { useEffect, useState } from "react";
 import { Card, Select } from "@athyper/platform-ui";
 import { createOperation } from "@athyper/platform-api-client";
@@ -17,7 +18,9 @@ const eligibility = createOperation<Decision>({
     `/api/neon/business-partners/${encodeURIComponent(id)}/eligibility`,
   parse: (value) => value as Decision,
 });
-export function AccessScopeCard() {
+export function AccessScopeCard({requiredCoordinates}: {readonly requiredCoordinates?: readonly string[]} = {}) {
+  const needsCompany = !requiredCoordinates || requiredCoordinates.includes("companyCodeId");
+  const unsupported = requiredCoordinates?.some(key => !["companyCodeId", "operatingOrganizationId"].includes(key));
   const { summary, selectSection, selectScope } = useBusinessPartner360(),
     operating = useNeonOperatingOrganization(),
     work = useNeonWorkContext(),
@@ -72,7 +75,8 @@ export function AccessScopeCard() {
   };
   return (
     <Card className="bp360-section-card">
-      <h2>Access &amp; transaction scope</h2>
+      <h2>Transaction context</h2>
+      <p>Choose the organization and company for transactions and setup requests. Partner-wide identity remains shared; access is checked again for the selected context.</p>
       <dl className="bp360-fields">
         <div>
           <dt>Directory visibility</dt>
@@ -95,7 +99,8 @@ export function AccessScopeCard() {
         <label>Organization<Select aria-label="Transaction organization" value={organizationId} onChange={event => {setOrganizationId(event.target.value);setCompanyId("");}}><option value="">Select organization</option>{operating.organizations.map(item => <option key={item.id} value={item.id}>{item.displayName}</option>)}</Select></label>
         <label>Company<Select aria-label="Transaction company" value={companyId} disabled={!org} onChange={event => setCompanyId(event.target.value)}><option value="">Select company</option>{work.companies.filter(item => org?.companyAssignments.some(assignment => assignment.companyCodeId === item.companyCodeId)).map(item => <option key={item.companyCodeId} value={item.companyCodeId}>{item.code} · {item.displayName}</option>)}</Select></label>
       </div>
-      {selectScope ? <button type="button" disabled={!org || !company || !org.companyAssignments.some(item => item.companyCodeId === company.companyCodeId)} onClick={() => selectScope(org!.id, company!.companyCodeId)}>Use this context</button> : null}
+      {unsupported ? <p role="status">This operation requires a context that cannot be selected here.</p> : null}
+      {selectScope ? <button type="button" disabled={unsupported || !org || (needsCompany && (!company || !org.companyAssignments.some(item => item.companyCodeId === company.companyCodeId)))} onClick={() => selectScope(org!.id, needsCompany ? company!.companyCodeId : "")}>Use this context</button> : null}
       <label>
         Transaction{" "}
         <Select
@@ -155,14 +160,10 @@ export function AccessScopeCard() {
       {summary.recordHeader?.actions
         .filter(
           (action) =>
-            action.key === "configure_company" &&
-            action.href &&
-            !action.disabledReason,
+            (action.operationKey ?? action.key) === "configure_company",
         )
         .map((action) => (
-          <a key={action.key} href={action.href}>
-            Request configuration
-          </a>
+          <BusinessPartnerAction key={action.key} action={action} />
         ))}
     </Card>
   );

@@ -1,4 +1,6 @@
 "use client";
+import type { AtlasResponseFeedbackV1, AtlasVocabularyCorrection } from "@athyper/platform-ai-agent-runtime";
+export type { AtlasResponseFeedbackV1, AtlasVocabularyCorrection } from "@athyper/platform-ai-agent-runtime";
 
 import {
   type AtlasBusinessContextV1,
@@ -43,6 +45,8 @@ export interface AtlasAnswerState {
   readonly messages:readonly import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage[];
 }
 export interface AtlasAnswerController extends AtlasAnswerState {
+  proposeVocabulary?(value: AtlasVocabularyCorrection): Promise<void>;
+  submitFeedback?(value: AtlasResponseFeedbackV1): Promise<void>;
   readonly automaticBriefsAvailable: boolean;
   readonly automaticBriefsEnabled: boolean;
   setAutomaticBriefsEnabled(enabled: boolean): void;
@@ -201,6 +205,8 @@ function useAtlasAnswerState(options: UseAtlasAnswerOptions = {}, store: AtlasBu
 
   return {
     ...state,
+    proposeVocabulary: async (value: AtlasVocabularyCorrection) => {if (!client.proposeVocabulary) throw new Error("Learning proposals are unavailable"); await client.proposeVocabulary(value);},
+    submitFeedback: async (value: AtlasResponseFeedbackV1) => {if (!client.feedback) throw new Error("Feedback is unavailable"); await client.feedback(value);},
     businessContext,
     automaticBriefsAvailable: options.proactiveBriefsEnabled === true,
     automaticBriefsEnabled,
@@ -224,7 +230,7 @@ function useAtlasAnswerState(options: UseAtlasAnswerOptions = {}, store: AtlasBu
 
 function localMessage(role:"user"|"assistant",text:string,createdAt:string,status:"pending"|"completed"="completed"):import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage{return Object.freeze({messageId:`local-${role}-${globalThis.crypto?.randomUUID?.()??Math.random()}`,threadId:"local",sequence:0,role,status,text,results:Object.freeze([]),runId:null,createdAt,terminalAt:null});}
 function appendPendingText(messages:readonly import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage[],text:string){return Object.freeze(messages.map((message,index)=>index===messages.length-1&&message.role==="assistant"&&message.status==="pending"?Object.freeze({...message,text:message.text+text}):message));}
-function completePendingMessage(messages:readonly import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage[],text:string,status:"completed"|"failed"="completed",answer?:import("@athyper/platform-ai-agent-runtime").AtlasGroundedAnswer){return Object.freeze(messages.map((message,index)=>index===messages.length-1&&message.role==="assistant"&&message.status==="pending"?Object.freeze({...message,...(answer?{answer}:{}),text:text||message.text,status,terminalAt:new Date().toISOString()}):message));}
+function completePendingMessage(messages:readonly import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage[],text:string,status:"completed"|"failed"="completed",answer?:import("@athyper/platform-ai-agent-runtime").AtlasGroundedAnswer){return Object.freeze(messages.map((message,index)=>index===messages.length-1&&message.role==="assistant"&&message.status==="pending"?Object.freeze({...message,...(answer?{answer, threadId:answer.threadId, runId:answer.runId??null, ...(answer.messageId?{messageId:answer.messageId}:{})}:{}),text:text||message.text,status,terminalAt:new Date().toISOString()}):message));}
 function updatePendingMessage(messages:readonly import("@athyper/platform-ai-agent-runtime").AtlasConversationMessage[],status:"cancelled"){return Object.freeze(messages.map((message)=>message.role==="assistant"&&message.status==="pending"?Object.freeze({...message,status,terminalAt:new Date().toISOString()}):message));}
 
 function updateAction(actions: readonly AtlasGovernedAction[], proposalId: string, status: AtlasGovernedAction["status"]): readonly AtlasGovernedAction[] { return Object.freeze(actions.map((action) => action.proposalId === proposalId ? Object.freeze({ ...action, status }) : action)); }

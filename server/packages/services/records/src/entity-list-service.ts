@@ -203,7 +203,7 @@ async function effectiveDataOperations(authorizer: Authorizer, context: Verified
   const resource = collectionScope?.status === "ready" ? collectionScope.authorizationResource : { entityCode: descriptor.entityCode };
   const allowed = async (operation: "import" | "export") => {
     const permission = descriptor.operations[operation]?.permissionCode;
-    return permission ? { permission, allowed: (await authorizer.authorize({ context, permissionCode: permission, resource })).allowed } : undefined;
+    return permission ? { permission, allowed: (await authorizer.authorize({ context, permissionCode: permission, resource, observation: { entityCode: descriptor.entityCode, operationKey: operation, surface: "transfer", phase: "discover" } })).allowed } : undefined;
   };
   const [exportAuthority, importAuthority] = await Promise.all([allowed("export"), allowed("import")]);
   const enabled = (permission?: string, maxRecords?: number, requiresPreflight = false, requiresApproval = false) => Object.freeze({ state: "enabled" as const, ...(maxRecords ? { maxRecords } : {}), ...(permission ? { requiredPermission: permission } : {}), requiresPreflight, requiresApproval });

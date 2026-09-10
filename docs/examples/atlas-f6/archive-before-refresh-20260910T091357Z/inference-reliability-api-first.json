@@ -1,0 +1,7 @@
+{
+  "observedAt": "2026-09-10T08:01:41.145Z",
+  "applied": true,
+  "baseImage": "sha256:134c54a06b958caf97e553e904d275d4ed782f450bac5184d714bccfbdb857e5",
+  "image": "athyper-runtime-server:inference-reliability-20260910",
+  "moduleImportPassed": true
+}

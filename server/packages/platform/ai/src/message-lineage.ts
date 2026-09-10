@@ -150,7 +150,7 @@ export class AtlasDurableMessageAuthorizer {
           const { resultHash, ...request } = l.input.attachments;
           if (
             atlasEvidenceHash(
-              await this.options.attachments.resolve({ context, ...request }),
+              await this.options.attachments.resolve({ context, ...request, businessContext:l.input.businessContext }),
             ) !== resultHash
           )
             return false;

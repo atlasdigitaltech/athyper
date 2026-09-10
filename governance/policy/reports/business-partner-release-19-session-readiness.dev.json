@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-10T05:46:03.380Z",
+  "evidence": "authenticated_browser_and_bff",
+  "authenticated": true,
+  "readJourneyQualified": true,
+  "canAttestDeployment": false,
+  "grantChanges": [],
+  "recordRef": "cfc6620992125823dab1ce2a0ab6289a1ac4385cf3288b260f7584a15106d90c",
+  "checks": [
+    {
+      "surface": "application",
+      "status": 200,
+      "passed": true,
+      "requestRef": "10193b72278d037aac4decab102143f42df52f93afe01f52a5681cc56550257c"
+    },
+    {
+      "surface": "list_descriptor",
+      "status": 200,
+      "passed": true,
+      "requestRef": "089d3d4c3332fc8dceabeb3262ee1cd4b9fd43fd9e0d2b4292682ae776c26e91"
+    },
+    {
+      "surface": "list",
+      "status": 200,
+      "passed": true,
+      "requestRef": "34c160f74717978865eef70c058e37d89be412d0f85372dac7455445e1ebd1ba"
+    },
+    {
+      "surface": "record",
+      "status": 200,
+      "passed": true,
+      "requestRef": "d370771645d7d2550969173a4ad420995364196b8c5d3aee82026a329a65ddbb"
+    },
+    {
+      "surface": "summary",
+      "status": 200,
+      "passed": true,
+      "requestRef": "a43589dbdc81f4166bdb989c51cea03b3ac71ada51c33771a76b4c3b49fb5f60"
+    },
+    {
+      "surface": "section:overview:summary",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "surface": "section:identity",
+      "status": 200,
+      "passed": true,
+      "requestRef": "4e07efdbf81e0d7fe9f938f65da9008d892327db60bfdcd84b5ce92f480838a3"
+    },
+    {
+      "surface": "section:contacts",
+      "status": 200,
+      "passed": true,
+      "requestRef": "ccfdc1ffaf6456d564496dcf074c71fcd097e0b479a889b472254b62c220ffc8"
+    },
+    {
+      "surface": "section:addresses",
+      "status": 200,
+      "passed": true,
+      "requestRef": "088ea8b7360891c122cda25a7701848b89e00750d81ddc0a1c0ed9ac1f680f83"
+    },
+    {
+      "surface": "section:identifiers-tax",
+      "status": 200,
+      "passed": true,
+      "requestRef": "469c54acf0bcc05f3319a4e8daa406bb88e4a71d66f4568cd1f3220c0e1739f5"
+    },
+    {
+      "surface": "section:governance",
+      "status": 200,
+      "passed": true,
+      "requestRef": "045cf83f2dac5a9d7045801c5b07e26516b927bc416a583fcb7cfe500fecd9f8"
+    },
+    {
+      "surface": "section:roles-scope",
+      "status": 200,
+      "passed": true,
+      "requestRef": "b5409cf0f68d87af550c2799ebe5f02fc99ebd1a0fbb5e953183226c58bf2b46"
+    },
+    {
+      "surface": "section:supplier-company",
+      "status": 409,
+      "passed": true,
+      "requestRef": "94b89db5a2a4f09e813eabb01cdce2059b75092ba0b3fb2b59a118d76e1702ac"
+    },
+    {
+      "surface": "section:banking",
+      "status": 200,
+      "passed": true,
+      "requestRef": "f3fd0a42d4a4a25cf20e9eb70a0e0bdb25086dc17240a7bddc3942dee6ec6d62"
+    },
+    {
+      "surface": "section:qualifications-certificates",
+      "status": 200,
+      "passed": true,
+      "requestRef": "ff758460030c63d12ee14d361fe9acf41b7db37b112a70c2c787a7a04db188b2"
+    },
+    {
+      "surface": "section:requests",
+      "status": 200,
+      "passed": true,
+      "requestRef": "423a4413c71efa91cea8b66ae666edea8b0b4f0be9e907ea36caddb429529041"
+    },
+    {
+      "surface": "section:activity",
+      "status": 200,
+      "passed": true,
+      "requestRef": "87545182e55fdac77a31a5d0a8ae8d5ef210505276d49728e12f7ffa1c30ae45"
+    },
+    {
+      "surface": "section:business-activity",
+      "status": 409,
+      "passed": true,
+      "requestRef": "8b665f36755ccef6b72c2fa7a28b2068ad93f5cc2cdccad4f0df1506c6d5cd86"
+    },
+    {
+      "surface": "section:network",
+      "status": 409,
+      "passed": true,
+      "requestRef": "f2d8eb1ca36ecec3ced3904de4eb526536adf45a8ab45f4697c91d0a627058ea"
+    },
+    {
+      "surface": "record_ui",
+      "passed": true
+    },
+    {
+      "surface": "unscoped_ui_actions_match_legacy",
+      "passed": true
+    },
+    {
+      "surface": "ui_section:identity",
+      "passed": true
+    },
+    {
+      "surface": "ui_section:contacts",
+      "passed": true
+    },
+    {
+      "surface": "ui_section:addresses",
+      "passed": true
+    },
+    {
+      "surface": "authorized_companies",
+      "status": 200,
+      "passed": true,
+      "requestRef": "a132199e6b8f26ebecd3a38067c660ecdd3d710263d936f2420dc224b2ffcdbf"
+    },
+    {
+      "surface": "authorized_organizations",
+      "status": 200,
+      "passed": true,
+      "requestRef": "5e93c180a92fac4ef1615428d50d08ee451b063d0604b6f39a7595515eead38a"
+    },
+    {
+      "surface": "scoped_summary",
+      "status": 200,
+      "passed": true,
+      "requestRef": "a23d31c188cc3c487cf0dc6804938a6e77f0be0bcb241b1b8a9be671b28a4aa1"
+    },
+    {
+      "surface": "scoped_section:company-configuration",
+      "status": 200,
+      "passed": true,
+      "requestRef": "e4063fea218e985a61dd0c3b4d7f1a7da5d0cf8284ed88b9ba6af0210e66e54f"
+    },
+    {
+      "surface": "scoped_section:business-activity",
+      "status": 200,
+      "passed": true,
+      "requestRef": "9ad40fad59843c45e050dba60825361548debb3e0151f613f5596a797852be66"
+    },
+    {
+      "surface": "scoped_section:network",
+      "status": 200,
+      "passed": true,
+      "requestRef": "f8079db085df055401bff6b27dd33931334681b1b09601448beb59de37f3d764"
+    },
+    {
+      "surface": "scoped_ui_actions_match_legacy",
+      "passed": true
+    },
+    {
+      "surface": "scoped_ui_tab:roles",
+      "passed": true
+    },
+    {
+      "surface": "scoped_ui_tab:requests",
+      "passed": true
+    },
+    {
+      "surface": "scoped_ui_tab:transactions",
+      "passed": true
+    },
+    {
+      "surface": "scoped_ui_tab:activity",
+      "passed": true
+    },
+    {
+      "surface": "denied_section:comments",
+      "status": 403,
+      "passed": true,
+      "requestRef": "58cbfdd999c7eb31e34ba68b7baff3ac1fd4462d25ba3c5f714e2af599fba154"
+    },
+    {
+      "surface": "denied_section:attachments",
+      "status": 403,
+      "passed": true,
+      "requestRef": "00376d9c7c96a9aa9457487238e900f526e3119d7b934d1b82042e130a4f0f74"
+    },
+    {
+      "surface": "invalid_company_closed",
+      "status": 400,
+      "passed": true,
+      "requestRef": "240b946a7a7fc3c106a9ff03038a3c5662c17265b19105fdb6aa1fc866626d7d"
+    },
+    {
+      "surface": "missing_record_closed",
+      "status": 404,
+      "passed": true,
+      "requestRef": "e247ec0c06590246f84a1a29390cccee582100adb6a5985be20adfd115503e55"
+    },
+    {
+      "surface": "anonymous_closed",
+      "status": 401,
+      "passed": true
+    }
+  ],
+  "principalRef": "76db65b4f8572cb6d2ec05799a8a028e51fd73cb2d61a241076e7602f9387ed7",
+  "authenticatedPrincipalCount": 1,
+  "scopeCases": [
+    "partner_wide",
+    "authorized_organization_company",
+    "missing_company",
+    "invalid_company",
+    "missing_record",
+    "denied_sections",
+    "anonymous"
+  ],
+  "remaining": [
+    "Distinct steward/requester/approver personas, same-phase commands and independent-ownership qualification remain enforcement/generalization gates. Shadow deployment and grant equality must be attested separately."
+  ]
+}

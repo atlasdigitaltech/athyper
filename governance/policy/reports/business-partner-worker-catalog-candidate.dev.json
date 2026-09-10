@@ -1,0 +1,7 @@
+{
+  "baseImage": "sha256:b8b1675e0ebf7ec53394f43ac5a332c0241b3682574692810a0d9f66b866bde2",
+  "imageId": "sha256:8862a63a1acfa29a7a1b46d6b38913ad2060872e4e5c351efa6b4e3e58e7560c",
+  "scope": "PostgreSQL enum-array to text-array conversion only",
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

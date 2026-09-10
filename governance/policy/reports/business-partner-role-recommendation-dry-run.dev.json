@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "kind": "named_role_recommendation_dry_run",
+  "checkedAt": "2026-09-09T18:10:03.589348+00:00",
+  "sourceSha256": "2cf94f7cf0d700b68de6c0ce41e5384149f7fc5af25f202c7a721db12b674b09",
+  "candidateCount": 79,
+  "candidateEvidenceUnchanged": true,
+  "authorizationTablesCompared": 13,
+  "changedAuthorizationTables": [],
+  "dispositions": {
+    "exclude_from_target": 2,
+    "approve_responsibilities": 21,
+    "retain_legacy_only": 56
+  },
+  "batches": {
+    "individual_exception": 38,
+    "equivalent_batch": 9
+  },
+  "allCandidatesAppearExactlyOnce": true,
+  "tests": {
+    "passed": 21,
+    "files": [
+      "tooling/scripts/verification/entity-authorization/named-role-review.test.mjs",
+      "tooling/scripts/verification/entity-authorization/named-role-recommendations.test.mjs"
+    ]
+  },
+  "recordedApprovalCount": 0,
+  "grantChanges": [],
+  "activationEligible": false
+}

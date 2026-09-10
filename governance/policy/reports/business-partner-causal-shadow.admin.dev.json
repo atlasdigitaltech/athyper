@@ -1,0 +1,2011 @@
+{
+  "schemaVersion": 1,
+  "kind": "authenticated_causal_shadow_capture",
+  "generatedAt": "2026-09-09T20:13:08.915Z",
+  "browserEvidence": "governance/policy/reports/business-partner-causal-browser.admin-fresh.dev.json",
+  "browserSha256": "29401d9464f6af588c7a4a6a7e323cf0ff405c2d546a6958432f19f8f2ea4721",
+  "principalRef": "76db65b4f8572cb6d2ec05799a8a028e51fd73cb2d61a241076e7602f9387ed7",
+  "apiImage": "sha256:0dd72c20dce41ef1c0ed78ffb67c7504b46096ad21cd218c28d34ba2a0ac3f9b",
+  "profileSha256": "8280aeee1aebb591f12e6ad53e640b2c3cea65fc209efcdb0d349214d3e85c88",
+  "mode": "shadow",
+  "effectiveAuthority": "legacy",
+  "authenticatedChecks": 40,
+  "shadowDecisionCount": 1204,
+  "unavailableCandidateObservations": 54,
+  "diagnosticComplete": false,
+  "comparisons": [
+    {
+      "operationKey": "request_supplier",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "request_supplier:binding:denied"
+      ],
+      "candidateTrace": [
+        "request_supplier:context:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_overview",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_overview:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_overview:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_overview",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_overview:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_overview:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_manage",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_manage:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_manage:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_manage",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_manage:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_manage:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_review",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_review:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_review:context:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_review",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "navigate_review:binding:denied"
+      ],
+      "candidateTrace": [
+        "navigate_review:context:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 3
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 3
+    },
+    {
+      "operationKey": "export",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "export:binding:denied"
+      ],
+      "candidateTrace": [
+        "export:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "import",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "import:binding:denied"
+      ],
+      "candidateTrace": [
+        "import:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "update",
+      "permissionCode": "neon.relationship.business_partner.update",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "update:binding:denied"
+      ],
+      "candidateTrace": [
+        "update:record:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 8
+    },
+    {
+      "operationKey": "create",
+      "permissionCode": "neon.relationship.business_partner.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "preflight_required",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "create:binding:denied"
+      ],
+      "candidateTrace": [
+        "create:preflight:preflight_required"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": false,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 6
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 85
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 105
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:verification:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "section_propose_change:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "section_propose_change:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 224
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "identity_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 32
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "identity_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 42
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "contacts_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "contacts_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "contacts_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "contacts_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "addresses_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "addresses_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "addresses_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "addresses_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identifier_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "identifier_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identifier_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "identifier_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "tax_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "tax_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "tax_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "tax_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "supplier_company_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "supplier_company_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "bank_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "bank_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 17
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "bank_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "bank_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "bank_reveal",
+      "permissionCode": "neon.relationship.business_partner_bank.reveal",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "bank_reveal:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "bank_reveal:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "qualification_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "qualification_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "qualification_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "qualification_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "certificate_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "certificate_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "certificate_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "certificate_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "attachments_read",
+      "permissionCode": "document.attachment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "attachments_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "attachments_read:permission:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 42
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "requests_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "requests_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "requests_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "requests_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "activity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "activity_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "activity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "activity_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "comments_read",
+      "permissionCode": "collaboration.comment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "comments_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "comments_read:permission:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "network_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "network_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "network_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "network_read:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 16
+    },
+    {
+      "operationKey": "amend_partner",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "amend_partner:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "amend_partner:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "add_role",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "add_role:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "add_role:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "assign_organization",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "assign_organization:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "assign_organization:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "configure_company",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "configure_company:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "configure_company:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "change_bank",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "change_bank:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "change_bank:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "lifecycle",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "lifecycle:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "lifecycle:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "qualification",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "qualification:binding:denied"
+      ],
+      "candidateTrace": [
+        "qualification:context:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "certification",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "certification:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "certification:parent_read:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "supplier_company_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "supplier_company_read:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "companyCodeId",
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 21
+    },
+    {
+      "operationKey": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "section_propose_change:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "section_propose_change:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 70
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "network_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "network_read:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "companyCodeId",
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 5
+    },
+    {
+      "operationKey": "amend_partner",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "amend_partner:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "amend_partner:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "add_role",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "add_role:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "add_role:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "assign_organization",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "assign_organization:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "assign_organization:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "configure_company",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "configure_company:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "configure_company:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "companyCodeId",
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "change_bank",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "change_bank:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "change_bank:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "lifecycle",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "lifecycle:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "lifecycle:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "qualification_company",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "qualification_company:binding:denied"
+      ],
+      "candidateTrace": [
+        "qualification_company:permission:denied"
+      ],
+      "coordinateKinds": [
+        "companyCodeId",
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "certification",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "certification:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:verification:denied",
+        "certification:parent_read:denied"
+      ],
+      "coordinateKinds": [
+        "operatingOrganizationId"
+      ],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 5
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 6
+    },
+    {
+      "operationKey": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "section_propose_change:binding:denied"
+      ],
+      "candidateTrace": [
+        "section_propose_change:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 14
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "identity_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "identity_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "contacts_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "contacts_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "contacts_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "contacts_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "addresses_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "addresses_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "addresses_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "addresses_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identifier_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "identifier_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "identifier_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "identifier_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "tax_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "tax_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "tax_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "tax_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "supplier_company_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "supplier_company_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "bank_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "bank_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "bank_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "bank_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "bank_reveal",
+      "permissionCode": "neon.relationship.business_partner_bank.reveal",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "command_discovery_preview",
+      "installedTrace": [
+        "bank_reveal:binding:denied"
+      ],
+      "candidateTrace": [
+        "bank_reveal:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "qualification_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "qualification_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "qualification_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "qualification_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "certificate_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "certificate_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "certificate_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "certificate_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "attachments_read",
+      "permissionCode": "document.attachment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "attachments_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "attachments_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 2
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "requests_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "requests_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "requests_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "requests_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "activity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "activity_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "activity_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "activity_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "comments_read",
+      "permissionCode": "collaboration.comment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "comments_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "comments_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "network_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "network_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "unavailable",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "network_read:binding:denied"
+      ],
+      "candidateTrace": [
+        "network_read:ownership:unavailable"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:ownership:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "read:binding:denied"
+      ],
+      "candidateTrace": [
+        "read:ownership:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:ownership:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "installedTrace": [
+        "discover:binding:denied"
+      ],
+      "candidateTrace": [
+        "discover:ownership:denied"
+      ],
+      "coordinateKinds": [],
+      "recordCoordinatePresent": true,
+      "snapshotRef": "2b4311286aa0be2935c1b3059dbd564a7119a8e6ec6fbcd22ca0bcc6017af67d",
+      "grantSnapshotRef": "dff04c0ceb51c87c2d0412a1c2ef01fdabb91585a9a0521c141880bff27fc4be",
+      "authEpoch": 0,
+      "count": 1
+    }
+  ],
+  "grantChanges": [],
+  "signedSelectedReleaseArtifact": null,
+  "sameReleaseQualification": false,
+  "acceptanceRecorded": false,
+  "activationAuthorized": false
+}

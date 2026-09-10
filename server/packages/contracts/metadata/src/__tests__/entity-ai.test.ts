@@ -51,3 +51,21 @@ it.each(["bp_read_brief", "bp_explain_readiness", "bp_check_eligibility"])("admi
   expect(() => parseEntityAiDescriptor(value, {...context, planeKey: "mesh"})).toThrow();
   expect(() => parseEntityAiDescriptor(value, {...context, operationKeys: []})).toThrow();
 });
+
+it.each([["business_partner", "neon"], ["network_relationship", "mesh"], ["metadata_entity", "studio"]])("admits the generic record capability for %s in %s", (entityCode, planeKey) => {
+ const value = {...config, insightProviders: [{id: "entity_read_record", version: 1}]};
+ expect(parseEntityAiDescriptor(value, {...context, entityCode: entityCode!, planeKey})).toEqual(value);
+ expect(() => parseEntityAiDescriptor({...value, summaryFieldKeys: []}, context)).toThrow("requires summary fields");
+ expect(() => parseEntityAiDescriptor(value, {...context, operationKeys: []})).toThrow();
+});
+it.each(["bp_read_contacts", "bp_read_addresses"])("validates published BP section capability %s", id => {
+ const value = {...config, insightProviders: [{id, version: 1}]};
+ expect(parseEntityAiDescriptor(value, context).insightProviders).toEqual([{id, version: 1}]);
+ expect(() => parseEntityAiDescriptor(value, {...context, entityCode: "network_relationship", planeKey: "mesh"})).toThrow();
+});
+
+it("restricts published BP list insights to Manage context", () => {
+ const value = {...config, contextKinds: ["manage"], insightProviders: [{id: "bp_read_list_insights", version: 1}], presentationProfiles: [{id: "list_brief", version: 1}]};
+ expect(parseEntityAiDescriptor(value, context).contextKinds).toEqual(["manage"]);
+ expect(() => parseEntityAiDescriptor({...value, contextKinds: ["record"]}, context)).toThrow("requires manage context");
+});

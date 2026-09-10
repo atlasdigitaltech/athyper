@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_test_grants_dry_run",
+  "checkedAt": "2026-09-10T06:34:08.237Z",
+  "assignments": 3,
+  "effectiveFrom": "2026-09-10T06:35:00.000Z",
+  "effectiveUntil": "2026-09-10T10:35:00.000Z",
+  "rolePermissions": 33,
+  "proposalRevision": "a4ef0dbcc40af46758034a70698463b5f6ec9bfbbe07a43497eefad1fe5c9176",
+  "existingAuthorityUnchanged": true,
+  "rollbackConfirmed": true,
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "approvalRecorded": false
+}

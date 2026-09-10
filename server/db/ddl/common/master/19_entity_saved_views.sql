@@ -22,8 +22,13 @@ DO $$ BEGIN IF to_regprocedure('audit.trg_capture_row_change()') IS NOT NULL THE
  DROP TRIGGER IF EXISTS saved_view_default_audit ON master.saved_view_default;
  CREATE TRIGGER saved_view_default_audit AFTER INSERT OR UPDATE ON master.saved_view_default FOR EACH ROW EXECUTE FUNCTION audit.trg_capture_row_change();
 END IF; END $$;
-DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
- GRANT SELECT,INSERT,UPDATE ON master.saved_view_default TO athyper_runtime;
+DO $$ BEGIN
+ IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname='athyper_runtime') THEN
+   REVOKE SELECT, INSERT, UPDATE ON master.saved_view_default FROM athyper_runtime;
+ END IF;
+END $$;
+DO $$ BEGIN IF EXISTS(SELECT 1 FROM pg_roles WHERE rolname='athyperapp') THEN
+ GRANT SELECT,INSERT,UPDATE ON master.saved_view_default TO athyperapp;
 END IF; END $$;
 INSERT INTO authz.permission(id,canonical_code,permission_kind,module_id,risk_tier,requires_mfa,requires_sod,is_shareable,is_delegable,is_overridable,metadata,status,created_by)
 SELECT shared.uuidv7(),plane||'.ui.saved_view.'||operation,'entity_operation',m.id,'medium',false,false,false,false,false,jsonb_build_object('feature','entity_saved_views','operation',operation),'published','00000000-0000-0000-0000-000000000000'::uuid

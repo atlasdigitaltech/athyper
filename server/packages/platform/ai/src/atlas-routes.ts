@@ -1,3 +1,4 @@
+import type { AtlasResponseFeedbackService } from "./response-feedback.js";
 import { readAtlasBusinessContext } from "./business-context.js";
 import type {
   AtlasDataClass,
@@ -17,6 +18,8 @@ import { AtlasThreadService } from "./thread-service.js";
 import { AtlasToolService } from "./tool-service.js";
 
 export interface AtlasRouteOptions {
+  readonly learning?: import("./learning-candidates.js").AtlasLearningCandidateService;
+  readonly feedback?: AtlasResponseFeedbackService;
   readonly authenticate: RequestHandler;
   readonly readContext: (response: Response) => VerifiedRequestContext;
   readonly admission: AtlasPlaneAdmissionResolver;
@@ -42,6 +45,8 @@ export function registerAtlasRoutes(app: Application, options: AtlasRouteOptions
     }
   };
 
+  if (options.learning) registerContractRoute(app, contract("post", "/api/atlas/learning-candidates", "atlas.submitLearningCandidate", 201, true), options.authenticate, route(async (request, context) => ({status: 201, body: await options.learning!.submit(context, readBody(request))})));
+  if (options.feedback) registerContractRoute(app, contract("post", "/api/atlas/feedback", "atlas.submitResponseFeedback", 201, true), options.authenticate, route(async (request, context) => ({status: 201, body: await options.feedback!.submit(context, readBody(request))})));
   registerContractRoute(app, contract("get", "/api/atlas/admission", "atlas.getAdmission"), options.authenticate, route(async (_request, context) => ({
     body: await options.admission.resolve(context),
   })));

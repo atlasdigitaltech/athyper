@@ -86,19 +86,22 @@ export async function effectiveListActions(
       resourceCode: descriptor.entityCode,
       operationKey: action.operationKey,
     };
+    const observation = { entityCode: descriptor.entityCode, operationKey: action.operationKey, surface: "action" as const, phase: "discover" as const };
     let decision = await authorizer.authorize({
+      observation,
       context,
       permissionCode: permission.permissionCode,
       resource,
     });
     if (!decision.allowed && decision.reason === "scope_not_contained" &&
         directoryNavigation && descriptor.directoryScope && scope.status === "ready") {
-      decision = await authorizer.authorize({ context, permissionCode: permission.permissionCode });
+      decision = await authorizer.authorize({ context, permissionCode: permission.permissionCode, observation });
     }
     if (!decision.allowed) {
       // Only contextual failures are useful to display; inaccessible actions stay hidden.
       if (decision.reason === "scope_coordinate_missing") {
         const baseAuthority = await authorizer.authorize({
+          observation,
           context,
           permissionCode: permission.permissionCode,
         });

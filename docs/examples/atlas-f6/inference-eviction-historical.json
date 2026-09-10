@@ -1,0 +1,70 @@
+{
+  "observedAt": "2026-09-10T08:41:43.805Z",
+  "mode": "historical-adapter",
+  "schedule": "Start a live embedding after generation warmup and before the next readiness observation",
+  "observations": [
+    {
+      "label": "adapter-readiness-observation",
+      "at": "2026-09-10T08:41:43.904Z",
+      "models": []
+    },
+    {
+      "label": "generation-warmup-finished",
+      "at": "2026-09-10T08:41:46.233Z",
+      "models": [
+        {
+          "name": "qwen3:8b",
+          "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+          "contextLength": 4096,
+          "size": 5578204118,
+          "sizeVram": 5578204118
+        }
+      ]
+    },
+    {
+      "label": "embedding-finished",
+      "at": "2026-09-10T08:41:49.450Z",
+      "models": [
+        {
+          "name": "nomic-embed-text:v1.5",
+          "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "contextLength": 2048,
+          "size": 323150151,
+          "sizeVram": 323150151
+        }
+      ]
+    },
+    {
+      "label": "adapter-readiness-observation",
+      "at": "2026-09-10T08:41:49.451Z",
+      "models": [
+        {
+          "name": "nomic-embed-text:v1.5",
+          "digest": "0a109f422b47e3a30ba2b10eca18548e944e8a23073ee3f3e947efcf3c45e59f",
+          "contextLength": 2048,
+          "size": 323150151,
+          "sizeVram": 323150151
+        }
+      ]
+    }
+  ],
+  "chatCalls": 0,
+  "embeddingAdmitted": true,
+  "embedding": {
+    "elapsedMs": 3215,
+    "model": "nomic-embed-text:v1.5",
+    "loadDurationMs": 1705.940776
+  },
+  "elapsedMs": 5555,
+  "terminal": {
+    "kind": "failed",
+    "error": {
+      "errorClass": "model_unavailable",
+      "code": "gpu_offload_required",
+      "safeMessage": "Local Atlas generation could not be completed.",
+      "retryable": false
+    }
+  },
+  "passed": true,
+  "imageDigest": "sha256:134c54a06b958caf97e553e904d275d4ed782f450bac5184d714bccfbdb857e5"
+}

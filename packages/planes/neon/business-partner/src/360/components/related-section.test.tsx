@@ -68,6 +68,7 @@ beforeEach(() => {
   mock.read.mockReset();
   mock.identity.scope.authEpoch = 1;
   mock.summary = {
+    completeness: {readOnly: false, required: []},
     identity: { id: "bp" },
     scope: {},
     asOf: "2026-09-09",

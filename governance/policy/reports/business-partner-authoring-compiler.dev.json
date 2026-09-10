@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_authoring_compiler_deployment",
+  "at": "2026-09-10T03:54:53.710Z",
+  "baseImage": "sha256:ed961dfc1e7bf65ffea5c34d91971fdb63ebf4bc3d85a2877213db8211692aa1",
+  "imageId": "sha256:b5804a3aa1c57bb08fe9bdb582b61c83d5faa76a5dc96156684846c401e38711",
+  "changes": [
+    {
+      "name": "profile.js",
+      "destination": "/app/server/node_modules/.pnpm/@athyper+server-contract-metadata@file+server+packages+contracts+metadata/node_modules/@athyper/server-contract-metadata/dist/entity-authorization.js",
+      "sha256": "09edf1446e3c244755ccc7da068351a4b10dae976cd4dd43ec84537370e29faa"
+    },
+    {
+      "name": "runtime.js",
+      "destination": "/app/server/node_modules/.pnpm/@athyper+server-contract-metadata@file+server+packages+contracts+metadata/node_modules/@athyper/server-contract-metadata/dist/entity-authorization-runtime.js",
+      "sha256": "32d35ef97028d5c9fd870b762cb0c47ce49d5479155c0965a8a1911597281971"
+    },
+    {
+      "name": "authoring.js",
+      "destination": "/app/server/node_modules/.pnpm/@athyper+server-plane-studio-meta-entity-authoring@file+server+packages+planes+studio+meta-entity-authoring/node_modules/@athyper/server-plane-studio-meta-entity-authoring/dist/entity-authorization.js",
+      "sha256": "dbe971abbaf2806d51ec437207686fb9b6b90757580b0e46cf1ca908f68de899"
+    },
+    {
+      "name": "metadata-index.js",
+      "destination": "/app/server/node_modules/.pnpm/@athyper+server-contract-metadata@file+server+packages+contracts+metadata/node_modules/@athyper/server-contract-metadata/dist/index.js",
+      "sha256": "5a03c5c8ca2881d2365e53d6e7a2f4f85824fd0d1a761adcdc34b21e4c11bf31"
+    },
+    {
+      "name": "compiler.js",
+      "destination": "/app/server/node_modules/.pnpm/@athyper+server-plane-studio-meta-entity-authoring@file+server+packages+planes+studio+meta-entity-authoring/node_modules/@athyper/server-plane-studio-meta-entity-authoring/dist/deterministic.js",
+      "sha256": "c53ffe977ad35343e18d1b2336e5cbb9b67175e204bb28eebca3cf79b4cfe8b4"
+    }
+  ],
+  "smoke": {
+    "validated": true,
+    "testsPassed": true,
+    "contractHash": "87955ca2394f691cfd17e2ca1277d35c060dc8af8c7a9dc9c31f85a08c739f1b",
+    "operations": 42
+  },
+  "applied": true,
+  "sourceConfig": [
+    "/home/chandravel_natarajan/.athyper/instances/dev/deployments/atlas-baseline-bridge-20260910/api/rollout.json"
+  ],
+  "override": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-authoring-compiler-20260910/override.json",
+  "rollback": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-authoring-compiler-20260910/rollback.json",
+  "grantsChanged": false,
+  "metadataHeadsChanged": false,
+  "activationAuthorized": false
+}

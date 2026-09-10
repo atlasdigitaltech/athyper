@@ -1,0 +1,4244 @@
+{
+  "schemaVersion": 1,
+  "environment": "dev",
+  "capturedAt": "2026-09-09T14:38:41.063Z",
+  "scope": "Active descriptor rows, not a claim that every row is the effective activation head. Grants are role/scope aggregates, not effective principal decisions.",
+  "planes": [
+    {
+      "plane": "studio",
+      "entities": [],
+      "grants": [
+        {
+          "role_code": "demo.studio.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract_draft.create",
+          "assignment_count": 4
+        },
+        {
+          "role_code": "demo.studio.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.import",
+          "assignment_count": 4
+        },
+        {
+          "role_code": "demo.studio.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.view",
+          "assignment_count": 4
+        },
+        {
+          "role_code": "demo.studio.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.manage",
+          "assignment_count": 4
+        },
+        {
+          "role_code": "demo.studio.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.view",
+          "assignment_count": 4
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "publication.deployment.retry",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "publication.deployment.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.publish",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.rollback",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.ai.agent.use",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.author",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.publish",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.application_projection.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.application_projection.replay",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.idp.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.idp.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.parameter.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.jobs.board.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.jobs.queue.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.break_glass",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract_draft.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.edit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.export",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.import",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.publish",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.review",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.rollback",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.submit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.overlay.edit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.reference.import",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.reference.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.subscriptions.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.subscriptions.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.taxonomy.import",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.taxonomy.view",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.cancel",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.claim",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.complete",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.studio.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "local.studio.catl.bank-directory-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.bank_directory.author",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.bank-directory-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.bank_directory.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.bank-directory-reviewer",
+          "scope_kind": "tenant",
+          "permission_code": "studio.bank_directory.publish",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.bank-directory-reviewer",
+          "scope_kind": "tenant",
+          "permission_code": "studio.bank_directory.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "publication.deployment.retry",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "publication.deployment.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.publish",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.rollback",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "publication.release.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.ai.agent.use",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.author",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.application_projection.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.application_projection.replay",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.idp.manage",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.idp.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.iam.parameter.manage",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.jobs.board.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.jobs.queue.manage",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.break_glass",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract_draft.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.edit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.export",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.import",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.publish",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.review",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.rollback",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.submit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.contract.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.metadata.overlay.edit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.manage",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.catalog.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.reference.import",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.reference.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.subscriptions.manage",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.subscriptions.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.taxonomy.import",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "studio.platform.taxonomy.view",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.cancel",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.claim",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.complete",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-author",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-reviewer",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.publish",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "local.studio.catl.definition-reviewer",
+          "scope_kind": "tenant",
+          "permission_code": "studio.business_partner_definition.read",
+          "assignment_count": 1
+        }
+      ]
+    },
+    {
+      "plane": "neon",
+      "entities": [
+        {
+          "fields": [
+            {
+              "key": "id",
+              "type": "uuid",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "code",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "display_name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "status",
+              "type": "enum",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "partner_category",
+              "type": "enum",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "registration_country_code",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "updated_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "legal_name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "is_active",
+              "type": "boolean",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            }
+          ],
+          "related": [
+            {
+              "key": "contact-details",
+              "detail": {
+                "layout": "contact-detail",
+                "copyLabel": "Copy contact value",
+                "headerFields": [
+                  "identity.primary"
+                ],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "identity",
+                  "label": "Contact details",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "businessTitle",
+                      "field": "businessTitle",
+                      "label": "Title",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "departmentName",
+                      "field": "departmentName",
+                      "label": "Department",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "primary",
+                      "field": "primary",
+                      "label": "Assignment",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Primary"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Additional"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "channels",
+                  "label": "Contact channels",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": [
+                      1,
+                      4,
+                      1,
+                      2
+                    ]
+                  },
+                  "fields": [
+                    {
+                      "key": "type",
+                      "field": "type",
+                      "label": "Channel",
+                      "values": {
+                        "fax": {
+                          "label": "Fax"
+                        },
+                        "sms": {
+                          "label": "Sms"
+                        },
+                        "email": {
+                          "label": "Email"
+                        },
+                        "phone": {
+                          "label": "Phone"
+                        },
+                        "website": {
+                          "label": "Website"
+                        },
+                        "whatsapp": {
+                          "label": "Whatsapp"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "value",
+                      "field": "value",
+                      "label": "Contact value",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "purpose",
+                      "field": "purpose",
+                      "label": "Purpose",
+                      "values": {
+                        "billing": {
+                          "label": "Billing"
+                        },
+                        "default": {
+                          "label": "Default"
+                        },
+                        "business": {
+                          "label": "Business"
+                        },
+                        "shipping": {
+                          "label": "Shipping"
+                        },
+                        "registered": {
+                          "label": "Registered"
+                        },
+                        "remittance": {
+                          "label": "Remittance"
+                        },
+                        "correspondence": {
+                          "label": "Correspondence"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "verified",
+                      "field": "verified",
+                      "label": "Channel verification",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Verified"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": true,
+                  "renderer": "channels",
+                  "collapsed": false
+                }
+              ],
+              "source": "contact-person.v1",
+              "actions": [
+                {
+                  "key": "request-change",
+                  "label": "Request contact change",
+                  "operationKey": "amend_partner"
+                }
+              ],
+              "summary": {
+                "fields": [
+                  "channels.type",
+                  "channels.value",
+                  "channels.verified"
+                ],
+                "layout": "contact-summary",
+                "copyLabel": "Copy contact value"
+              },
+              "emptyLabel": "No current contact is available.",
+              "scopeLabel": "Shared Business Partner contacts across companies.",
+              "sectionKey": "contacts",
+              "titleField": "displayName",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View all contacts",
+              "schemaVersion": 1,
+              "collectionOrder": "primary-first",
+              "compactEmptyLabel": "No primary contact assigned"
+            },
+            {
+              "key": "address-details",
+              "detail": {
+                "layout": "postal-detail",
+                "copyLabel": "Copy address",
+                "headerFields": [
+                  "usage.primary"
+                ],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "postal",
+                  "label": "Postal address",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [],
+                  "compact": true,
+                  "renderer": "postal-address",
+                  "collapsed": false
+                },
+                {
+                  "key": "usage",
+                  "label": "Address use",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [
+                      "purpose"
+                    ],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "purpose",
+                      "field": "purpose",
+                      "label": "Purpose",
+                      "values": {
+                        "billing": {
+                          "label": "Billing"
+                        },
+                        "default": {
+                          "label": "Default"
+                        },
+                        "business": {
+                          "label": "Business"
+                        },
+                        "shipping": {
+                          "label": "Shipping"
+                        },
+                        "registered": {
+                          "label": "Registered"
+                        },
+                        "remittance": {
+                          "label": "Remittance"
+                        },
+                        "correspondence": {
+                          "label": "Correspondence"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "primary",
+                      "field": "primary",
+                      "label": "Assignment",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Primary"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Additional"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "validation",
+                  "label": "Address validation",
+                  "detail": {
+                    "placement": "aside",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "validationStatus",
+                      "field": "validationStatus",
+                      "label": "Postal validation",
+                      "values": {
+                        "valid": {
+                          "tone": "success",
+                          "label": "Valid"
+                        },
+                        "invalid": {
+                          "tone": "danger",
+                          "label": "Invalid"
+                        },
+                        "partial": {
+                          "tone": "warning",
+                          "label": "Partially validated"
+                        },
+                        "pending": {
+                          "tone": "warning",
+                          "label": "Pending validation"
+                        },
+                        "unverified": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        },
+                        "unvalidated": {
+                          "tone": "neutral",
+                          "label": "Not validated"
+                        }
+                      },
+                      "renderer": "badge"
+                    },
+                    {
+                      "key": "validationProvider",
+                      "field": "validationProvider",
+                      "label": "Validation source",
+                      "values": {
+                        "development_fixture": {
+                          "label": "Development fixture"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "validatedAt",
+                      "field": "validatedAt",
+                      "label": "Validated on",
+                      "renderer": "datetime"
+                    },
+                    {
+                      "key": "validationConfidence",
+                      "field": "validationConfidence",
+                      "label": "Validation confidence",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": true,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "validity",
+                  "label": "Validity",
+                  "detail": {
+                    "placement": "aside",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "effectiveFrom",
+                      "field": "effectiveFrom",
+                      "label": "Effective from",
+                      "renderer": "date"
+                    },
+                    {
+                      "key": "effectiveUntil",
+                      "field": "effectiveUntil",
+                      "label": "Effective until",
+                      "renderer": "date"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "history",
+                  "label": "Validation history",
+                  "detail": {
+                    "placement": "footer",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "eventType",
+                      "field": "eventType",
+                      "label": "Event",
+                      "values": {
+                        "MOVED": {
+                          "label": "Address moved"
+                        },
+                        "MERGED": {
+                          "label": "Address merged"
+                        },
+                        "CREATED": {
+                          "label": "Address created"
+                        },
+                        "RETIRED": {
+                          "label": "Address retired"
+                        },
+                        "CORRECTED": {
+                          "label": "Address corrected"
+                        },
+                        "GEOCODE_RECORDED": {
+                          "label": "Location recorded"
+                        },
+                        "MANUALLY_VERIFIED": {
+                          "label": "Address manually verified"
+                        },
+                        "CORRECTION_ACCEPTED": {
+                          "label": "Correction accepted"
+                        },
+                        "CORRECTION_REJECTED": {
+                          "label": "Correction rejected"
+                        },
+                        "VALIDATION_RECORDED": {
+                          "label": "Address validated"
+                        },
+                        "POSTAL_OVERRIDE_ACCEPTED": {
+                          "label": "Postal override accepted"
+                        },
+                        "STANDARDIZATION_PROPOSED": {
+                          "label": "Standardized address proposed"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "occurredAt",
+                      "field": "occurredAt",
+                      "label": "Recorded on",
+                      "renderer": "datetime"
+                    },
+                    {
+                      "key": "resultStatus",
+                      "field": "resultStatus",
+                      "label": "Result",
+                      "values": {
+                        "valid": {
+                          "tone": "success",
+                          "label": "Valid"
+                        },
+                        "invalid": {
+                          "tone": "danger",
+                          "label": "Invalid"
+                        },
+                        "partial": {
+                          "tone": "warning",
+                          "label": "Partially validated"
+                        },
+                        "pending": {
+                          "tone": "warning",
+                          "label": "Pending validation"
+                        },
+                        "unverified": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        },
+                        "unvalidated": {
+                          "tone": "neutral",
+                          "label": "Not validated"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "confidence",
+                      "field": "confidence",
+                      "label": "Confidence",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "reasonCode",
+                      "field": "reasonCode",
+                      "label": "Reason",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "timeline",
+                  "collapsed": true
+                }
+              ],
+              "source": "address-link.v1",
+              "actions": [
+                {
+                  "key": "request-change",
+                  "label": "Request address change",
+                  "operationKey": "amend_partner"
+                }
+              ],
+              "summary": {
+                "fields": [
+                  "validation.validationStatus"
+                ],
+                "layout": "postal-summary",
+                "copyLabel": "Copy address"
+              },
+              "emptyLabel": "No current address is available.",
+              "scopeLabel": "Shared Business Partner addresses across companies.",
+              "sectionKey": "addresses",
+              "titleField": "purpose",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View all addresses",
+              "schemaVersion": 1,
+              "collectionOrder": "primary-first",
+              "compactEmptyLabel": "No primary address assigned"
+            },
+            {
+              "key": "external-reference-details",
+              "detail": {
+                "layout": "reference-detail",
+                "copyLabel": "Copy reference",
+                "headerFields": [],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "reference",
+                  "label": "External reference details",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "system",
+                      "field": "sourceSystemCode",
+                      "label": "External system",
+                      "values": {
+                        "athyper_mesh": {
+                          "label": "Athyper Mesh"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "entity",
+                      "field": "externalEntityCode",
+                      "label": "External entity",
+                      "lookup": {
+                        "values": {
+                          "athyper_mesh": {
+                            "network_account": "Network account"
+                          }
+                        },
+                        "scopeField": "sourceSystemCode"
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "code",
+                      "field": "externalCode",
+                      "label": "Network account code",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "technical",
+                  "label": "Technical details",
+                  "detail": {
+                    "placement": "footer",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "id",
+                      "field": "externalId",
+                      "label": "External ID",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": true
+                }
+              ],
+              "source": "external-reference.v1",
+              "actions": [],
+              "emptyLabel": "No external references",
+              "scopeLabel": "External system references",
+              "sectionKey": "identity",
+              "titleField": "externalEntityCode",
+              "titleLabel": "External reference",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View external references",
+              "schemaVersion": 1,
+              "compactEmptyLabel": "No external reference"
+            }
+          ],
+          "storage": {
+            "object": "business_partner",
+            "schema": "master",
+            "idField": "id",
+            "statusField": "status",
+            "tenantField": "tenant_id"
+          },
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+          "entityCode": "business_partner",
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "export": {
+              "code": "export",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "import": {
+              "code": "import",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "update": {
+              "code": "update",
+              "permissionCode": "neon.relationship.business_partner.update"
+            },
+            "add_role": {
+              "code": "add_role",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "amend_partner": {
+              "code": "amend_partner",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_manage": {
+              "code": "navigate_manage",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "navigate_review": {
+              "code": "navigate_review",
+              "permissionCode": "neon.relationship.entity_case.read"
+            },
+            "request_supplier": {
+              "code": "request_supplier",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "configure_company": {
+              "code": "configure_company",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_overview": {
+              "code": "navigate_overview",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "assign_organization": {
+              "code": "assign_organization",
+              "permissionCode": "neon.relationship.entity_case.create"
+            }
+          },
+          "contractHash": "20a93ecbf375c5b65c3724c15e21fba690b5837d7517bb6c46d39b4cad9584ab",
+          "authorization": null,
+          "descriptorHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+          "directoryScope": {
+            "mode": "tenant",
+            "filters": [
+              "organization",
+              "company"
+            ],
+            "quickFilters": [
+              {
+                "key": "partnerRole",
+                "label": "Role",
+                "options": [
+                  {
+                    "label": "Suppliers",
+                    "value": "supplier"
+                  },
+                  {
+                    "label": "Customers",
+                    "value": "customer"
+                  }
+                ],
+                "requires": [],
+                "emptyLabel": "All partners"
+              },
+              {
+                "key": "eligibleOperation",
+                "label": "Eligible for transactions",
+                "options": [
+                  {
+                    "label": "Eligible for orders",
+                    "value": "order"
+                  },
+                  {
+                    "label": "Eligible for invoices",
+                    "value": "invoice"
+                  },
+                  {
+                    "label": "Eligible for payments",
+                    "value": "payment"
+                  }
+                ],
+                "requires": [
+                  "partnerRole",
+                  "organization",
+                  "company"
+                ],
+                "emptyLabel": "Any eligibility"
+              }
+            ],
+            "schemaVersion": 1
+          }
+        },
+        {
+          "fields": [
+            {
+              "key": "id",
+              "type": "uuid",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "code",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "display_name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "status",
+              "type": "enum",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "partner_category",
+              "type": "enum",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "registration_country_code",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "updated_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "legal_name",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "is_active",
+              "type": "boolean",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            }
+          ],
+          "related": [
+            {
+              "key": "contact-details",
+              "detail": {
+                "layout": "contact-detail",
+                "copyLabel": "Copy contact value",
+                "headerFields": [
+                  "identity.primary"
+                ],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "identity",
+                  "label": "Contact details",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "businessTitle",
+                      "field": "businessTitle",
+                      "label": "Title",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "departmentName",
+                      "field": "departmentName",
+                      "label": "Department",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "primary",
+                      "field": "primary",
+                      "label": "Assignment",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Primary"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Additional"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "channels",
+                  "label": "Contact channels",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": [
+                      1,
+                      4,
+                      1,
+                      2
+                    ]
+                  },
+                  "fields": [
+                    {
+                      "key": "type",
+                      "field": "type",
+                      "label": "Channel",
+                      "values": {
+                        "fax": {
+                          "label": "Fax"
+                        },
+                        "sms": {
+                          "label": "Sms"
+                        },
+                        "email": {
+                          "label": "Email"
+                        },
+                        "phone": {
+                          "label": "Phone"
+                        },
+                        "website": {
+                          "label": "Website"
+                        },
+                        "whatsapp": {
+                          "label": "Whatsapp"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "value",
+                      "field": "value",
+                      "label": "Contact value",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "purpose",
+                      "field": "purpose",
+                      "label": "Purpose",
+                      "values": {
+                        "billing": {
+                          "label": "Billing"
+                        },
+                        "default": {
+                          "label": "Default"
+                        },
+                        "business": {
+                          "label": "Business"
+                        },
+                        "shipping": {
+                          "label": "Shipping"
+                        },
+                        "registered": {
+                          "label": "Registered"
+                        },
+                        "remittance": {
+                          "label": "Remittance"
+                        },
+                        "correspondence": {
+                          "label": "Correspondence"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "verified",
+                      "field": "verified",
+                      "label": "Channel verification",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Verified"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": true,
+                  "renderer": "channels",
+                  "collapsed": false
+                }
+              ],
+              "source": "contact-person.v1",
+              "actions": [
+                {
+                  "key": "request-change",
+                  "label": "Request contact change",
+                  "operationKey": "amend_partner"
+                }
+              ],
+              "summary": {
+                "fields": [
+                  "channels.type",
+                  "channels.value",
+                  "channels.verified"
+                ],
+                "layout": "contact-summary",
+                "copyLabel": "Copy contact value"
+              },
+              "emptyLabel": "No current contact is available.",
+              "scopeLabel": "Shared Business Partner contacts across companies.",
+              "sectionKey": "contacts",
+              "titleField": "displayName",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View all contacts",
+              "schemaVersion": 1,
+              "collectionOrder": "primary-first",
+              "compactEmptyLabel": "No primary contact assigned"
+            },
+            {
+              "key": "address-details",
+              "detail": {
+                "layout": "postal-detail",
+                "copyLabel": "Copy address",
+                "headerFields": [
+                  "usage.primary"
+                ],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "postal",
+                  "label": "Postal address",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [],
+                  "compact": true,
+                  "renderer": "postal-address",
+                  "collapsed": false
+                },
+                {
+                  "key": "usage",
+                  "label": "Address use",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [
+                      "purpose"
+                    ],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "purpose",
+                      "field": "purpose",
+                      "label": "Purpose",
+                      "values": {
+                        "billing": {
+                          "label": "Billing"
+                        },
+                        "default": {
+                          "label": "Default"
+                        },
+                        "business": {
+                          "label": "Business"
+                        },
+                        "shipping": {
+                          "label": "Shipping"
+                        },
+                        "registered": {
+                          "label": "Registered"
+                        },
+                        "remittance": {
+                          "label": "Remittance"
+                        },
+                        "correspondence": {
+                          "label": "Correspondence"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "primary",
+                      "field": "primary",
+                      "label": "Assignment",
+                      "values": {
+                        "true": {
+                          "tone": "success",
+                          "label": "Primary"
+                        },
+                        "false": {
+                          "tone": "neutral",
+                          "label": "Additional"
+                        }
+                      },
+                      "renderer": "badge"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "validation",
+                  "label": "Address validation",
+                  "detail": {
+                    "placement": "aside",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "validationStatus",
+                      "field": "validationStatus",
+                      "label": "Postal validation",
+                      "values": {
+                        "valid": {
+                          "tone": "success",
+                          "label": "Valid"
+                        },
+                        "invalid": {
+                          "tone": "danger",
+                          "label": "Invalid"
+                        },
+                        "partial": {
+                          "tone": "warning",
+                          "label": "Partially validated"
+                        },
+                        "pending": {
+                          "tone": "warning",
+                          "label": "Pending validation"
+                        },
+                        "unverified": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        },
+                        "unvalidated": {
+                          "tone": "neutral",
+                          "label": "Not validated"
+                        }
+                      },
+                      "renderer": "badge"
+                    },
+                    {
+                      "key": "validationProvider",
+                      "field": "validationProvider",
+                      "label": "Validation source",
+                      "values": {
+                        "development_fixture": {
+                          "label": "Development fixture"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "validatedAt",
+                      "field": "validatedAt",
+                      "label": "Validated on",
+                      "renderer": "datetime"
+                    },
+                    {
+                      "key": "validationConfidence",
+                      "field": "validationConfidence",
+                      "label": "Validation confidence",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": true,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "validity",
+                  "label": "Validity",
+                  "detail": {
+                    "placement": "aside",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "effectiveFrom",
+                      "field": "effectiveFrom",
+                      "label": "Effective from",
+                      "renderer": "date"
+                    },
+                    {
+                      "key": "effectiveUntil",
+                      "field": "effectiveUntil",
+                      "label": "Effective until",
+                      "renderer": "date"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "history",
+                  "label": "Validation history",
+                  "detail": {
+                    "placement": "footer",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "eventType",
+                      "field": "eventType",
+                      "label": "Event",
+                      "values": {
+                        "MOVED": {
+                          "label": "Address moved"
+                        },
+                        "MERGED": {
+                          "label": "Address merged"
+                        },
+                        "CREATED": {
+                          "label": "Address created"
+                        },
+                        "RETIRED": {
+                          "label": "Address retired"
+                        },
+                        "CORRECTED": {
+                          "label": "Address corrected"
+                        },
+                        "GEOCODE_RECORDED": {
+                          "label": "Location recorded"
+                        },
+                        "MANUALLY_VERIFIED": {
+                          "label": "Address manually verified"
+                        },
+                        "CORRECTION_ACCEPTED": {
+                          "label": "Correction accepted"
+                        },
+                        "CORRECTION_REJECTED": {
+                          "label": "Correction rejected"
+                        },
+                        "VALIDATION_RECORDED": {
+                          "label": "Address validated"
+                        },
+                        "POSTAL_OVERRIDE_ACCEPTED": {
+                          "label": "Postal override accepted"
+                        },
+                        "STANDARDIZATION_PROPOSED": {
+                          "label": "Standardized address proposed"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "occurredAt",
+                      "field": "occurredAt",
+                      "label": "Recorded on",
+                      "renderer": "datetime"
+                    },
+                    {
+                      "key": "resultStatus",
+                      "field": "resultStatus",
+                      "label": "Result",
+                      "values": {
+                        "valid": {
+                          "tone": "success",
+                          "label": "Valid"
+                        },
+                        "invalid": {
+                          "tone": "danger",
+                          "label": "Invalid"
+                        },
+                        "partial": {
+                          "tone": "warning",
+                          "label": "Partially validated"
+                        },
+                        "pending": {
+                          "tone": "warning",
+                          "label": "Pending validation"
+                        },
+                        "unverified": {
+                          "tone": "neutral",
+                          "label": "Not verified"
+                        },
+                        "unvalidated": {
+                          "tone": "neutral",
+                          "label": "Not validated"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "confidence",
+                      "field": "confidence",
+                      "label": "Confidence",
+                      "renderer": "text"
+                    },
+                    {
+                      "key": "reasonCode",
+                      "field": "reasonCode",
+                      "label": "Reason",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "timeline",
+                  "collapsed": true
+                }
+              ],
+              "source": "address-link.v1",
+              "actions": [
+                {
+                  "key": "request-change",
+                  "label": "Request address change",
+                  "operationKey": "amend_partner"
+                }
+              ],
+              "summary": {
+                "fields": [
+                  "validation.validationStatus"
+                ],
+                "layout": "postal-summary",
+                "copyLabel": "Copy address"
+              },
+              "emptyLabel": "No current address is available.",
+              "scopeLabel": "Shared Business Partner addresses across companies.",
+              "sectionKey": "addresses",
+              "titleField": "purpose",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View all addresses",
+              "schemaVersion": 1,
+              "collectionOrder": "primary-first",
+              "compactEmptyLabel": "No primary address assigned"
+            },
+            {
+              "key": "external-reference-details",
+              "detail": {
+                "layout": "reference-detail",
+                "copyLabel": "Copy reference",
+                "headerFields": [],
+                "additionalFieldsLabel": "Additional fields"
+              },
+              "groups": [
+                {
+                  "key": "reference",
+                  "label": "External reference details",
+                  "detail": {
+                    "placement": "main",
+                    "showLabel": false,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "system",
+                      "field": "sourceSystemCode",
+                      "label": "External system",
+                      "values": {
+                        "athyper_mesh": {
+                          "label": "Athyper Mesh"
+                        }
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "entity",
+                      "field": "externalEntityCode",
+                      "label": "External entity",
+                      "lookup": {
+                        "values": {
+                          "athyper_mesh": {
+                            "network_account": "Network account"
+                          }
+                        },
+                        "scopeField": "sourceSystemCode"
+                      },
+                      "renderer": "lookup"
+                    },
+                    {
+                      "key": "code",
+                      "field": "externalCode",
+                      "label": "Network account code",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": false
+                },
+                {
+                  "key": "technical",
+                  "label": "Technical details",
+                  "detail": {
+                    "placement": "footer",
+                    "showLabel": true,
+                    "omitFields": [],
+                    "columnWeights": []
+                  },
+                  "fields": [
+                    {
+                      "key": "id",
+                      "field": "externalId",
+                      "label": "External ID",
+                      "renderer": "text"
+                    }
+                  ],
+                  "compact": false,
+                  "renderer": "fields",
+                  "collapsed": true
+                }
+              ],
+              "source": "external-reference.v1",
+              "actions": [],
+              "emptyLabel": "No external references",
+              "scopeLabel": "External system references",
+              "sectionKey": "identity",
+              "titleField": "externalEntityCode",
+              "titleLabel": "External reference",
+              "emptyFields": "disclose",
+              "viewAllLabel": "View external references",
+              "schemaVersion": 1,
+              "compactEmptyLabel": "No external reference"
+            }
+          ],
+          "storage": {
+            "object": "business_partner",
+            "schema": "master",
+            "idField": "id",
+            "statusField": "status",
+            "tenantField": "tenant_id"
+          },
+          "tenantId": null,
+          "releaseId": "7872ca07-6dbe-4268-a2a0-b7762c8001d1",
+          "entityCode": "business_partner",
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "export": {
+              "code": "export",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "import": {
+              "code": "import",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "add_role": {
+              "code": "add_role",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "amend_partner": {
+              "code": "amend_partner",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_manage": {
+              "code": "navigate_manage",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "navigate_review": {
+              "code": "navigate_review",
+              "permissionCode": "neon.relationship.entity_case.read"
+            },
+            "request_supplier": {
+              "code": "request_supplier",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "configure_company": {
+              "code": "configure_company",
+              "permissionCode": "neon.relationship.entity_case.create"
+            },
+            "navigate_overview": {
+              "code": "navigate_overview",
+              "permissionCode": "neon.relationship.business_partner.read"
+            },
+            "assign_organization": {
+              "code": "assign_organization",
+              "permissionCode": "neon.relationship.entity_case.create"
+            }
+          },
+          "contractHash": "42acc097c005570d917f2e1e5b11315f81efa892d9f52b604b9ddfc7f98907f9",
+          "authorization": null,
+          "descriptorHash": "ea53d3b4b151de16c470019fff5320dd91b714ec84b19994c5310c4626afb89b",
+          "directoryScope": {
+            "mode": "tenant",
+            "filters": [
+              "organization",
+              "company"
+            ],
+            "quickFilters": [
+              {
+                "key": "partnerRole",
+                "label": "Role",
+                "options": [
+                  {
+                    "label": "Suppliers",
+                    "value": "supplier"
+                  },
+                  {
+                    "label": "Customers",
+                    "value": "customer"
+                  }
+                ],
+                "requires": [],
+                "emptyLabel": "All partners"
+              },
+              {
+                "key": "eligibleOperation",
+                "label": "Eligible for transactions",
+                "options": [
+                  {
+                    "label": "Eligible for orders",
+                    "value": "order"
+                  },
+                  {
+                    "label": "Eligible for invoices",
+                    "value": "invoice"
+                  },
+                  {
+                    "label": "Eligible for payments",
+                    "value": "payment"
+                  }
+                ],
+                "requires": [
+                  "partnerRole",
+                  "organization",
+                  "company"
+                ],
+                "emptyLabel": "Any eligibility"
+              }
+            ],
+            "schemaVersion": 1
+          }
+        },
+        {
+          "fields": [
+            {
+              "key": "id",
+              "type": "uuid",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "case_code",
+              "type": "string",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "operation_code",
+              "type": "enum",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "status",
+              "type": "enum",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "created_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "updated_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            }
+          ],
+          "related": null,
+          "storage": {
+            "object": "entity_case",
+            "schema": "document",
+            "idField": "id",
+            "statusField": "status",
+            "tenantField": "tenant_id"
+          },
+          "tenantId": null,
+          "releaseId": "d748bb0f-8bf3-47ce-bf50-1cf1a1b952d8",
+          "entityCode": "business_partner_request",
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "neon.relationship.entity_case.read"
+            }
+          },
+          "contractHash": "a8bae3dc1f0d450cae5dca1f22640a4517f496d1743547c5766edc1717b2ed70",
+          "authorization": null,
+          "descriptorHash": "4c66d384f17c364b3b760080c17b640b8099ed59eca804b9ff7d101609e58440",
+          "directoryScope": null
+        },
+        {
+          "fields": [],
+          "related": null,
+          "storage": null,
+          "tenantId": "00000000-0000-0000-0000-000000000000",
+          "releaseId": "ba5cbd75-cc24-5cf7-9b1c-ca782f13fbd1",
+          "entityCode": "master.business_partner",
+          "operations": null,
+          "contractHash": "42416dd56d3c57f6ff16c292adc99627d718d3a9b5bc890a3d685083ebe05b91",
+          "authorization": null,
+          "descriptorHash": "2a5fd629234537605c6f9b49da50c95071152c9d58e7cf38fe1225bc95125712",
+          "directoryScope": null
+        },
+        {
+          "fields": [],
+          "related": null,
+          "storage": null,
+          "tenantId": "22222222-2222-4222-8222-222222222222",
+          "releaseId": "db61201d-a868-58c0-bb87-efbf475c2581",
+          "entityCode": "master.business_partner",
+          "operations": null,
+          "contractHash": "42416dd56d3c57f6ff16c292adc99627d718d3a9b5bc890a3d685083ebe05b91",
+          "authorization": null,
+          "descriptorHash": "749fb3b7b128421e0ac1c85c34cede981e147bc41b1a0d06dd6c663b709447ad",
+          "directoryScope": null
+        },
+        {
+          "fields": [],
+          "related": null,
+          "storage": null,
+          "tenantId": "11111111-1111-4111-8111-111111111111",
+          "releaseId": "c15df3df-48fe-5b70-961e-45280ab64930",
+          "entityCode": "master.business_partner",
+          "operations": null,
+          "contractHash": "42416dd56d3c57f6ff16c292adc99627d718d3a9b5bc890a3d685083ebe05b91",
+          "authorization": null,
+          "descriptorHash": "798b194ac0f8374513bf99548be45268f7cd06dd975c82ca96b6cadf6c7f5dde",
+          "directoryScope": null
+        },
+        {
+          "fields": [],
+          "related": null,
+          "storage": null,
+          "tenantId": "44444444-4444-4444-8444-444444444444",
+          "releaseId": "84047f7f-bd0a-59dd-9a70-9345523cbe9b",
+          "entityCode": "master.business_partner",
+          "operations": null,
+          "contractHash": "42416dd56d3c57f6ff16c292adc99627d718d3a9b5bc890a3d685083ebe05b91",
+          "authorization": null,
+          "descriptorHash": "ff9a3f32740ca321a4bc839a967f04abfe33ef1e9d158fe362b344ac00d7a4d2",
+          "directoryScope": null
+        }
+      ],
+      "grants": [
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.request",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.decide",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.activate",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.reactivate",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.suspend",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.cancel",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.activate",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.decide",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.materialize",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.submit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.update",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.validate",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.admin",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.submit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.verify",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.governance.write",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.preference.admin",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.qualification.admin",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.cancel",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.restricted",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.submit",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.verify",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.44f10c9b-b4fa-5155-9365-4bfcc22ff5fd",
+          "scope_kind": "operating_organization",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_activity.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_address.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_amend.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_bank.read_masked",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_bank.reveal",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_certificate.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_contact.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_credit.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_identifier.read_masked",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_identity.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_network.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_person.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_person_sensitive.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_qualification.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_tax.read_masked",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_tax.reveal",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_workforce.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.4d6847c0-fcc3-5fa2-b039-2df3373fe4d3",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.a3372064-9422-5194-96cf-19039698bdf6",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.create",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.f0a6b34b-c918-5fef-b417-a9cbd3cefc66",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r2.f0a6b34b-c918-5fef-b417-a9cbd3cefc66",
+          "scope_kind": "operating_organization",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "acceptance.bp.r3.applicant",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier_registration.external.respond",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.business_partner_bank_checker",
+          "scope_kind": "company_code",
+          "permission_code": "neon.business_partner_bank.verify",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.business_partner_case_approver",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "catl.demo.business_partner_case_approver",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.decide",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "catl.demo.business_partner_case_approver",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "catl.demo.business_partner_case_approver",
+          "scope_kind": "operating_organization",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "catl.demo.business_partner_profile_projection_reader",
+          "scope_kind": "tenant",
+          "permission_code": "neon.business_partner_profile_projection.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.company_finance_context_reader",
+          "scope_kind": "company_code",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.company_finance_context_reader",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.company_finance_context_reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.legal_entity_context_owner",
+          "scope_kind": "company_code",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.legal_entity_context_owner",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.legal_entity_context_owner",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.mesh_account_link_requester",
+          "scope_kind": "network_relationship",
+          "permission_code": "neon.mesh_account_link.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.mesh_account_link_requester",
+          "scope_kind": "network_relationship",
+          "permission_code": "neon.mesh_account_link.request",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.mesh_account_link_reviewer",
+          "scope_kind": "network_relationship",
+          "permission_code": "neon.mesh_account_link.decide",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.mesh_account_link_reviewer",
+          "scope_kind": "network_relationship",
+          "permission_code": "neon.mesh_account_link.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.tenant_context_administrator",
+          "scope_kind": "company_code",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.tenant_context_administrator",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.tenant_context_administrator",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "catl.demo.tenant_context_administrator",
+          "scope_kind": "tenant",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_activity.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_address.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_amend.create",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_bank.read_masked",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_bank.reveal",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_certificate.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_contact.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_credit.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_identifier.read_masked",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_identity.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_network.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_person.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_person_sensitive.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_qualification.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_tax.read_masked",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_tax.reveal",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner_workforce.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.read",
+          "assignment_count": 27
+        },
+        {
+          "role_code": "demo.neon.business-partner-request-creator",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.create",
+          "assignment_count": 14
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "company_code",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 516
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 271
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 29
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 6
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "company_code",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 516
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "legal_entity",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 271
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "operating_organization",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 29
+        },
+        {
+          "role_code": "demo.neon.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 6
+        },
+        {
+          "role_code": "demo.neon.testing-admin-company_code-exact",
+          "scope_kind": "company_code",
+          "permission_code": "neon.address_contact.company_code.manage",
+          "assignment_count": 39
+        },
+        {
+          "role_code": "demo.neon.testing-admin-company_code-exact",
+          "scope_kind": "company_code",
+          "permission_code": "neon.business_partner_bank.apply",
+          "assignment_count": 39
+        },
+        {
+          "role_code": "demo.neon.testing-admin-company_code-exact",
+          "scope_kind": "company_code",
+          "permission_code": "neon.business_partner_bank.verify",
+          "assignment_count": 39
+        },
+        {
+          "role_code": "demo.neon.testing-admin-company_code-exact",
+          "scope_kind": "company_code",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 39
+        },
+        {
+          "role_code": "demo.neon.testing-admin-company_code-exact",
+          "scope_kind": "company_code",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 39
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.address_contact.legal_entity.manage",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.banking.admin",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.banking.submit",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.banking.verify",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.governance.write",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.qualification.admin",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.tax.restricted",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.tax.submit",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "neon.supplier.tax.verify",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-legal_entity-exact",
+          "scope_kind": "legal_entity",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 22
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.business_partner_profile_match.request",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.decide",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.credit.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.activate",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.reactivate",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer.lifecycle.suspend",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.cancel",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.customer_registration.invitation.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.activate",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.decide",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.materialize",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.submit",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.update",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.entity_case.validate",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.admin",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.submit",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.banking.verify",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.governance.write",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.preference.admin",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.qualification.admin",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.cancel",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.create",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier_registration.invitation.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.restricted",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.submit",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.supplier.tax.verify",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-operating_organization-subtree",
+          "scope_kind": "operating_organization",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 16
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.address_contact.company_code.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.address_contact.legal_entity.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.address_contact.tenant.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_admin.support_session",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_feedback.submit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_history.delete",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_history.export",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_history.manage",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_history.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent.provider_diagnostics",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent_tools.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.ai.agent.use",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.business_partner_invitation.recovery.request",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.business_partner_profile_projection.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.business_partner_profile_projection.receive",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.business_partner_profile_projection.replay",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.context.catalog.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.customer_registration.external.respond",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.records.lock.force_release",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.relationship.business_partner.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.banking.admin",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.banking.submit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.banking.verify",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.governance.write",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.qualification.admin",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier_registration.external.respond",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.tax.restricted",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.tax.submit",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.supplier.tax.verify",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.iam.retry",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.integration.import",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.invitation.external.respond",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.offboarding.execute",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.onboarding.execute",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.pii.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "neon.workforce.review",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.cancel",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.claim",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.complete",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.neon.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "local.contact-verifier",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.verify_contact",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.root",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.root",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.update",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.sensitive",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read_address_sensitive",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.sensitive",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.read_contact_sensitive",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.sensitive",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.write_address_sensitive",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "local.master-data.sensitive",
+          "scope_kind": "operating_organization",
+          "permission_code": "neon.relationship.business_partner.write_contact_sensitive",
+          "assignment_count": 2
+        }
+      ]
+    },
+    {
+      "plane": "mesh",
+      "entities": [
+        {
+          "fields": [
+            {
+              "key": "id",
+              "type": "uuid",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "buyer_account_id",
+              "type": "uuid",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "supplier_account_id",
+              "type": "uuid",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "relationship_kind",
+              "type": "string",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "status",
+              "type": "enum",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "effective_from",
+              "type": "date",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "effective_until",
+              "type": "date",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "created_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "updated_at",
+              "type": "datetime",
+              "writableOn": [],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "buyer_tenant_id",
+              "type": "uuid",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            },
+            {
+              "key": "supplier_tenant_id",
+              "type": "uuid",
+              "writableOn": [
+                "create",
+                "patch"
+              ],
+              "readPermissionCode": null,
+              "writePermissionCode": null
+            }
+          ],
+          "related": null,
+          "storage": {
+            "object": "network_relationship",
+            "schema": "mesh",
+            "idField": "id",
+            "statusField": "status"
+          },
+          "tenantId": null,
+          "releaseId": "205b53cd-ed90-5f8b-a20e-b72234d92ddb",
+          "entityCode": "network_relationship",
+          "operations": {
+            "read": {
+              "code": "read",
+              "permissionCode": "mesh.catalog.network_relationship.read"
+            },
+            "export": {
+              "code": "export",
+              "permissionCode": "mesh.catalog.network_relationship.read"
+            },
+            "import": {
+              "code": "import",
+              "permissionCode": "mesh.catalog.network_relationship.read"
+            }
+          },
+          "contractHash": "e8b65d275c7575236568fd682dc273d240cfd52e04546da814deb9020d1e2a59",
+          "authorization": null,
+          "descriptorHash": "c6e7b8875fd6d72287b413f384aade42cc532fb4d8a94c0304d6b2b433bd8e29",
+          "directoryScope": null
+        }
+      ],
+      "grants": [
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.read",
+          "assignment_count": 192
+        },
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_account.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 192
+        },
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.request",
+          "assignment_count": 192
+        },
+        {
+          "role_code": "demo.mesh.context-reader",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.request",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.attachment.create",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.attachment.delete",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.attachment.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.attachment.share",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.bank_account.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.bank_account.update",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.bank_account.verify",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.catalog.publish",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.catalog.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.content_item.create",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.content_item.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.content_item.share",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.content_item.update",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.conversation.add_participant",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.conversation.create",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.conversation.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.conversation.remove_participant",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.document_envelope.acknowledge",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.document_envelope.publish",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.document_envelope.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.document_envelope.replay",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.connect",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.invite",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.update",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.accept",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.request",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.suspend",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.terminate",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.supplier_profile_verification.read",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.supplier_profile_verification.reject",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-network_account-exact",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.supplier_profile_verification.verify",
+          "assignment_count": 44
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.ai.agent.use",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.attachment.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.attachment.delete",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.attachment.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.attachment.share",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.bank_account.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.bank_account.update",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.bank_account.verify",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.catalog.publish",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.catalog.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.content_item.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.content_item.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.content_item.share",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.content_item.update",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.conversation.add_participant",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.conversation.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.conversation.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.conversation.remove_participant",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.document_envelope.acknowledge",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.document_envelope.publish",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.document_envelope.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.document_envelope.replay",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_account.connect",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_account.invite",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_account.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_account.update",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.accept",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.request",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.suspend",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.network_relationship.terminate",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.supplier_profile_verification.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.supplier_profile_verification.reject",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "mesh.catalog.supplier_profile_verification.verify",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.cancel",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.claim",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.complete",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.create",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "demo.mesh.testing-admin-tenant-exact",
+          "scope_kind": "tenant",
+          "permission_code": "workflow.work_item.read",
+          "assignment_count": 3
+        },
+        {
+          "role_code": "development.mesh.northwind.account-reader",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_account.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "development.mesh.northwind.account-reader",
+          "scope_kind": "network_account",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 2
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-requester",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.bank_disclosure.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-requester",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.bank_disclosure.request",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-requester",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-reviewer",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.bank_disclosure.decide",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-reviewer",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.bank_disclosure.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.bank-disclosure-reviewer",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.profile-publisher",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.business_partner_profile.publish",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.profile-publisher",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.business_partner_profile.read",
+          "assignment_count": 1
+        },
+        {
+          "role_code": "development.mesh.northwind.profile-publisher",
+          "scope_kind": "network_relationship",
+          "permission_code": "mesh.catalog.network_relationship.read",
+          "assignment_count": 1
+        }
+      ]
+    }
+  ],
+  "failures": []
+}

@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_signed_artifact_verification",
+  "capturedAt": "2026-09-10T05:45:13.698Z",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactId": "7b4f3eb7-e214-45dc-9968-89fc6cae0ff9",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "signedAt": "2026-09-10T05:43:23.504Z",
+  "verification": {
+    "signatureVerified": true,
+    "manifestValid": true,
+    "runtimeCompatible": true,
+    "targetPlane": "neon",
+    "contractHash": "b009c515ccb776a9b76999c77d06b81ab70127e42e9e15fc7637214ee1c10343",
+    "descriptorSourceHash": "b009c515ccb776a9b76999c77d06b81ab70127e42e9e15fc7637214ee1c10343",
+    "contractSchemaVersion": "2.1",
+    "descriptorSchemaVersion": "1.0.0",
+    "signatureAlgorithm": "Ed25519",
+    "signingKeyId": "athyper-dev-publication-ed25519-20260905"
+  },
+  "operationCount": 42,
+  "scopeBindingCount": 48,
+  "qualificationScopes": [
+    "operating_organization"
+  ],
+  "head": [
+    {
+      "publication_key": "metadata.entity.business_partner.local-master-data.cirrusatlantic",
+      "applied_release_id": "01a0894f-b8a9-793a-9e54-504421b393aa",
+      "source_release_no": "18",
+      "artifact_hash": "95231dee569ed4f9acb9c4b180049965e96b3ba3c680e0d8b47119c01e43db96",
+      "activated_at": "2026-09-10T03:14:58.398Z",
+      "row_version": "18"
+    }
+  ],
+  "reviewReceipt": "78bd9a49e5d791182721ed44453f482eb05f09fe540b831aa7a656b3cf815e73",
+  "grantsChanged": false,
+  "activationAuthorized": false,
+  "authenticatedBusinessJourneysQualified": false,
+  "policyDifferencesAccepted": false
+}

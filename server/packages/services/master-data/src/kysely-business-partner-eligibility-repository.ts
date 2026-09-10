@@ -571,6 +571,29 @@ export class KyselyBusinessPartnerEligibilityRepository implements BusinessPartn
     ).rows[0];
     return row ? mapQualification(row) : null;
   }
+  async qualificationTargetReady(input: {tenantId: string; businessPartnerId: string; operatingOrganizationId: string; companyCodeId?: string}, transaction: Tx): Promise<boolean> {
+    // No command function or evidence write: inspect the commercial parent and
+    // active proposed catalog scope. Specific role/type/content validation is
+    // still performed by the actual create command before materialization.
+    const result = await sql<{ready: boolean}>`SELECT EXISTS(
+      SELECT 1 FROM master.business_partner bp
+      JOIN master.operating_organization org ON org.tenant_id=bp.tenant_id
+        AND org.id=${input.operatingOrganizationId}::uuid AND org.status='active'
+      WHERE bp.tenant_id=${input.tenantId}::uuid AND bp.id=${input.businessPartnerId}::uuid
+      AND (EXISTS(SELECT 1 FROM master.supplier r WHERE r.tenant_id=bp.tenant_id AND r.business_partner_id=bp.id)
+        OR EXISTS(SELECT 1 FROM master.customer r WHERE r.tenant_id=bp.tenant_id AND r.business_partner_id=bp.id))
+      AND (${input.companyCodeId ?? null}::uuid IS NULL OR EXISTS(
+        SELECT 1 FROM master.company_code company
+        JOIN master.operating_organization_company_assignment assignment
+          ON assignment.tenant_id=company.tenant_id AND assignment.company_code_id=company.id
+        WHERE company.tenant_id=bp.tenant_id AND company.id=${input.companyCodeId ?? null}::uuid
+          AND company.status='active' AND company.is_active
+          AND assignment.operating_organization_id=org.id AND assignment.status='active'
+          AND assignment.effective_from<=current_date
+          AND (assignment.effective_until IS NULL OR assignment.effective_until>current_date)
+      ))) AS ready`.execute(transaction as never);
+    return result.rows[0]?.ready === true;
+  }
   async createQualification(
     input: Parameters<
       BusinessPartnerEligibilityRepository<Tx>["createQualification"]

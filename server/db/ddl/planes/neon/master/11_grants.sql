@@ -89,7 +89,8 @@ BEGIN
         GRANT SELECT, INSERT, UPDATE
             ON master.fx_rate
             TO athyperapp;
-        GRANT SELECT ON master.mv_company_postable_account TO athyperapp;
+        REVOKE ALL ON master.mv_company_postable_account FROM athyperapp;
+        GRANT SELECT ON master.v_company_postable_account TO athyperapp;
         GRANT SELECT, INSERT, UPDATE
             ON master.bank_account_link,
                master.bank_account_house_config

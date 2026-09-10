@@ -1,3 +1,4 @@
+import { useBusinessPartnerActionHandlers } from "./governed-action";
 import type { EntityRecordHeaderV1 } from "@athyper/contract-platform-entity-runtime";
 import { EntityRecordHeader } from "@athyper/platform-entity-form-detail";
 import { useBusinessPartner360 } from "../business-partner-360-context";
@@ -25,14 +26,16 @@ export function IdentityHeader() {
         : {}),
     })),
   };
+  const actionHandlers = useBusinessPartnerActionHandlers();
   const header = {
     ...base,
-    context: [],
+    context: [{ key: "ownership", label: "Partner-wide data", value: "Identity and shared master data" }, { key: "transaction", label: "Transaction context", value: summary.scope.operatingOrganizationId || summary.scope.companyCodeId ? "Selected organization/company · view or change below" : "No organization or company selected" }],
     sections: [],
   };
   return (
     <EntityRecordHeader
       header={header}
+      actionHandlers={actionHandlers}
       breadcrumbLabel={header.code && header.code !== header.title
         ? `${header.title} (${header.code})`
         : header.title}

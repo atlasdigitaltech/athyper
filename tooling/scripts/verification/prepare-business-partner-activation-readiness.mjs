@@ -1,0 +1,45 @@
+// Read-only DEV evidence refresh and offline readiness assembly; no apply mode.
+import {execFileSync} from 'node:child_process';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {homedir} from 'node:os';
+import {hash,proposalHash} from './entity-authorization/named-role-review.mjs';
+import {compareApprovedGrants} from './entity-authorization/activation-readiness.mjs';
+if(process.argv.length!==2)throw Error('No arguments or activation flags supported');
+const dir='governance/policy/reports/', read=p=>JSON.parse(readFileSync(p,'utf8'));
+const run=(cmd,args)=>execFileSync(cmd,args,{encoding:'utf8',maxBuffer:8_000_000,timeout:120000});
+run('node',['tooling/scripts/verification/review-business-partner-roles.mjs','dev',dir+'business-partner-activation-current-grants.dev.json']);
+run('pnpm',['exec','tsx','tooling/scripts/verification/prepare-entity-authorization-publication.mts','dev','44444444-4444-4444-8444-444444444444','packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json','governance/config/governance/business-partner-authorization-bindings.v1.json',dir+'business-partner-activation-publication.dev.json']);
+run('pnpm',['exec','tsx','tooling/scripts/verification/qualify-business-partner-database-adapters.mts','dev',dir+'business-partner-activation-adapters.dev.json']);
+run('node',['tooling/scripts/verification/review-entity-policy-differences.mjs','governance/policy/reviews/entity-authorization-differences.dev.json',dir+'business-partner-activation-differences.dev.json']);
+const inventoryPath=dir+'business-partner-role-review.named.dev.json',packetPath='governance/policy/reviews/business-partner-two-reviewer-recorded.dev.json';
+const approvedInventory=read(inventoryPath),packet=read(packetPath),current=read(dir+'business-partner-activation-current-grants.dev.json');
+const durable=read(homedir()+'/.athyper/instances/dev/deployments/bp-owner-review-20260910-two-reviewers/review/output/state.json');
+if(proposalHash(durable.packet)!==proposalHash(packet))throw Error('Durable reviewed packet differs from exported evidence');
+const receipts=read(dir+'business-partner-two-reviewer-receipts.dev.json');
+if(proposalHash(receipts.receipts)!==proposalHash(durable.receipts)||durable.receipts.length!==2||durable.receipts.some(r=>!r.authenticatedReviewer||r.activationAuthorized||r.grantChanges.length))throw Error('Durable review receipt mismatch');
+const diff=compareApprovedGrants({approvedInventory,packet,sourceSha256:hash(readFileSync(inventoryPath)),current});
+const pub=read(dir+'business-partner-activation-publication.dev.json'),adapters=read(dir+'business-partner-activation-adapters.dev.json'),differences=read(dir+'business-partner-activation-differences.dev.json'),commands=read(dir+'business-partner-ownership-qualified.dev.json');
+const names=['api','worker','scheduler','neon-web','bp-role-review'].map(n=>'athyper-dev-'+n+'-1');
+const services=JSON.parse(run('docker',['inspect',...names])).map(c=>({name:c.Name,imageId:c.Image,imageReference:c.Config.Image,startedAt:c.State.StartedAt,status:c.State.Status,health:c.State.Health?.Status??null,authorizationSelection:(c.Config.Env??[]).filter(e=>['BP_AUTHORIZATION_MODE','BP_AUTHORIZATION_PROFILE_PATH','BP_AUTHORIZATION_PROFILE_SHA256','AUTHORIZATION_V2_MODE'].includes(e.split('=')[0]))}));
+const sql="SELECT jsonb_build_object('id',id,'status',status,'rowVersion',row_version,'hasDecisionSnapshot',decision_snapshot_id IS NOT NULL,'hasResultSnapshot',result_snapshot_id IS NOT NULL) FROM document.entity_case WHERE tenant_id='44444444-4444-4444-8444-444444444444' AND id='2a03927d-7076-4e02-8b1b-181830b49ec5'";
+const lines=run('docker',['exec','athyper-dev-db-1','psql','-X','-U','postgres','-d','athyper_neon','-At','-v','ON_ERROR_STOP=1','-c',`BEGIN READ ONLY; SET LOCAL statement_timeout='15s'; ${sql}; COMMIT;`]).split('\n');
+const liveCase=JSON.parse(lines.find(l=>l.startsWith('{'))??'null');
+const gates=[
+ {id:'named_role_review',status:diff.assessment.namedRoleReviewComplete?'passed':'blocked',detail:'Exact recorded proposals and both authenticated server receipts rechecked.'},
+ {id:'grant_snapshot',status:diff.inventoryUnchanged?'passed':'blocked',detail:'Current candidate records and all 13 authorization-table fingerprints compared; effective decision parity is not implied.'},
+ {id:'assignment_window',status:packet.items.filter(i=>i.proposal.decision==='approve_responsibilities').every(i=>Date.now()>=Date.parse(i.proposal.conditions.effectiveFrom)&&Date.now()<Date.parse(i.proposal.conditions.effectiveUntil))?'passed':'blocked',detail:'Approved pilot assignments are effective only from 2026-09-11T00:00:00Z through 2026-12-10T00:00:00Z; do not activate early or after expiry.'},
+ {id:'grant_migration',status:'blocked',detail:'Zero persisted grant mutations proposed. Target responsibility provisioning and runtime role bindings are not compiled; no global steward or widened scope is approved.'},
+ {id:'publication',status:'blocked',detail:`Selected head ${pub.base.releaseNo}; ${pub.coverage.unexplainedBindingGaps} unexplained gaps, ${pub.coverage.reviewGatedOperations} review-gated operations. Native publishable envelope and callable deployment qualification missing.`},
+ {id:'policy_differences',status:differences.policyDifferenceGateSatisfied?'passed':'blocked',detail:`${differences.unresolvedDifferences} unresolved historical difference groups. Reassessment is fresh; live observations were not recaptured.`},
+ {id:'database_adapters',status:adapters.checks.every(c=>c.passed)?'passed':'blocked',detail:'Read-only deployed database role checks; not authenticated end-to-end command/generalization evidence.'},
+ {id:'authenticated_commands',status:commands.ownershipCommandMilestoneComplete&&commands.commandJourneyCompleted?'passed':'blocked',detail:'Internal-supplier ownership journey and negative validation qualified with MFA; full target-policy command coverage remains under release_coverage.'},
+ {id:'company_and_independent_child_journeys',status:'blocked',detail:'Database/fixture coverage exists; complete authenticated owning-service journeys still need qualification.'},
+ {id:'release_coverage',status:'blocked',detail:'Pin the actual owning-service registrations and qualify reads, nested fields/providers, reveals, commands, export and AI using the same release. Local source is not deployment proof.'},
+ {id:'activation_and_rollback',status:'blocked',detail:'No signed compatible release, enforcement approval or qualified rollback receipt. Preserve current denials/revocations; never restore an old grant snapshot.'},
+ {id:'compatibility_retirement',status:'blocked',detail:'Retain retries and compatibility mappings until activated paths demonstrate accepted parity.'}
+];
+const output=dir+'business-partner-activation-readiness.dev.json',diffPath=dir+'business-partner-activation-grant-diff.dev.json';
+writeFileSync(diffPath,JSON.stringify(diff,null,2)+'\n');
+const sources=['packages/contracts/platform/fixtures/entity-authorization/business-partner.v1.json','governance/config/governance/business-partner-authorization-bindings.v1.json','tooling/scripts/verification/entity-authorization/activation-readiness.mjs','tooling/scripts/verification/prepare-business-partner-activation-readiness.mjs',inventoryPath,packetPath,dir+'business-partner-two-reviewer-receipts.dev.json',dir+'business-partner-activation-current-grants.dev.json',dir+'business-partner-activation-publication.dev.json',dir+'business-partner-activation-publication.dev.snapshot.json',dir+'business-partner-activation-adapters.dev.json',dir+'business-partner-activation-differences.dev.json',dir+'business-partner-ownership-qualified.dev.json',diffPath];
+const report={schemaVersion:1,kind:'activation_readiness_package',generatedAt:new Date().toISOString(),environment:'dev',selection:{plane:'neon',entity:'business_partner',tenantId:pub.base.tenantId,base:pub.base},packageComplete:true,activationReady:false,publicationEligible:false,activationAuthorized:false,grantChanges:[],applySupported:false,gates,grantDiffSummary:diff.summary,services,currentQualificationCase:liveCase,commandEvidence:{generatedAt:commands.generatedAt,completedAt:commands.completedAt,freshCommandRun:false,ownershipCommandMilestoneComplete:commands.ownershipCommandMilestoneComplete,qualifiedCaseId:commands.testCaseId,materialization:commands.materializationVerified,limitations:commands.limitations},sourceRevision:run('git',['rev-parse','HEAD']).trim(),workingTreeDirty:run('git',['status','--porcelain']).trim().length>0,sources:sources.map(path=>({path,sha256:hash(readFileSync(path))})),rollback:{restoreGrantSnapshot:false,preserveCurrentRevocations:true,incompatibleArtifacts:'closed',qualificationReceipt:null},approvalRequested:null};
+writeFileSync(output,JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify({output,activationReady:false,reviewedRows:diff.summary.reviewedRows,inventoryUnchanged:diff.inventoryUnchanged,blockedGates:gates.filter(g=>g.status==='blocked').map(g=>g.id)}));

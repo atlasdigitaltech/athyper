@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "entityCode": "qualification_independent_document",
+  "planeKey": "neon",
+  "ownership": "workspace.record.v1",
+  "directory": {
+    "operation": "discover",
+    "population": "ownership"
+  },
+  "recordReadOperation": "read",
+  "operations": [
+    {
+      "key": "discover",
+      "permissionCode": "qualification.document.read",
+      "scope": "workspace.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "read",
+      "permissionCode": "qualification.document.read",
+      "scope": "workspace.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "reveal",
+      "permissionCode": "qualification.document.reveal",
+      "scope": "workspace.record.v1",
+      "target": "existing",
+      "effect": "reveal",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    }
+  ],
+  "fieldPolicies": [
+    {
+      "key": "identity",
+      "fields": [
+        "id",
+        "title"
+      ],
+      "readOperation": "read",
+      "representation": "plain",
+      "writeOperations": [],
+      "queryUses": [
+        "filter",
+        "sort",
+        "export"
+      ]
+    },
+    {
+      "key": "secret",
+      "fields": [
+        "protected_value"
+      ],
+      "readOperation": "read",
+      "representation": "masked",
+      "writeOperations": [],
+      "queryUses": [],
+      "revealOperation": "reveal"
+    }
+  ],
+  "surfaces": [],
+  "relationships": []
+}

@@ -1,0 +1,645 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-09T15:35:48.050Z",
+  "environment": "dev",
+  "shadowMilestoneComplete": true,
+  "fullMigrationComplete": false,
+  "mode": "shadow",
+  "entityCode": "business_partner",
+  "planeKey": "neon",
+  "profileSha256": "8280aeee1aebb591f12e6ad53e640b2c3cea65fc209efcdb0d349214d3e85c88",
+  "services": [
+    {
+      "service": "api",
+      "image": "sha256:333a309df25375b268ac664c34877a0a8effbb0b199e4f4d198c4251c50e3df1",
+      "health": "healthy",
+      "mode": "shadow"
+    },
+    {
+      "service": "worker",
+      "image": "sha256:333a309df25375b268ac664c34877a0a8effbb0b199e4f4d198c4251c50e3df1",
+      "health": "healthy",
+      "mode": "shadow"
+    },
+    {
+      "service": "scheduler",
+      "image": "sha256:333a309df25375b268ac664c34877a0a8effbb0b199e4f4d198c4251c50e3df1",
+      "health": "healthy",
+      "mode": "shadow"
+    }
+  ],
+  "authenticatedPrincipalCount": 1,
+  "authenticatedChecks": 40,
+  "scopeCases": [
+    "partner_wide",
+    "authorized_organization_company",
+    "missing_company",
+    "invalid_company",
+    "missing_record",
+    "denied_sections",
+    "anonymous"
+  ],
+  "correlatedRequestCount": 28,
+  "shadowDecisionCount": 1204,
+  "mappingGaps": 0,
+  "unavailableCorrelatedPreviews": 0,
+  "operationsObserved": [
+    "activity_read",
+    "add_role",
+    "addresses_read",
+    "amend_partner",
+    "assign_organization",
+    "attachments_read",
+    "bank_read",
+    "bank_reveal",
+    "certificate_read",
+    "certification",
+    "change_bank",
+    "comments_read",
+    "configure_company",
+    "contacts_read",
+    "create",
+    "discover",
+    "export",
+    "identifier_read",
+    "identity_read",
+    "import",
+    "lifecycle",
+    "navigate_manage",
+    "navigate_overview",
+    "navigate_review",
+    "network_read",
+    "qualification",
+    "qualification_company",
+    "qualification_read",
+    "read",
+    "request_supplier",
+    "requests_read",
+    "section_propose_change",
+    "supplier_company_read",
+    "tax_read",
+    "update"
+  ],
+  "comparisons": [
+    {
+      "operationKey": "request_supplier",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_overview",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_overview",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_manage",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_manage",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_review",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "navigate_review",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 2
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 25
+    },
+    {
+      "operationKey": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 25
+    },
+    {
+      "operationKey": "export",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 2
+    },
+    {
+      "operationKey": "import",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 2
+    },
+    {
+      "operationKey": "update",
+      "permissionCode": "neon.relationship.business_partner.update",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 8
+    },
+    {
+      "operationKey": "create",
+      "permissionCode": "neon.relationship.business_partner.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "preflight_required",
+      "evidence": "command_discovery_preview",
+      "count": 6
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 91
+    },
+    {
+      "operationKey": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 112
+    },
+    {
+      "operationKey": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 238
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 34
+    },
+    {
+      "operationKey": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 44
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 18
+    },
+    {
+      "operationKey": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "bank_reveal",
+      "permissionCode": "neon.relationship.business_partner_bank.reveal",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 22
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "attachments_read",
+      "permissionCode": "document.attachment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 44
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "comments_read",
+      "permissionCode": "collaboration.comment.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 17
+    },
+    {
+      "operationKey": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 22
+    },
+    {
+      "operationKey": "amend_partner",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "add_role",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "assign_organization",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "configure_company",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "change_bank",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "lifecycle",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "qualification",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "certification",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "authorization_comparison",
+      "count": 21
+    },
+    {
+      "operationKey": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 70
+    },
+    {
+      "operationKey": "amend_partner",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "add_role",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "assign_organization",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "configure_company",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "change_bank",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "lifecycle",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "qualification_company",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "legacy": "denied",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    },
+    {
+      "operationKey": "certification",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "legacy": "allowed",
+      "installedTarget": "denied",
+      "candidateTarget": "denied",
+      "evidence": "command_discovery_preview",
+      "count": 1
+    }
+  ],
+  "effectiveAuthority": "legacy",
+  "authorizationTablesCompared": 13,
+  "changedAuthorizationTables": [],
+  "grantChanges": [],
+  "namedAssignments": [],
+  "roleReviewCandidates": 79,
+  "rollbackAuditPath": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-authenticated-shadow-20260909/audit.json",
+  "browserEvidence": "governance/policy/reports/business-partner-shadow-browser.dev.json",
+  "limitations": [
+    "One existing authenticated DEV principal exercised positive, missing-scope, scoped, denied-section, invalid-target and signed-out paths.",
+    "Shadow command readiness is a discovery preview; no business commands were replayed or executed by the observer.",
+    "This unsigned shadow attestation cannot activate target enforcement."
+  ],
+  "remainingMigrationGates": [
+    "Named steward/requester/approver review and any explicitly approved grant changes",
+    "Distinct governance personas and same-phase workflow/command qualification",
+    "Company-owned entity and independently owned child generality qualification",
+    "Resolution of recorded policy differences before enforcement",
+    "Compatible signed activation and eventual compatibility retirement"
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-09-10T03:17:37.467Z",
+  "environment": "dev",
+  "plane": "studio",
+  "migration": "20260910_metadata_activation_confirmation.sql",
+  "sha256": "75b21a5486a1acc0373477df0838c43c8c4a8ce8decbbe2dd2782fc5c5f8059d",
+  "applied": true,
+  "runtimeHeadChanged": false
+}

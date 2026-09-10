@@ -296,6 +296,9 @@ export interface BusinessPartner360SafeError {
 }
 
 export interface BusinessPartner360Service {
+  /** Read-only workflow readiness. Execution separately validates purpose,
+   * child ownership and replay claims before returning a restricted value. */
+  preflightReveal?(query: BusinessPartner360Query & {readonly kind: "bank" | "tax"; readonly historical?: boolean}): Promise<"allowed" | "workflow_blocked" | "not_applicable">;
   summary(query: BusinessPartner360Query): Promise<BusinessPartner360Summary>;
   section<T=unknown>(query:BusinessPartner360PageQuery&{readonly sectionCode:BusinessPartner360SectionCode}):Promise<BusinessPartner360Section<T>>;
   revealTaxRegistration(command:import("./business-partner-360-sections.js").BusinessPartner360TaxRevealCommand):Promise<import("./business-partner-360-sections.js").BusinessPartner360TaxRevealResult>;

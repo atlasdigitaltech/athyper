@@ -23,6 +23,7 @@ export type AtlasBusinessPartnerList = (query: ListRecordsQuery) => Promise<{
 }>;
 const MAX_RECORDS = 20;
 const MAX_MS = 3500;
+const BATCH_SIZE = 4;
 const invalid = (): never => {
   throw new AtlasServiceError(
     "TOOL_DENIED",
@@ -34,7 +35,15 @@ const invalid = (): never => {
 export function createBusinessPartnerListInsightTool(
   list: AtlasBusinessPartnerList,
   brief: AtlasRegisteredTool,
+  options: { concurrency?: number } = {},
 ): AtlasRegisteredTool {
+  const concurrency = options.concurrency ?? BATCH_SIZE;
+  if (
+    !Number.isSafeInteger(concurrency) ||
+    concurrency < 1 ||
+    concurrency > BATCH_SIZE
+  )
+    throw new TypeError("Assessment concurrency must be 1..4.");
   const validate = (args: Readonly<Record<string, unknown>>) => {
     if (Object.keys(args).some((key) => !["page", "target"].includes(key)))
       invalid();
@@ -182,96 +191,115 @@ export function createBusinessPartnerListInsightTool(
         let examined = 0,
           evaluated = 0,
           stale = false;
-        for (const row of population.rows) {
+        batches: for (
+          let offset = 0;
+          offset < population.rows.length;
+          offset += concurrency
+        ) {
           check();
           if (Date.now() - started >= MAX_MS) break;
           // Reuse record admission, scoped admission, owner scope checks and disclosure.
           // Authorization/protocol failures abort the whole result instead of exposing denial counts.
-          const result = await brief.readHandler!.execute({
-            context,
-            arguments: {
-              recordId: row.id,
-              ...(page.workContext?.operatingOrganizationId
-                ? {
-                    operatingOrganizationId:
-                      page.workContext.operatingOrganizationId,
-                  }
-                : {}),
-              ...(page.workContext?.companyCodeId
-                ? { companyCodeId: page.workContext.companyCodeId }
-                : {}),
-              ...(directory?.partnerRole
-                ? { role: directory.partnerRole }
-                : {}),
-            },
-          });
+          const batch = population.rows.slice(offset, offset + concurrency);
+          // Drain the whole bounded batch before propagating failure. No background tail reads.
+          const settled = await Promise.allSettled(
+            batch.map((row) =>
+              brief.readHandler!.execute({
+                context,
+                arguments: {
+                  recordId: row.id,
+                  ...(page.workContext?.operatingOrganizationId
+                    ? {
+                        operatingOrganizationId:
+                          page.workContext.operatingOrganizationId,
+                      }
+                    : {}),
+                  ...(page.workContext?.companyCodeId
+                    ? { companyCodeId: page.workContext.companyCodeId }
+                    : {}),
+                  ...(directory?.partnerRole
+                    ? { role: directory.partnerRole }
+                    : {}),
+                },
+              }),
+            ),
+          );
           check();
-          const data = result.data as {
-            records: Readonly<Record<string, unknown>>[];
-            insight: AtlasInsightResult;
-          };
-          const insight = parseAtlasInsightResult(data.insight);
-          if (
-            result.sources.some(
-              (source) =>
-                source.coordinate.descriptorHash !== population.descriptorHash,
+          const failed = settled.find((result) => result.status === "rejected");
+          if (failed?.status === "rejected") throw failed.reason;
+          for (const [index, outcome] of settled.entries()) {
+            if (outcome.status !== "fulfilled") throw outcome.reason;
+            const row = batch[index]!;
+            const result = outcome.value;
+            const data = result.data as {
+              records: Readonly<Record<string, unknown>>[];
+              insight: AtlasInsightResult;
+            };
+            const insight = parseAtlasInsightResult(data.insight);
+            if (
+              result.sources.some(
+                (source) =>
+                  source.coordinate.descriptorHash !==
+                  population.descriptorHash,
+              )
             )
-          )
-            invalid();
-          const complete =
-            insight.coverage.state === "complete" &&
-            insight.freshness === "current" &&
-            insight.findings.length > 0 &&
-            insight.findings.every((f) =>
-              ["evaluated_pass", "evaluated_fail"].includes(f.state),
+              invalid();
+            const complete =
+              insight.coverage.state === "complete" &&
+              insight.freshness === "current" &&
+              insight.findings.length > 0 &&
+              insight.findings.every((f) =>
+                ["evaluated_pass", "evaluated_fail"].includes(f.state),
+              );
+            // Bounded evidence/findings: stop before exceeding the transport contract.
+            if (evidence.length + insight.evidence.length > 100) break batches;
+            examined++;
+            if (complete) evaluated++;
+            stale ||= insight.freshness === "stale";
+            const failures = insight.findings.filter(
+              (f) => f.state === "evaluated_fail",
             );
-          // Bounded evidence/findings: stop before exceeding the transport contract.
-          if (evidence.length + insight.evidence.length > 100) break;
-          examined++;
-          if (complete) evaluated++;
-          stale ||= insight.freshness === "stale";
-          const failures = insight.findings.filter(
-            (f) => f.state === "evaluated_fail",
-          );
-          const codes = new Set(failures.map((f) => f.code));
-          for (const code of codes) {
-            if (!issuePartners.has(code)) issuePartners.set(code, new Set());
-            issuePartners.get(code)!.add(row.id);
-            affected.add(row.id);
+            const codes = new Set(failures.map((f) => f.code));
+            for (const code of codes) {
+              if (!issuePartners.has(code)) issuePartners.set(code, new Set());
+              issuePartners.get(code)!.add(row.id);
+              affected.add(row.id);
+            }
+            evidence.push(
+              ...insight.evidence.map((e) => ({
+                ...e,
+                id: `${examined}:${e.id}`,
+              })),
+            );
+            sources.push(...result.sources);
+            const identity = data.records[0] ?? {};
+            findings.push({
+              id: `partner:${examined}`,
+              code: "partner_comparison",
+              state: complete
+                ? failures.length
+                  ? "evaluated_fail"
+                  : "evaluated_pass"
+                : "not_evaluated",
+              severity: failures.length ? "warning" : "info",
+              facts: {
+                ...Object.fromEntries(
+                  ["code", "display_name", "status", "partner_category"]
+                    .filter((key) => Object.hasOwn(identity, key))
+                    .map((key) => [key, identity[key] as string | null]),
+                ),
+                evaluated: complete,
+                assessmentStates:
+                  [...new Set(insight.findings.map((f) => f.state))].join(
+                    ", ",
+                  ) || "not_evaluated",
+                disclosedIssueCount: codes.size,
+              },
+              ruleVersion: "bp-list/1",
+              evidenceIds: insight.evidence.map((e) => `${examined}:${e.id}`),
+              actionIds: [],
+            });
           }
-          evidence.push(
-            ...insight.evidence.map((e) => ({
-              ...e,
-              id: `${examined}:${e.id}`,
-            })),
-          );
-          sources.push(...result.sources);
-          const identity = data.records[0] ?? {};
-          findings.push({
-            id: `partner:${examined}`,
-            code: "partner_comparison",
-            state: complete
-              ? failures.length
-                ? "evaluated_fail"
-                : "evaluated_pass"
-              : "not_evaluated",
-            severity: failures.length ? "warning" : "info",
-            facts: {
-              ...Object.fromEntries(
-                ["code", "display_name", "status", "partner_category"]
-                  .filter((key) => Object.hasOwn(identity, key))
-                  .map((key) => [key, identity[key] as string | null]),
-              ),
-              evaluated: complete,
-              assessmentStates:
-                [...new Set(insight.findings.map((f) => f.state))].join(", ") ||
-                "not_evaluated",
-              disclosedIssueCount: codes.size,
-            },
-            ruleVersion: "bp-list/1",
-            evidenceIds: insight.evidence.map((e) => `${examined}:${e.id}`),
-            actionIds: [],
-          });
         }
         if (issuePartners.size > 70) invalid();
         for (const [code, partners] of [...issuePartners].sort(([a], [b]) =>

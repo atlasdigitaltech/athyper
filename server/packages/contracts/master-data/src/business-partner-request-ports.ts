@@ -24,6 +24,8 @@ import type {
 } from "./business-partner-requests.js";
 
 export interface BusinessPartnerRequestRepository<Transaction = unknown> {
+  /** Compare governed import retry with immutable creation evidence, not an enriched/current view. */
+  matchesGovernedImportCreation?(input: {readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly command: Omit<CreateBusinessPartnerRequestCommand,"context">; readonly schema: BusinessPartnerRequestSchemaReference; readonly existing: BusinessPartnerRequest}, transaction: Transaction): Promise<boolean>;
   findByIdempotencyKey(
     tenantId: string,
     idempotencyKey: string,
@@ -126,6 +128,8 @@ export interface BusinessPartnerRequestSchemaResolver {
 }
 
 export interface BusinessPartnerRequestValidator<Transaction = unknown> {
+  /** Read-only draft validation uses the same rules, without inventing a stored case. */
+  validateProposed?(input: { readonly context: CreateBusinessPartnerRequestCommand["context"]; readonly request: CreateBusinessPartnerRequestCommand }, transaction: Transaction): Promise<BusinessPartnerRequestValidationResult>;
   validate(
     input: {
       readonly context: ValidateBusinessPartnerRequestCommand["context"];
@@ -150,6 +154,8 @@ export interface BusinessPartnerRequestNumberAllocator<Transaction = unknown> {
 }
 
 export interface BusinessPartnerRequestService {
+  /** Validate intake, ownership permission and current schema without creating a case. */
+  preflightCreate?(command: CreateBusinessPartnerRequestCommand): Promise<{ readonly schema: BusinessPartnerRequestSchemaReference & { readonly releaseId: string }; readonly validation: BusinessPartnerRequestValidationResult }>;
   explainCase?(query: { readonly context: BusinessPartnerRequestQuery["context"]; readonly requestId: string; readonly expectedVersion?: number; readonly businessPartnerId?: string }): Promise<import("./business-partner-requests.js").BusinessPartnerCaseExplanation>;
   create(command: CreateBusinessPartnerRequestCommand): Promise<{
     readonly request: BusinessPartnerRequest;

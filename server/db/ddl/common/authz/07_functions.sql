@@ -1756,7 +1756,8 @@ BEGIN
       id,tenant_id,applied_release_id,plane_code,source_entity_id,source_entity_operation_id,
       source_release_id,source_release_hash,source_compiled_hash,entity_code,operation_key,
       permission_id,decision_mode,created_by)
-    SELECT DISTINCT ON (item->>'sourceEntityOperationId') (item->>'bindingId')::uuid,p_tenant_id,p_applied_release_id,lower(p_plane_code),
+    -- Descriptor IDs identify source bindings; projection rows belong to one applied release.
+    SELECT DISTINCT ON (item->>'sourceEntityOperationId') md5(p_applied_release_id::text||':operation:'||(item->>'bindingId'))::uuid,p_tenant_id,p_applied_release_id,lower(p_plane_code),
       v_source_entity_id,(item->>'sourceEntityOperationId')::uuid,p_source_release_id,v_release_hash,
       p_source_compiled_hash,item->>'entityCode',item->>'operationKey',p.id,
       (item->>'decisionMode')::authz.operation_decision_mode_d,v_actor
@@ -1767,7 +1768,7 @@ BEGIN
     IF v_actual<>v_expected THEN RAISE EXCEPTION 'OPERATION_BINDING_STAGE_COUNT_MISMATCH' USING ERRCODE='check_violation'; END IF;
     INSERT INTO authz.entity_operation_scope_binding(
       id,entity_operation_binding_id,scope_kind,coordinate_source,coordinate_key,resolver_key,created_by)
-    SELECT (item->>'scopeBindingId')::uuid,b.id,(item->>'scopeKind')::authz.scope_kind_d,
+    SELECT md5(p_applied_release_id::text||':scope:'||(item->>'scopeBindingId'))::uuid,b.id,(item->>'scopeKind')::authz.scope_kind_d,
       (item->>'coordinateSource')::authz.scope_coordinate_source_d,item->>'coordinateKey',item->>'resolverKey',v_actor
     FROM jsonb_array_elements(v_bindings) item
     JOIN authz.entity_operation_binding b ON b.applied_release_id=p_applied_release_id

@@ -1,0 +1,90 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_operation_decision_export",
+  "packetRevision": "ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d",
+  "receipts": [
+    {
+      "reference": "neon-operation-review:9bd1233b-b4b0-4b1b-b4cf-b7281ae4c388",
+      "recordedAt": "2026-09-10T02:04:55.499Z",
+      "packetRevision": "ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.owner",
+        "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "import",
+          "decision": "approve",
+          "proposalSha256": "7fc3468de94fa034b025b78bd7abac8a677467a7ee837210be887deda612233e",
+          "reason": "Explicit user approval of import revision ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d: bounded supplier-request drafts only; exact tenant gateway plus existing per-row case-create authority, stored scope checks, full pre-write validation, pinned schema, stable idempotency and fresh checks with stop on revocation. Submission, MFA, approval and application stay separate. No grants, publication or activation approved."
+        }
+      ],
+      "submissionId": "5d1d9482-637d-4857-838d-3bf1529eab10",
+      "commandHash": "a7a93e39ebbcd0f52fa35860c76949aefb234afd6a06ec3a20cf99731fc8920a",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    },
+    {
+      "reference": "neon-operation-review:22742ecd-2285-47bb-a720-d366001390d7",
+      "recordedAt": "2026-09-10T02:05:46.710Z",
+      "packetRevision": "ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d",
+      "nominationSha256": "e25db84f547efe3ca50e64054effcee5d2f84a011452d689f5ba87d12addd6bb",
+      "actor": {
+        "reviewerId": "catl.admin",
+        "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+        "tenantId": "44444444-4444-4444-8444-444444444444",
+        "authEpoch": 0,
+        "profileHash": null,
+        "assurance": "elevated"
+      },
+      "domains": [
+        "business",
+        "security"
+      ],
+      "decisions": [
+        {
+          "operation": "import",
+          "decision": "approve",
+          "proposalSha256": "7fc3468de94fa034b025b78bd7abac8a677467a7ee837210be887deda612233e",
+          "reason": "Explicit user approval of import revision ef285c3c15543c113fb7321c5034c40a6be643e59c6f922cb98a7d8571bf104d: bounded supplier-request drafts only; exact tenant gateway plus existing per-row case-create authority, stored scope checks, full pre-write validation, pinned schema, stable idempotency and fresh checks with stop on revocation. Submission, MFA, approval and application stay separate. No grants, publication or activation approved."
+        }
+      ],
+      "submissionId": "e0f9e34b-1aeb-4e99-acee-f62693c86604",
+      "commandHash": "f75e625097dee3cdbe57b84746a3b74deba8453785030468dff9e72a68382498",
+      "authenticatedReviewer": true,
+      "grantChanges": [],
+      "activationAuthorized": false
+    }
+  ],
+  "receiptsSha256": "556fb79130937f9bd4664bd3901b1732ff35ba496cdfb2c48604564e4a463225",
+  "assessment": {
+    "rows": [
+      {
+        "operation": "import",
+        "complete": true,
+        "accepted": true,
+        "state": "proposal_approved"
+      }
+    ],
+    "remainingRows": 0,
+    "unresolvedRows": 0,
+    "proposalReviewComplete": true,
+    "publicationEligible": false,
+    "activationAuthorized": false,
+    "grantChanges": []
+  },
+  "implementationEvidenceCurrent": true,
+  "priorCorrectionReceiptsPreserved": true,
+  "grantChanges": [],
+  "activationAuthorized": false
+}

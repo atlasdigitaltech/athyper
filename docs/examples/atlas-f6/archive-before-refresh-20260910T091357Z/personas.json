@@ -1,0 +1,131 @@
+{
+  "observedAt": "2026-09-10T07:23:54.592Z",
+  "tenantId": "44444444-4444-4444-8444-444444444444",
+  "images": [
+    {
+      "name": "athyper-dev-api-1",
+      "image": "sha256:134c54a06b958caf97e553e904d275d4ed782f450bac5184d714bccfbdb857e5",
+      "digest": "sha256:134c54a06b958caf97e553e904d275d4ed782f450bac5184d714bccfbdb857e5",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-worker-1",
+      "image": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-neon-web-1",
+      "image": "athyper-neon-web:atlas-retrieval-20260910",
+      "digest": "sha256:fc7274346722d6819b5bf1c2b1c26217695d9e2dddbf2b5ee7a911ffaa200e7a",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-mesh-web-1",
+      "image": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "digest": "sha256:f28495a88022dc1ad29cd5cec1506088fe0e731e2b7f2d3412eab9a28164095c",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-studio-web-1",
+      "image": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "digest": "sha256:afc2db8740712ec0972a23b04c6321b0f274508d9c0ca0d5ed0a6148d108d9a1",
+      "health": "healthy"
+    },
+    {
+      "name": "athyper-dev-atlas-atlas-inference-1",
+      "image": "ollama/ollama@sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "digest": "sha256:32931b46719f673c05fdbaa81ccb26da18ea4a1c57590a754874ab28ba269eb2",
+      "health": "healthy"
+    }
+  ],
+  "personas": [
+    {
+      "plane": "mesh",
+      "actor": "catl.admin",
+      "principalId": "dc4ef163-269a-5b83-90ef-5b71a56087c6",
+      "authenticated": true,
+      "assurance": "baseline",
+      "admissionStatus": 200,
+      "chatAllowed": true,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "plane": "mesh",
+      "actor": "catl.owner",
+      "principalId": "3dd93048-ac4b-54a7-b820-32d0c457691b",
+      "authenticated": true,
+      "assurance": "baseline",
+      "admissionStatus": 200,
+      "chatAllowed": false,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "plane": "neon",
+      "actor": "catl.admin",
+      "principalId": "cca94907-7519-5871-8e3c-6b11aa545c93",
+      "authenticated": true,
+      "assurance": "elevated",
+      "admissionStatus": 200,
+      "chatAllowed": true,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "plane": "neon",
+      "actor": "catl.owner",
+      "principalId": "645b6a55-3355-526a-9643-3900425bde47",
+      "authenticated": true,
+      "assurance": "baseline",
+      "admissionStatus": 200,
+      "chatAllowed": false,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "plane": "studio",
+      "actor": "catl.admin",
+      "principalId": "81cd1978-2df5-5c9a-938a-2f8c291aea13",
+      "authenticated": true,
+      "assurance": "baseline",
+      "admissionStatus": 200,
+      "chatAllowed": true,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    },
+    {
+      "plane": "studio",
+      "actor": "catl.owner",
+      "principalId": "5cd6cf93-3fe4-500c-8066-3ebf14a9eb5d",
+      "authenticated": true,
+      "assurance": "baseline",
+      "admissionStatus": 200,
+      "chatAllowed": false,
+      "policyRevision": "atlas-local-v4:sha256:500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41:tools-true-mutations-true"
+    }
+  ],
+  "checks": [
+    {
+      "name": "unavailable_parent_denied",
+      "status": 403
+    },
+    {
+      "name": "authorized_retrieval",
+      "actor": "catl.admin",
+      "status": 200
+    },
+    {
+      "name": "same_tenant_other_actor_history_denied",
+      "status": 404
+    },
+    {
+      "name": "denied_atlas_admission",
+      "actor": "catl.owner",
+      "status": 403
+    },
+    {
+      "name": "anonymous_denied",
+      "status": 401
+    }
+  ],
+  "blockers": [],
+  "authenticatedPersonasPassed": false,
+  "passed": true
+}

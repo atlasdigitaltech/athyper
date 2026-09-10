@@ -1,0 +1,25 @@
+{
+  "observedAt": "2026-09-10T08:41:20.225Z",
+  "imageDigest": "sha256:aa9cff97b6a3cdda67dcc3481ae1b61cd8a343e84b57740758be331ada4b75db",
+  "baseImages": [
+    {
+      "name": "/athyper-dev-api-1",
+      "digest": "sha256:b604218602a65433c330bf2c0fe2dc2197227d4625846281f5737372d8de361a"
+    },
+    {
+      "name": "/athyper-dev-worker-1",
+      "digest": "sha256:324d82baf010e5814fc42a32391c3f9cb7badedf647cc5a41b8e2d647a00970a"
+    }
+  ],
+  "checks": [
+    "historical controlled eviction qualification",
+    "corrected controlled eviction qualification",
+    "coordination state initialized after inference quiescence",
+    "API and worker healthy on the coordinated image"
+  ],
+  "maintenanceStartedAt": "2026-09-10T08:41:20.225Z",
+  "passed": true,
+  "completedAt": "2026-09-10T08:42:10.056Z",
+  "deploymentDirectory": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/atlas-inference-reliability-2026-09-10T08-36-48-223Z",
+  "workerInferenceNetworkEnabled": true
+}

@@ -4249,6 +4249,9 @@ importers:
       '@athyper/server-contract-jobs':
         specifier: workspace:*
         version: link:../../contracts/jobs
+      '@athyper/server-contract-metadata':
+        specifier: workspace:*
+        version: link:../../contracts/metadata
       '@athyper/server-contract-object-storage':
         specifier: workspace:*
         version: link:../../contracts/object-storage
@@ -4258,6 +4261,9 @@ importers:
       '@athyper/server-foundation':
         specifier: workspace:*
         version: link:../../foundation
+      '@athyper/server-platform-metadata':
+        specifier: workspace:*
+        version: link:../../platform/metadata
       '@athyper/server-runtime-http':
         specifier: workspace:*
         version: link:../../runtime/http

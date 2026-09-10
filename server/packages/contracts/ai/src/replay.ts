@@ -10,17 +10,23 @@ export interface AtlasReadReplayEvidence {
   readonly resultHash: string;
 }
 export interface AtlasReplayInput {
+  readonly intent?: import("./intent.js").AtlasIntentV1;
   readonly schemaVersion: 1;
   readonly attachments?: {
     readonly attachmentContextId: string;
     readonly attachmentIds: readonly string[];
+    readonly attachmentChunkIds?: readonly string[];
     readonly dataClass: AtlasDataClass;
     readonly resultHash: string;
   };
   readonly businessContext?: AtlasBusinessContextV1;
   readonly businessContextHash?: string;
+  readonly entityDescriptorHash?: string;
+  readonly entityContractHash?: string;
 }
 export interface AtlasReplayCompletion {
+  /** Only exact static guidance may complete without provider or tool usage. */
+  readonly guidance?: import("./intent.js").AtlasGuidanceCode;
   readonly complete: boolean;
   readonly reads: readonly AtlasReadReplayEvidence[];
 }

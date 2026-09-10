@@ -64,6 +64,8 @@ export function BusinessPartner360Shell({
     [error, setError] = useState<string>(),
     [revision, setRevision] = useState(0),
     [retry, setRetry] = useState(0),
+    [showTransactionContext, setShowTransactionContext] = useState(false),
+    [requiredCoordinates, setRequiredCoordinates] = useState<readonly string[]>(),
     [, setScrollRevision] = useState(0);
   const url = readUrl();
   const authEpoch = identity.scope?.authEpoch ?? 0;
@@ -276,14 +278,19 @@ export function BusinessPartner360Shell({
         section,
         roleLens: url.roleLens,
         selectSection,
+        openTransactionContext: decision => { setRequiredCoordinates(decision?.missingCoordinates); setShowTransactionContext(true); },
+        retryDecisions: () => { setSummary(undefined); setRetry(value => value + 1); },
         selectRole: (roleLens) => navigate({ roleLens }),
         selectScope: (operatingOrganizationId, companyCodeId) => {
+          setShowTransactionContext(false);
+          setSummary(undefined);
+          setRetry(value => value + 1);
           const next = new URL(window.location.href);
           next.searchParams.set(
             "operatingOrganizationId",
             operatingOrganizationId,
           );
-          next.searchParams.set("companyCodeId", companyCodeId);
+          if (companyCodeId) next.searchParams.set("companyCodeId", companyCodeId); else next.searchParams.delete("companyCodeId");
           next.searchParams.delete("legalEntityId");
           window.history.pushState({}, "", next);
           setRevision((value) => value + 1);
@@ -298,6 +305,8 @@ export function BusinessPartner360Shell({
         data-bp360-historical={url.asOf ? "true" : "false"}
       >
         <IdentityHeader />
+        <button type="button" onClick={() => { setRequiredCoordinates(undefined); setShowTransactionContext(value => !value); }} aria-expanded={showTransactionContext} aria-controls="bp-transaction-context">Select transaction context</button>
+        {showTransactionContext ? <section id="bp-transaction-context" aria-label="Transaction context"><AccessScopeCard requiredCoordinates={requiredCoordinates} /></section> : null}
         <EntityRecord360Panel
           key={key}
           panel={panel}

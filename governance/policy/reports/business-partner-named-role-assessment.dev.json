@@ -1,0 +1,967 @@
+{
+  "schemaVersion": 1,
+  "kind": "named_role_review_assessment",
+  "candidateCount": 79,
+  "unresolvedRows": 79,
+  "obsoleteRows": [],
+  "namedRoleReviewComplete": false,
+  "targetRoleCoverageQualified": false,
+  "approvedAssignments": [],
+  "grantChanges": [],
+  "activationEligible": false,
+  "applySupported": false,
+  "rows": [
+    {
+      "candidateId": "c5fc0344b104188b0f32c3c8b9f064422eeba61b824cb2299e2b89b641d9f993",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "aba771061de0e4fe1548c2448a79ffc77d56be615e3d511b6023d63d38b62863",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e221e9cd8758c577ab881e9e47f1352667c499cc836d75275827864dca393520",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "f318d2c82c6e38800e7431cea2eec6ea45e316800c462d5f98290ec06702da33",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "a69b2903c1217e622844ea9ecf97ce0fb784be9e25a3b84c0637d15774be3889",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "d4fa1c2f40c5484b569ffd58dde36e59ff15163047d1bfe5310ae49158abc5c5",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "0925060788a5fe9cdbb28e9a5a3ff632347d3727587a44111fa443aae1ee2dbe",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "fa8423f0f1c5f37bd52d6af3b9ada3f64b0b0bfc080df27aede7c0b1c23dc03c",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "ada6c3f661a5caa559d3f50660dfa14ad10210add769e1ebd194065e899de084",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "e55f9af7df54f179771fb265ddec776bc34cb962520b743ef62e2da306e63a16",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "f1ec47430cfe74219bbb3b717a20e192c49390b8bd1db7227c9b1f2767c3e809",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "cc42872c3673b0e8d697539357b9f50866482b29caa7f8093e2802ab70fd5268",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e101bc6f0177aa615754122db001d0de020361f48f9ff12bdf3726c8b8e08676",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "cc7dc63ac60cc1baf1b1b4c062b0d536c4191ac963eac23592b3448b1578b7a7",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "6457c055abc355fcc533f73da2112a17a24d73aa2aeff12aef57212829da52a2",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2b3ca669a65c69077c5fff527649822c1c344d90293cb16a81b6dcaa218e23dd",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "5ba7251e0bfca31122d238209e156917faa6dbf1d6832f277be9eeb8182ab63e",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "1714197f9b840b4e3e50204769a52c8811684595845ddbd6789150146c8ef16f",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e7e1a81b7f04e46729e9afa138c7e6e15a581221f7100aba00b9b323815f0b50",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "052ddffc2ad2d53db4661a855476ab5a847b66e86bbe854fad976fd453573675",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "3e2a198bacfb9cec26843152a71535ed6d106795f50dc52277415190b26acc8d",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "c91a94721f030e70448051c14d4008e658692e163953c3eafef4511e22506bf6",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "49c4ebb2bbac48da3a02fcc6a47d44d19f27609831921e40a44dd220bedcefc5",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "20218000c41bb17ff5d6d1c8964ca18d5e48a1f8438419f3fa8256753090135c",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "8433694c1eb66dd71c7442c35e0e887062ca71f691afbad2764abfe81108f41c",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "8b5196776953de8175fddb7164cf577286e4b565e16e73e700fb73e16498a7ce",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "91d2610cad398c077f584bec7e524b331372a2f38ea46a20fd7c559be387689c",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2a917d155c94dc435572a956101f920fb33574553e9d284d5228370b79ffeb09",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "ed04b30b6d011750cd5a6d86f0a030e6005de3b68baf7a22776cc10e2aa79d25",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "fc4739140d31ad839839888458d9a7d2b65d0914dbb88b047d2581e0ba86613b",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "095261e09b6258a4ae25c22ca21341b51eb5f782cbb4a5890f8549aba8b9e134",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "e811aa9f741800b100d4b6ce448904159f36dfc1a072491af86eceffa3ee8864",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "94a1fcfe71ecb3443670b2e2ef204ba7681aeb67650250731ba34270c5a96e24",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "732c489be62ed3f32b4d60efc697fa7029a55f80d7925d6962c219304820546c",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "fdc6b3265fe0402d7d9eec75f7f3bf2e5d67df6e2636fbfdff6f2af716327830",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "c93a2b166eec46a8849a0b2fac022c5fc9c5aa906adb4a13337b4efa65c65f0f",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "72d51aac9f43a542374bbf96bdda11fe1d1b9594f6c280c7573a36c2368d2cac",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "3f79d292df62ce3c1244186db16c52dbc43d4d769949848cd44afe9677791dcc",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "0e52f426770a418a4a6043388ed578b399bc854e3222bdc8abec457e5baa4e6a",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "25271e5e9048504cf4bbafbf406dd525f5b6e92124aeb1f517d62f2bc9c9f5b2",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "6d6abc4c262555dfe3247cd5dedae4f3700376b0f9f779d69d51f934a33a51bb",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "8ce7539466a3a35594d8b80f403181ca8e271ca4e714c08605f7ab4af48c9633",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "56c65bd1325a2b1266eefa3065e8a1feb067074c56e82bc1beedcb69e9c3d450",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "ee178642c8a6cd3f8df1d20ec305f12b6491ce7b20e29334baa0f9bf5d0cdd5a",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "c7733971cf8a4eff01c535398a0ada6949d9169f2a05bd3f38fe1b14f77f0dcf",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2e50ea9eff0655337b8b83705eb056f47653b81deac40338ada3e7d4646bde37",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e379d41f80f4ee5f8a28182e8b707a9681863d8d8fc5b7c41d5c1be5d6aea69d",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "74a0d7fe0bd49cb662456e92c2ece4910d71aff485b9e39d66155460df4c8afa",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "bf52d0df4a7c31920c4c9d6660dc88f31e11aea9c85b51bd270bfa5afb561c3e",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "930254780b27da483aac5391855b71701cb0332d641860e5513212c90d5f0f39",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "a41af090017132a91b434610e450015660cf8a69bcbf0bc0e1d1097791ca9628",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "9df835f0500e5cfee4f2c214b1193ba8e4e680931e7923a36af74c8cc1b2b129",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "1851900448e9a8f21b2bd067be81cfe9b5e37cb2557e9ae747f1dffbb6187b4e",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a992111abd29f6bad9d33d3ee4e99eb6367c9131e022181fa6d220facde3c8f8",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "4b0eb34b80051a6b5e58e5d2909487ebd1bad834481e3b413d88e010498ea38d",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a8d8d9a29d9d31827b58ac690c73148a67274c8683153e7e2b4d88cf7cb55147",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "b56f729c05443c94cafc86a20ca689921cf08122553138805d7d0d374a17b9ed",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "6d14b30dbbf18922856630cc36597c24fc30d73e63558fe8c91be5eb3ce673c3",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e9876f358d391a29ec1df26e95278ab9db466192aeb7e66d8c2661ac9969fdea",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "d752216732b85eea5255f6779e0716bab02947b76aaa77853e1de33010ebcd79",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "4e1cc6af89c40044d5d15d4369a261fa117117f598310fe7bfdeb83e15315798",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2e7f690b87466c4c7f35c617c0a1649457523eddaedcc9dda75a5f465dd8cef2",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "fd80200fc52786578650cf103288036f1e6974f640c0c4b2a0b10ed1427cbec5",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "66e0a52a601e6591c0e88899e1bf8ddecd44b5f59d718b8a10035f0451dbb5d3",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "5e0ab72b2897e266e57de5ec3280e04dd23a54c2b96b39073c7674944042606a",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "7a6758b9b2eff1f739e7b1fa56bab62c5039e1bcf541d8ca96201e3c0b8b04c5",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "0fe3164d48614b65ff7b0a3dd90c747cfc6f5e3208b01962351cc6683c712cc4",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "b20e055226f5e6caa47762320314cb9cb3898b7c198da6dff6beae20e9720bb9",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "dd66f86d563797ca171db09b94ba2e71bd0a94f857754862d9c7bc016e806a01",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a482d91e881894a7fea20e506f3438cc55faadeb5a211b2dcac4ec26f05dbb2e",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "500644ac1683bf71567b204580c5231459cde3ab21c4a0d2b2aefb179b881bcc",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "e7c8bd0cc56f4600232cd6733829d380db664954b95fcbbea31edab3923d4b70",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "ae064d9afca731e53d733e86f403f3bb087fdd754c31bf7592178665c82fcba8",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "142646170ec70da1f0be52e9cc851693981e749645767bdb45b583cd21987e6e",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "f267deb4e219b9d70089909ea6d97aa7549cdcbfe5eec8c04826cc6a2372d383",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "68fecbb19650d05fa58b1f4947984e78bb85d8def3d38547acf3c4f082705c71",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "7d1da15f22788e0b3d4bc928cb4fa2fb63056d1c77b48abec7830a4126a38ceb",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "d357d7fe312966a8751da834323bff2b78d4fc1b4c7cc39b1de50210937adb39",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "42492c561b4c3b8bc6d6dea98d77cf959925836bea340b999c7d71cef20c054a",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "b39b6d1e7eacd566a92a067baea9bc7c4f15126d2067ce78207d2e50c1e6dca6",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "4235fb6bb4a8c207168ee40df8f90e583263c0309e7c7d5ada12aff0640b311f",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "975ac2bc91da40290c008b30b790321f129d313982ab3c003cd622a914b711de",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "38ca6725a0de93ad5301899628f65f0338025c215635c190a70cb34ee0d28591",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "04929f184acc9531588bf8e750e5618e53c7b57e2694964992f88d7512191600",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "2c5de730de8b78849281687b50b50b30f527ea2b452063f987a19b56f87bce75",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a26ca3b57f46d2d2c8cdfd89beac3bfd0125b70e241d06a4cea449f8b1c6b41d",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "3bf35cb1c7874df5152cf420e21766780d2161a1c18f7aa531a22583e28816a3",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "1e55b001ded50a851f9c90e24b28d4e3865fa4406ee73d2e273a7ad6073d7a4f",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "06b4e088bf6bd2ccab3b57437893b13d1f30d69b71c220cfdeaf2b420972977f",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "9c70bf5e184e61ecdb0821b878e83356b5e18b3f2aa0c0a0a0e97812f917498f",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "165ce7915a19bf80fde65688dc6491c99bae6d405dc06c10dc8109adce549df6",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a5a60fcd3f1abc2c35905d6f552d6255edd7ff755013f01e41131c69263076f4",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "892257b679adc36d8d33ff01ebde8d50f401f734c2de178ab14a626a05802e5b",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "0a7b14b9bd325c4640568339b904221d38cc4f6b0d978e473efa9c901ebd1b62",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e03d7ae663ff1cd4fa2d4c14b1d3aecc333ed2a6c16a539a5651c914bc3d4e2f",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "9552ae601c9021b427f6f11bfc2faf95016c5261a26cf37c378df6c579f47343",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "71ffb8e15fa4d9a9847a7a94b151fda21da6317e4342034f465d8dfdb6982330",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "f245585b6e3b5d238f4702a19419419636b2a06c99130c0fd959555650f31ac8",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "d94dc7e41f8ebe6b4e18f40d3f52690c4c2b98cf7be8ce0f8d6676873588460d",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "1b8087a076ea8ab3a96f91a4b1c39aaf1db2f9213cbefba9ca65f3dbfb6211db",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "7e9dcc9a5cca38bdca7627cdf7abbfc7007e6e8808c031c347d1a25d8a364709",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "f9aa82ef732bb9f290e16cf918d767ef34355a8ae3d87a738a6a28a594d22120",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "03f8b97a73234db8483718aad3c02d06a67e7738828bba93761051ba9a3aef02",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a5bb4fccf7e23c89f03b8d0d3bd78fbecfa1e16ee61aa010854ac08ff1cb8426",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "ad109139bcd74ae0ce6aaf8509309f1c51b7fbebd57f6752f5e76d8eb5b4724e",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "89eb3c01db7c1a5b745552dffd3fa7c9923725183cad2cb25c826bf27f636f47",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "0906e51999bfb4a6c5831787d4625209c16aef9ac6f9e69bd077583d495c48e0",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a11b44e46a14314f19e8f7b24cf9d8f2c0a7b646ce13797f714f5b29a1f76ab0",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "995bd1ce27fadfceefa5f23e9a467c1dcbf93868c3885b909bd76337a9d4aa2f",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "76e2dbbd05909ec4427a937dcb053308fcfce412b9b502f6c6616b3d3442140d",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "d6fd7365d084c668518f21462348714f5a4e86c1eb46e27e600232daa5be8b16",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "4b42f75567c8de4653e56c9ff531c10cb5a512f334fddb0c815270f2f023e078",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "8507f011e998c5fa93dbfb57a9da923340bb64a626dd0714ff66f2433072969d",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2f18adec8f2f3b28b87af320b54786d9fd185eb440a1b0d39a7b064a08bc662a",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "6cbfd46cd574bdfa8f574053ad85f7c0c65610774c166d3fc1a7faf4305e0b24",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "78f960db5432bf33b8bca1bbc8bd0bfc78fb7f43aba89fc8656ce19431f22215",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "d4a4bc4c6ef255c1c9b63bc563950e06684660ea04fd22f164b45e280a110be6",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "24bedb7f2603d61ea43fef50d6f94efb8fff253b4bb862a5e8e354884dbd8554",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "326b9f68d72ea5be6036fe5c53a0caa612c8d01f1fd24344943e4b71fffbbd4e",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "ff2f3d5d2bb954590d1c21c62feaba4341ca95d6b995d769ab7ec74cbd5bf8b7",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "46f04d8ad06283465b3b34641b229118b85c2984118d4b1216c238213bffc778",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "fcdac5e06283e80f0a9f1d4848236293eb7720992a7878a4b70914d0626ba018",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "26902ddd70d6e4a640514a2afb3f16fe9ae02c817c08e531be8fc14379d7c7d1",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "ba9131d2b5de19f926e303858d86de3da03fd1dc965596e9bb13f27b3699d987",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "5f547e80b132be9f5fac9db8b1b6010670eca2d98d4e8d5fe40824f8f21ee56a",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "fadc7e7bf829eb6afdf4b56f6f118806beca30531ebaacc532403e502bc6b892",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "20e2dc4312e0f10b3f99d317378fbfa6a1e47615f36166cbb515d26a0de0d665",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "e5a3fb375b2aeefecdcb35ded25cc60896fbefe6fb5ec1068e226bf6362d2a4d",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "2291b8ee870f9124ea845e09e11d0913e54f7ab604a9b32604e696c7a6b3d0ec",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a6696cd4ed8522f5b97fb3d723faa04f65278548fa331f12d7299b0531ce960c",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "bcedaf5ec98df9b7be214442b0c51fc00c71d8f2f07a9eaf949ee70cb824cf3a",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a125569552f0ff448953e417507385f74404a73de6dd99dc67329ec2f286171d",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "1351ab401b93c7e94419fb98af7b45b015c6a6e81af97a0b973d3d88504e10f7",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "3b000537d986105a97cf67d468da69626f14299169f2470fd8083804d2164948",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "49f0d0af7e2e6fd6dc2cbcaf5853f4fd054f67f762ca6e6256173b63dfdde1b8",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "9087528393a78b9d22eca0d47d5579abe070c594bcb6e335d034914c8d613279",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "54eb36ef4148fb172d32b4ab62b64ce3738d7419a648c8a1fa0949dbd5d82126",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "367412a3b34f5eaf356e69971fd9734bfdbad724f839dcd23b62c420afa61bc5",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "d7876c4ff7dd463a6f24591a052897b03be12e266ce5878a40d2edf17755d23c",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "df7a5ae6a2c4e42c53e87b052bfa0235827472fb14f27f85a21627a7e47b21a2",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "a4a676b7d52739bdf69943991ebe71a6f67d08ab7adaf63cb2cbd3036b007805",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "2effe64f28843fe0511b32cb7cdfa84bc55a1d4d2b6854ffc7fb805b8fde1a3e",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "32b1963b08daa3ff347d2c3512bcc1f0a822a824f031766c9d7acf236dc34971",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "6b7d6463f73ab319aec730ace899ac09a2440f92d8a87276022ac42ee95113e2",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "517ca2b454935f93f207819255945687737d59826a4a35b9d72897f2a08ada98",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "543640aa0c412ff1c2783319aadf1315f24a5e56db027be821d1f5fd0a84dd0e",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "e0698257c24caaf7f6bb064659990c57c2f5efcbda9c22fc98c7c8d7fe8a39e0",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "9519dfbd51cac51b8a5a3860c55b678d4dd57f1458787c78b2aa96d0cbddf299",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "23d7aaac42a1fbeebcefaae46948f9059a5ca890d38119c6ab1b934187f26621",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "d24705b79c8dd6d740bbfb423128f33c1b3595f6dc72155bcb9e9e8190738e28",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "8bf3050729271d616281108414045ab23567cbd245f7e4b9767ddfdb8662c772",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "37b239913f69edeebbbcf3869e95ba40e9862bd4e0792b727243e2ae3efcacd1",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "b4da67570cf88bbdcdbf4b68285ab115145f09f9e1ea077a18581a95412787ae",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "48cf41ec9e71df6409bd7b463dc63fd8fe3fee12de92a722f7936a6608e9c24e",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "ed9757e8fe184b6e4e8dc008119c9c900678a397d81f8cf6be4c968795c0a201",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "a3ac90081283b53eeca9731e7c1cde55350d73f4f9e81c7afb8a081856c3c4be",
+      "decision": "pending"
+    },
+    {
+      "candidateId": "b9f314c6a9e4589996f87f8247c9ef17b853a3f391dfa006e5bf040d7f5a7632",
+      "resolved": false,
+      "gates": [
+        "decision_pending",
+        "retention_or_exclusion_rationale_missing",
+        "business_approval_missing_or_stale",
+        "security_approval_missing_or_stale"
+      ],
+      "proposalSha256": "60ca66b63dd36dd658037d90d1a1a047d73112fbba9f02811daff21490e92aab",
+      "decision": "pending"
+    }
+  ],
+  "generatedAt": "2026-09-09T17:59:11.378Z",
+  "inventoryPath": "governance/policy/reports/business-partner-role-review.named.dev.json",
+  "packetPath": "governance/policy/reviews/business-partner-named-role-review.dev.json",
+  "sourceSha256": "2cf94f7cf0d700b68de6c0ce41e5384149f7fc5af25f202c7a721db12b674b09"
+}

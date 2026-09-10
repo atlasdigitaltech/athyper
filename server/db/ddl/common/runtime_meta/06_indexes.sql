@@ -43,3 +43,10 @@ CREATE UNIQUE INDEX runtime_entity_descriptor_active_uq
     NULLS NOT DISTINCT WHERE status = 'active';
 CREATE INDEX runtime_applied_release_payload_lookup_idx
     ON runtime_meta.applied_release_payload (tenant_id, artifact_kind, generated_at DESC);
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection
+CREATE UNIQUE INDEX experience_surface_projection_active_uq ON runtime_meta.experience_surface_projection USING btree (tenant_id, surface_key, layer) WHERE (status = 'active'::text);
+
+CREATE INDEX experience_surface_projection_lookup_idx ON runtime_meta.experience_surface_projection USING btree (tenant_id, surface_key, layer, source_revision DESC) WHERE (status = 'active'::text);
+-- END ATLAS EXPERIENCE FOUNDATION: runtime_meta.experience_surface_projection

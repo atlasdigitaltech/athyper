@@ -46,7 +46,7 @@ import type { ControlServices, ControlServiceRouteFlags, RuntimeCommandService }
 import type { AtlasToolProposalStore } from "@athyper/server-contract-ai";
 import type { AtlasA2Services, AtlasAgentRuntime, AtlasThreadService, AtlasToolService } from "@athyper/server-platform-ai";
 import type { Application } from "@athyper/server-runtime-http";
-import type { Transaction } from "kysely";
+import type { Transaction, Kysely } from "kysely";
 import type {
   NotificationChannel,
   NotificationChannelHandler,
@@ -65,6 +65,7 @@ export interface Container {
     notificationEvents?: RedisNotificationEventBus;
     sesEventSource?: SesEventSqsAdapter;
     sesEventHandler?: SesEventMessageHandler;
+    authorizationWriterDatabases?: Partial<Record<"studio" | "neon" | "mesh", Kysely<Record<string, never>>>>;
     neonDatabase?: NeonDatabaseAdapter;
     athyperDatabase?: AthyperDatabaseAdapter;
     meshDatabase?: MeshDatabaseAdapter;
@@ -121,6 +122,7 @@ export interface Container {
     masterData?: MasterDataServices;
     records?: {
       readonly lists: Pick<import("@athyper/server-service-records").EntityListService, "list">;
+      readonly surfaces?: Pick<import("@athyper/server-service-records").EntityListService, "list" | "record" | "applicationDescriptor">;
       readonly queries: RecordQueryService;
       readonly mutations: RecordMutationService;
       readonly snapshots?: RecordSnapshotService;
@@ -136,6 +138,8 @@ export interface Container {
     jobs?: JobAdministration;
     numbering?: NumberingService;
     businessPartnerRequests?: BusinessPartnerRequestService;
+    businessPartnerGovernedImport?: ReturnType<typeof import("./business-partner-bound-import.js").createBusinessPartnerBoundImport>;
+    businessPartner360?: import("@athyper/server-contract-master-data").BusinessPartner360Service;
     workforce?: WorkforceService;
     businessPartnerInvitations?: BusinessPartnerInvitationService;
     businessPartnerAtlasInsights?: import("@athyper/server-contract-ai").AtlasBusinessPartnerInsightOwner;

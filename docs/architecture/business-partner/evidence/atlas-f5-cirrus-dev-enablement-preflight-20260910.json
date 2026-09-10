@@ -1,0 +1,125 @@
+{
+  "capturedAt": "2026-09-09T19:32:50.910058+00:00",
+  "environment": "dev",
+  "tenant": {
+    "code": "cirrusatlantic",
+    "id": "44444444-4444-4444-8444-444444444444"
+  },
+  "mode": "read-only deployment preflight; no live changes",
+  "currentDescriptor": {
+    "entityCode": "business_partner",
+    "plane": "neon",
+    "releaseId": "42213535-3b6c-4c11-8877-1fe2b5142a42",
+    "compiledHash": "671ec9e727e3b368c96df71df78c7ea5a23ddaedbc4cf0477c1191ec6e44f7f7",
+    "ai": null,
+    "readPermission": "neon.relationship.business_partner.read"
+  },
+  "proposedAi": {
+    "schemaVersion": 1,
+    "enabled": true,
+    "aliases": [
+      "Business partner",
+      "Supplier",
+      "Customer"
+    ],
+    "description": "Saved Business Partner identity and authorized owner sections",
+    "summaryFieldKeys": [
+      "code",
+      "display_name",
+      "status",
+      "partner_category"
+    ],
+    "searchFieldKeys": [
+      "code",
+      "display_name"
+    ],
+    "relationshipKeys": [],
+    "contextKinds": [
+      "record",
+      "manage"
+    ],
+    "insightProviders": [
+      {
+        "id": "entity_read_record",
+        "version": 1
+      },
+      {
+        "id": "bp_read_summary",
+        "version": 1
+      },
+      {
+        "id": "bp_read_contacts",
+        "version": 1
+      },
+      {
+        "id": "bp_read_addresses",
+        "version": 1
+      },
+      {
+        "id": "bp_read_brief",
+        "version": 1
+      },
+      {
+        "id": "bp_explain_readiness",
+        "version": 1
+      },
+      {
+        "id": "bp_check_eligibility",
+        "version": 1
+      },
+      {
+        "id": "bp_explain_case_validation",
+        "version": 1
+      },
+      {
+        "id": "bp_explain_case_diff",
+        "version": 1
+      },
+      {
+        "id": "bp_read_list_insights",
+        "version": 1
+      }
+    ],
+    "actions": [
+      {
+        "id": "open_record",
+        "version": 1,
+        "operationKey": "read"
+      }
+    ],
+    "presentationProfiles": [
+      {
+        "id": "record_brief",
+        "version": 1
+      },
+      {
+        "id": "list_brief",
+        "version": 1
+      }
+    ]
+  },
+  "publicationMethod": "Normal Studio authoring, independent review, signed publication and target activation; never edit active projections",
+  "targetSelection": {
+    "businessPartnerId": null,
+    "attachmentId": null,
+    "principalId": null
+  },
+  "findings": [
+    "CirrusAtlantic read operation is published but AI metadata is absent",
+    "Existing CirrusAtlantic attachment links are atlas.prompt; no Business Partner attachment link selected",
+    "DEV Neon knowledge source count is zero",
+    "Deployed API has no built-in attachment admission adapter",
+    "API startup passes empty AI dependencies to registerServices, selecting local-only composition; full-provider knowledge operations are not instantiated"
+  ],
+  "requiredWork": [
+    "Identify BP, intended user and BP document or explicitly requested synthetic fixture",
+    "Prepare and publish reviewed Meta Entity AI definition through Studio",
+    "Wire an index and ingestion owner into the deployed local runtime or configure full AI composition; rebuilding alone is insufficient",
+    "Deploy qualified changes without overwriting unrelated concurrent deployment work",
+    "Upload/link through authorized attachment lifecycle; verify scan and extraction",
+    "Verify narrow effective parent/attachment permissions for selected user",
+    "Register source and ingest exact extracted text with attachment.id:sha256 version",
+    "Verify authorized retrieval, revocation, stale/deleted exclusion and retain live receipts"
+  ],
+  "liveChanges": []
+}

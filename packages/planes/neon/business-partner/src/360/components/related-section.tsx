@@ -1,3 +1,4 @@
+import { useBusinessPartnerActionHandlers } from "./governed-action";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   useApiClient,
@@ -25,6 +26,7 @@ export function RelatedSection({
   compact?: boolean;
   summaryFooter?: ReactNode;
 }) {
+  const actionHandlers = useBusinessPartnerActionHandlers();
   const http = useApiClient(),
     identity = useSessionIdentity(),
     { summary, roleLens } = useBusinessPartner360();
@@ -224,7 +226,8 @@ export function RelatedSection({
             hideScope
             summaryFooter={summaryFooter}
             restrictedFields={section.redactions.map((r) => r.fieldCode)}
-            actions={summary.recordHeader?.relatedActions}
+            actions={summary.completeness.readOnly ? [] : summary.recordHeader?.relatedActions}
+            actionHandlers={actionHandlers}
           />
         );
         return compact ? (

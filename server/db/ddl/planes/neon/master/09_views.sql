@@ -83,6 +83,13 @@ CREATE INDEX mv_cpa_class_idx
 COMMENT ON MATERIALIZED VIEW master.mv_company_postable_account IS
   'Cached company-postable account set used by finance readiness and configuration. Refresh through master.fn_refresh_mv_cpa after chart/control mutations.';
 
+-- The underlying cache contains every tenant. Only this filtered projection is
+-- available to application roles; materialized views do not enforce table RLS.
+CREATE OR REPLACE VIEW master.v_company_postable_account
+WITH (security_barrier = true) AS
+SELECT * FROM master.mv_company_postable_account
+WHERE tenant_id = shared.current_tenant_id_soft();
+
 CREATE OR REPLACE VIEW master.v_bank_account_resolved
 WITH (security_barrier = true)
 AS

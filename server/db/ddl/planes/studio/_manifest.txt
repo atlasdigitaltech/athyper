@@ -239,4 +239,6 @@ planes/studio/trustiam/12_identity_replay_approval.sql
 common/authz/13_management.sql
 common/control/14_admin_integrations.sql
 common/control/15_lookup_reference_governance.sql
+common/master/19_entity_saved_views.sql
+planes/studio/metadata/12_baseline_import.sql
 common/shared/99_security_definer_hardening.sql

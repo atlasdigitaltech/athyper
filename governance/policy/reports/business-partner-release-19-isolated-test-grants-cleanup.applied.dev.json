@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_19_isolated_test_grant_cleanup",
+  "capturedAt": "2026-09-10T07:57:38.102Z",
+  "proposalRevision": "a4ef0dbcc40af46758034a70698463b5f6ec9bfbbe07a43497eefad1fe5c9176",
+  "assignmentsRevoked": 3,
+  "membershipsRevoked": 3,
+  "applied": true,
+  "rollbackRehearsal": false,
+  "oldGrantsRestored": false,
+  "activationAuthorized": false,
+  "isolatedOnly": true,
+  "sharedDevChanged": false
+}

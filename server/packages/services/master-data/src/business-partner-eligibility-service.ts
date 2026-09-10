@@ -37,6 +37,17 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
   readonly onboardingCycles?: Pick<import("./business-partner-onboarding-cycle.js").BusinessPartnerOnboardingCycleCoordinator<Transaction>,"advanceForBusinessPartner">;
 }): BusinessPartnerEligibilityService {
   return {
+    async preflightQualification(query) {
+      assertContext(query.context);
+      if (query.historical) return "workflow_blocked";
+      if (!query.businessPartnerId || !query.operatingOrganizationId || !options.repository.qualificationTargetReady)
+        return "not_applicable";
+      return options.transactions.run("neon", actor(query.context), async transaction =>
+        await options.repository.qualificationTargetReady!({tenantId: query.context.tenantId,
+          businessPartnerId: query.businessPartnerId, operatingOrganizationId: query.operatingOrganizationId,
+          ...(query.companyCodeId ? {companyCodeId: query.companyCodeId} : {})}, transaction)
+          ? "allowed" : "not_applicable");
+    },
     async resolve(query) {
       assertContext(query.context);
       validateDate(query.businessDate, "businessDate");
@@ -225,6 +236,8 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
         businessPartnerQualificationPermissions.manage,
         {
           ...scope(command.operatingOrganizationId, command.companyCodeId),
+          businessPartnerId: command.businessPartnerId,
+          operationKey: command.companyCodeId ? "qualification_company" : "qualification",
           qualificationControl: true,
           makerCheckerEnforced: true,
         },
@@ -321,6 +334,11 @@ export function createBusinessPartnerEligibilityService<Transaction>(options: {
             businessPartnerQualificationPermissions.manage,
             {
               ...scope(current.operatingOrganizationId, current.companyCodeId),
+              businessPartnerId: current.businessPartnerId,
+              qualificationId: current.id,
+              // Existing child decisions cannot use proposed-resource creation
+              // authority. Until explicitly bound, target enforcement denies.
+              operationKey: "qualification_decide",
               qualificationControl: true,
               makerCheckerEnforced: true,
               createdBy: current.createdBy,
@@ -1279,6 +1297,7 @@ async function authorize(
     context,
     permissionCode,
     resource,
+    ...(permissionCode === businessPartnerQualificationPermissions.manage ? { observation: { entityCode: "business_partner", surface: "command" as const, phase: "execute" as const } } : {}),
   });
   if (!decision.allowed)
     throw new MasterDataError(

@@ -2,7 +2,7 @@
 
 BP-AI-01 adds an optional `ai` extension to `EntityRuntimeDescriptor`. Author it once on an active Meta Entity surface at `layoutConfig.ai`. Studio validates it during graph validation and compilation, includes it in the deterministic artifact, and runtime metadata parsing validates it again against the published fields, operations and plane.
 
-This is a capability declaration, not a permission grant or a tool installation. Atlas page-context transport, generated response components and new BP insight tools are subsequent work packages. Existing explicit Atlas tools retain their admission behavior when AI metadata is absent.
+This is a capability declaration, not a permission grant or a tool installation. Atlas F2 consumes this declaration through the generic runtime described in [the F2 runbook](../runbooks/atlas-f2-generic-capabilities.md). Existing explicit Atlas tools retain their admission behavior when AI metadata is absent.
 
 ## Example
 
@@ -33,6 +33,7 @@ All array properties and `enabled` are required; `description` is optional. An e
 - `summaryFieldKeys` must reference active fields. `searchFieldKeys` must reference active searchable fields. Neither permits accessing the values without authorization.
 - `relationshipKeys` initially supports reference-field keys or an explicitly published `collectionRelationship.sourceRef`. Arbitrary graph relations without a runtime relationship contract remain unsupported. Traversal still requires future owner adapters and independent authorization.
 - `bp_read_summary`, `bp_read_brief`, `bp_explain_readiness`, and `bp_check_eligibility` v1 are registered provider declarations. The three owner insights are documented in [BP-AI-04](atlas-business-partner-insights.md). Each provider requires the `business_partner` entity, a published read operation, record context, and NEON at the runtime boundary. Studio compilation is target-neutral; target-plane eligibility is rechecked when the runtime descriptor is parsed.
+- `entity_read_record` v1 requires a published read operation, record context and nonempty summary fields, and supports every runtime plane. `bp_read_contacts` and `bp_read_addresses` v1 require Neon Business Partner record context and an installed section owner. `bp_read_list_insights` v1 requires Neon Business Partner Manage context.
 - `open_record` v1 is the only initial action declaration and must bind the published `read` operation. It declares navigation semantics; the registered runtime resolver and user permission remain necessary. No entity operation is automatically promoted into a mutation tool.
 - Registered presentation vocabulary: `record_brief` v1 requires record context; `list_brief` and `comparison` v1 require Manage context. This registration identifies a presentation contract; it does not claim those renderers have been implemented in BP-AI-01.
 - No future duplicate, document or submission provider is accepted merely because it appears in the plan. Add a versioned catalogue entry and conformance coverage when its owner implementation is qualified. Existing `bp_submit_case` remains a separate governed Atlas tool, because its target is a case rather than the Business Partner's `read` operation.

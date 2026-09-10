@@ -1,0 +1,9 @@
+{
+  "observedAt": "2026-09-10T02:45:02.229Z",
+  "environment": "dev",
+  "plane": "neon",
+  "migration": "20260910_baseline_activation_precondition.sql",
+  "sha256": "f9fa84303487ece2f791a129853baa807136048bcdd9398368967beee8fc80ef",
+  "applied": false,
+  "runtimeHeadChanged": false
+}

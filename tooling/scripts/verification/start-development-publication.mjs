@@ -35,6 +35,7 @@ if (phase!=='secretstore') {
   if (phase==='neon-web') env.ATHYPER_IMAGE_NEON_WEB='athyper-neon-web:publication-dev';
   if (phase==='mesh-web') env.ATHYPER_IMAGE_MESH_WEB='athyper-mesh-web:publication-dev';
   files.push('compose.publication.yaml','compose.publication-local-trust.yaml');
+  if (phase==='api' || phase==='check') files.push('compose.publication-authoring.yaml');
 }
 const args=['compose','-p','athyper-dev'];
 for(const file of files)args.push('-f','deploy/compose/instance/'+file);

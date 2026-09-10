@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_causal_recapture_milestone",
+  "currentLegacyShadowRecaptureComplete": true,
+  "evidence": [
+    {
+      "path": "governance/policy/reports/business-partner-causal-shadow.admin-repeat.dev.json",
+      "sha256": "1a3d5596e42d2b7874c153cd837b8f9f1a2741376ff768ae582f97bf1a1b197c",
+      "checks": 40,
+      "observations": 1204,
+      "unavailable": 0,
+      "image": "sha256:36a599368fe8c4590b9be71b21370b379a0c40a4e35395db8eef281f7184778b",
+      "profile": "8280aeee1aebb591f12e6ad53e640b2c3cea65fc209efcdb0d349214d3e85c88"
+    },
+    {
+      "path": "governance/policy/reports/business-partner-causal-shadow.owner-qualified.dev.json",
+      "sha256": "7467a20ea2864bd2dc69fbb2b64b5728668c411c7394473e988916da72caf39c",
+      "checks": 29,
+      "observations": 482,
+      "unavailable": 0,
+      "image": "sha256:9cd6223c55c4a341e72852169d816c48d3879a9d3e2415dee9d34b8f8ce9da39",
+      "profile": "8280aeee1aebb591f12e6ad53e640b2c3cea65fc209efcdb0d349214d3e85c88"
+    }
+  ],
+  "authenticatedChecks": 69,
+  "observations": 1686,
+  "originalUnresolvedDifferences": 29,
+  "runtimeRegistrationsComplete": false,
+  "signedArtifact": null,
+  "sameSignedReleaseQualification": false,
+  "differenceAcceptanceRecorded": false,
+  "importProposal": "docs/reviews/business-partner-governed-import-proposal.md",
+  "grantChanges": [],
+  "activationAuthorized": false
+}

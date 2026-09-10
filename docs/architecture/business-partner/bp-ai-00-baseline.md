@@ -4,6 +4,14 @@ Captured: 2026-09-08. Scope: inspected working tree and local DEV/QA deployment.
 
 **Status: BP-AI-00 complete for the DEV baseline scope, closed 2026-09-09 (Asia/Kuala_Lumpur).** The refreshed session passed authenticated citation verification, one warm-up plus 20 measured reads, a visible Atlas response check, and the R9 regression gate. No metadata was republished, permissions changed, Business Partner records mutated, or containers restarted. Benchmark conversations were created through normal Atlas APIs. Earlier blocked attempts below remain as historical evidence; future feature/persona qualification is not implied.
 
+Closure reviewed 2026-09-10: **confirmed closed for the recorded DEV baseline**.
+The [authenticated closure receipt](evidence/bp-ai-00-authenticated-20260909.json)
+records `status: passed`, 20 measured runs, browser UI success and the R9 gate.
+The [subsequent F6 pilot closure](evidence/atlas-f6-phase-closure-distributed-20260910.json)
+is separate evidence for its later deployment. Neither closure marks the entire
+[BP AI implementation plan](atlas-ai-agent-implementation-plan.md) complete.
+Inventory and benchmark values below remain historical observations.
+
 ## Deliverables and gate evidence
 
 | Exit requirement | Evidence | Status |
@@ -11,8 +19,8 @@ Captured: 2026-09-08. Scope: inspected working tree and local DEV/QA deployment.
 | Deployment inventory | Sanitized container, model, Redis and descriptor receipt | Captured |
 | Source-version discrepancy | Active DEV/QA descriptors compared with database schema, seed and gateway behavior | Resolved as a configuration discrepancy; no deployment correction applied |
 | Owner projection and disclosure matrix | Matrix below with actual permission codes and conservative initial model projection | Recorded |
-| Route contexts | Manage, record, panel and Atlas transport inventory below | Recorded from source; authenticated browser behavior pending |
-| Model budget and benchmark | Three synthetic provider measurements, precise model configuration and scope limits | Captured; application latency not measured |
+| Route contexts | Manage, record, panel and Atlas transport inventory below | Baseline inventory complete; visible Atlas response verified in section 11. Broader route/context qualification belongs to BP-AI-02 |
+| Model budget and benchmark | Three synthetic provider measurements, precise model configuration and scope limits | Provider baseline captured; authenticated single-record latency subsequently measured in section 11 |
 | Baseline fixtures | Eight synthetic contract scenarios, plus existing R9 fixture suite | Recorded; new scenarios not yet implemented as agent tests |
 | Existing regression gate | `pnpm qualify:business-partner-r9` | Passed: typecheck, 54 Atlas + 37 case + 3 publication tests |
 | Authenticated user benchmark | Refreshed NEON session, warm-up + 20 measured cited reads and Atlas panel response | Passed; see closure evidence below |
@@ -162,7 +170,7 @@ The collector performs three bounded synthetic inference requests and GET/metada
 
 The [sanitized follow-up receipt](evidence/bp-ai-00-authentication-followup.json) records the execution attempt authorized after BP-AI-01. Chromium now launches and renders the actual NEON/IAM login flow using the existing shared-library bundle. The previous browser dependency blocker is resolved for this environment.
 
-Both checked saved sessions are anonymous. Normal login with the existing private `catl.admin` test credential is rejected by IAM with “Invalid username or password.” Login attempts were stopped; credentials, permissions and authentication policy were not changed. Restoring a fresh session now requires a current test credential or a fresh authorized Playwright state, requested from the user. No authenticated timing/citation measurements were fabricated or substituted with unauthenticated/provider timings. BP-AI-00 therefore remains pending only the authenticated evidence described above.
+Both checked saved sessions are anonymous. Normal login with the existing private `catl.admin` test credential is rejected by IAM with “Invalid username or password.” Login attempts were stopped; credentials, permissions and authentication policy were not changed. Restoring a fresh session now requires a current test credential or a fresh authorized Playwright state, requested from the user. No authenticated timing/citation measurements were fabricated or substituted with unauthenticated/provider timings. At that attempt, BP-AI-00 remained pending only the authenticated evidence described above. Section 11 subsequently closed this blocker.
 
 ## 10. Automated completion runner
 
@@ -194,7 +202,7 @@ Default evidence output is a private, timestamped directory under `~/.athyper/in
 
 Expected revision kind defaults to `content_hash`, matching the captured publication; set `ATLAS_TEST_REVISION_KIND=record_version` only after the published contract actually changes. The runner parses actual SSE envelopes, binds citations to completed read calls, verifies target/entity/revision shape, and rejects failed/cancelled runs or mutation proposals. It does not accept event names merely appearing in model prose. Seven standalone tests cover these evidence checks and percentile calculation, including the valid read-only preview event observed during live execution.
 
-Execution on 2026-09-08 stopped with `CURRENT_SESSION_OR_CREDENTIAL_REQUIRED` at authentication; existing states are not current and no replacement credential was supplied. This is an automated blocked result, not a completed phase. After a successful execution, review the private summary and citation receipts, incorporate sanitized timings here, and then mark the phase exit complete.
+Execution on 2026-09-08 stopped with `CURRENT_SESSION_OR_CREDENTIAL_REQUIRED` at authentication; existing states are not current and no replacement credential was supplied. That execution was a historical blocked result. The subsequent successful execution and reviewed sanitized measurements in section 11 closed the phase.
 
 ## 11. Closure evidence — 2026-09-09
 

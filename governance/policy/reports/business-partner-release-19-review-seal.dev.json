@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "kind": "bp_release_review_seal",
+  "sealedAt": "2026-09-10T04:58:10.361Z",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "packetRevision": "d78669b00d4ce71f64d5aaf0443576987055bb45c0ba2c21a1dd0275a8706e01",
+  "manifestSha256": "a2fd74a166b433db1b8af6188a2bf4df586baeac6b15f57795ad7ee4faeb62c0",
+  "directory": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-release-19-review-20260910/sealed/ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "reviewComplete": true,
+  "included": 42,
+  "deferred": 9,
+  "currentReviewerAuthorityStillRequired": true,
+  "sourceAndCatalogRecheckRequired": true,
+  "signed": false,
+  "policyDifferencesAccepted": false,
+  "grantChanges": [],
+  "activationAuthorized": false
+}

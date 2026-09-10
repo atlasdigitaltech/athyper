@@ -1,5 +1,6 @@
 -- Generated from the extracted live Atlas AI contract.
--- Regenerate with: node server/db/scripts/catalog/build-common-ai-ddl.mjs
+-- Maintained as canonical foundation DDL; use additive migrations for installed databases.
+-- Supported verification and maintenance: server/db/scripts/README.md (Atlas AI DDL).
 
 ALTER TABLE "ai"."ai_action_policy" ENABLE ROW LEVEL SECURITY;
 
@@ -666,3 +667,19 @@ CREATE POLICY actor_access ON ai.atlas_provider_usage
       AND r.principal_id = NULLIF(current_setting('app.current_principal_id', true), '')::uuid
       AND r.plane = NULLIF(current_setting('app.current_atlas_plane', true), '')
   ));
+
+
+-- BEGIN ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+ALTER TABLE ai.atlas_experience_release ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai.atlas_experience_release FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY atlas_experience_tenant_scope ON ai.atlas_experience_release USING ((tenant_id = shared.current_tenant_id_soft())) WITH CHECK ((tenant_id = shared.current_tenant_id()));
+-- END ATLAS EXPERIENCE FOUNDATION: ai.atlas_experience_release
+
+-- BEGIN ATLAS F4 LEARNING COMMON
+ALTER TABLE ai.atlas_learning_candidate ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai.atlas_learning_candidate FORCE ROW LEVEL SECURITY;
+CREATE POLICY atlas_learning_candidate_actor ON ai.atlas_learning_candidate
+ USING (tenant_id=shared.current_tenant_id() AND submitted_by=NULLIF(current_setting('app.current_principal_id',true),'')::uuid)
+ WITH CHECK (tenant_id=shared.current_tenant_id() AND submitted_by=NULLIF(current_setting('app.current_principal_id',true),'')::uuid);
+-- END ATLAS F4 LEARNING COMMON

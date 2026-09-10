@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-09-10T02:46:42.327Z",
+  "kind": "bp_qualification_readiness_database_check",
+  "checks": [
+    {
+      "name": "organization_creation_ready",
+      "passed": true
+    },
+    {
+      "name": "company_creation_ready",
+      "passed": true
+    },
+    {
+      "name": "reject_unknown_tenantId",
+      "passed": true
+    },
+    {
+      "name": "reject_unknown_businessPartnerId",
+      "passed": true
+    },
+    {
+      "name": "reject_unknown_operatingOrganizationId",
+      "passed": true
+    },
+    {
+      "name": "reject_unknown_companyCodeId",
+      "passed": true
+    }
+  ],
+  "sourceEvidence": [
+    {
+      "path": "server/packages/services/master-data/src/kysely-business-partner-eligibility-repository.ts",
+      "sha256": "7880abf3a9b147d54c86c963ea690b6ef90d16c09577df13f2ede2ebd17be3ca"
+    },
+    {
+      "path": "server/packages/services/master-data/src/business-partner-eligibility-service.ts",
+      "sha256": "88fabc889a1748a6c8dac868e61b0667ac6ac0f554f7bc57af4867003f2ae9e9"
+    },
+    {
+      "path": "server/apps/platform-host/src/composition/business-partner-qualification-runtime.ts",
+      "sha256": "1d9f073333845af98cd1e2bee1c1437d249160c5105387d5602573f040488b59"
+    }
+  ],
+  "readOnly": true,
+  "authenticatedQualification": false,
+  "exactReleaseQualified": false,
+  "grantsChanged": false,
+  "activationAuthorized": false
+}

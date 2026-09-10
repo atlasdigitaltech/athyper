@@ -41,3 +41,11 @@ it("requires one active declaration and ignores deprecated surfaces", () => {
   const deprecated = compileGraph({ ...source, surfaces: [{ ...source.surfaces![0]!, status: "deprecated" }] });
   expect(deprecated.descriptor).not.toHaveProperty("ai");
 });
+
+it.each(["business_partner", "network_relationship"])("compiles the generic record provider for %s through the same authoring path", entityCode => {
+  const config = {...ai, insightProviders: [{id: "entity_read_record", version: 1}]};
+  const source = {...graph(config), entity: {entityCode}};
+  expect(validateGraph(source).issues).toEqual([]);
+  expect(compileGraph(source).descriptor.ai).toEqual(config);
+  expect(() => compileGraph({...source, surfaces: [{...source.surfaces![0]!, layoutConfig: {ai: {...config, summaryFieldKeys: []}}}]})).toThrow("META_ENTITY_GRAPH_INVALID");
+});

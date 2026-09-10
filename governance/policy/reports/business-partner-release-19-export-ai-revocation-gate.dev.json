@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "kind": "release19_export_ai_local_revocation_gate",
+  "qualified": true,
+  "capturedAt": "2026-09-10T08:00:42.576Z",
+  "releaseId": "ba383d04-9a18-4e59-ab4e-3d9726e934c6",
+  "artifactHash": "a1b5c585802eab7c5a0c3c83b85033a066607476070bfb4e7efb3201618620fa",
+  "execution": [
+    {
+      "id": "e05b62a88eeff8941c58680d990f79a9c5eb6f078060c42715e68f3593b6ea26",
+      "image": "sha256:61686a2a5cdd813eb51466c84636835e106b17241a5e94a12dc4d56be0a89617",
+      "startedAt": "2026-09-10T07:56:22.29229067Z"
+    },
+    {
+      "id": "62274f5a127a71da0e76543ed2e32ec1304de3b938ea6074664618ff5bc0d68f",
+      "image": "sha256:61686a2a5cdd813eb51466c84636835e106b17241a5e94a12dc4d56be0a89617",
+      "startedAt": "2026-09-10T07:56:22.530088506Z"
+    }
+  ],
+  "export": {
+    "requestId": "26284a77-bb90-4420-9b87-cc1df2e91dfd",
+    "rows": 125,
+    "fields": [
+      "id",
+      "legal_name"
+    ],
+    "sha256": "6eb0741bdcd0f15cf900d07140d07aca6bf1fcfa7b2828ff89ea9ab5625ce865"
+  },
+  "ai": {
+    "tool": "entity_read_record",
+    "publishedSummaryOnly": true,
+    "authenticatedIsolatedHarness": true,
+    "fullAtlasConversationQualified": false
+  },
+  "revocation": {
+    "queuedExport": "0c1ae42c-0603-471d-be02-60a91591361a",
+    "staleQueuedContextRejected": true,
+    "newExportsDenied": true,
+    "downloadIssuanceDenied": true,
+    "recordReadDenied": true,
+    "aiRetrievalDenied": true,
+    "cloneAssignmentsRemainRevoked": true,
+    "sharedDevAuthorityUnchanged": true,
+    "continuousCrossInstanceSynchronizationQualified": false
+  },
+  "sharedDev": {
+    "releaseNo": 18,
+    "artifactHash": "95231dee569ed4f9acb9c4b180049965e96b3ba3c680e0d8b47119c01e43db96",
+    "rowVersion": 18,
+    "holdEnabled": true
+  },
+  "tests": [
+    {
+      "name": "export-regression",
+      "passed": 32,
+      "sha256": "91339ba6fb9e53a85e543a40e1fb15d2faf3e301b8d3e07948bb962111dfc605"
+    },
+    {
+      "name": "read-query-regression",
+      "passed": 41,
+      "sha256": "f5c381334e3bfa13fad2cd11f1a671e758abeafb4c372849543a16baf4d01788"
+    },
+    {
+      "name": "iam-export-tests",
+      "passed": 18,
+      "sha256": "23727568c23624844028df7a93de8a1f83accf1d15898e09c213849a03a04acd"
+    },
+    {
+      "name": "ai-retrieval-tests",
+      "passed": 10,
+      "sha256": "089e6616d453dcf89c173f6f871d3cf62304f628f82665f8162c63320d8b0412"
+    }
+  ],
+  "reportHashes": {
+    "positive": "d26e92aaca69bc2d2b6c9a82187e81bd428b10ce43877b147dfb6dfa8754b971",
+    "revocation": "da634816fdf758ab0405b578e50477f87f1946140f9629a53b0777fae535febd",
+    "bindings": "09d436c94850a3678e6e541def2a5ba3540bead8c7f608ac1db9be89bfe82a7f",
+    "deployment": "38b468f64aa4eb02cbf3a9ef0fe90beb6ff6cf04bf4efe13a2f95687ba21d84b"
+  },
+  "limitations": [
+    "Clone qualification assignments remain revoked. No access was restored.",
+    "Local live revocation including queued stale authority is qualified; continuous source-to-clone synchronization is not.",
+    "Previously minted presigned object URLs retain their bounded TTL; subsequent download URL issuance is denied.",
+    "AI scope is the real entity_read_record handler and Records gateway invoked through an authenticated isolated harness, not an Atlas conversation."
+  ],
+  "activationAuthorized": false
+}

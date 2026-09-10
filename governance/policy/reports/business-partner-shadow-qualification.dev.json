@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-09T15:02:00.488412+00:00",
+  "environment": "dev",
+  "mode": "shadow",
+  "effectiveAuthority": "legacy",
+  "profileSha256": "1414beaf4bfe4f614682573fbb786bd75fe443d80325e2038b9904b87d9fb8b9",
+  "services": [
+    {
+      "service": "api",
+      "image": "sha256:eb78de4d9407991cc65140f22f2648f92e3f20e00cc34f2ef86b97262d6aa45d",
+      "health": "healthy",
+      "mode": "shadow"
+    },
+    {
+      "service": "worker",
+      "image": "sha256:eb78de4d9407991cc65140f22f2648f92e3f20e00cc34f2ef86b97262d6aa45d",
+      "health": "healthy",
+      "mode": "shadow"
+    },
+    {
+      "service": "scheduler",
+      "image": "sha256:eb78de4d9407991cc65140f22f2648f92e3f20e00cc34f2ef86b97262d6aa45d",
+      "health": "healthy",
+      "mode": "shadow"
+    }
+  ],
+  "resolvedObservedGaps": [
+    "neon.relationship.business_partner.create",
+    "neon.relationship.business_partner.update",
+    "neon.supplier.qualification.admin"
+  ],
+  "installedDescriptorCount": 2,
+  "unmappedInstalledOperations": 0,
+  "unmappedInstalledFields": 0,
+  "installedPermissionMismatches": 0,
+  "authorizationTablesCompared": 13,
+  "changedAuthorizationTables": [],
+  "installedDescriptorsAndGrantInventoryUnchanged": true,
+  "grantChanges": [],
+  "namedAssignments": [],
+  "tests": {
+    "shadowBoundaryAndMapping": 15,
+    "masterDataPassed": 317,
+    "masterDataSkipped": 25,
+    "typechecks": "passed"
+  },
+  "authenticatedReadQualification": false,
+  "fullMilestoneComplete": false,
+  "blocker": "Designated NEON test sessions are anonymous; issuer requires normal sign-in and no test credentials are configured.",
+  "browserReport": "governance/policy/reports/business-partner-shadow-browser.dev.json",
+  "rollbackAuditPath": "/home/chandravel_natarajan/.athyper/instances/dev/deployments/bp-shadow-qualification-20260909/audit.json",
+  "remainingEnforcementGates": [
+    "Named steward/requester review",
+    "Same-phase command and provider/independent ownership qualification",
+    "Resolution of two synthetic policy differences",
+    "Compatible release approval and eventual compatibility retirement"
+  ],
+  "supersededBy": "governance/policy/reports/business-partner-shadow-attestation.dev.json"
+}

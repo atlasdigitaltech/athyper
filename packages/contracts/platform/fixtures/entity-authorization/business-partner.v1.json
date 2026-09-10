@@ -1,0 +1,625 @@
+{
+  "schemaVersion": 1,
+  "entityCode": "business_partner",
+  "planeKey": "neon",
+  "ownership": "tenant.record.v1",
+  "directory": {
+    "operation": "discover",
+    "population": "tenant"
+  },
+  "recordReadOperation": "read",
+  "operations": [
+    {
+      "key": "enter",
+      "permissionCode": "neon.relationship.business_partner.enter",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "discover",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "navigate_manage",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "navigate_overview",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false
+    },
+    {
+      "key": "export",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": true
+    },
+    {
+      "key": "navigate_review",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "scope": "organization.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "request_supplier",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "add_role",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "amend_partner",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "assign_organization",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "configure_company",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization-company.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "change_bank",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "lifecycle",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "certification",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "import",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "tenant.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "identity_read",
+      "permissionCode": "neon.relationship.business_partner_identity.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "contacts_read",
+      "permissionCode": "neon.relationship.business_partner_contact.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "addresses_read",
+      "permissionCode": "neon.relationship.business_partner_address.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "identifier_read",
+      "permissionCode": "neon.relationship.business_partner_identifier.read_masked",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "tax_read",
+      "permissionCode": "neon.relationship.business_partner_tax.read_masked",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "bank_read",
+      "permissionCode": "neon.relationship.business_partner_bank.read_masked",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "qualification_read",
+      "permissionCode": "neon.relationship.business_partner_qualification.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "certificate_read",
+      "permissionCode": "neon.relationship.business_partner_certificate.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "credit_read",
+      "permissionCode": "neon.relationship.business_partner_credit.read",
+      "scope": "organization-company.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "requests_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "activity_read",
+      "permissionCode": "neon.relationship.business_partner_activity.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "network_read",
+      "permissionCode": "neon.relationship.business_partner_network.read",
+      "scope": "organization-company.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "comments_read",
+      "permissionCode": "collaboration.comment.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "attachments_read",
+      "permissionCode": "document.attachment.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "bank_reveal",
+      "permissionCode": "neon.relationship.business_partner_bank.reveal",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "reveal",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "tax_reveal",
+      "permissionCode": "neon.relationship.business_partner_tax.reveal",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "reveal",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "person_read",
+      "permissionCode": "neon.relationship.business_partner_person.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "person_sensitive_read",
+      "permissionCode": "neon.relationship.business_partner_person_sensitive.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "workforce_read",
+      "permissionCode": "neon.relationship.business_partner_workforce.read",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "contact_sensitive_read",
+      "permissionCode": "neon.relationship.business_partner.read_contact_sensitive",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "address_sensitive_read",
+      "permissionCode": "neon.relationship.business_partner.read_address_sensitive",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false
+    },
+    {
+      "key": "case_create",
+      "permissionCode": "neon.relationship.entity_case.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_read",
+      "permissionCode": "neon.relationship.entity_case.read",
+      "scope": "organization.record.v1",
+      "target": "collection",
+      "effect": "read",
+      "requiresParentRead": false,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_update",
+      "permissionCode": "neon.relationship.entity_case.update",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_validate",
+      "permissionCode": "neon.relationship.entity_case.validate",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_submit",
+      "permissionCode": "neon.relationship.entity_case.submit",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_decide",
+      "permissionCode": "neon.relationship.entity_case.decide",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "case_materialize",
+      "permissionCode": "neon.relationship.entity_case.materialize",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "section_propose_change",
+      "permissionCode": "neon.relationship.business_partner_amend.create",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "create",
+      "permissionCode": "neon.relationship.business_partner.create",
+      "scope": "tenant.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "update",
+      "permissionCode": "neon.relationship.business_partner.update",
+      "scope": "tenant.record.v1",
+      "target": "existing",
+      "effect": "write",
+      "requiresParentRead": true,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "qualification",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "scope": "organization.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "qualification_company",
+      "permissionCode": "neon.supplier.qualification.admin",
+      "scope": "organization-company.record.v1",
+      "target": "proposed",
+      "effect": "write",
+      "requiresParentRead": false,
+      "requiresPreflight": true,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "supplier_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "organization-company.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    },
+    {
+      "key": "customer_company_read",
+      "permissionCode": "neon.relationship.business_partner.read",
+      "scope": "organization-company.record.v1",
+      "target": "existing",
+      "effect": "read",
+      "requiresParentRead": true,
+      "requiresPreflight": false,
+      "discoveryOperation": "enter"
+    }
+  ],
+  "fieldPolicies": [
+    {
+      "key": "directory_identity",
+      "fields": [
+        "id",
+        "code",
+        "display_name",
+        "status",
+        "partner_category",
+        "registration_country_code",
+        "updated_at",
+        "name",
+        "legal_name",
+        "is_active"
+      ],
+      "readOperation": "read",
+      "representation": "plain",
+      "writeOperations": [],
+      "queryUses": [
+        "filter",
+        "sort",
+        "export"
+      ]
+    }
+  ],
+  "surfaces": [
+    {
+      "key": "app",
+      "level": "application",
+      "operation": "enter"
+    },
+    {
+      "key": "directory",
+      "level": "workspace",
+      "operation": "discover"
+    },
+    {
+      "key": "identity",
+      "level": "section",
+      "operation": "identity_read"
+    },
+    {
+      "key": "contacts",
+      "level": "section",
+      "operation": "contacts_read"
+    },
+    {
+      "key": "addresses",
+      "level": "section",
+      "operation": "addresses_read"
+    },
+    {
+      "key": "identifier",
+      "level": "section",
+      "operation": "identifier_read"
+    },
+    {
+      "key": "tax",
+      "level": "section",
+      "operation": "tax_read"
+    },
+    {
+      "key": "bank",
+      "level": "section",
+      "operation": "bank_read"
+    },
+    {
+      "key": "qualification",
+      "level": "section",
+      "operation": "qualification_read"
+    },
+    {
+      "key": "certificate",
+      "level": "section",
+      "operation": "certificate_read"
+    },
+    {
+      "key": "credit",
+      "level": "section",
+      "operation": "credit_read"
+    },
+    {
+      "key": "requests",
+      "level": "section",
+      "operation": "requests_read"
+    },
+    {
+      "key": "activity",
+      "level": "section",
+      "operation": "activity_read"
+    },
+    {
+      "key": "network",
+      "level": "section",
+      "operation": "network_read"
+    },
+    {
+      "key": "comments",
+      "level": "section",
+      "operation": "comments_read"
+    },
+    {
+      "key": "attachments",
+      "level": "section",
+      "operation": "attachments_read"
+    }
+  ],
+  "relationships": [
+    {
+      "key": "company_configuration",
+      "targetEntity": "business_partner_company",
+      "ownership": "independent",
+      "readOperation": "read"
+    }
+  ]
+}

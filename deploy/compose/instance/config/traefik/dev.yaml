@@ -1,5 +1,7 @@
 http:
   routers:
+    bp-operation-review: { rule: "Host(`neon.dev.athyper.test`) && (PathPrefix(`/mdg/operation-review`) || Path(`/api/governance/operation-review`))", entryPoints: [web], service: bp-operation-review, priority: 200 }
+    bp-role-review: { rule: "Host(`neon.dev.athyper.test`) && (PathPrefix(`/mdg/authorization-review`) || Path(`/api/governance/named-role-review`))", entryPoints: [web], service: bp-role-review, priority: 200 }
     iam: { rule: Host(`iam.dev.athyper.test`), entryPoints: [web], service: iam }
     api: { rule: Host(`api.dev.athyper.test`), entryPoints: [web], service: api-failover }
     neon: { rule: Host(`neon.dev.athyper.test`), entryPoints: [web], service: neon-failover }
@@ -12,6 +14,14 @@ http:
     objects: { rule: Host(`objects.dev.athyper.test`), entryPoints: [web], service: objects }
     fallback: { rule: PathPrefix(`/`), entryPoints: [web], service: problem, priority: 1 }
   services:
+    bp-operation-review:
+      loadBalancer:
+        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
+        servers: [{ url: http://bp-operation-review:3000 }]
+    bp-role-review:
+      loadBalancer:
+        healthCheck: { path: /livez, interval: 10s, timeout: 3s }
+        servers: [{ url: http://bp-role-review:3000 }]
     api-failover: { failover: { healthCheck: {}, service: api, fallback: problem } }
     neon-failover: { failover: { healthCheck: {}, service: neon, fallback: outage } }
     mesh-failover: { failover: { healthCheck: {}, service: mesh, fallback: outage } }

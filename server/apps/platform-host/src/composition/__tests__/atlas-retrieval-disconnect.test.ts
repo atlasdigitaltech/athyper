@@ -1,0 +1,20 @@
+import {EventEmitter} from 'node:events';
+import {expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({routes:new Map<string,Function>(),started:()=>{},signal:undefined as AbortSignal|undefined}));
+vi.mock('@athyper/server-runtime-http',()=>({defineRouteContract:(x:unknown)=>x,registerContractRoute:(_app:unknown,c:{path:string},_auth:unknown,handler:Function)=>m.routes.set(c.path,handler)}));
+vi.mock('@athyper/server-platform-ai',()=>({KyselyAtlasKnowledgeRepository:class{},AtlasKnowledgeService:class{constructor(private options:any){}search(input:any){return this.options.index.search({...input,tenantId:'tenant'});}}}));
+vi.mock('@athyper/server-service-attachments',()=>({createAttachmentRetrievalAdmission:()=>({})}));
+vi.mock('@athyper/server-adapter-search-meilisearch',()=>({createMeilisearchIndex:()=>({})}));
+vi.mock('../atlas-semantic-index.js',()=>({createAtlasSemanticIndex:()=>({search:async(_scope:unknown,_query:string,_limit:number,signal:AbortSignal)=>{m.signal=signal;m.started();signal.throwIfAborted();return await new Promise((_resolve,reject)=>signal.addEventListener('abort',()=>reject(signal.reason),{once:true}));}})}));
+import {registerAtlasAttachmentKnowledge} from '../atlas-attachment-knowledge.js';
+it.each(['request','response'])('cancels embedding on %s disconnect without writing a response',async(kind)=>{
+ const id='11111111-1111-4111-8111-111111111111';
+ registerAtlasAttachmentKnowledge({} as never,{authenticate:vi.fn(),readContext:()=>({planeKey:'neon',tenantId:'tenant',principalId:'actor'}),transactions:{},authorizer:{authorize:async()=>({allowed:true})},metadata:{getEntityDescriptor:async()=>({ai:{enabled:true},planeKey:'neon',operations:{read:{}},storage:{idField:'id'}})},records:{list:async()=>({data:[{id}]})},search:{},semantic:{}} as never);
+ const req=Object.assign(new EventEmitter(),{body:{entityCode:'business_partner',recordId:id,query:'synthetic'}});
+ const res=Object.assign(new EventEmitter(),{json:vi.fn(),status:vi.fn(),writableEnded:false});const next=vi.fn();
+ let started!:()=>void;const entered=new Promise<void>(r=>started=r);m.started=started;
+ const pending=m.routes.get('/api/atlas/knowledge/search')!(req,res,next);await entered;
+ if(kind==='request')req.emit('aborted');else res.emit('close');
+ await pending;
+ expect(m.signal?.aborted).toBe(true);expect(res.json).not.toHaveBeenCalled();expect(next).not.toHaveBeenCalled();expect(req.listenerCount('aborted')).toBe(0);expect(res.listenerCount('close')).toBe(0);
+});

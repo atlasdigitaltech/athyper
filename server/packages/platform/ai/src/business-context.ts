@@ -10,11 +10,14 @@ import type {
   RecordQueryService,
 } from "@athyper/server-contract-records";
 import { assertAtlasContext } from "./context.js";
-import { AtlasServiceError } from "./errors.js";
+import { AtlasServiceError, AtlasScopeSelectionRequiredError } from "./errors.js";
 
 export interface AtlasResolvedBusinessContext {
   readonly page: AtlasBusinessContextV1;
   readonly descriptorHash: string;
+  /** Published entity hash; descriptorHash identifies the authorized list surface. */
+  readonly entityDescriptorHash?: string;
+  readonly entityContractHash?: string;
   readonly scopeFingerprint: string;
 }
 export interface AtlasBusinessContextResolver {
@@ -48,7 +51,7 @@ export function createAtlasBusinessContextResolver(options: {
         context,
         page.entityCode,
       );
-      if (!descriptor || descriptor.planeKey !== context.planeKey)
+      if (!descriptor || descriptor.entityCode !== page.entityCode || descriptor.planeKey !== context.planeKey)
         return deny();
       // Legacy BP context transport is allowed; this does not enable any additional tools.
       if (
@@ -62,7 +65,7 @@ export function createAtlasBusinessContextResolver(options: {
         !(context.planeKey === "neon" && page.entityCode === "business_partner")
       )
         return deny();
-      // No case relationship or network-coordinate adapter is registered in this phase.
+      // Case relationships remain owner-specific. Work coordinates are validated by the Records list owner.
       if (
         page.kind === "record" &&
         page.entityCode === "business_partner" &&
@@ -70,7 +73,7 @@ export function createAtlasBusinessContextResolver(options: {
         !["all", "supplier", "customer"].includes(page.roleLens)
       )
         return deny();
-      if (page.workContext?.networkAccountId) return deny();
+      if (page.workContext?.networkAccountId && !descriptor.ai?.insightProviders.some(ref => ref.id === "entity_read_record" && ref.version === 1)) return deny();
       if (page.kind === "record" && page.caseId) {
         if (page.entityCode !== "business_partner" || !options.cases) return deny();
         try { await options.cases.read({context, requestId: page.caseId, businessPartnerId: page.recordId}); }
@@ -84,7 +87,10 @@ export function createAtlasBusinessContextResolver(options: {
           hydrateReferences: false,
         };
         if (page.kind === "record") {
-          if (
+          // Mesh admission must use the account-scoped Records owner below.
+          // The unscoped get cannot supply its required account coordinate.
+          const scopedMeshRecord = context.planeKey === "mesh" && page.entityCode === "network_relationship";
+          if (!scopedMeshRecord &&
             !(
               await options.records.get({
                 context,
@@ -108,6 +114,8 @@ export function createAtlasBusinessContextResolver(options: {
           return Object.freeze({
             page,
             descriptorHash: scoped.descriptorHash,
+            entityDescriptorHash: descriptor.compiledHash,
+          entityContractHash: descriptor.contractHash,
             scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
           });
         }
@@ -165,9 +173,12 @@ export function createAtlasBusinessContextResolver(options: {
         return Object.freeze({
           page,
           descriptorHash: scoped.descriptorHash,
+          entityDescriptorHash: descriptor.compiledHash,
+          entityContractHash: descriptor.contractHash,
           scopeFingerprint: fingerprint(scoped.scopeFingerprint, page),
         });
-      } catch {
+      } catch (error) {
+        if (error && typeof error === "object" && "code" in error && error.code === "RECORD_LIST_SCOPE_REQUIRED") throw new AtlasScopeSelectionRequiredError();
         return deny();
       }
     },
