@@ -1,26 +1,650 @@
 {
   "schemaVersion": 1,
-  "status": "candidate-preparation; committed qualification pending",
-  "baseCommit": "8cf6737d63b3e7744a61176fd5f0f3c48a65f2f9",
-  "postgres": {
-    "numTotalTests": 321,
-    "numPassedTests": 321,
+  "implementationCommit": "de2762cb4f5201291138f771b4e8315b53cda23a",
+  "source": {
+    "fileCount": 3433,
+    "sha256": "e77b8edf59081add201836d096895f43a0ec90adb4edf3541be80f21833894a7"
+  },
+  "wave0Closed": false,
+  "databaseQualification": {
+    "qualified": true,
+    "checks": 27,
+    "checksExecuted": [
+      {
+        "name": "studio: canonical DDL",
+        "status": "pass"
+      },
+      {
+        "name": "studio: seed replay, drift convergence and wrong-plane rejection",
+        "status": "pass"
+      },
+      {
+        "name": "studio: db:verify:rls",
+        "status": "pass"
+      },
+      {
+        "name": "studio: db:verify:security-definer",
+        "status": "pass"
+      },
+      {
+        "name": "studio: negative RLS disabled",
+        "status": "pass"
+      },
+      {
+        "name": "studio: negative PUBLIC function execution",
+        "status": "pass"
+      },
+      {
+        "name": "neon: canonical DDL",
+        "status": "pass"
+      },
+      {
+        "name": "neon: seed replay, drift convergence and wrong-plane rejection",
+        "status": "pass"
+      },
+      {
+        "name": "neon: db:verify:rls",
+        "status": "pass"
+      },
+      {
+        "name": "neon: db:verify:security-definer",
+        "status": "pass"
+      },
+      {
+        "name": "neon: negative RLS disabled",
+        "status": "pass"
+      },
+      {
+        "name": "neon: negative PUBLIC function execution",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: canonical DDL",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: seed replay, drift convergence and wrong-plane rejection",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: db:verify:rls",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: db:verify:security-definer",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: negative RLS disabled",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: negative PUBLIC function execution",
+        "status": "pass"
+      },
+      {
+        "name": "studio: permission FK, runtime writer denial and tenant role isolation",
+        "status": "pass"
+      },
+      {
+        "name": "neon: permission FK, runtime writer denial and tenant role isolation",
+        "status": "pass"
+      },
+      {
+        "name": "mesh: permission FK, runtime writer denial and tenant role isolation",
+        "status": "pass"
+      },
+      {
+        "name": "studio: fixtures/publication-authority.sql",
+        "status": "pass"
+      },
+      {
+        "name": "studio: ci-entity-release-contract.sql",
+        "status": "pass"
+      },
+      {
+        "name": "neon: fixtures/runtime-entity-projection.sql",
+        "status": "pass"
+      },
+      {
+        "name": "neon: business-partner-profile-projection.sql",
+        "status": "pass"
+      },
+      {
+        "name": "PgBouncer transaction stamping: commit, rollback, no-context denial and tenant switch",
+        "status": "pass"
+      },
+      {
+        "name": "required service PostgreSQL suites",
+        "status": "pass"
+      }
+    ],
+    "postgres": {
+      "numTotalTests": 321,
+      "numPassedTests": 321,
+      "numFailedTests": 0,
+      "numPendingTests": 0
+    },
+    "localAndGitHubSourceBindingsMatch": true
+  },
+  "finance": {
+    "numTotalTests": 54,
+    "numPassedTests": 54,
     "numFailedTests": 0,
     "numPendingTests": 0
   },
   "build": {
-    "successfulTasks": 106,
-    "artifacts": 6
+    "localSuccessfulTasks": 106,
+    "artifacts": [
+      {
+        "path": "apps/neon/.next/BUILD_ID",
+        "bytes": 21,
+        "sha256": "fcb13e64fc5f99fe917d541296c1c57ae87ee315adc91e78ee193d5dd1541d1d"
+      },
+      {
+        "path": "apps/studio/.next/BUILD_ID",
+        "bytes": 21,
+        "sha256": "d5dc09b726c43393f1146d8fd43da9d94ac1744942e815aa1f1e8efa9996c97b"
+      },
+      {
+        "path": "apps/mesh/.next/BUILD_ID",
+        "bytes": 21,
+        "sha256": "90734ff1ee777a220f80e2195a98abd6454188fd8952584de51c3c28df9964da"
+      },
+      {
+        "path": "server/apps/platform-host/dist/processes/api/index.js",
+        "bytes": 4577,
+        "sha256": "25e27b8f377b1c5fb58c71f27947e6af1d414f901115676b561beb22c637630f"
+      },
+      {
+        "path": "server/apps/platform-host/dist/processes/worker/index.js",
+        "bytes": 2940,
+        "sha256": "9d1b3b2d472a079f156d03a1b0fa566d6daab56c7bcc2fe5b9578d8353b6c410"
+      },
+      {
+        "path": "server/apps/platform-host/dist/processes/scheduler/index.js",
+        "bytes": 2144,
+        "sha256": "3d2f2d1fe659981e0789ee329548678eb9aa352c7b9a69f082dcb14ae6a7428d"
+      }
+    ],
+    "emptyArtifactNegativeTest": "nonzero exit observed; artifact restored"
   },
   "seedContract": {
     "files": 73,
     "unchangedBaselineFiles": 22,
     "passed": true
   },
-  "unresolved": [
-    "aggregate GitHub run pending",
-    "existing architecture/version/tsconfig policies and records authorization typecheck failure",
-    "detailed merge-rule APIs restricted; branch-summary reports protection disabled",
-    "historical full purchase-to-pay qualification not inferred from current semantic coverage"
-  ]
+  "github": {
+    "runId": 34511997375,
+    "url": "https://github.com/atlasdigitaltech/athyper/actions/runs/34511997375",
+    "headSha": "de2762cb4f5201291138f771b4e8315b53cda23a",
+    "conclusion": "failure",
+    "jobs": [
+      {
+        "name": "Build",
+        "id": 102988138806,
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup pnpm",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup Node.js 24.19.0",
+            "conclusion": "success"
+          },
+          {
+            "name": "Restore Turbo cache",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install dependencies",
+            "conclusion": "success"
+          },
+          {
+            "name": "Generate database types for this runner",
+            "conclusion": "success"
+          },
+          {
+            "name": "Build packages",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify nonempty product artifacts",
+            "conclusion": "success"
+          },
+          {
+            "name": "Retain build verification evidence",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Restore Turbo cache",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Setup Node.js 24.19.0",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Setup pnpm",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "IAM dependency readiness",
+        "id": 102988139234,
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Boot and verify live IAM dependencies",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "Quality Gate",
+        "id": 102988139244,
+        "conclusion": "failure",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup pnpm",
+            "conclusion": "success"
+          },
+          {
+            "name": "Setup Node.js 24.19.0",
+            "conclusion": "success"
+          },
+          {
+            "name": "Cache Turbo",
+            "conclusion": "success"
+          },
+          {
+            "name": "Install dependencies",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify workspace:* dependency resolution",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify deployment profiles and package boundaries",
+            "conclusion": "failure"
+          },
+          {
+            "name": "Verify UTF-8 source and architecture artifacts",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify no duplicate active package names",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify server Docker workspace manifests",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify Docker and CI pnpm pins",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Generate Prisma/Kysely types",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Check generated Kysely types are current",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Format check (advisory)",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Lint",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Typecheck",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify OpenAPI route contracts and operation IDs",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify development URL catalogue coverage",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Test URL catalogue extraction",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify server route manifest against committed legacy baseline",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify DDL service coverage policy and generated artifact",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify host capability composition agrees with DDL coverage",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Test DDL service coverage failure gates",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Test host capability composition failure gates",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify theme token integrity",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify design-system policy",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Audit raw style tokens",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Workspace tests with coverage",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Business Partner Atlas evaluations and owner gates",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Root tests and reachability",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Document-open rollout CI gates",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Workspace policy",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify CI entrypoints",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify meta-entity certification",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify records identity-boundary ratchet",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify performance phase history and legacy boundary",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify unified experience production budgets",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify unified experience cleanup inventory",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify meta-entity retirement evidence boundary",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Verify no legacy DDL schema references (Gate 3 \u2014 advisory)",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Post Cache Turbo",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Post Setup Node.js 24.19.0",
+            "conclusion": "skipped"
+          },
+          {
+            "name": "Post Setup pnpm",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Checkout",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "Three-Plane Permission Stack Verify",
+        "id": 102988139413,
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run pnpm/action-setup@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run pnpm install --frozen-lockfile",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate workflow entrypoints and their failure tests",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify strict MFA realm export",
+            "conclusion": "success"
+          },
+          {
+            "name": "Check canonical DDL plane contracts",
+            "conclusion": "success"
+          },
+          {
+            "name": "Check current seed contracts",
+            "conclusion": "success"
+          },
+          {
+            "name": "Verify authorization contract rejection and seed lint negative fixtures",
+            "conclusion": "success"
+          },
+          {
+            "name": "Current finance budget, reversal, posting and inventory semantics",
+            "conclusion": "success"
+          },
+          {
+            "name": "Retain finance verification evidence",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "RLS + Tenant Stamp Verify",
+        "id": 102988139441,
+        "conclusion": "success",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run pnpm/action-setup@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Run pnpm install --frozen-lockfile",
+            "conclusion": "success"
+          },
+          {
+            "name": "Validate workflow entrypoints",
+            "conclusion": "success"
+          },
+          {
+            "name": "Typecheck CI database runner",
+            "conclusion": "success"
+          },
+          {
+            "name": "Provision and verify disposable three-plane security and service suites",
+            "conclusion": "success"
+          },
+          {
+            "name": "Require substantive evidence from this commit",
+            "conclusion": "success"
+          },
+          {
+            "name": "Upload database evidence",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/setup-node@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run pnpm/action-setup@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "conclusion": "success"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      },
+      {
+        "name": "Screenshot Regression (PI)",
+        "id": 102988140600,
+        "conclusion": "skipped",
+        "steps": []
+      },
+      {
+        "name": "P0 Performance Baseline (Advisory)",
+        "id": 102988396526,
+        "conclusion": "skipped",
+        "steps": []
+      },
+      {
+        "name": "CI Success",
+        "id": 102989758500,
+        "conclusion": "failure",
+        "steps": [
+          {
+            "name": "Set up job",
+            "conclusion": "success"
+          },
+          {
+            "name": "Evaluate results",
+            "conclusion": "failure"
+          },
+          {
+            "name": "Complete job",
+            "conclusion": "success"
+          }
+        ]
+      }
+    ]
+  },
+  "artifactSha256": {
+    "ci-database-integrity-de2762cb4f5201291138f771b4e8315b53cda23a/database.json": "c236f0177f95b93f9d96ec31bf641961dc58448c8abd992f6f35d7e4306e722a",
+    "finance-verification/finance-tests.json": "7a5386d6afdda0c6979bd75c99a01271aeda63086cc49842bcee69b2069e5f12",
+    "build-verification/build.json": "697ed65b11726821579ebc154061625c863bcd42cfa3e267064c43b5856cc325"
+  },
+  "remaining": {
+    "aggregate": "Quality Gate and CI Success fail the existing shared frontend AI runtime dependency on @athyper/server-contract-ai; security, build and live IAM jobs passed.",
+    "mergeRules": "Branch-summary reports main unprotected and no required checks. Detailed protection/ruleset APIs return 403 (plan/visibility restriction). No settings changed.",
+    "historicalBusinessFlowQualification": "Old AP/PI/PO and source-string PC entry points are explicitly retired. Current behavior is tested; historical full purchase-to-pay parity is not inferred.",
+    "additionalLocalFindings": [
+      "workspace version-policy drift",
+      "tsconfig policy rejects existing BOMs",
+      "records authorization test returns an invalid decision shape"
+    ]
+  }
 }

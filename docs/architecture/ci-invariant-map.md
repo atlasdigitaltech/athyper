@@ -1,9 +1,9 @@
 # Wave 0 — CI verification integrity
 
-Status: repair candidate prepared. Database/service qualification passes its behavioral checks; aggregate and merge enforcement remain separately assessed below. **Not a merge-readiness attestation.**
+Status: implementation commit `de2762cb4f5201291138f771b4e8315b53cda23a` qualified locally and on GitHub for all mapped database, finance and build checks. Aggregate CI correctly fails the existing architecture boundary policy; Wave 0 merge-readiness remains open. **Not a merge-readiness attestation.**
 Owners are responsible engineering areas, not invented individual approvals.
 
-The latest disposable run executed **321 PostgreSQL tests with no failures or skips**, plus canonical DDL, catalog mutation probes, PgBouncer stamping, seed replay/drift checks and immutable Entity release tests. Production compilation completed 106 tasks and produced nonempty Neon/Studio/Mesh build IDs and API/worker/scheduler entry points. Source changed during preparation; final qualification must be repeated on the committed candidate. See the [local execution summary](../../governance/policy/reports/ci-integrity-local.json).
+The latest disposable run executed **321 PostgreSQL tests with no failures or skips**, plus canonical DDL, catalog mutation probes, PgBouncer stamping, seed replay/drift checks and immutable Entity release tests. Production compilation completed 106 tasks and produced nonempty Neon/Studio/Mesh build IDs and API/worker/scheduler entry points. The final local and GitHub runs bind the same committed source fingerprint: 27 database/PgBouncer checks, 321 PostgreSQL tests and 54 finance semantic tests passed with zero skips. See the [local execution summary](../../governance/policy/reports/ci-integrity-local.json).
 
 ## Operational baseline
 
@@ -47,17 +47,17 @@ Disposition of additional stale references: root `depcheck`, seed drift, PC refr
 
 The static permission job is independent of the broad quality job. Its independent checks continue after a check fails, preserving the job's failure status. Provisioning and DB verification remain sequential. Existing aggregate job IDs are preserved; actual GitHub merge rules must be verified separately.
 
-## Closure requirements
+## Aggregate follow-up
 
 1. Preserve the resolved fixture, role and seed contracts; complete any separately scoped historical business-flow qualification.
-2. Run all mapped checks on a frozen candidate and retain positive and negative evidence.
-3. Execute the aggregate workflow on the repaired commit; local fingerprints are not GitHub run evidence.
+2. Completed: run all mapped security checks on the frozen implementation commit and retain positive and negative evidence.
+3. Completed: [CI run 34511997375](https://github.com/atlasdigitaltech/athyper/actions/runs/34511997375) executed on the implementation commit. Build, IAM, Three-Plane and RLS jobs passed; Quality Gate and CI Success failed. Fix the actual shared-AI/server-contract dependency before expecting aggregate green.
 4. Obtain visibility into GitHub merge rules and confirm the expected status checks are required.
 
-Until then, Wave 0 is **implemented in part and unqualified**, not complete.
+The verification repair is implemented and evidenced. Aggregate green and required merge enforcement are **not established**.
 
 ## Remaining aggregate scope and enforcement
 
 The readable branch-summary API reports `main.protected=false`, protection disabled and an empty required-check list. Detailed protection, applicable-rule and ruleset endpoints still return HTTP 403 with a plan/visibility restriction. These are separate observations; no settings were changed and no ruleset contents were inferred.
 
-The committed base also fails unrelated policy/typecheck checks: the shared AI runtime imports a server contract, toolchain version declarations drift, tsconfig policy rejects existing BOMs, and an existing records authorization test returns an invalid decision shape. The repair preserves those failures; it does not enlarge package budgets, suppress diagnostics, waive protections or claim aggregate success. GitHub run results on the repair commit are the authoritative operational follow-up.
+The committed base also fails unrelated policy/typecheck checks: the shared AI runtime imports a server contract, toolchain version declarations drift, tsconfig policy rejects existing BOMs, and an existing records authorization test returns an invalid decision shape. The repair preserves those failures; it does not enlarge package budgets, suppress diagnostics, waive protections or claim aggregate success. The failed GitHub Quality Gate explicitly names the shared AI runtime/server-contract dependency. This is a substantive policy failure, not an absent verifier or an empty selection. The [checked-in execution report](../../governance/policy/reports/ci-integrity-local.json) records every job/step conclusion and artifact fingerprints.
