@@ -35,5 +35,7 @@ suite.each(planes)("governance %s plane isolation", (plane) => {
 
 async function insertConsent(client: PoolClient, input: { id: string; subjectId: string; sourceCode: string; consented: boolean }): Promise<void> {
   const tenantId = fixtures.neon.tenantId;
-  await client.query("INSERT INTO governance.channel_consent(id,tenant_id,subject_type,subject_id,channel_code,is_consented,effective_at,last_event_id,source_code,evidence) VALUES($1::uuid,$2::uuid,'principal',$3::uuid,'email',$4,now(),$5::uuid,$6,jsonb_build_object('suite','plane-boundary'))", [input.id, tenantId, input.subjectId, input.consented, randomUUID(), input.sourceCode]);
+  const eventId = randomUUID();
+  await client.query("INSERT INTO event.channel_consent_event(id,tenant_id,subject_type,subject_id,channel_code,action,source_code) VALUES($1::uuid,$2::uuid,'principal',$3::uuid,'email',$4,$5)", [eventId,tenantId,input.subjectId,input.consented ? 'granted' : 'revoked',input.sourceCode]);
+  await client.query("INSERT INTO governance.channel_consent(id,tenant_id,subject_type,subject_id,channel_code,is_consented,effective_at,last_event_id,source_code,evidence) VALUES($1::uuid,$2::uuid,'principal',$3::uuid,'email',$4,now(),$5::uuid,$6,jsonb_build_object('suite','plane-boundary'))", [input.id, tenantId, input.subjectId, input.consented, eventId, input.sourceCode]);
 }

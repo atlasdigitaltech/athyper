@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import type { RecordSnapshot, RecordSnapshotCaptureInput, RecordSnapshotRepository, RecordTransactionCoordinator, SnapshotCaptureReceipt, SnapshotReadScope } from "@athyper/server-contract-records";
 import { sql, type Transaction } from "kysely";
 import { stable } from "./snapshot-service.js";
@@ -8,7 +7,7 @@ type Tx = Transaction<Database>;
 type Row = Record<string, unknown>;
 
 export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository {
-  constructor(private readonly transactions: RecordTransactionCoordinator<Tx>, private readonly createId: () => string = randomUUID) {}
+  constructor(private readonly transactions: RecordTransactionCoordinator<Tx>) {}
 
   capture(input: RecordSnapshotCaptureInput): Promise<SnapshotCaptureReceipt> {
     // Hash and compare the exact JSON representation persisted in jsonb (including Dates).
@@ -17,37 +16,20 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
       await sql`SELECT pg_advisory_xact_lock(hashtextextended(${input.tenantId}::uuid::text || ':' || ${input.entityType} || ':' || ${input.entityId}::uuid::text, 0))`.execute(transaction);
       const previous = await this.latestIn(input.tenantId, input.entityType, input.entityId, transaction);
       if (previous && sameCapture(previous, input)) return { kind: "replayed", snapshot: previous };
-      const id = this.createId();
-      const capturedAt = new Date().toISOString();
-      const chainSequence = (previous?.chainSequence ?? 0) + 1;
-      // Use the same JSONB canonicalization and evidence function as the payload trigger.
-      const payloadJson = JSON.stringify(input.payload);
-      const evidence = await sql<{ payload_hash: string; payload_size_bytes: number | string }>`
-        SELECT snapshot.fn_compute_entity_snapshot_hash(
-          ${input.tenantId}::uuid, ${input.entityType}, ${input.entityId}::uuid,
-          ${chainSequence}::integer, 1, ${input.entityContractHash}, ${input.captureEvent},
-          ${input.captureKind}::snapshot.capture_kind_d, ${payloadJson}::jsonb,
-          ${previous?.id ?? null}::uuid, ${previous?.payloadHash ?? null}
-        ) AS payload_hash, octet_length((${payloadJson}::jsonb)::text) AS payload_size_bytes
-      `.execute(transaction);
-      const payloadHash = evidence.rows[0]!.payload_hash;
-      const payloadSizeBytes = Number(evidence.rows[0]!.payload_size_bytes);
-      const inserted = await sql<Row>`
-        INSERT INTO snapshot.entity_snapshot_identity(
-          id, tenant_id, entity_type, entity_id, entity_code, version_number, payload_schema_version,
-          entity_contract_hash, source_record_version, capture_event, capture_kind, payload_hash,
-          previous_snapshot_id, previous_payload_hash, chain_seq, correlation_id, audit_event_id,
-          valid_from, valid_until, retention_class, payload_size_bytes, captured_at, captured_by, capture_source
-        ) VALUES (
-          ${id}::uuid, ${input.tenantId}::uuid, ${input.entityType}, ${input.entityId}::uuid, ${input.entityCode ?? null}, ${chainSequence}, 1,
-          ${input.entityContractHash}, ${input.sourceRecordVersion ?? null}, ${input.captureEvent}, ${input.captureKind}, ${payloadHash},
-          ${previous?.id ?? null}::uuid, ${previous?.payloadHash ?? null}, ${chainSequence}, ${input.correlationId ?? null}::uuid, ${input.auditEventId ?? null}::uuid,
-          ${input.validFrom ?? null}::timestamptz, ${input.validUntil ?? null}::timestamptz, ${input.retentionClass}, ${payloadSizeBytes}, ${capturedAt}::timestamptz,
-          ${input.principalId}::uuid, ${input.captureSource}
-        ) RETURNING *
-      `.execute(transaction);
-      await sql`INSERT INTO snapshot.entity_snapshot(tenant_id, snapshot_id, captured_at, payload_json) VALUES (${input.tenantId}::uuid, ${id}::uuid, ${capturedAt}::timestamptz, ${payloadJson}::jsonb)`.execute(transaction);
-      return { kind: "created", snapshot: snapshotRow(inserted.rows[0]!, input.payload) };
+      // Capture authority belongs to the hardened database function. Application
+      // roles only read the immutable ledger and execute this entry point.
+      const captured = await sql<{id:string}>`SELECT snapshot.fn_capture_entity(
+        ${input.entityType}, ${input.entityId}::uuid, ${input.entityCode ?? null}, 1,
+        ${input.entityContractHash}, ${input.sourceRecordVersion ?? null}::bigint,
+        ${input.captureEvent}, ${input.captureKind}::snapshot.capture_kind_d,
+        ${JSON.stringify(input.payload)}::jsonb, ${input.correlationId ?? null}::uuid,
+        ${input.auditEventId ?? null}::uuid, ${input.validFrom ?? null}::timestamptz,
+        ${input.validUntil ?? null}::timestamptz,
+        ${input.retentionClass}::snapshot.retention_class_d, ${input.captureSource}
+      ) AS id`.execute(transaction);
+      const result = await this.latestIn(input.tenantId, input.entityType, input.entityId, transaction);
+      if (!result || result.id !== captured.rows[0]?.id) throw new Error("Snapshot capture did not produce its ledger evidence");
+      return {kind:"created",snapshot:result};
     });
   }
 
@@ -63,7 +45,7 @@ export class KyselyRecordSnapshotRepository implements RecordSnapshotRepository 
   }
 
   private async latestIn(tenantId: string, entityType: string, entityId: string, transaction: Tx): Promise<RecordSnapshot | null> {
-    const result = await sql<Row>`SELECT i.*, p.payload_json FROM snapshot.entity_snapshot_identity i JOIN snapshot.entity_snapshot p ON p.tenant_id=i.tenant_id AND p.snapshot_id=i.id AND p.captured_at=i.captured_at WHERE i.tenant_id=${tenantId}::uuid AND i.entity_type=${entityType} AND i.entity_id=${entityId}::uuid ORDER BY i.chain_seq DESC LIMIT 1 FOR UPDATE OF i`.execute(transaction);
+    const result = await sql<Row>`SELECT i.*, p.payload_json FROM snapshot.entity_snapshot_identity i JOIN snapshot.entity_snapshot p ON p.tenant_id=i.tenant_id AND p.snapshot_id=i.id AND p.captured_at=i.captured_at WHERE i.tenant_id=${tenantId}::uuid AND i.entity_type=${entityType} AND i.entity_id=${entityId}::uuid ORDER BY i.chain_seq DESC LIMIT 1`.execute(transaction);
     return result.rows[0] ? snapshotRow(result.rows[0], object(result.rows[0]["payload_json"])) : null;
   }
 }

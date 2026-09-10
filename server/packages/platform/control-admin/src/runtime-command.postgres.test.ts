@@ -26,7 +26,7 @@ const db = new Kysely<Record<string, never>>({
 });
 const ddl = (name: string) =>
   readFileSync(
-    resolve(process.cwd(), "../../../db/ddl/common/ops", name),
+    resolve(import.meta.dirname, "../../../../db/ddl/common/ops", name),
     "utf8",
   );
 const run = (text: string) => sql.raw(text).execute(admin);

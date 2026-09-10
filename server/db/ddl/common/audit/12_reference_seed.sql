@@ -9,13 +9,13 @@
 -- seed-natural-key: master.audit_event_contract(code)
 -- seed-cross-file-ids: false
 -- seed-id-strategy: natural-key-only
--- seed-expected-row-count: exact:28
+-- seed-expected-row-count: exact:32
 -- seed-assertions: expected-count,orphan,uniqueness,semantic
 -- seed-demo-data: false
 
 DO $seed_plane_guard$
 BEGIN
-    IF current_setting('app.database_plane', true) NOT IN ('studio', 'neon', 'mesh') THEN
+    IF COALESCE(current_setting('app.database_plane', true), '') NOT IN ('studio', 'neon', 'mesh') THEN
         RAISE EXCEPTION '[common.audit.event-contracts] app.database_plane is missing or invalid';
     END IF;
 END $seed_plane_guard$;
@@ -421,14 +421,14 @@ INSERT INTO master.audit_event_contract (
     ARRAY['create','update']::audit.operation_d[], 'info',
     ARRAY['user','service_account','system']::audit.actor_type_d[], 'tenant', false, 'safe_values',
     65536, 1, '{"owner":"control-admin","reason_location":"new_values.reason"}'::jsonb, 'active'
-) ON CONFLICT (code) DO NOTHING;
+) ON CONFLICT (code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern, priority=EXCLUDED.priority, allowed_operations=EXCLUDED.allowed_operations, default_severity=EXCLUDED.default_severity, allowed_actor_types=EXCLUDED.allowed_actor_types, allowed_scope=EXCLUDED.allowed_scope, reason_required=EXCLUDED.reason_required, capture_mode=EXCLUDED.capture_mode, max_payload_bytes=EXCLUDED.max_payload_bytes, schema_version=EXCLUDED.schema_version, metadata=EXCLUDED.metadata, status=EXCLUDED.status WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status) ;
 
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
     allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('control_feature_override','^control\.feature_override\.(created|updated|expired)$',10,
     ARRAY['create','update']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
     'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","reason_location":"new_values.reason"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern, priority=EXCLUDED.priority, allowed_operations=EXCLUDED.allowed_operations, default_severity=EXCLUDED.default_severity, allowed_actor_types=EXCLUDED.allowed_actor_types, allowed_scope=EXCLUDED.allowed_scope, reason_required=EXCLUDED.reason_required, capture_mode=EXCLUDED.capture_mode, max_payload_bytes=EXCLUDED.max_payload_bytes, schema_version=EXCLUDED.schema_version, metadata=EXCLUDED.metadata, status=EXCLUDED.status WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status) ;
 
 -- The operator's tenant owns the audit record; the affected catalog scope is the entire plane.
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
@@ -436,11 +436,17 @@ INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed
 VALUES('control_feature_cohort','^control\.feature_cohort\.changed$',10,
     ARRAY['update']::audit.operation_d[],'info',ARRAY['user','service_account']::audit.actor_type_d[],
     'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","affected_scope":"plane","reason_location":"new_values.reason"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern, priority=EXCLUDED.priority, allowed_operations=EXCLUDED.allowed_operations, default_severity=EXCLUDED.default_severity, allowed_actor_types=EXCLUDED.allowed_actor_types, allowed_scope=EXCLUDED.allowed_scope, reason_required=EXCLUDED.reason_required, capture_mode=EXCLUDED.capture_mode, max_payload_bytes=EXCLUDED.max_payload_bytes, schema_version=EXCLUDED.schema_version, metadata=EXCLUDED.metadata, status=EXCLUDED.status WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status) ;
 
 INSERT INTO master.audit_event_contract(code,event_code_pattern,priority,allowed_operations,default_severity,
  allowed_actor_types,allowed_scope,reason_required,capture_mode,max_payload_bytes,schema_version,metadata,status)
 VALUES('control_parameter_value','^control\.parameter_value\.(created|updated|expired)$',10,
  ARRAY['create','update']::audit.operation_d[],'info',ARRAY['user','service_account','system']::audit.actor_type_d[],
  'tenant',false,'safe_values',65536,1,'{"owner":"control-admin","parameter_values":"omitted"}'::jsonb,'active')
-ON CONFLICT(code) DO NOTHING;
+ON CONFLICT(code) DO UPDATE SET event_code_pattern=EXCLUDED.event_code_pattern, priority=EXCLUDED.priority, allowed_operations=EXCLUDED.allowed_operations, default_severity=EXCLUDED.default_severity, allowed_actor_types=EXCLUDED.allowed_actor_types, allowed_scope=EXCLUDED.allowed_scope, reason_required=EXCLUDED.reason_required, capture_mode=EXCLUDED.capture_mode, max_payload_bytes=EXCLUDED.max_payload_bytes, schema_version=EXCLUDED.schema_version, metadata=EXCLUDED.metadata, status=EXCLUDED.status WHERE (master.audit_event_contract.event_code_pattern, master.audit_event_contract.priority, master.audit_event_contract.allowed_operations, master.audit_event_contract.default_severity, master.audit_event_contract.allowed_actor_types, master.audit_event_contract.allowed_scope, master.audit_event_contract.reason_required, master.audit_event_contract.capture_mode, master.audit_event_contract.max_payload_bytes, master.audit_event_contract.schema_version, master.audit_event_contract.metadata, master.audit_event_contract.status) IS DISTINCT FROM (EXCLUDED.event_code_pattern, EXCLUDED.priority, EXCLUDED.allowed_operations, EXCLUDED.default_severity, EXCLUDED.allowed_actor_types, EXCLUDED.allowed_scope, EXCLUDED.reason_required, EXCLUDED.capture_mode, EXCLUDED.max_payload_bytes, EXCLUDED.schema_version, EXCLUDED.metadata, EXCLUDED.status) ;
+
+DO $seed_runtime_contracts$ BEGIN
+ IF (SELECT count(*) FROM master.audit_event_contract WHERE code IN ('control_entitlement_override','control_feature_override','control_feature_cohort','control_parameter_value') AND status='active')<>4 THEN
+  RAISE EXCEPTION 'Expected four active control runtime audit contracts';
+ END IF;
+END $seed_runtime_contracts$;

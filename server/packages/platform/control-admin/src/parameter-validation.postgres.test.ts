@@ -15,7 +15,7 @@ const pool = new Pool({
   max: 2,
 });
 const read = (file: string) =>
-  readFileSync(resolve(process.cwd(), file), "utf8");
+  readFileSync(resolve(import.meta.dirname, "..", file), "utf8");
 const functions = read("../../../db/ddl/common/control/07_functions.sql");
 const fn = (name: string) =>
   functions.match(

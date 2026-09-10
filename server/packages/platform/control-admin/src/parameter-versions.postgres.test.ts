@@ -10,7 +10,7 @@ const pool = new Pool({
   connectionString: url ?? "postgres://disabled",
   max: 4,
 });
-const read = (p: string) => readFileSync(resolve(process.cwd(), p), "utf8");
+const read = (p: string) => readFileSync(resolve(import.meta.dirname, "..", p), "utf8");
 const functions = read("../../../db/ddl/common/control/07_functions.sql");
 const fn = (name: string) =>
   functions.match(

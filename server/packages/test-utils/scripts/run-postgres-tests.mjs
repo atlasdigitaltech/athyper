@@ -7,7 +7,7 @@ const vitestEntry = fileURLToPath(new URL("../node_modules/vitest/vitest.mjs", i
 const environment = { ...process.env };
 if (allowSkip) environment.ATHYPER_POSTGRES_LOCAL_SKIP = "true";
 
-const result = spawnSync(process.execPath, [vitestEntry, "run", "--config", "vitest.integration.config.ts"], {
+const result = spawnSync(process.execPath, [vitestEntry, "run", "--config", "vitest.integration.config.ts", ...process.argv.slice(2).filter(argument => argument !== "--allow-skip")], {
   cwd: packageRoot,
   env: environment,
   stdio: "inherit",

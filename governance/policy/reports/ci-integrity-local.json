@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate-preparation; committed qualification pending",
+  "baseCommit": "8cf6737d63b3e7744a61176fd5f0f3c48a65f2f9",
+  "postgres": {
+    "numTotalTests": 321,
+    "numPassedTests": 321,
+    "numFailedTests": 0,
+    "numPendingTests": 0
+  },
+  "build": {
+    "successfulTasks": 106,
+    "artifacts": 6
+  },
+  "seedContract": {
+    "files": 73,
+    "unchangedBaselineFiles": 22,
+    "passed": true
+  },
+  "unresolved": [
+    "aggregate GitHub run pending",
+    "existing architecture/version/tsconfig policies and records authorization typecheck failure",
+    "detailed merge-rule APIs restricted; branch-summary reports protection disabled",
+    "historical full purchase-to-pay qualification not inferred from current semantic coverage"
+  ]
+}

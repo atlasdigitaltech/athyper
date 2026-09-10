@@ -20,16 +20,8 @@ describe.skipIf(!enabled)("DDL-created plane databases", () => {
         expect(visible.rows).toEqual([{ tenant_id: fixture.tenantId, principal_id: fixture.principalId }]);
         const hidden = await client.query("SELECT 1 FROM master.tenant WHERE id=$1::uuid", [fixture.otherTenantId]);
         expect(hidden.rowCount).toBe(0);
-        const sameTenantMutation = await client.query(
-          "UPDATE master.tenant SET display_name=display_name WHERE id=$1::uuid",
-          [fixture.tenantId],
-        );
-        expect(sameTenantMutation.rowCount).toBe(1);
-        const crossTenantMutation = await client.query(
-          "UPDATE master.tenant SET display_name=display_name WHERE id=$1::uuid",
-          [fixture.otherTenantId],
-        );
-        expect(crossTenantMutation.rowCount).toBe(0);
+        // Tenant identity is owned by its dedicated writer, even within the tenant.
+        await expect(client.query("UPDATE master.tenant SET display_name=display_name WHERE id=$1::uuid", [fixture.tenantId])).rejects.toMatchObject({ code: "42501" });
       });
     });
 

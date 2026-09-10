@@ -31,7 +31,7 @@ describe.skipIf(!enabled)("finance durable PostgreSQL idempotency", () => {
       await context(actor, tx);
       return repository.execute(value, tx, async () => { applications += 1; return { resourceId: original.commandId, version: 7, output: { amount: "10.0000" } }; });
     });
-    try {
+    {
       const [left, right] = await Promise.all([execute(original), execute({ ...original, commandId: randomUUID(), actor: { ...actor, correlationId: randomUUID() } })]);
       expect([left.kind, right.kind].sort()).toEqual(["applied", "replayed"]);
       const applied = [left, right].find(result => result.kind === "applied")!;
@@ -42,12 +42,28 @@ describe.skipIf(!enabled)("finance durable PostgreSQL idempotency", () => {
       expect(replayed.output).toEqual({ amount: "10.0000" });
       expect(applications).toBe(1);
       const changed = command(actor, randomUUID(), commandCode, key, { amount: "11.0000" });
-      await expect(execute(changed)).resolves.toMatchObject({ kind: "idempotency_conflict", existingCommandId: original.commandId });
+      await expect(execute(changed)).resolves.toMatchObject({ kind: "idempotency_conflict", existingCommandId: applied.commandId });
       expect(applications).toBe(1);
-    } finally {
-      await database.transaction().execute(async tx => { await context(actor, tx); await sql`DELETE FROM event.command_execution WHERE tenant_id=${actor.tenantId}::uuid AND command_code=${commandCode}`.execute(tx); });
     }
+    // The command ledger is immutable. Its unique test records die with the
+    // disposable database; runtime DELETE must remain forbidden.
+    await expect(database.transaction().execute(async tx => { await context(actor, tx); await sql`DELETE FROM event.command_execution WHERE tenant_id=${actor.tenantId}::uuid AND command_code=${commandCode}`.execute(tx); })).rejects.toMatchObject({code:"42501"});
   });
+  it("rolls back a failed application and permits a clean retry of the same key", async () => {
+    const actor: FinanceActor = {tenantId:tenantId!,principalId:principalId!,planeKey:"neon",correlationId:randomUUID()};
+    const original=command(actor,randomUUID(),`finance.test.${randomUUID()}`,randomUUID(),{amount:"5.0000"});
+    await expect(database.transaction().execute(async tx => {
+      await context(actor,tx);
+      return repository.execute(original,tx,async () => {throw new Error("controlled finance application failure");});
+    })).rejects.toThrow("controlled finance application failure");
+    await database.transaction().execute(async tx => {
+      await context(actor,tx);
+      const rows=await sql`SELECT 1 FROM event.command_execution WHERE id=${original.commandId}::uuid`.execute(tx);
+      expect(rows.rows).toHaveLength(0);
+      expect(await repository.execute(original,tx,async () => ({resourceId:original.commandId,version:1,output:{amount:"5.0000"}}))).toMatchObject({kind:"applied"});
+    });
+  });
+
 });
 
 function command<Payload extends Readonly<Record<string, unknown>>>(actor: FinanceActor, commandId: string, commandCode: string, idempotencyKey: string, payload: Payload): FinanceCommand<Payload> {

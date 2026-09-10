@@ -39,7 +39,7 @@ async function newOwner() {
 function contactInput(o: ReturnType<typeof owner>, value = "a@example.com", isPrimary = false) {
   return { tenantId: tenant, owner: o, channelType: "email" as const, value, purpose: "default", isPrimary, effectiveFrom: from };
 }
-const ddl = (path: string) => readFileSync(resolve(process.cwd(), "../../../db/ddl", path), "utf8");
+const ddl = (path: string) => readFileSync(resolve(import.meta.dirname, "../../../../../db/ddl", path), "utf8");
 
 describe.skipIf(!enabled)("master data PostgreSQL repository", () => {
   beforeAll(async () => {
@@ -61,7 +61,7 @@ describe.skipIf(!enabled)("master data PostgreSQL repository", () => {
     const triggers = ddl("planes/neon/master/08_triggers.sql");
     for (const name of ["trg_address_link_owner_reference", "trg_contact_link_10_normalize", "trg_contact_link_20_owner_reference", "trg_contact_link_30_verification_evidence"]) await sql.raw(triggers.match(new RegExp(`CREATE TRIGGER ${name}\\s[\\s\\S]*?;`))![0]).execute(db);
     await sql.raw(`CREATE FUNCTION shared.current_tenant_id_soft() RETURNS uuid LANGUAGE sql AS $$ SELECT nullif(current_setting('app.current_tenant_id',true),'')::uuid $$; CREATE FUNCTION shared.current_tenant_id() RETURNS uuid LANGUAGE sql AS $$ SELECT shared.current_tenant_id_soft() $$; CREATE ROLE master_data_test_user; GRANT USAGE ON SCHEMA master,control,shared TO master_data_test_user; GRANT SELECT,INSERT,UPDATE ON ALL TABLES IN SCHEMA master,control TO master_data_test_user;`).execute(db);
-    await sql.raw(readFileSync(resolve(process.cwd(), '../../../db/scripts/provisioning/sql/local-master-data-authority-lock.sql'), 'utf8')).execute(db);
+    await sql.raw(readFileSync(resolve(import.meta.dirname, '../../../../../db/scripts/provisioning/sql/local-master-data-authority-lock.sql'), 'utf8')).execute(db);
     await sql.raw('REVOKE INSERT,UPDATE ON control.owner_type FROM master_data_test_user; GRANT EXECUTE ON FUNCTION control.lock_master_data_owner_registry() TO master_data_test_user;').execute(db);
     const policies = ddl("planes/neon/master/10_rls.sql");
     for (const name of ["address", "address_link", "contact_link"]) {
@@ -275,7 +275,7 @@ describe.skipIf(!enabled)("master data PostgreSQL repository", () => {
   it("completes local challenges atomically, rejects replay/changed targets/invalid tokens, and persists throttling", async () => {
     await sql.raw("CREATE TABLE master.principal(tenant_id uuid,id uuid,PRIMARY KEY(tenant_id,id));").execute(db);
     await sql`INSERT INTO master.principal VALUES (${tenant}::uuid,${principal}::uuid)`.execute(db);
-    await sql.raw(readFileSync(resolve(process.cwd(), "../../../db/scripts/provisioning/sql/local-contact-challenge.sql"),"utf8")).execute(db);
+    await sql.raw(readFileSync(resolve(import.meta.dirname, "../../../../../db/scripts/provisioning/sql/local-contact-challenge.sql"),"utf8")).execute(db);
     const challenges = new KyselyContactChallengeRepository();
     const pair=generateKeyPairSync("ed25519");
     let clock=new Date("2026-01-01T00:00:03.000Z"), denied=false, auditFails=false, outboxFails=false;

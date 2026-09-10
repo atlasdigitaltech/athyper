@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
 
 permissions:
   contents: write
@@ -49,20 +49,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify workflow entrypoints
+        run: pnpm policy:ci-entrypoints
+
       - name: Verify deployment profiles and package boundaries
         run: pnpm policy:release-boundaries
 
-      - name: Build Neon profile
-        run: pnpm --filter @athyper/neon... build
+      - name: Generate database types for release builds
+        run: pnpm --fail-if-no-match --filter @athyper/server-db run codegen
 
-      - name: Build Admin profile
-        run: pnpm --filter @athyper/admin... build
+      - name: Build Neon profile
+        run: pnpm --fail-if-no-match --filter @athyper/neon... build
+
+      - name: Build Studio profile
+        run: pnpm --fail-if-no-match --filter @athyper/studio... build
 
       - name: Build Mesh profile
-        run: pnpm --filter @athyper/mesh... build
+        run: pnpm --fail-if-no-match --filter @athyper/mesh... build
 
       - name: Build Server profile
-        run: pnpm --filter @athyper/runtime-server... build
+        run: pnpm --fail-if-no-match --filter @athyper/server-platform-host... build
+
+      - name: Verify nonempty product artifacts
+        run: pnpm verify:ci-build
 
       # - name: Upload artifacts
       #   uses: actions/upload-artifact@v4

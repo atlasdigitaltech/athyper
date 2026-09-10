@@ -35,7 +35,7 @@ const admin = connection(false), db = connection(true);
 const repo = new KyselyEntitlementRepository(db, plane);
 const tenant = randomUUID(), otherTenant = randomUUID(), actor = randomUUID(), otherActor = randomUUID();
 const from = "2090-01-01T00:00:00.000Z", until = "2091-01-01T00:00:00.000Z";
-const ddl = (path: string) => readFileSync(resolve(process.cwd(), "../../../db/ddl", path), "utf8");
+const ddl = (path: string) => readFileSync(resolve(import.meta.dirname, "../../../../db/ddl", path), "utf8");
 const table = (source: string, name: string) => source.match(new RegExp(`CREATE TABLE ${name.replaceAll(".", "\\.")} \\([\\s\\S]*?\\n\\);`))![0];
 const fn = (source: string, name: string) => source.match(new RegExp(`CREATE OR REPLACE FUNCTION ${name.replaceAll(".", "\\.")}\\([\\s\\S]*?\\$\\$;`))![0];
 const run = (statement: string) => sql.raw(statement.replace(/^\uFEFF/, "")).execute(admin);

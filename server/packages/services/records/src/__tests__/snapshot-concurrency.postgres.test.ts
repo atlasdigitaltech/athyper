@@ -31,7 +31,7 @@ describe.skipIf(!enabled)("snapshot PostgreSQL concurrency",()=>{
     const read = await repository.get({ tenantId: tenantId!, principalId: principalId!, planeKey: "neon" }, captured.snapshot.id);
     expect(read).toEqual(captured.snapshot);
     expect(read!.payload["date"]).toBe("2026-09-06T01:02:03.456Z");
-    const evidence = await sql<{ matches: boolean }>`SELECT i.payload_hash = snapshot.fn_compute_entity_snapshot_hash(i.tenant_id, i.entity_type, i.entity_id, i.version_number, i.payload_schema_version, i.entity_contract_hash, i.capture_event, i.capture_kind, p.payload_json, i.previous_snapshot_id, i.previous_payload_hash) AND i.payload_size_bytes = octet_length(p.payload_json::text) AS matches FROM snapshot.entity_snapshot_identity i JOIN snapshot.entity_snapshot p ON p.tenant_id = i.tenant_id AND p.snapshot_id = i.id AND p.captured_at = i.captured_at WHERE i.tenant_id = ${tenantId!}::uuid AND i.id = ${captured.snapshot.id}::uuid`.execute(database);
+    const evidence = await transactions.run("neon", {tenantId:tenantId!,principalId:principalId!}, tx => sql<{ matches: boolean }>`SELECT snapshot.fn_verify_entity_snapshot_hash(${captured.snapshot.id}::uuid) AS matches`.execute(tx));
     expect(evidence.rows).toEqual([{ matches: true }]);
     expect((await repository.capture(input)).kind).toBe("replayed");
     const legal = await repository.capture({ ...input, retentionClass: "legal" });

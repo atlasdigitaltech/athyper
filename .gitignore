@@ -212,3 +212,6 @@ packages-backup/
 
 # Customer-specific docs (local only)
 docs/customer/
+
+# Disposable CI verification output; reviewed summaries live under governance/.
+/artifacts/ci-integrity/

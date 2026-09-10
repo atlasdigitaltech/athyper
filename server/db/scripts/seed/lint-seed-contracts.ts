@@ -227,7 +227,7 @@ export function lintSeedSource(source: string, file = "seed.sql", activeContract
   }
 
   const ctes = cteNames(structuralSql);
-  const relationPattern = /\b(?:insert\s+into|update(?!\s+set\b)|delete\s+from|merge\s+into|from|join)\s+(?:only\s+)?([a-z_][a-z0-9_.]*)\b/gi;
+  const relationPattern = /\b(?:insert\s+into|update(?!\s+set\b)|delete\s+from|merge\s+into|from|join)\s+(?:only\s+)?(?:lateral\s+)?((?!lateral\b)[a-z_][a-z0-9_.]*)\b/gi;
   for (const match of structuralSql.matchAll(relationPattern)) {
     const name = match[1]!.toLowerCase();
     if (!name.includes(".") && !ctes.has(name) && !["excluded", "values"].includes(name)) {
@@ -246,7 +246,14 @@ export function lintSeedSource(source: string, file = "seed.sql", activeContract
         "every insert requires an explicit natural-key conflict target");
       continue;
     }
-    if (/\bon\s+conflict\b[\s\S]*?\bdo\s+nothing\b/i.test(segment.text)) {
+    // Membership rows have no mutable payload: the entire non-audit row is
+    // its natural key. DO NOTHING preserves creation evidence on replay.
+    // Keep this exception structural and restricted to the declared key-only table.
+    const membership = segment.text.match(/^insert\s+into\s+control\.owner_type_purpose\s*\(([^)]+)\)/i);
+    const membershipKeys = ["owner_type_id", "capability", "purpose_code"];
+    const conflictKeys = segment.text.match(/on\s+conflict\s*\(([^)]+)\)/i)?.[1]?.split(",").map(key => key.trim().toLowerCase());
+    const keyOnlyMembership = Boolean(membership && membership[1]!.split(",").every(column => [...membershipKeys,"created_at","created_by"].includes(column.trim().toLowerCase())) && conflictKeys?.length === 3 && membershipKeys.every(key => conflictKeys.includes(key)));
+    if (!keyOnlyMembership && /\bon\s+conflict\b[\s\S]*?\bdo\s+nothing\b/i.test(segment.text)) {
       add("convergence.do-nothing", { 0: "", index: segment.index, input: source, groups: undefined, length: 1 } as RegExpExecArray,
         "production seed convergence must update seed-owned drift, not DO NOTHING");
     }

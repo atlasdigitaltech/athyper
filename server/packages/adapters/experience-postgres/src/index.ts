@@ -20,7 +20,7 @@ export class KyselyExperiencePlaneRepository implements ExperiencePlaneRepositor
       await sql`SELECT set_config('app.current_tenant_id',${context.tenantId},true), set_config('app.current_principal_id',${context.principalId},true)`.execute(transaction);
       return work(transaction);
     };
-    return this.database.isTransaction ? scoped(this.database) : this.database.transaction().execute(scoped);
+    return this.database.isTransaction ? work(this.database) : this.database.transaction().execute(scoped);
   }
 
   async readIdentity(context: VerifiedRequestContext, at: Date): Promise<ExperienceIdentityRecord | undefined> {

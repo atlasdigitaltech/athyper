@@ -237,7 +237,13 @@
     "test:e2e:bp-r6-amendment": "bash tooling/scripts/verification/run-playwright-with-linux-deps.sh test --config=tooling/config/playwright.config.ts --project=bp-r6-amendment --output=tests/e2e/.playwright-bp-r6-amendment-output",
     "preflight:e2e:bp-r6-amendment": "node tooling/scripts/verification/preflight-business-partner-environment.mjs --slice=r6-amendment",
     "qualify:business-partner-ai": "node tooling/scripts/verification/qualify-business-partner-ai.mjs",
-    "test:business-partner-ai-qualification": "node --test tooling/scripts/verification/business-partner-ai-qualification.test.mjs"
+    "test:business-partner-ai-qualification": "node --test tooling/scripts/verification/business-partner-ai-qualification.test.mjs",
+    "policy:ci-entrypoints": "node tooling/scripts/policy/verify-ci-entrypoints.mjs",
+    "policy:ci-realm": "node tooling/scripts/policy/verify-ci-realm.mjs",
+    "test:ci-integrity": "node --test tooling/scripts/policy/verify-ci-entrypoints.test.mjs tooling/scripts/policy/verify-ci-realm.test.mjs tooling/scripts/verification/ci-integrity-evidence.test.mjs",
+    "verify:ci-build": "node tooling/scripts/verification/verify-ci-build.mjs",
+    "verify:ci-finance": "node tooling/scripts/verification/verify-ci-finance.mjs",
+    "verify:ci-database": "pnpm --fail-if-no-match --filter @athyper/server-db run test:integration:ci-integrity"
   },
   "pnpm": {
     "overrides": {
@@ -267,6 +273,7 @@
     "syncpack": "^14.3.0",
     "tsx": "^4.19.2",
     "turbo": "^2.9.6",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "yaml": "2.9.0"
   }
 }

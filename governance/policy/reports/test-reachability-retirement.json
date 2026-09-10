@@ -360,6 +360,14 @@
       "runner": "test:policy"
     },
     {
+      "path": "tooling/scripts/policy/verify-ci-entrypoints.test.mjs",
+      "runner": "test:policy"
+    },
+    {
+      "path": "tooling/scripts/policy/verify-ci-realm.test.mjs",
+      "runner": "test:policy"
+    },
+    {
       "path": "tooling/scripts/policy/verify-design-system.test.mjs",
       "runner": "test:policy"
     },
@@ -396,11 +404,23 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/atlas-baseline-adoption.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-f6-pilot.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/atlas-foundation-baseline.test.mjs",
       "runner": "test:operations"
     },
     {
       "path": "tooling/scripts/verification/atlas-inference-readiness.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/atlas-mesh-baseline.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -436,6 +456,10 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/ci-integrity-evidence.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/entity-authorization/accepted-operation-selection.test.mjs",
       "runner": "test:operations"
     },
@@ -449,6 +473,18 @@
     },
     {
       "path": "tooling/scripts/verification/entity-authorization/authenticated-role-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/case-runtime-correction.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/combined-successor.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/entity-authorization/governed-import-selection.test.mjs",
       "runner": "test:operations"
     },
     {
@@ -468,7 +504,23 @@
       "runner": "test:operations"
     },
     {
+      "path": "tooling/scripts/verification/entity-authorization/successor-difference-review.test.mjs",
+      "runner": "test:operations"
+    },
+    {
       "path": "tooling/scripts/verification/inspect-master-data-environment.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/case-bindings.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/import-policy.test.mjs",
+      "runner": "test:operations"
+    },
+    {
+      "path": "tooling/scripts/verification/isolated-execution/release-boundary.test.mjs",
       "runner": "test:operations"
     },
     {

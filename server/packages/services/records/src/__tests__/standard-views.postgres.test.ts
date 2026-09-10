@@ -6,10 +6,11 @@ import { describe, it, expect } from "vitest";
 import { createKyselyRecordRepository } from "../kysely-record-repository.js";
 import type { EntityRuntimeDescriptor } from "@athyper/server-contract-metadata";
 import type { RecordRepositoryListInput } from "@athyper/server-contract-records";
+if(process.env["ENTITY_VIEW_POSTGRES_TEST"]==="1"&&!process.env["ATHYPER_ENTITY_VIEW_TEST_CONTAINER"]) throw new Error("An explicitly owned disposable container is required");
 const enabled=process.env["ENTITY_VIEW_POSTGRES_TEST"]==="1";
 const tenant="11111111-1111-4111-8111-111111111111", principal="22222222-2222-4222-8222-222222222222", other="33333333-3333-4333-8333-333333333333";
 const literal=(value:unknown)=>value===null?"NULL":typeof value==="number"?String(value):"'"+String(value).replaceAll("'","''")+"'";
-function psql(database:string,sql:string){return execFileSync("docker",["exec","-i","-u","postgres","athyper-dev-db-1","psql","-X","-v","ON_ERROR_STOP=1","-d",database,"-At"],{input:sql,encoding:"utf8"}).trim();}
+function psql(database:string,sql:string){return execFileSync("docker",["exec","-i","-u","postgres",process.env["ATHYPER_ENTITY_VIEW_TEST_CONTAINER"]!,"psql","-X","-q","-v","ON_ERROR_STOP=1","-d",database,"-At"],{input:sql,encoding:"utf8"}).trim();}
 describe.skipIf(!enabled)("standard view PostgreSQL complete-result semantics",()=>{
  it("paginates 137 documents, deduplicates tasks and respects actor, tenant, status and request evidence",async()=>{
   const name="entity_view_test_"+randomUUID().replaceAll("-","");
@@ -38,9 +39,11 @@ describe.skipIf(!enabled)("standard view PostgreSQL complete-result semantics",(
     INSERT INTO document.entity_case_command_evidence SELECT tenant_id,id,'entity.case.submit','accepted','${principal}',2 FROM document.entity_case WHERE id=md5('2')::uuid;
     INSERT INTO snapshot.entity_snapshot SELECT tenant_id,id,jsonb_build_object('requestedRole','supplier') FROM document.entity_case;
    `);
+   psql(name,`CREATE ROLE ci_entity_view_reader NOSUPERUSER NOBYPASSRLS; GRANT USAGE ON SCHEMA document,master,snapshot TO ci_entity_view_reader; GRANT SELECT ON ALL TABLES IN SCHEMA document,master,snapshot TO ci_entity_view_reader`);
+   expect(psql(name,"SET ROLE ci_entity_view_reader; SELECT NOT rolsuper AND NOT rolbypassrls FROM pg_roles WHERE rolname=current_user")).toBe("t");
    class Driver extends DummyDriver {override async acquireConnection():Promise<DatabaseConnection>{return {executeQuery:async<R>(query:CompiledQuery)=>{
     const statement=query.sql.replace(/\$(\d+)/g,(_,index)=>literal(query.parameters[Number(index)-1]));
-    return {rows:JSON.parse(psql(name,`SELECT COALESCE(json_agg(row_to_json(result)),'[]') FROM (${statement}) result`)) as R[]};
+    return {rows:JSON.parse(psql(name,`SET ROLE ci_entity_view_reader; SELECT COALESCE(json_agg(row_to_json(result)),'[]') FROM (${statement}) result`)) as R[]};
    },streamQuery:async function*<R>(){yield {rows:[] as R[]};}};}}
    db=new Kysely({dialect:{createDriver:()=>new Driver(),createAdapter:()=>new PostgresAdapter(),createIntrospector:db=>new PostgresIntrospector(db),createQueryCompiler:()=>new PostgresQueryCompiler()}});
    const descriptor={schema:"athyper.entity-runtime-descriptor/1.0",entityCode:"any_case_list",planeKey:"neon",releaseId:"release",releaseNo:1,contractHash:"a".repeat(64),compiledHash:"b".repeat(64),storage:{schema:"document",object:"entity_case",idField:"id",tenantField:"tenant_id"},fields:[{key:"id",storagePath:"id"},{key:"status",storagePath:"status"}],operations:{}} as unknown as EntityRuntimeDescriptor;

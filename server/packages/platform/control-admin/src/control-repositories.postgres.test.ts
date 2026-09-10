@@ -780,7 +780,7 @@ describe.runIf(enabled)(
       expect(rules.length).toBeGreaterThan(0);
       expect(rules.some((r) => r.direction === "outbound")).toBe(true);
     });
-    it.runIf(plane === "studio")(
+    if (plane === "studio") it(
       "publishes bank fixtures with version checks",
       async () => {
         const railCode = "test_" + randomUUID().slice(0, 8);
@@ -823,7 +823,7 @@ describe.runIf(enabled)(
         });
       },
     );
-    it.runIf(plane === "neon")(
+    if (plane === "neon") it(
       "writes finance dispatch and releases the coordinate on retirement",
       async () => {
         const repo = repositories.rounding.require(plane),

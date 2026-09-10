@@ -12,7 +12,7 @@
     "db:generate:experience-foundation": "node scripts/checks/ddl/experience-foundation.mjs --write",
     "test:integration:experience-foundation": "node scripts/tests/integration/experience-foundation.mjs",
     "test": "tsx --test scripts/__tests__/**/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit && pnpm run typecheck:ci-integrity",
     "db:codegen:pull:neon": "node prisma/prisma-pull.mjs --target=neon --schema prisma/schema.neon.prisma --force",
     "db:codegen:pull:mesh": "node prisma/prisma-pull.mjs --target=mesh --schema prisma/schema.mesh.prisma --force",
     "db:codegen:pull:studio": "node prisma/prisma-pull.mjs --target=studio --schema prisma/schema.studio.prisma --force",
@@ -151,7 +151,9 @@
     "test:integration:identity-replay": "tsx scripts/tests/integration/identity-replay-live.mjs",
     "db:verify:business-partner-360-reads": "tsx scripts/business-partner-360/verify-business-partner-360-reads.ts",
     "test:integration:atlas-f3": "tsx scripts/tests/integration/atlas/intent-feedback.mts",
-    "test:integration:atlas-f5": "tsx scripts/tests/integration/atlas/retrieval.mts"
+    "test:integration:atlas-f5": "tsx scripts/tests/integration/atlas/retrieval.mts",
+    "test:integration:ci-integrity": "tsx scripts/tests/integration/ci-integrity.ts",
+    "typecheck:ci-integrity": "tsc -p tsconfig.ci-integrity.json --noEmit"
   },
   "dependencies": {
     "@athyper/platform-temporal": "workspace:*",

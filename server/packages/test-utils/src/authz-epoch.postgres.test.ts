@@ -6,7 +6,7 @@ const enabled = postgresServiceTestsEnabled();
 const tenantId = process.env["ATHYPER_SERVICE_TEST_TENANT_ID"];
 const principalId = process.env["ATHYPER_SERVICE_TEST_PRINCIPAL_ID"];
 if (enabled && (!tenantId || !principalId)) throw new Error("ATHYPER_SERVICE_TEST_TENANT_ID and ATHYPER_SERVICE_TEST_PRINCIPAL_ID are required");
-const harness = new PostgresServiceHarness(enabled ? loadPlaneTestDatabases() : []);
+const harness = new PostgresServiceHarness(enabled ? loadPlaneTestDatabases().map(configuration => ({...configuration, connectionString: process.env[`ATHYPER_${configuration.plane.toUpperCase()}_AUTHORIZATION_TEST_DATABASE_URL`] ?? configuration.connectionString, expectedRole: "ci_authorization_writer"})) : []);
 
 describe.skipIf(!enabled)("DDL-owned authorization epoch", () => {
   afterAll(async () => harness.close());
