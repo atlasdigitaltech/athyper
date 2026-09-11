@@ -51,6 +51,12 @@ export function extractStaticUrlRoutes(source) {
       const left = value(node.left, env, depth + 1), right = value(node.right, env, depth + 1);
       return left === undefined || right === undefined ? undefined : left === right;
     }
+    if (ts.isBinaryExpression(node) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.AmpersandAmpersandToken].includes(node.operatorToken.kind)) {
+      const left = value(node.left, env, depth + 1);
+      const right = value(node.right, env, depth + 1);
+      if (typeof left !== 'boolean' || typeof right !== 'boolean') return undefined;
+      return node.operatorToken.kind === ts.SyntaxKind.BarBarToken ? left || right : left && right;
+    }
     if (ts.isConditionalExpression(node)) {
       const condition = value(node.condition, env, depth + 1);
       return typeof condition === 'boolean' ? value(condition ? node.whenTrue : node.whenFalse, env, depth + 1) : undefined;
@@ -107,6 +113,16 @@ export function extractStaticUrlRoutes(source) {
       const expression = node.expression;
       if (ts.isElementAccessExpression(expression) && receivers.has(expression.expression.getText(file))) {
         attempted.set(node.pos, node); return;
+      }
+      // An explicit callback passed without a mount path is middleware, not an
+      // endpoint declaration. Named handlers, router mounts and dynamic arguments
+      // remain unresolved: syntax alone cannot prove what they register.
+      if (ts.isPropertyAccessExpression(expression) && receivers.has(expression.expression.getText(file)) && expression.name.text === 'use') {
+        const isCallback = (argument) => {
+          while (ts.isParenthesizedExpression(argument) || ts.isAsExpression(argument) || ts.isSatisfiesExpression(argument)) argument = argument.expression;
+          return ts.isArrowFunction(argument) || ts.isFunctionExpression(argument);
+        };
+        if (node.arguments.length > 0 && node.arguments.every(isCallback)) return;
       }
       if (ts.isPropertyAccessExpression(expression) && receivers.has(expression.expression.getText(file)) && ['route', 'all', 'use'].includes(expression.name.text)) {
         attempted.set(node.pos, node); return;

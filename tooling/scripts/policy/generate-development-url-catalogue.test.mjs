@@ -98,3 +98,42 @@ test('catalogue covers the complete Swagger snapshot, compatibility APIs, financ
   }
   assert.match(markdown, /auth.step_up_required/);
 });
+
+test('explicit callback middleware does not declare endpoints or inspect handler bodies', () => {
+  const result = extractStaticUrlRoutes(`
+    application.use((request, response, next) => { app.get(dynamicPath, handler); next(); });
+    app.use(function (request, response, next) { next(); });
+    app.use(((request, response, next) => next()) as RequestHandler);
+    app.use((req, res, next) => next(), (error, req, res, next) => next(error));
+    app.get('/health', handler);
+  `);
+  assert.deepEqual(result.unresolved, []);
+  assert.deepEqual(result.routes.map(({ method, declaredPath }) => [method, declaredPath]), [['GET', '/health']]);
+});
+
+test('router mounts and ambiguous use registrations still fail extraction', () => {
+  for (const registration of [
+    'app.use(router)', 'app.use("/api", router)', 'app.use(prefix, handler)',
+    'app.use(handler)', 'app.use()', 'app.use(...handlers)',
+    'app.use((req, res, next) => next(), router)',
+    'app.post(dynamicPath, handler)', 'app.route(dynamicPath)',
+  ]) {
+    const result = extractStaticUrlRoutes(registration);
+    assert.equal(result.unresolved.length, 1, registration);
+    assert.equal(result.routes.length, 0, registration);
+  }
+});
+
+test('finite route conditions resolve boolean combinations without guessing dynamic operands', () => {
+  const result = extractStaticUrlRoutes(`
+    for (const operation of ['list', 'get', 'review'] as const) {
+      const method = operation === 'list' || operation === 'get' ? 'get' : 'post';
+      defineRouteContract({method, path: operation === 'list' ? '/banks' : '/banks/' + operation});
+    }
+  `.replace("'/banks/' + operation", "`/banks/${operation}`"));
+  assert.equal(result.unresolved.length, 0);
+  assert.deepEqual(result.routes.map(({method, declaredPath}) => [method, declaredPath]), [
+    ['GET', '/banks'], ['GET', '/banks/get'], ['POST', '/banks/review'],
+  ]);
+  assert.equal(extractStaticUrlRoutes(`app.get(unknown || flag ? '/a' : '/b', handler)`).unresolved.length, 1);
+});

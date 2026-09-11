@@ -10,11 +10,11 @@ This catalogue covers all operations in that Swagger snapshot, additional backen
 | --- | ---: |
 | Swagger operations | 127 |
 | Swagger paths | 119 |
-| Backend method/path identities extracted from source | 503 |
-| Source identities absent from Swagger | 376 |
-| studio URL entries (including patterns) | 78 |
-| neon URL entries (including patterns) | 125 |
-| mesh URL entries (including patterns) | 64 |
+| Backend method/path identities extracted from source | 529 |
+| Source identities absent from Swagger | 402 |
+| studio URL entries (including patterns) | 80 |
+| neon URL entries (including patterns) | 133 |
+| mesh URL entries (including patterns) | 65 |
 
 ## Jump to
 
@@ -32,10 +32,10 @@ This audit checks every listed App and Runtime entry, including discovery endpoi
 
 | Origin | Method/path entries | Unique identities | Duplicate identity groups | Paths with multiple methods |
 | --- | ---: | ---: | ---: | ---: |
-| https://api.dev.athyper.test | 505 | 505 | 0 | 37 |
-| https://studio.dev.athyper.test | 82 | 82 | 0 | 1 |
-| https://neon.dev.athyper.test | 129 | 127 | 2 | 1 |
-| https://mesh.dev.athyper.test | 68 | 68 | 0 | 1 |
+| https://api.dev.athyper.test | 531 | 531 | 0 | 38 |
+| https://studio.dev.athyper.test | 84 | 84 | 0 | 1 |
+| https://neon.dev.athyper.test | 139 | 137 | 2 | 3 |
+| https://mesh.dev.athyper.test | 69 | 69 | 0 | 1 |
 
 Duplicate identities listed below represent repeated URL shapes, even when their parameter names differ. A generated entity detail template and a concrete Next.js page can describe the same endpoint; this alone does not establish conflicting handlers.
 
@@ -143,6 +143,9 @@ Base URL: [https://studio.dev.athyper.test](https://studio.dev.athyper.test). Pa
 - **GET** [/atlas-ai/providers](https://studio.dev.athyper.test/atlas-ai/providers)  
   Module — AI Provider & Model Management · [source](../../../apps/studio/lib/catalog-routes.ts)
 
+- **GET** [/atlas/learning](https://studio.dev.athyper.test/atlas/learning)  
+  Page · [source](../../../apps/studio/app/(shell)/atlas/learning/page.tsx)
+
 - **GET** [/communications](https://studio.dev.athyper.test/communications)  
   Workspace — Communications Studio · [source](../../../apps/studio/lib/catalog-routes.ts)
 
@@ -217,6 +220,9 @@ Base URL: [https://studio.dev.athyper.test](https://studio.dev.athyper.test). Pa
 
 - **GET** [/mdg](https://studio.dev.athyper.test/mdg)  
   Page · [source](../../../apps/studio/app/(shell)/mdg/page.tsx)
+
+- **GET** [/mdg/bank-directory](https://studio.dev.athyper.test/mdg/bank-directory)  
+  Page · [source](../../../apps/studio/app/(shell)/mdg/bank-directory/page.tsx)
 
 - **GET** [/mdg/business-partner](https://studio.dev.athyper.test/mdg/business-partner)  
   Page · [source](../../../apps/studio/app/(shell)/mdg/business-partner/page.tsx)
@@ -361,6 +367,15 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **POST** [/api/auth/touch](https://neon.dev.athyper.test/api/auth/touch)  
   Browser endpoint · [source](../../../apps/neon/app/api/auth/touch/route.ts)
 
+- **GET** [/api/business-partner/discover](https://neon.dev.athyper.test/api/business-partner/discover)  
+  Browser endpoint · [source](../../../apps/neon/app/api/business-partner/discover/route.ts)
+
+- **GET, POST** [/api/governance/named-role-review](https://neon.dev.athyper.test/api/governance/named-role-review)  
+  Browser endpoint · [source](../../../apps/neon/app/api/governance/named-role-review/route.ts)
+
+- **GET, POST** [/api/governance/operation-review](https://neon.dev.athyper.test/api/governance/operation-review)  
+  Browser endpoint · [source](../../../apps/neon/app/api/governance/operation-review/route.ts)
+
 - **DELETE, GET, PATCH, POST, PUT** `/api/relay/{path...}`  
   Browser endpoint · [source](../../../apps/neon/app/api/relay/[...path]/route.ts)
 
@@ -472,6 +487,9 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** [/mdg](https://neon.dev.athyper.test/mdg)  
   Page — Master Data Governance · [source](../../../apps/neon/app/(shell)/mdg/page.tsx)
 
+- **GET** [/mdg/authorization-review](https://neon.dev.athyper.test/mdg/authorization-review)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/authorization-review/page.tsx)
+
 - **GET** [/mdg/business-partner](https://neon.dev.athyper.test/mdg/business-partner)  
   Page — Business Partner Management · [source](../../../apps/neon/app/(shell)/mdg/business-partner/page.tsx)
 
@@ -489,6 +507,9 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 
 - **GET** [/mdg/business-partner/customer/new](https://neon.dev.athyper.test/mdg/business-partner/customer/new)  
   Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/customer/new/page.tsx)
+
+- **GET** [/mdg/business-partner/manage](https://neon.dev.athyper.test/mdg/business-partner/manage)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/manage/page.tsx)
 
 - **GET** [/mdg/business-partner/mesh-proposals](https://neon.dev.athyper.test/mdg/business-partner/mesh-proposals)  
   Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/mesh-proposals/page.tsx)
@@ -520,6 +541,12 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 - **GET** `/mdg/business-partner/{recordId}`  
   Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/page.tsx)
 
+- **GET** `/mdg/business-partner/{recordId}/bank-verification`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/bank-verification/page.tsx)
+
+- **GET** `/mdg/business-partner/{recordId}/banking`  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/banking/page.tsx)
+
 - **GET** `/mdg/business-partner/{recordId}/customer`  
   Page · [source](../../../apps/neon/app/(shell)/mdg/business-partner/[recordId]/customer/page.tsx)
 
@@ -540,6 +567,9 @@ Base URL: [https://neon.dev.athyper.test](https://neon.dev.athyper.test). Paths 
 
 - **GET** [/mdg/location-address](https://neon.dev.athyper.test/mdg/location-address)  
   Module — Location & Address Governance · [source](../../../apps/neon/lib/catalog-routes.ts)
+
+- **GET** [/mdg/operation-review](https://neon.dev.athyper.test/mdg/operation-review)  
+  Page · [source](../../../apps/neon/app/(shell)/mdg/operation-review/page.tsx)
 
 - **GET** [/mdg/organization-reference](https://neon.dev.athyper.test/mdg/organization-reference)  
   Module — Organization & Reference Data · [source](../../../apps/neon/lib/catalog-routes.ts)
@@ -851,6 +881,9 @@ Base URL: [https://mesh.dev.athyper.test](https://mesh.dev.athyper.test). Paths 
 
 - **GET** [/network-relationships/marketplace](https://mesh.dev.athyper.test/network-relationships/marketplace)  
   Module — Marketplace & Discovery · [source](../../../apps/mesh/lib/catalog-routes.ts)
+
+- **GET** [/network-relationships/marketplace/buyer-discovery](https://mesh.dev.athyper.test/network-relationships/marketplace/buyer-discovery)  
+  Page · [source](../../../apps/mesh/app/(shell)/network-relationships/marketplace/buyer-discovery/page.tsx)
 
 - **GET** [/network-relationships/partner-network](https://mesh.dev.athyper.test/network-relationships/partner-network)  
   Module — Network & Partner Management · [source](../../../apps/mesh/lib/catalog-routes.ts)
@@ -1524,6 +1557,18 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **GET** [/api/atlas/admission](https://api.dev.athyper.test/api/atlas/admission)  
   Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
 
+- **POST** [/api/atlas/feedback](https://api.dev.athyper.test/api/atlas/feedback)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
+- **POST** [/api/atlas/knowledge/attachments/reindex](https://api.dev.athyper.test/api/atlas/knowledge/attachments/reindex)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts)
+
+- **POST** [/api/atlas/knowledge/search](https://api.dev.athyper.test/api/atlas/knowledge/search)  
+  Route contract · [source](../../../server/apps/platform-host/src/composition/atlas-attachment-knowledge.ts)
+
+- **POST** [/api/atlas/learning-candidates](https://api.dev.athyper.test/api/atlas/learning-candidates)  
+  Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
+
 - **GET** [/api/atlas/threads](https://api.dev.athyper.test/api/atlas/threads)  
   Route contract · [source](../../../server/packages/platform/ai/src/atlas-routes.ts)
 
@@ -1590,6 +1635,11 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** [/api/audit/status](https://api.dev.athyper.test/api/audit/status)  
   Route contract · [source](../../../server/packages/platform/audit/src/audit-routes.ts)
+
+### Source routes: /api/bank-directory
+
+- **GET** [/api/bank-directory/reference](https://api.dev.athyper.test/api/bank-directory/reference)  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-reader.ts)
 
 ### Source routes: /api/collab
 
@@ -1842,6 +1892,17 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 - **POST** [/api/documents/render](https://api.dev.athyper.test/api/documents/render)  
   Raw route · [source](../../../server/packages/services/documents/src/document-routes.ts)
 
+### Source routes: /api/entity-runtime
+
+- **GET** `/api/entity-runtime/{entityCode}/application-descriptor`  
+  Route contract · [source](../../../server/packages/services/records/src/entity-list-routes.ts)
+
+- **GET** `/api/entity-runtime/{entityCode}/views`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/entity-views-routes.ts)
+
+- **POST** `/api/entity-runtime/{entityCode}/views`  
+  Raw route · [source](../../../server/packages/platform/preferences/src/entity-views-routes.ts)
+
 ### Source routes: /api/governance
 
 - **POST** [/api/governance/channel-consents](https://api.dev.athyper.test/api/governance/channel-consents)  
@@ -2083,6 +2144,12 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 ### Source routes: /api/neon
 
+- **POST** `/api/neon/bank-account-links/{linkId}/company-usage`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
+- **POST** `/api/neon/bank-account-links/{linkId}/usage-scope`  
+  Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
+
 - **POST** [/api/neon/business-partner-bank-verifications](https://api.dev.athyper.test/api/neon/business-partner-bank-verifications)  
   Raw route · [source](../../../server/packages/planes/neon/src/business-partner-account-bank-linkage-routes.ts)
 
@@ -2121,6 +2188,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
 
 - **GET** `/api/neon/business-partner-cases/{requestId}/view`  
   Raw route · [source](../../../server/packages/services/master-data/src/business-partner-request-routes.ts)
+
+- **POST** [/api/neon/business-partner-imports](https://api.dev.athyper.test/api/neon/business-partner-imports)  
+  Raw route · [source](../../../server/packages/services/master-data/src/business-partner-governed-import-routes.ts)
 
 - **GET** `/api/neon/business-partner-invitation-templates/{journeyKind}`  
   Raw route · [source](../../../server/packages/services/master-data/src/business-partner-invitation-routes.ts)
@@ -2213,6 +2283,9 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
 
 - **POST** `/api/neon/business-partners/{businessPartnerId}/360/banking/reveal`  
+  Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
+
+- **POST** `/api/neon/business-partners/{businessPartnerId}/360/comments`  
   Route contract · [source](../../../server/packages/services/master-data/src/business-partner-360-route-contracts.ts)
 
 - **POST** `/api/neon/business-partners/{businessPartnerId}/360/identifiers-tax/reveal`  
@@ -2626,6 +2699,48 @@ Base URL: [https://api.dev.athyper.test](https://api.dev.athyper.test). Paths be
   Raw route · [source](../../../server/packages/platform/search/src/document-search-routes.ts)
 
 ### Source routes: /api/studio
+
+- **GET** [/api/studio/atlas-learning](https://api.dev.athyper.test/api/studio/atlas-learning)  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/approve`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/publish`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/reject`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/resume`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/stage`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **POST** `/api/studio/atlas-learning/{id}/submit`  
+  Raw route · [source](../../../server/packages/planes/studio/meta-entity-authoring/src/learning-routes.ts)
+
+- **GET** [/api/studio/bank-directory](https://api.dev.athyper.test/api/studio/bank-directory)  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **GET** `/api/studio/bank-directory/{revisionId}`  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **POST** `/api/studio/bank-directory/{revisionId}/resume`  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **POST** `/api/studio/bank-directory/{revisionId}/review`  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **POST** [/api/studio/bank-directory/import](https://api.dev.athyper.test/api/studio/bank-directory/import)  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **GET** [/api/studio/bank-directory/reconcile](https://api.dev.athyper.test/api/studio/bank-directory/reconcile)  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
+
+- **POST** [/api/studio/bank-directory/references](https://api.dev.athyper.test/api/studio/bank-directory/references)  
+  Route contract · [source](../../../server/packages/services/publication/src/bank-directory-routes.ts)
 
 - **POST** [/api/studio/onboarding/cases](https://api.dev.athyper.test/api/studio/onboarding/cases)  
   Raw route · [source](../../../server/packages/planes/studio/onboarding/src/routes.ts)

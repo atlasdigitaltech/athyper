@@ -1,10 +1,10 @@
-import { parseAtlasIntent, type AtlasIntentV1 } from "@athyper/server-contract-ai/intent";
-import { parseAtlasResponseFeedback, type AtlasResponseFeedbackV1 } from "@athyper/server-contract-ai/feedback";
-export type { AtlasResponseFeedbackV1 } from "@athyper/server-contract-ai/feedback";
-import { parseAtlasInsightResult, type AtlasInsightResult, parseAtlasAnswerEnvelope, type AtlasAnswerEnvelope } from "@athyper/server-contract-ai/answer";
-export { parseAtlasInsightResult, parseAtlasAnswerEnvelope, type AtlasAnswerEnvelope, type AtlasAnswerAuthority } from "@athyper/server-contract-ai/answer";
-import { parseAtlasBusinessContext, type AtlasBusinessContextV1 } from "@athyper/server-contract-ai/business-context";
-export { parseAtlasBusinessContext, type AtlasBusinessContextV1 } from "@athyper/server-contract-ai/business-context";
+import { parseAtlasIntent, type AtlasIntentV1 } from "@athyper/contract-platform-ai/intent";
+import { parseAtlasResponseFeedback, type AtlasResponseFeedbackV1 } from "@athyper/contract-platform-ai/feedback";
+export type { AtlasResponseFeedbackV1 } from "@athyper/contract-platform-ai/feedback";
+import { parseAtlasInsightResult, type AtlasInsightResult, parseAtlasAnswerEnvelope, type AtlasAnswerEnvelope } from "@athyper/contract-platform-ai/answer";
+export { parseAtlasInsightResult, parseAtlasAnswerEnvelope, type AtlasAnswerEnvelope, type AtlasAnswerAuthority } from "@athyper/contract-platform-ai/answer";
+import { parseAtlasBusinessContext, type AtlasBusinessContextV1 } from "@athyper/contract-platform-ai/business-context";
+export { parseAtlasBusinessContext, type AtlasBusinessContextV1 } from "@athyper/contract-platform-ai/business-context";
 import { createHttpClient, createOperation, encodePathSegment, type HttpClient } from "@athyper/platform-api-client";
 
 export interface AtlasAdmission {

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "purpose": "Excluded workspace packages with test files must be retired or reactivated through package consolidation; they are not run by test:repo.",
-  "activeWorkspacePackageCount": 176,
+  "activeWorkspacePackageCount": 177,
   "rootTests": [
     {
       "path": "deploy/compose/tests/structure.test.mjs",

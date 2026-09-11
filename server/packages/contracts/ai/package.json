@@ -20,7 +20,8 @@
     "@athyper/server-contract-auth": "workspace:*",
     "@athyper/server-contract-metadata": "workspace:*",
     "@athyper/server-contract-records": "workspace:*",
-    "@athyper/server-foundation": "workspace:*"
+    "@athyper/server-foundation": "workspace:*",
+    "@athyper/contract-platform-ai": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",
